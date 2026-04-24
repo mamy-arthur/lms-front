@@ -1,0 +1,59 @@
+import { NextRequest, NextResponse } from "next/server";
+
+const PUBLIC_PATHS = ["/login", "/forgot-password", "/reset-password"];
+const STATIC_PATHS = ["/_next", "/favicon.ico", "/public"];
+
+// e.g. "learneo.local" in dev, "learneo.dev-test2.nacre-solutions.com" in staging
+const BASE_DOMAIN = (process.env.NEXT_PUBLIC_BASE_DOMAIN ?? "localhost").split(":")[0];
+
+/**
+ * Returns the tenant slug from the host, or null when on the central domain.
+ * acme.learneo.local  → "acme"
+ * learneo.local       → null  (central domain)
+ * localhost           → null  (central domain)
+ */
+function extractTenantSlug(host: string): string | null {
+  const clean = host.split(":")[0];
+
+  if (clean === BASE_DOMAIN) return null;
+
+  if (clean.endsWith(`.${BASE_DOMAIN}`)) {
+    const slug = clean.slice(0, -(`.${BASE_DOMAIN}`).length);
+    return slug || null;
+  }
+
+  return null;
+}
+
+export function middleware(req: NextRequest) {
+  const { pathname } = req.nextUrl;
+  const host = req.headers.get("host") ?? "";
+
+  if (STATIC_PATHS.some((p) => pathname.startsWith(p))) {
+    return NextResponse.next();
+  }
+
+  const slug = extractTenantSlug(host);
+  const headers = new Headers(req.headers);
+
+  if (slug) {
+    headers.set("x-tenant-slug", slug);
+  } else {
+    headers.delete("x-tenant-slug");
+  }
+
+  const token = req.cookies.get("auth-token")?.value;
+  const isPublic = PUBLIC_PATHS.some((p) => pathname.startsWith(p));
+
+  if (!isPublic && !token) {
+    const loginUrl = new URL("/login", req.url);
+    loginUrl.searchParams.set("from", pathname);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  return NextResponse.next({ request: { headers } });
+}
+
+export const config = {
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
+};
