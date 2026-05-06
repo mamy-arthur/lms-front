@@ -18,18 +18,21 @@ registerResourceHandlers("tenants", {
   },
 
   getOne: async (_resource, { id }) => {
-    const data = await adminTenantsApi.getById(String(id));
-    return { data: normalizeTenant(data as unknown as Record<string, unknown>) };
+    const res = await adminTenantsApi.getById(String(id));
+    const raw = (res as { data?: unknown }).data ?? res;
+    return { data: normalizeTenant(raw as Record<string, unknown>) };
   },
 
   create: async (_resource, { data }) => {
-    const created = await adminTenantsApi.create(data);
-    return { data: normalizeTenant(created as unknown as Record<string, unknown>) };
+    const res = await adminTenantsApi.create(data);
+    const raw = (res as { data?: unknown }).data ?? res;
+    return { data: normalizeTenant(raw as Record<string, unknown>) };
   },
 
   update: async (_resource, { id, data }) => {
-    const updated = await adminTenantsApi.update(String(id), data);
-    return { data: normalizeTenant(updated as unknown as Record<string, unknown>) };
+    const res = await adminTenantsApi.update(String(id), data);
+    const raw = (res as { data?: unknown }).data ?? res;
+    return { data: normalizeTenant(raw as Record<string, unknown>) };
   },
 
   delete: async (_resource, { id }) => {

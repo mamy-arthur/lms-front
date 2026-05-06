@@ -6,6 +6,9 @@ import { dataProvider } from "./providers/dataProvider";
 import { authProvider } from "./providers/authProvider";
 import { i18nProvider } from "./providers/i18nProvider";
 import { AdminLayout } from "./layout/AdminLayout";
+import { AdminLoginPage } from "./pages/AdminLoginPage";
+import { AdminForgotPasswordPage } from "./pages/AdminForgotPasswordPage";
+import { AdminResetPasswordPage } from "./pages/AdminResetPasswordPage";
 import { APP_ROUTES } from "@/appConfig/routes";
 import { canAccess, PermissionSet } from "@/shared/auth/permissions";
 import { Role } from "@/shared/constants/roles";
@@ -32,6 +35,7 @@ export default function AdminApp() {
       authProvider={authProvider}
       i18nProvider={i18nProvider}
       layout={AdminLayout}
+      loginPage={AdminLoginPage}
       basename="/admin"
       dashboard={DynamicDashboard}
     >
@@ -60,6 +64,10 @@ export default function AdminApp() {
             {p.isSuperAdmin && (
               <Resource name="tenants" list={TenantList} />
             )}
+            <CustomRoutes noLayout>
+              <Route path="/forgot-password" element={<AdminForgotPasswordPage />} />
+              <Route path="/reset-password" element={<AdminResetPasswordPage />} />
+            </CustomRoutes>
             <CustomRoutes>
               {APP_ROUTES.filter((r) => canAccess(p, r.access)).map((r) => (
                 <Route key={r.path} path={r.path} element={r.element} />

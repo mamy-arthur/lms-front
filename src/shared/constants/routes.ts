@@ -2,6 +2,7 @@ export const ROUTES = {
   auth: {
     login: "/login",
     forgotPassword: "/forgot-password",
+    resetPassword: "/reset-password",
   },
   admin: {
     root: "/admin",

@@ -1,5 +1,5 @@
 import { apiGet, apiPost, apiPut, apiDelete } from "@/shared/lib/apiClient";
-import { User } from "../types";
+import { User, CreateUserPayload } from "../types";
 
 interface UserListParams {
   page?: number;
@@ -21,9 +21,10 @@ export const adminUsersApi = {
 
   getById: (id: string) => apiGet<User>(`users/${id}`),
 
-  create: (data: Partial<User>) => apiPost<User>("users", data),
+  create: (data: CreateUserPayload) => apiPost<{ data: User }>("users", data),
 
-  update: (id: string, data: Partial<User>) => apiPut<User>(`users/${id}`, data),
+  update: (id: string, data: Partial<CreateUserPayload>) =>
+    apiPut<{ data: User }>(`users/${id}`, data),
 
   remove: (id: string) => apiDelete(`users/${id}`),
 };

@@ -1,4 +1,5 @@
 import { apiGet, apiPost, apiPut, apiDelete } from "@/shared/lib/apiClient";
+import { platformApi, CreateTenantPayload } from "@/shared/api/platform.api";
 import { Tenant } from "../types";
 
 interface TenantListResponse {
@@ -10,15 +11,15 @@ interface TenantListResponse {
 export const adminTenantsApi = {
   list: (params: { page?: number; limit?: number; q?: string }) =>
     apiGet<TenantListResponse>(
-      `tenants?page=${params.page ?? 1}&limit=${params.limit ?? 25}${params.q ? `&q=${params.q}` : ""}`
+      `platform/tenants?page=${params.page ?? 1}&limit=${params.limit ?? 25}${params.q ? `&q=${params.q}` : ""}`
     ),
 
-  getById: (id: string) => apiGet<Tenant>(`tenants/${id}`),
+  getById: (id: string) => apiGet<Tenant>(`platform/tenants/${id}`),
 
-  create: (data: Partial<Tenant>) => apiPost<Tenant>("tenants", data),
+  create: (data: CreateTenantPayload) => platformApi.createTenant(data),
 
   update: (id: string, data: Partial<Tenant>) =>
-    apiPut<Tenant>(`tenants/${id}`, data),
+    apiPut<{ data: Tenant }>(`platform/tenants/${id}`, data),
 
-  remove: (id: string) => apiDelete(`tenants/${id}`),
+  remove: (id: string) => apiDelete(`platform/tenants/${id}`),
 };

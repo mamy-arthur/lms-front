@@ -3,6 +3,13 @@ export const tenantKeys = {
   current: () => [...tenantKeys.all, "current"] as const,
 };
 
+export const platformTenantKeys = {
+  all: ["platform", "tenants"] as const,
+  lists: () => [...platformTenantKeys.all, "list"] as const,
+  list: (filters: object) => [...platformTenantKeys.lists(), filters] as const,
+  detail: (id: string) => [...platformTenantKeys.all, "detail", id] as const,
+};
+
 export const userKeys = {
   all: ["users"] as const,
   lists: () => [...userKeys.all, "list"] as const,

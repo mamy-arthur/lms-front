@@ -23,13 +23,15 @@ registerResourceHandlers("users", {
   },
 
   create: async (_resource, { data }) => {
-    const created = await adminUsersApi.create(data);
-    return { data: normalizeUser(created as unknown as Record<string, unknown>) };
+    const res = await adminUsersApi.create(data);
+    const raw = (res as { data?: unknown }).data ?? res;
+    return { data: normalizeUser(raw as Record<string, unknown>) };
   },
 
   update: async (_resource, { id, data }) => {
-    const updated = await adminUsersApi.update(String(id), data);
-    return { data: normalizeUser(updated as unknown as Record<string, unknown>) };
+    const res = await adminUsersApi.update(String(id), data);
+    const raw = (res as { data?: unknown }).data ?? res;
+    return { data: normalizeUser(raw as Record<string, unknown>) };
   },
 
   delete: async (_resource, { id }) => {

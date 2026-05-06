@@ -1,24 +1,20 @@
 import { AuthProvider } from "react-admin";
-import { apiPost } from "@/shared/lib/apiClient";
+import { authApi } from "@/shared/api/auth.api";
 import { useAuthStore } from "@/shared/stores/auth.store";
 import { Role } from "@/shared/constants/roles";
-import { AuthUser } from "@/shared/types/auth.types";
-
-interface LoginResponse {
-  token: string;
-  user: AuthUser;
-}
 
 export const authProvider: AuthProvider = {
   login: async ({ username, password }) => {
-    const data = await apiPost<LoginResponse>("auth/login", {
-      email: username,
-      password,
-    });
-    useAuthStore.getState().setAuth({ token: data.token, user: data.user });
+    const data = await authApi.platformLogin(username, password);
+    useAuthStore.getState().setAuth(data);
   },
 
   logout: async () => {
+    try {
+      await authApi.platformLogout();
+    } catch {
+      // Token already expired — clear locally regardless
+    }
     useAuthStore.getState().clearAuth();
   },
 
