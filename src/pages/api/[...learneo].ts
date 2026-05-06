@@ -2,11 +2,10 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { Agent, fetch as undiciFetch } from "undici";
 
 const BACKEND_BASE = process.env.BACKEND_BASE ?? "http://localhost:4000";
-const IS_DEV = process.env.NODE_ENV !== "production";
 const INSECURE_TLS = process.env.INSECURE_TLS === "1";
 
 const agent = new Agent({
-  connect: { rejectUnauthorized: !(IS_DEV && INSECURE_TLS) },
+  connect: { rejectUnauthorized: !INSECURE_TLS },
 });
 
 const SKIP_HEADERS = new Set([
