@@ -1,10 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const PUBLIC_PATHS = ["/login", "/forgot-password", "/reset-password"];
+const PUBLIC_PATHS = [
+  "/login",
+  "/forgot-password",
+  "/reset-password",
+  "/tenant-not-found",
+  "/tenant-inactive",
+];
 const STATIC_PATHS = ["/_next", "/favicon.ico", "/public"];
 
 // e.g. "learneo.local" in dev, "learneo.dev-test2.nacre-solutions.com" in staging
-const BASE_DOMAIN = (process.env.NEXT_PUBLIC_BASE_DOMAIN ?? "localhost").split(":")[0];
+const BASE_DOMAIN = (process.env.NEXT_PUBLIC_BASE_DOMAIN ?? "localhost").split(
+  ":",
+)[0];
 
 /**
  * Returns the tenant slug from the host, or null when on the central domain.
@@ -18,7 +26,7 @@ function extractTenantSlug(host: string): string | null {
   if (clean === BASE_DOMAIN) return null;
 
   if (clean.endsWith(`.${BASE_DOMAIN}`)) {
-    const slug = clean.slice(0, -(`.${BASE_DOMAIN}`).length);
+    const slug = clean.slice(0, -`.${BASE_DOMAIN}`.length);
     return slug || null;
   }
 

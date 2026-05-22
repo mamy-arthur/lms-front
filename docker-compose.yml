@@ -3,13 +3,17 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      args:
-        # Build-time : injecté dans le bundle JS client
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-/api}
+      target: dev
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.next
     ports:
       - "3000:3000"
     env_file:
       - .env.local
+    environment:
+      - WATCHPACK_POLLING=true
     # Permet d'atteindre le host depuis le container (Linux Docker Engine)
     extra_hosts:
       - "host.docker.internal:host-gateway"

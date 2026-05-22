@@ -17,6 +17,8 @@ export interface Tenant {
   slug: string;
   name: string;
   domain: string;
+  status: "active" | "suspended" | "pending";
+  is_active: boolean;
   branding: TenantBranding;
   features: TenantFeatures;
 }
