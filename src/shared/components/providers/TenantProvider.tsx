@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useTenantStore } from "@/shared/stores/tenant.store";
 import { LoadingSpinner } from "@/shared/components/feedback/LoadingSpinner";
+// import { fetchTenantBySlug } from "@/shared/api/tenant.api"; // ← activer quand GET /api/tenant/current est prêt
 import { mockFetchTenantBySlug } from "@/shared/mocks/tenant.mock";
 import type { Tenant } from "@/shared/types/tenant.types";
 
@@ -35,21 +36,6 @@ function extractTenantSlug(hostname: string): string | null {
   return null;
 }
 
-// ---------------------------------------------------------------------------
-// TODO: Décommenter et supprimer mockFetchTenantBySlug quand le backend est prêt
-//
-// async function fetchTenantBySlug(slug: string, signal: AbortSignal): Promise<Tenant> {
-//   const response = await fetch("/api/tenant/current", {
-//     headers: { "X-Tenant-Slug": slug },
-//     signal,
-//   });
-//   if (!response.ok) {
-//     const error = new Error("Tenant not found");
-//     (error as Error & { status: number }).status = response.status;
-//     throw error;
-//   }
-//   return response.json();
-// }
 // ---------------------------------------------------------------------------
 
 /**
@@ -169,6 +155,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     setResolutionStatus("loading");
 
     // Remplacer mockFetchTenantBySlug par fetchTenantBySlug quand le backend est prêt
+    // fetchTenantBySlug(slug)
     mockFetchTenantBySlug(slug)
       .then((tenant) => {
         if (!tenant.is_active) {

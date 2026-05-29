@@ -17,8 +17,10 @@ const SKIP_HEADERS = new Set([
 
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse
+  res: NextApiResponse,
 ) {
+  // Strip the /api prefix added by Next.js Pages Router.
+  // Caddy (local) and nginx (prod) handle the /api/ → /api/v1/ rewrite upstream.
   const destPath = req.url!.replace(/^\/api/, "");
   const destUrl = `${BACKEND_BASE}${destPath}`;
 

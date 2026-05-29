@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 const PUBLIC_PATHS = [
   "/login",
+  "/admin/login",
   "/forgot-password",
   "/reset-password",
   "/tenant-not-found",
@@ -54,7 +55,9 @@ export function middleware(req: NextRequest) {
   const isPublic = PUBLIC_PATHS.some((p) => pathname.startsWith(p));
 
   if (!isPublic && !token) {
-    const loginUrl = new URL("/login", req.url);
+    const isAdminPath = pathname.startsWith("/admin");
+    const loginPath = isAdminPath ? "/admin/login" : "/login";
+    const loginUrl = new URL(loginPath, req.url);
     loginUrl.searchParams.set("from", pathname);
     return NextResponse.redirect(loginUrl);
   }

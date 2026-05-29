@@ -1,7 +1,7 @@
 import { AuthProvider } from "react-admin";
 import { authApi } from "@/shared/api/auth.api";
 import { useAuthStore } from "@/shared/stores/auth.store";
-import { Role } from "@/shared/constants/roles";
+import { Role, PLATFORM_ROLES } from "@/shared/constants/roles";
 
 export const authProvider: AuthProvider = {
   login: async ({ username, password }) => {
@@ -19,8 +19,10 @@ export const authProvider: AuthProvider = {
   },
 
   checkAuth: async () => {
-    const token = useAuthStore.getState().token;
-    if (!token) throw new Error("Not authenticated");
+    const { token, role } = useAuthStore.getState();
+    if (!token || !role || !PLATFORM_ROLES.includes(role)) {
+      throw new Error("Not authenticated");
+    }
   },
 
   checkError: async ({ status }) => {

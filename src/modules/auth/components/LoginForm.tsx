@@ -19,9 +19,12 @@ import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
 
 import { loginSchema, type LoginSchema } from "@/shared/schemas/auth.schema";
-import { authApi } from "@/shared/api/auth.api";
 import { useAuthStore } from "@/shared/stores/auth.store";
-import { ADMIN_ROLES } from "@/shared/constants/roles";
+import { useTenantStore } from "@/shared/stores/tenant.store";
+import {
+  resolveLogin,
+  resolveRedirectPath,
+} from "@/modules/auth/utils/loginUtils";
 import { ROUTES } from "@/shared/constants/routes";
 
 const pillInputSx = {
@@ -54,12 +57,10 @@ export function LoginForm() {
   const onSubmit = async (data: LoginSchema) => {
     setServerError(null);
     try {
-      const { token, user } = await authApi.login(data.email, data.password);
+      const hasTenant = !!useTenantStore.getState().tenant;
+      const { token, user } = await resolveLogin(data.email, data.password);
       setAuth({ token, user });
-      const dest = ADMIN_ROLES.includes(user.role)
-        ? ROUTES.admin.root
-        : ROUTES.portal.dashboard;
-      router.replace(dest);
+      router.replace(resolveRedirectPath(user, hasTenant));
     } catch {
       setServerError("Email ou mot de passe incorrect.");
     }
@@ -81,9 +82,7 @@ export function LoginForm() {
       <Box>
         <Typography
           variant="body2"
-          fontWeight={500}
-          mb={0.75}
-          color="text.secondary"
+          sx={{ fontWeight: 500, mb: 0.75, color: "text.secondary" }}
         >
           Email :
         </Typography>
@@ -103,9 +102,7 @@ export function LoginForm() {
       <Box>
         <Typography
           variant="body2"
-          fontWeight={500}
-          mb={0.75}
-          color="text.secondary"
+          sx={{ fontWeight: 500, mb: 0.75, color: "text.secondary" }}
         >
           Mot de passe :
         </Typography>
@@ -171,11 +168,14 @@ export function LoginForm() {
             borderRadius: "50px",
             px: 4,
             py: 1.2,
-            bgcolor: "#0d1642",
+            bgcolor: "var(--color-primary)",
             fontWeight: 700,
             letterSpacing: 1,
             textTransform: "uppercase",
-            "&:hover": { bgcolor: "#1a237e" },
+            "&:hover": {
+              filter: "brightness(0.85)",
+              bgcolor: "var(--color-primary)",
+            },
           }}
         >
           Connexion

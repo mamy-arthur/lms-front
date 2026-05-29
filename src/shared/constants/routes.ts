@@ -4,6 +4,10 @@ export const ROUTES = {
     forgotPassword: "/forgot-password",
     resetPassword: "/reset-password",
   },
+  platform: {
+    login: "/admin/login",
+  },
+  tenantNotFound: "/tenant-not-found",
   admin: {
     root: "/admin",
     users: "/admin/users",
