@@ -6,7 +6,7 @@ import { Role, PLATFORM_ROLES } from "@/shared/constants/roles";
 export const authProvider: AuthProvider = {
   login: async ({ username, password }) => {
     const data = await authApi.platformLogin(username, password);
-    useAuthStore.getState().setAuth(data);
+    useAuthStore.getState().setAuth(data.user);
   },
 
   logout: async () => {
@@ -19,8 +19,8 @@ export const authProvider: AuthProvider = {
   },
 
   checkAuth: async () => {
-    const { token, role } = useAuthStore.getState();
-    if (!token || !role || !PLATFORM_ROLES.includes(role)) {
+    const { user, role } = useAuthStore.getState();
+    if (!user || !role || !PLATFORM_ROLES.includes(role)) {
       throw new Error("Not authenticated");
     }
   },

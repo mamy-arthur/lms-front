@@ -8,7 +8,6 @@ import { LoadingSpinner } from "@/shared/components/feedback/LoadingSpinner";
 
 export function PlatformGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const token = useAuthStore((s) => s.token);
   const user = useAuthStore((s) => s.user);
 
   const [hydrated, setHydrated] = useState(() =>
@@ -24,8 +23,7 @@ export function PlatformGuard({ children }: { children: React.ReactNode }) {
     return unsub;
   }, [hydrated]);
 
-  const isAuthorized =
-    hydrated && !!token && !!user && PLATFORM_ROLES.includes(user.role);
+  const isAuthorized = hydrated && !!user && PLATFORM_ROLES.includes(user.role);
 
   useEffect(() => {
     if (hydrated && !isAuthorized) router.replace(ROUTES.platform.login);

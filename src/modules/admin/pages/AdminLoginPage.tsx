@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useLogin } from "react-admin";
+// import { useLogin } from "react-admin";
 import { Link, useSearchParams } from "react-router-dom";
+import { authProvider } from "../providers/authProvider";
 import {
   Box,
   Paper,
@@ -16,7 +17,7 @@ import {
 import { loginSchema, type LoginSchema } from "@/shared/schemas/auth.schema";
 
 export function AdminLoginPage() {
-  const login = useLogin();
+  // const login = useLogin();
   const [searchParams] = useSearchParams();
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -31,7 +32,13 @@ export function AdminLoginPage() {
   const onSubmit = async (data: LoginSchema) => {
     setServerError(null);
     try {
-      await login({ username: data.email, password: data.password });
+      // await login({ username: data.email, password: data.password });
+      await authProvider.login({
+        username: data.email,
+        password: data.password,
+      });
+      window.location.replace("/admin");
+
     } catch {
       setServerError("Email ou mot de passe incorrect.");
     }

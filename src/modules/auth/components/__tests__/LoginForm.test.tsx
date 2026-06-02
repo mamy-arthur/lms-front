@@ -179,7 +179,7 @@ describe("LoginForm", () => {
     });
   });
 
-  it("appelle setAuth avec le token et l'utilisateur reçus", async () => {
+  it("appelle setAuth avec l'utilisateur reçu (sans token)", async () => {
     const user = userEvent.setup();
     mockResolveLogin.mockResolvedValue(MOCK_AUTH_RESPONSE);
     render(<LoginForm />);
@@ -191,10 +191,7 @@ describe("LoginForm", () => {
     );
 
     await waitFor(() => {
-      expect(mockSetAuth).toHaveBeenCalledWith({
-        token: MOCK_AUTH_RESPONSE.token,
-        user: MOCK_AUTH_RESPONSE.user,
-      });
+      expect(mockSetAuth).toHaveBeenCalledWith(MOCK_AUTH_RESPONSE.user);
     });
   });
 

@@ -54,11 +54,8 @@ export function PlatformLoginForm() {
     setServerError(null);
     try {
       const hasTenant = !!useTenantStore.getState().tenant;
-      const { token, user } = await authApi.platformLogin(
-        data.email,
-        data.password,
-      );
-      setAuth({ token, user });
+      const { user } = await authApi.platformLogin(data.email, data.password);
+      setAuth(user);
       router.replace(resolveRedirectPath(user, hasTenant));
     } catch {
       setServerError("Email ou mot de passe incorrect.");

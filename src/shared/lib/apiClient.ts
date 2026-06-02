@@ -1,25 +1,53 @@
 import { fetchUtils } from "react-admin";
-import { getToken } from "@/shared/stores/auth.store";
+import { useAuthStore } from "@/shared/stores/auth.store";
 import { useTenantStore } from "@/shared/stores/tenant.store";
 
-export const httpClient = (url: string, options: fetchUtils.Options = {}) => {
+/**
+ * Retourne le chemin de login adapté au contexte courant.
+ * Exporté pour être testé indépendamment.
+ */
+export function resolveLoginPath(pathname: string): string {
+  return pathname.startsWith("/admin") ? "/admin/login" : "/login";
+}
+
+/**
+ * Client HTTP centralisé.
+ *
+ * - credentials: "include" → envoie automatiquement le cookie HttpOnly
+ *   posé par le backend lors du login (aucun token en mémoire JS).
+ * - Sur 401 : vide le store utilisateur et redirige vers la page de login
+ *   correspondant au contexte (/admin/login ou /login).
+ */
+export const httpClient = async (
+  url: string,
+  options: fetchUtils.Options = {},
+) => {
   let finalUrl = url;
   if (!url.startsWith("/api") && !url.startsWith("http")) {
     finalUrl = `/api/${url.replace(/^\/+/, "")}`;
   }
 
   const headers = new Headers(options.headers as HeadersInit | undefined);
-  const token = getToken();
   const tenant = useTenantStore.getState().tenant;
 
-  if (token) headers.set("Authorization", `Bearer ${token}`);
   if (tenant) headers.set("X-Tenant-ID", tenant.id);
 
-  return fetchUtils.fetchJson(finalUrl, {
-    ...options,
-    headers,
-    credentials: "same-origin",
-  });
+  try {
+    return await fetchUtils.fetchJson(finalUrl, {
+      ...options,
+      headers,
+      credentials: "include",
+    });
+  } catch (err: unknown) {
+    const status = (err as { status?: number }).status;
+    if (status === 401) {
+      useAuthStore.getState().clearAuth();
+      if (typeof window !== "undefined") {
+        window.location.replace(resolveLoginPath(window.location.pathname));
+      }
+    }
+    throw err;
+  }
 };
 
 export async function apiGet<T>(path: string): Promise<T> {
@@ -27,7 +55,10 @@ export async function apiGet<T>(path: string): Promise<T> {
   return json as T;
 }
 
-export async function apiPost<T, B = unknown>(path: string, body?: B): Promise<T> {
+export async function apiPost<T, B = unknown>(
+  path: string,
+  body?: B,
+): Promise<T> {
   const { json } = await httpClient(`/api/${path.replace(/^\/+/, "")}`, {
     method: "POST",
     body: JSON.stringify(body),
@@ -35,7 +66,10 @@ export async function apiPost<T, B = unknown>(path: string, body?: B): Promise<T
   return json as T;
 }
 
-export async function apiPut<T, B = unknown>(path: string, body?: B): Promise<T> {
+export async function apiPut<T, B = unknown>(
+  path: string,
+  body?: B,
+): Promise<T> {
   const { json } = await httpClient(`/api/${path.replace(/^\/+/, "")}`, {
     method: "PUT",
     body: JSON.stringify(body),

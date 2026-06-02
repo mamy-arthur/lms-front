@@ -1,7 +1,7 @@
 "use client";
 import "@/appConfig/handlers";
 import { Admin, Resource, CustomRoutes, usePermissions as usePermissionsRA } from "react-admin";
-import { Route } from "react-router-dom";
+import { Route, BrowserRouter } from "react-router-dom";
 import { dataProvider } from "./providers/dataProvider";
 import { authProvider } from "./providers/authProvider";
 import { i18nProvider } from "./providers/i18nProvider";
@@ -30,52 +30,79 @@ function DynamicDashboard() {
 
 export default function AdminApp() {
   return (
-    <Admin
-      dataProvider={dataProvider}
-      authProvider={authProvider}
-      i18nProvider={i18nProvider}
-      layout={AdminLayout}
-      loginPage={AdminLoginPage}
-      basename="/admin"
-      dashboard={DynamicDashboard}
-    >
-      {(permissions: PermissionSet | null) => {
-        const p = permissions ?? { role: Role.TRAINEE, isSuperAdmin: false };
+    <BrowserRouter basename="/admin">
+      <Admin
+        dataProvider={dataProvider}
+        authProvider={authProvider}
+        i18nProvider={i18nProvider}
+        layout={AdminLayout}
+        loginPage={AdminLoginPage}
+        dashboard={DynamicDashboard}
+      >
+        {(permissions: PermissionSet | null) => {
+          const p = permissions ?? { role: Role.TRAINEE, isSuperAdmin: false };
 
-        return (
-          <>
-            <Resource
-              name="users"
-              list={canAccess(p, { anyRoles: [Role.SUPER_ADMIN, Role.CLIENT_MANAGER] }) ? UsersList : undefined}
-            />
-            <Resource
-              name="courses"
-              list={canAccess(p, { anyRoles: [Role.SUPER_ADMIN, Role.EDITOR] }) ? CourseList : undefined}
-              show={CourseShow}
-            />
-            <Resource
-              name="trainees"
-              list={canAccess(p, { anyRoles: [Role.SUPER_ADMIN, Role.CLIENT_MANAGER] }) ? TraineeList : undefined}
-            />
-            <Resource
-              name="reports"
-              list={canAccess(p, { anyRoles: [Role.SUPER_ADMIN, Role.CLIENT_MANAGER] }) ? ReportList : undefined}
-            />
-            {p.isSuperAdmin && (
-              <Resource name="tenants" list={TenantList} />
-            )}
-            <CustomRoutes noLayout>
-              <Route path="/forgot-password" element={<AdminForgotPasswordPage />} />
-              <Route path="/reset-password" element={<AdminResetPasswordPage />} />
-            </CustomRoutes>
-            <CustomRoutes>
-              {APP_ROUTES.filter((r) => canAccess(p, r.access)).map((r) => (
-                <Route key={r.path} path={r.path} element={r.element} />
-              ))}
-            </CustomRoutes>
-          </>
-        );
-      }}
-    </Admin>
+          return (
+            <>
+              <Resource
+                name="users"
+                list={
+                  canAccess(p, {
+                    anyRoles: [Role.SUPER_ADMIN, Role.CLIENT_MANAGER],
+                  })
+                    ? UsersList
+                    : undefined
+                }
+              />
+              <Resource
+                name="courses"
+                list={
+                  canAccess(p, { anyRoles: [Role.SUPER_ADMIN, Role.EDITOR] })
+                    ? CourseList
+                    : undefined
+                }
+                show={CourseShow}
+              />
+              <Resource
+                name="trainees"
+                list={
+                  canAccess(p, {
+                    anyRoles: [Role.SUPER_ADMIN, Role.CLIENT_MANAGER],
+                  })
+                    ? TraineeList
+                    : undefined
+                }
+              />
+              <Resource
+                name="reports"
+                list={
+                  canAccess(p, {
+                    anyRoles: [Role.SUPER_ADMIN, Role.CLIENT_MANAGER],
+                  })
+                    ? ReportList
+                    : undefined
+                }
+              />
+              {p.isSuperAdmin && <Resource name="tenants" list={TenantList} />}
+              <CustomRoutes noLayout>
+                <Route
+                  path="/forgot-password"
+                  element={<AdminForgotPasswordPage />}
+                />
+                <Route
+                  path="/reset-password"
+                  element={<AdminResetPasswordPage />}
+                />
+              </CustomRoutes>
+              <CustomRoutes>
+                {APP_ROUTES.filter((r) => canAccess(p, r.access)).map((r) => (
+                  <Route key={r.path} path={r.path} element={r.element} />
+                ))}
+              </CustomRoutes>
+            </>
+          );
+        }}
+      </Admin>
+    </BrowserRouter>
   );
 }

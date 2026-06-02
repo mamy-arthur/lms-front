@@ -7,12 +7,11 @@ import { LoadingSpinner } from "@/shared/components/feedback/LoadingSpinner";
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const token = useAuthStore((s) => s.token);
   const user = useAuthStore((s) => s.user);
 
   // Zustand v5 persist hydrates localStorage asynchronously.
   // We must wait for hydration to complete before checking auth,
-  // otherwise we redirect on the first render before the token is restored.
+  // otherwise we redirect on the first render before the user is restored.
   const [hydrated, setHydrated] = useState(() =>
     useAuthStore.persist.hasHydrated(),
   );
@@ -29,7 +28,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 
   // Any authenticated user (regardless of role) can access portal pages.
   // Role-based redirect happens at login time via resolveRedirectPath.
-  const isAuthenticated = hydrated && !!token && !!user;
+  const isAuthenticated = hydrated && !!user;
 
   useEffect(() => {
     if (hydrated && !isAuthenticated) {
