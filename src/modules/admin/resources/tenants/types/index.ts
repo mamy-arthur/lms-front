@@ -7,6 +7,8 @@ export function normalizeTenant(raw: Record<string, unknown>): Tenant {
     slug: String(raw.slug ?? ""),
     name: String(raw.name ?? ""),
     domain: String(raw.domain ?? ""),
+    status: (raw.status as Tenant["status"]) ?? "active",
+    is_active: Boolean(raw.is_active ?? raw.isActive ?? true),
     branding: {
       primaryColor: String((raw.branding as any)?.primaryColor ?? "#2563eb"),
       secondaryColor: String((raw.branding as any)?.secondaryColor ?? "#64748b"),

@@ -1,35 +1,55 @@
-import {
-  List,
-  Datagrid,
-  TextField,
-  EmailField,
-  BooleanField,
-  DateField,
-  SearchInput,
-  TopToolbar,
-  CreateButton,
-  ExportButton,
-} from "react-admin";
+"use client";
+import { useState } from "react";
+import { DataGrid, type GridColDef } from "@mui/x-data-grid";
+import Box from "@mui/material/Box";
+import Typography from "@mui/material/Typography";
+import TextField from "@mui/material/TextField";
+import { useUsersQuery } from "../hooks/useUsersQuery";
 
-const filters = [<SearchInput key="q" source="q" alwaysOn />];
-
-const ListActions = () => (
-  <TopToolbar>
-    <CreateButton />
-    <ExportButton />
-  </TopToolbar>
-);
+const columns: GridColDef[] = [
+  { field: "name",      headerName: "Nom",    flex: 1 },
+  { field: "email",     headerName: "Email",  flex: 1 },
+  { field: "role",      headerName: "Rôle",   width: 160 },
+  { field: "isActive",  headerName: "Actif",  type: "boolean", width: 100 },
+  { field: "createdAt", headerName: "Créé le", width: 180 },
+];
 
 export function UsersList() {
+  const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 25 });
+  const [search, setSearch] = useState("");
+
+  const { data, isLoading } = useUsersQuery({
+    page: paginationModel.page + 1,
+    perPage: paginationModel.pageSize,
+    q: search || undefined,
+  });
+
   return (
-    <List filters={filters} actions={<ListActions />} perPage={25}>
-      <Datagrid rowClick="show" bulkActionButtons={false}>
-        <TextField source="name" label="Nom" />
-        <EmailField source="email" label="Email" />
-        <TextField source="role" label="Rôle" />
-        <BooleanField source="isActive" label="Actif" />
-        <DateField source="createdAt" label="Créé le" />
-      </Datagrid>
-    </List>
+    <Box sx={{ p: 3 }}>
+      <Typography variant="h5" sx={{ fontWeight: 700, mb: 3 }}>
+        Utilisateurs
+      </Typography>
+
+      <TextField
+        size="small"
+        placeholder="Rechercher..."
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        sx={{ mb: 2, width: 280 }}
+      />
+
+      <DataGrid
+        rows={data?.data ?? []}
+        rowCount={data?.total ?? 0}
+        columns={columns}
+        loading={isLoading}
+        paginationMode="server"
+        paginationModel={paginationModel}
+        onPaginationModelChange={setPaginationModel}
+        pageSizeOptions={[25, 50, 100]}
+        disableRowSelectionOnClick
+        autoHeight
+      />
+    </Box>
   );
 }

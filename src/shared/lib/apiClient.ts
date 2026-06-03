@@ -1,4 +1,3 @@
-import { fetchUtils } from "react-admin";
 import { useAuthStore } from "@/shared/stores/auth.store";
 import { useTenantStore } from "@/shared/stores/tenant.store";
 
@@ -8,6 +7,10 @@ import { useTenantStore } from "@/shared/stores/tenant.store";
  */
 export function resolveLoginPath(pathname: string): string {
   return pathname.startsWith("/admin") ? "/admin/login" : "/login";
+}
+
+export interface HttpOptions extends RequestInit {
+  headers?: HeadersInit;
 }
 
 /**
@@ -20,8 +23,8 @@ export function resolveLoginPath(pathname: string): string {
  */
 export const httpClient = async (
   url: string,
-  options: fetchUtils.Options = {},
-) => {
+  options: HttpOptions = {},
+): Promise<{ status: number; headers: Headers; body: string; json: unknown }> => {
   let finalUrl = url;
   if (!url.startsWith("/api") && !url.startsWith("http")) {
     finalUrl = `/api/${url.replace(/^\/+/, "")}`;
@@ -31,23 +34,39 @@ export const httpClient = async (
   const tenant = useTenantStore.getState().tenant;
 
   if (tenant) headers.set("X-Tenant-ID", tenant.id);
+  if (options.body) headers.set("Content-Type", "application/json");
 
+  const res = await fetch(finalUrl, {
+    ...options,
+    headers,
+    credentials: "include",
+  });
+
+  const body = await res.text();
+  let json: unknown;
   try {
-    return await fetchUtils.fetchJson(finalUrl, {
-      ...options,
-      headers,
-      credentials: "include",
-    });
-  } catch (err: unknown) {
-    const status = (err as { status?: number }).status;
-    if (status === 401) {
+    json = JSON.parse(body);
+  } catch {
+    json = body;
+  }
+
+  if (!res.ok) {
+    if (res.status === 401) {
       useAuthStore.getState().clearAuth();
       if (typeof window !== "undefined") {
         window.location.replace(resolveLoginPath(window.location.pathname));
       }
     }
+    const err = Object.assign(new Error(res.statusText), {
+      status: res.status,
+      headers: res.headers,
+      body,
+      json,
+    });
     throw err;
   }
+
+  return { status: res.status, headers: res.headers, body, json };
 };
 
 export async function apiGet<T>(path: string): Promise<T> {
