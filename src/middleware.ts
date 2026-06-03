@@ -51,7 +51,7 @@ export function middleware(req: NextRequest) {
     headers.delete("x-tenant-slug");
   }
 
-  const token = req.cookies.get("auth-token")?.value;
+  const token = req.cookies.get("auth_token")?.value;
   const isPublic = PUBLIC_PATHS.some((p) => pathname.startsWith(p));
 
   if (!isPublic && !token) {

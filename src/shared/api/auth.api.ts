@@ -19,7 +19,6 @@ interface BackendUser {
 interface LoginApiResponse {
   message: string;
   user: BackendUser;
-  token_type: "Bearer";
 }
 
 interface MessageApiResponse {
