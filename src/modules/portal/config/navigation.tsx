@@ -3,6 +3,7 @@ import DashboardIcon from "@mui/icons-material/Dashboard";
 import SchoolIcon from "@mui/icons-material/School";
 import WorkspacePremiumIcon from "@mui/icons-material/WorkspacePremium";
 import PersonIcon from "@mui/icons-material/Person";
+import GroupIcon from "@mui/icons-material/Group";
 import { ROUTES } from "@/shared/constants/routes";
 
 export interface PortalNavItem {
@@ -26,6 +27,11 @@ export const PORTAL_NAV: PortalNavItem[] = [
     href: ROUTES.portal.certificates,
     label: "Certificats",
     icon: <WorkspacePremiumIcon />,
+  },
+  {
+    href: ROUTES.portal.users,
+    label: "Utilisateurs",
+    icon: <GroupIcon />,
   },
   {
     href: ROUTES.portal.profile,

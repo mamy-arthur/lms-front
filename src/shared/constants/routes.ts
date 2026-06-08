@@ -23,5 +23,6 @@ export const ROUTES = {
     lesson: (slug: string, lessonId: string) => `/courses/${slug}/${lessonId}`,
     profile: "/profile",
     certificates: "/certificates",
+    users: "/users",
   },
 } as const;

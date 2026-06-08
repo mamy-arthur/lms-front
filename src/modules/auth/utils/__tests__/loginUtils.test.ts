@@ -30,29 +30,29 @@ function makeUser(role: Role): AuthUser {
 
 describe("resolveRedirectPath", () => {
   describe("SUPER_ADMIN", () => {
-    it("redirige vers /dashboard même sans tenant", () => {
+    it("redirige vers /admin même sans tenant", () => {
       expect(resolveRedirectPath(makeUser(Role.SUPER_ADMIN), false)).toBe(
-        ROUTES.portal.dashboard,
+        ROUTES.admin.root,
       );
     });
 
-    it("redirige vers /dashboard avec tenant", () => {
+    it("redirige vers /admin avec tenant", () => {
       expect(resolveRedirectPath(makeUser(Role.SUPER_ADMIN), true)).toBe(
-        ROUTES.portal.dashboard,
+        ROUTES.admin.root,
       );
     });
   });
 
   describe("EDITOR", () => {
-    it("redirige vers /dashboard quand un tenant existe", () => {
+    it("redirige vers /admin avec tenant", () => {
       expect(resolveRedirectPath(makeUser(Role.EDITOR), true)).toBe(
-        ROUTES.portal.dashboard,
+        ROUTES.admin.root,
       );
     });
 
-    it("redirige vers /tenant-not-found sans tenant", () => {
+    it("redirige vers /admin même sans tenant", () => {
       expect(resolveRedirectPath(makeUser(Role.EDITOR), false)).toBe(
-        ROUTES.tenantNotFound,
+        ROUTES.admin.root,
       );
     });
   });

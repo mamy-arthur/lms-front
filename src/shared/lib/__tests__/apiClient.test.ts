@@ -54,8 +54,12 @@ function mockFetchError(status: number) {
 }
 
 function setupMocks(tenant: { id: string; slug: string } | null = null) {
-  mockAuthGetState.mockReturnValue({ clearAuth: mockClearAuth } as ReturnType<typeof useAuthStore.getState>);
-  mockTenantGetState.mockReturnValue({ tenant } as ReturnType<typeof useTenantStore.getState>);
+  mockAuthGetState.mockReturnValue({ clearAuth: mockClearAuth } as ReturnType<
+    typeof useAuthStore.getState
+  >);
+  mockTenantGetState.mockReturnValue({ tenant } as ReturnType<
+    typeof useTenantStore.getState
+  >);
 }
 
 // ─── resolveLoginPath ─────────────────────────────────────────────────────────
@@ -129,6 +133,17 @@ describe("httpClient", () => {
   });
 
   describe("sur une réponse 401", () => {
+    beforeEach(() => {
+      // window.location.replace() est read-only dans jsdom et déclenche
+      // "not implemented: navigation" — on silences ces warnings car
+      // les assertions portent uniquement sur clearAuth, pas sur la navigation.
+      jest.spyOn(console, "error").mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
     it("appelle clearAuth", async () => {
       mockFetchError(401);
       await expect(httpClient("/api/me")).rejects.toBeDefined();
@@ -137,7 +152,9 @@ describe("httpClient", () => {
 
     it("propage l'erreur après clearAuth", async () => {
       mockFetchError(401);
-      await expect(httpClient("/api/me")).rejects.toMatchObject({ status: 401 });
+      await expect(httpClient("/api/me")).rejects.toMatchObject({
+        status: 401,
+      });
     });
 
     it("clearAuth n'est pas appelé pour une 200", async () => {
@@ -149,7 +166,9 @@ describe("httpClient", () => {
 
   it("laisse passer les erreurs 500 sans toucher au store", async () => {
     mockFetchError(500);
-    await expect(httpClient("/api/test")).rejects.toMatchObject({ status: 500 });
+    await expect(httpClient("/api/test")).rejects.toMatchObject({
+      status: 500,
+    });
     expect(mockClearAuth).not.toHaveBeenCalled();
   });
 });
@@ -157,7 +176,10 @@ describe("httpClient", () => {
 // ─── Helpers REST ─────────────────────────────────────────────────────────────
 
 describe("apiGet", () => {
-  beforeEach(() => { jest.clearAllMocks(); setupMocks(); });
+  beforeEach(() => {
+    jest.clearAllMocks();
+    setupMocks();
+  });
 
   it("retourne le JSON parsé", async () => {
     mockFetch({ id: 1 });
@@ -174,7 +196,10 @@ describe("apiGet", () => {
 });
 
 describe("apiPost", () => {
-  beforeEach(() => { jest.clearAllMocks(); setupMocks(); });
+  beforeEach(() => {
+    jest.clearAllMocks();
+    setupMocks();
+  });
 
   it("envoie la méthode POST", async () => {
     mockFetch({ created: true });
@@ -192,7 +217,10 @@ describe("apiPost", () => {
 });
 
 describe("apiPut", () => {
-  beforeEach(() => { jest.clearAllMocks(); setupMocks(); });
+  beforeEach(() => {
+    jest.clearAllMocks();
+    setupMocks();
+  });
 
   it("envoie la méthode PUT", async () => {
     mockFetch({});
@@ -203,7 +231,10 @@ describe("apiPut", () => {
 });
 
 describe("apiDelete", () => {
-  beforeEach(() => { jest.clearAllMocks(); setupMocks(); });
+  beforeEach(() => {
+    jest.clearAllMocks();
+    setupMocks();
+  });
 
   it("envoie la méthode DELETE", async () => {
     mockFetch({});

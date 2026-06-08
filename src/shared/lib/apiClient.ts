@@ -24,7 +24,12 @@ export interface HttpOptions extends RequestInit {
 export const httpClient = async (
   url: string,
   options: HttpOptions = {},
-): Promise<{ status: number; headers: Headers; body: string; json: unknown }> => {
+): Promise<{
+  status: number;
+  headers: Headers;
+  body: string;
+  json: unknown;
+}> => {
   let finalUrl = url;
   if (!url.startsWith("/api") && !url.startsWith("http")) {
     finalUrl = `/api/${url.replace(/^\/+/, "")}`;
@@ -33,6 +38,7 @@ export const httpClient = async (
   const headers = new Headers(options.headers as HeadersInit | undefined);
   const tenant = useTenantStore.getState().tenant;
 
+  headers.set("Accept", "application/json");
   if (tenant) headers.set("X-Tenant-ID", tenant.id);
   if (options.body) headers.set("Content-Type", "application/json");
 

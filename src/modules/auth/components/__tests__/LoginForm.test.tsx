@@ -33,7 +33,7 @@ jest.mock("next/navigation", () => ({
 jest.mock("@/modules/auth/utils/loginUtils", () => ({
   resolveLogin: jest.fn(),
   resolveRedirectPath: (user: { role: string }, hasTenant: boolean): string => {
-    if (user.role === "SUPER_ADMIN") return "/dashboard";
+    if (user.role === "SUPER_ADMIN" || user.role === "EDITOR") return "/admin";
     return hasTenant ? "/dashboard" : "/tenant-not-found";
   },
 }));
@@ -195,7 +195,7 @@ describe("LoginForm", () => {
     });
   });
 
-  it("redirige vers /dashboard pour un SUPER_ADMIN (avec ou sans tenant)", async () => {
+  it("redirige vers /admin pour un SUPER_ADMIN (avec ou sans tenant)", async () => {
     const user = userEvent.setup();
     mockResolveLogin.mockResolvedValue(MOCK_AUTH_RESPONSE);
     // Pas de tenant dans le store → hasTenant = false
@@ -208,7 +208,7 @@ describe("LoginForm", () => {
     );
 
     await waitFor(() => {
-      expect(mockReplace).toHaveBeenCalledWith("/dashboard");
+      expect(mockReplace).toHaveBeenCalledWith("/admin");
     });
   });
 
