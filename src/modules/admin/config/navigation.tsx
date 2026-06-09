@@ -25,7 +25,7 @@ export const ADMIN_NAV: AdminNavItem[] = [
         url: ROUTES.admin.root,
         title: "Tableau de bord",
         icon: LayoutDashboard,
-        items: [{title : 'Tableau de bord' , url: ROUTES.admin.root}],
+        items: [{ title: "Tableau de bord", url: ROUTES.admin.root }],
     },
     {
         url: ROUTES.admin.users,
@@ -60,6 +60,6 @@ export const ADMIN_NAV: AdminNavItem[] = [
         title: "Tenants",
         icon: Building2,
         access: ACCESS.tenants,
-        items: [],
+        items: [{ title: "Liste des tenants", url: ROUTES.admin.tenants }],
     },
 ];
