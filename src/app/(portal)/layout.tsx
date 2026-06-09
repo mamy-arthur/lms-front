@@ -1,7 +1,7 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { AuthGuard } from "@/modules/auth/guards/AuthGuard";
-import { AppSidebar } from "@/modules/shared/layout/AppSidebar";
+import { LayoutSideBar } from "@/modules/shared/layout/AppSidebar";
 import { PORTAL_NAV } from "@/modules/portal/config/navigation";
 import { useAuthStore } from "@/shared/stores/auth.store";
 import { useTenant } from "@/shared/hooks/useTenant";
@@ -23,7 +23,7 @@ function PortalLayout({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AppSidebar
+    <LayoutSideBar
       navItems={PORTAL_NAV}
       user={user}
       logoUrl={logoUrl}
@@ -31,7 +31,7 @@ function PortalLayout({ children }: { children: React.ReactNode }) {
       onLogout={handleLogout}
     >
       {children}
-    </AppSidebar>
+    </LayoutSideBar>
   );
 }
 

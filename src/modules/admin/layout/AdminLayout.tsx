@@ -1,6 +1,6 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { AppSidebar } from "@/modules/shared/layout/AppSidebar";
+import { LayoutSideBar } from "@/modules/shared/layout/AppSidebar";
 import { ADMIN_NAV } from "@/modules/admin/config/navigation";
 import { useAuthStore } from "@/shared/stores/auth.store";
 import { usePermissions } from "@/shared/hooks/usePermissions";
@@ -28,7 +28,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AppSidebar
+    <LayoutSideBar
       navItems={navItems}
       user={user}
       logoUrl={logoUrl}
@@ -36,6 +36,6 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
       onLogout={handleLogout}
     >
       {children}
-    </AppSidebar>
+    </LayoutSideBar>
   );
 }
