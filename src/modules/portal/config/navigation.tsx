@@ -1,41 +1,50 @@
-import type { ReactNode } from "react";
-import DashboardIcon from "@mui/icons-material/Dashboard";
-import SchoolIcon from "@mui/icons-material/School";
-import WorkspacePremiumIcon from "@mui/icons-material/WorkspacePremium";
-import PersonIcon from "@mui/icons-material/Person";
-import GroupIcon from "@mui/icons-material/Group";
+import type { LucideIcon } from "lucide-react";
+import {
+    LayoutDashboard,
+    GraduationCap,
+    Award,
+    Users,
+    User,
+} from "lucide-react";
 import { ROUTES } from "@/shared/constants/routes";
 
 export interface PortalNavItem {
-  href: string;
-  label: string;
-  icon: ReactNode;
+    url: string;
+    title: string;
+    icon: LucideIcon;
+    isActive?: boolean;
+    items: { title: string; url: string }[];
 }
 
 export const PORTAL_NAV: PortalNavItem[] = [
-  {
-    href: ROUTES.portal.dashboard,
-    label: "Tableau de bord",
-    icon: <DashboardIcon />,
-  },
-  {
-    href: ROUTES.portal.courses,
-    label: "Mes formations",
-    icon: <SchoolIcon />,
-  },
-  {
-    href: ROUTES.portal.certificates,
-    label: "Certificats",
-    icon: <WorkspacePremiumIcon />,
-  },
-  {
-    href: ROUTES.portal.users,
-    label: "Utilisateurs",
-    icon: <GroupIcon />,
-  },
-  {
-    href: ROUTES.portal.profile,
-    label: "Profil",
-    icon: <PersonIcon />,
-  },
+    {
+        url: ROUTES.portal.dashboard,
+        title: "Tableau de bord",
+        icon: LayoutDashboard,
+        items:[]
+    },
+    {
+        url: ROUTES.portal.courses,
+        title: "Mes formations",
+        icon: GraduationCap,
+        items:[]
+    },
+    {
+        url: ROUTES.portal.certificates,
+        title: "Certificats",
+        icon: Award,
+        items:[]
+    },
+    {
+        url: ROUTES.portal.users,
+        title: "Utilisateurs",
+        icon: Users,
+        items:[]
+    },
+    {
+        url: ROUTES.portal.profile,
+        title: "Profil",
+        icon: User,
+        items:[]
+    },
 ];

@@ -1,55 +1,65 @@
 import type { ReactNode } from "react";
-import DashboardIcon from "@mui/icons-material/Dashboard";
-import PeopleIcon from "@mui/icons-material/People";
-import SchoolIcon from "@mui/icons-material/School";
-import PersonIcon from "@mui/icons-material/Person";
-import AssessmentIcon from "@mui/icons-material/Assessment";
-import BusinessIcon from "@mui/icons-material/Business";
+import {
+    LayoutDashboard,
+    Users,
+    GraduationCap,
+    User,
+    BarChart2,
+    Building2,
+    LucideIcon,
+} from "lucide-react";
 import { ROUTES } from "@/shared/constants/routes";
 import { ACCESS } from "@/shared/auth/permissions";
 import type { AccessRule } from "@/shared/auth/permissions";
 
 export interface AdminNavItem {
-  href: string;
-  label: string;
-  icon: ReactNode;
-  access?: AccessRule;
+    url: string;
+    title: string;
+    icon: LucideIcon;
+    access?: AccessRule;
+    items: { title: string; url: string }[];
 }
 
 export const ADMIN_NAV: AdminNavItem[] = [
-  {
-    href: ROUTES.admin.root,
-    label: "Tableau de bord",
-    icon: <DashboardIcon />,
-  },
-  {
-    href: ROUTES.admin.users,
-    label: "Utilisateurs",
-    icon: <PeopleIcon />,
-    access: ACCESS.users,
-  },
-  {
-    href: ROUTES.admin.courses,
-    label: "Formations",
-    icon: <SchoolIcon />,
-    access: ACCESS.courses,
-  },
-  {
-    href: ROUTES.admin.trainees,
-    label: "Stagiaires",
-    icon: <PersonIcon />,
-    access: ACCESS.trainees,
-  },
-  {
-    href: ROUTES.admin.reports,
-    label: "Rapports",
-    icon: <AssessmentIcon />,
-    access: ACCESS.reports,
-  },
-  {
-    href: ROUTES.admin.tenants,
-    label: "Tenants",
-    icon: <BusinessIcon />,
-    access: ACCESS.tenants,
-  },
+    {
+        url: ROUTES.admin.root,
+        title: "Tableau de bord",
+        icon: LayoutDashboard,
+        items: [{title : 'Tableau de bord' , url: ROUTES.admin.root}],
+    },
+    {
+        url: ROUTES.admin.users,
+        title: "Utilisateurs",
+        icon: Users,
+        access: ACCESS.users,
+        items: [],
+    },
+    {
+        url: ROUTES.admin.courses,
+        title: "Formations",
+        icon: GraduationCap,
+        access: ACCESS.courses,
+        items: [],
+    },
+    {
+        url: ROUTES.admin.trainees,
+        title: "Stagiaires",
+        icon: User,
+        access: ACCESS.trainees,
+        items: [],
+    },
+    {
+        url: ROUTES.admin.reports,
+        title: "Rapports",
+        icon: BarChart2,
+        access: ACCESS.reports,
+        items: [],
+    },
+    {
+        url: ROUTES.admin.tenants,
+        title: "Tenants",
+        icon: Building2,
+        access: ACCESS.tenants,
+        items: [],
+    },
 ];
