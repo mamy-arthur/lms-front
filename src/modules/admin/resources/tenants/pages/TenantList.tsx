@@ -1,54 +1,55 @@
 "use client";
-import { useState } from "react";
-import { DataGrid, type GridColDef } from "@mui/x-data-grid";
-import Box from "@mui/material/Box";
-import Typography from "@mui/material/Typography";
-import TextField from "@mui/material/TextField";
-import { useTenantsQuery } from "../hooks/useTenantsQuery";
 
-const columns: GridColDef[] = [
-  { field: "name",   headerName: "Nom",     flex: 1 },
-  { field: "slug",   headerName: "Slug",    flex: 1 },
-  { field: "domain", headerName: "Domaine", flex: 1 },
-  { field: "status", headerName: "Statut",  width: 130 },
-];
+import Box from "@mui/material/Box";
+import TextField from "@mui/material/TextField";
+import Typography from "@mui/material/Typography";
+import { Plus } from "lucide-react";
+import { useState } from "react";
+
+import { Button } from "@/components/ui/button";
+import { CreateTenantWizard } from "../components/CreateTenantWizard";
 
 export function TenantList() {
-  const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 25 });
   const [search, setSearch] = useState("");
-
-  const { data, isLoading } = useTenantsQuery({
-    page: paginationModel.page + 1,
-    perPage: paginationModel.pageSize,
-    q: search || undefined,
-  });
+  const [wizardOpen, setWizardOpen] = useState(false);
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h5" sx={{ fontWeight: 700, mb: 3 }}>
-        Tenants
-      </Typography>
+    <>
+      <Box sx={{ p: { xs: 2, sm: 3 } }}>
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: { xs: "column", sm: "row" },
+            alignItems: { xs: "stretch", sm: "center" },
+            justifyContent: "space-between",
+            gap: { xs: 2, sm: 0 },
+            mb: 3,
+          }}
+        >
+          <Typography variant="h5" sx={{ fontWeight: 700 }}>
+            Tenants
+          </Typography>
 
-      <TextField
-        size="small"
-        placeholder="Rechercher..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        sx={{ mb: 2, width: 280 }}
-      />
+          <Button
+            onClick={() => setWizardOpen(true)}
+            size="lg"
+            className="bg-(--color-primary) text-primary-foreground"
+          >
+            <Plus className="size-4" />
+            Créer un tenant
+          </Button>
+        </Box>
 
-      <DataGrid
-        rows={data?.data ?? []}
-        rowCount={data?.total ?? 0}
-        columns={columns}
-        loading={isLoading}
-        paginationMode="server"
-        paginationModel={paginationModel}
-        onPaginationModelChange={setPaginationModel}
-        pageSizeOptions={[25, 50, 100]}
-        disableRowSelectionOnClick
-        autoHeight
-      />
-    </Box>
+        <TextField
+          size="small"
+          placeholder="Rechercher..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          sx={{ mb: 2, width: { xs: "100%", sm: 280 } }}
+        />
+      </Box>
+
+      <CreateTenantWizard open={wizardOpen} onOpenChange={setWizardOpen} />
+    </>
   );
 }
