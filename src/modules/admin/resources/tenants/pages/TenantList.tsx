@@ -9,6 +9,8 @@ import { TenantsTable } from "./_components/tenant-table";
 import { MOCK_TENANTS } from "@/shared/mocks/tenant/mock-tenants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CreateTenantWizard } from "../components/CreateTenantWizard";
+import { Plus } from "lucide-react";
 
 const columns: GridColDef[] = [
     { field: "name", headerName: "Nom", flex: 1 },
@@ -23,6 +25,8 @@ export function TenantList() {
         pageSize: 25,
     });
     const [search, setSearch] = useState("");
+
+    const [wizardOpen, setWizardOpen] = useState(false);
 
     // const { data, isLoading } = useTenantsQuery({
     //   page: paginationModel.page + 1,
@@ -43,7 +47,14 @@ export function TenantList() {
                 <Typography variant="h5" sx={{ fontWeight: 800 }}>
                     Tenants
                 </Typography>
-                <Button color="" variant="secondary">Nouveau tenant</Button>
+                <Button
+                    onClick={() => setWizardOpen(true)}
+                    size="lg"
+                    className="bg-(--color-primary) text-primary-foreground"
+                >
+                    <Plus className="size-4" />
+                    Créer un tenant
+                </Button>
             </Box>
 
             {/* SEARCH BAR AREA */}
@@ -81,6 +92,11 @@ export function TenantList() {
                 onToggleSuspend={() => {}}
                 onImpersonate={() => {}}
                 onEdit={() => {}}
+            />
+
+            <CreateTenantWizard
+                open={wizardOpen}
+                onOpenChange={setWizardOpen}
             />
         </Box>
     );
