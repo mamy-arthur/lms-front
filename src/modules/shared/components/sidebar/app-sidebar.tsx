@@ -1,24 +1,24 @@
-"use client"
-import * as React from "react"
+"use client";
+import * as React from "react";
 import {
     AudioWaveform,
     Command,
     GalleryVerticalEnd,
     AudioWaveform as AudioWaveformIcon,
-} from "lucide-react"
-import { NavMain } from "./nav-main"
-import { NavProjects } from "./nav-projects"
-import { NavUser } from "./nav-user"
-import { TeamSwitcher } from "./team-switcher"
+} from "lucide-react";
+import { NavMain } from "./nav-main";
+import { NavProjects } from "./nav-projects";
+import { NavUser } from "./nav-user";
+import { TeamSwitcher } from "./team-switcher";
 import {
     Sidebar,
     SidebarContent,
     SidebarFooter,
     SidebarHeader,
     SidebarRail,
-} from "@/components/ui/sidebar"
-import { AdminNavItem } from "@/modules/admin/config/navigation"
-import { useAuthStore } from "@/shared/stores/auth.store"
+} from "@/components/ui/sidebar";
+import { AdminNavItem } from "@/modules/admin/config/navigation";
+import { useAuthStore } from "@/shared/stores/auth.store";
 
 const data = {
     user: {
@@ -43,13 +43,14 @@ const data = {
             plan: "Free",
         },
     ],
-}
+};
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
-    navItems?: AdminNavItem[]
+    navItems?: AdminNavItem[];
+    onLogout?: () => void;
 }
 
-export function AppSidebar({ navItems, ...props }: AppSidebarProps) {
+export function AppSidebar({ navItems, onLogout, ...props }: AppSidebarProps) {
     return (
         <Sidebar collapsible="icon" {...props}>
             <SidebarHeader>
@@ -59,9 +60,9 @@ export function AppSidebar({ navItems, ...props }: AppSidebarProps) {
                 <NavMain items={navItems ?? []} />
             </SidebarContent>
             <SidebarFooter>
-                <NavUser />
+                <NavUser onLogout={onLogout} />
             </SidebarFooter>
             <SidebarRail />
         </Sidebar>
-    )
+    );
 }

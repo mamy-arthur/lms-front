@@ -7,7 +7,6 @@ import { usePathname } from "next/navigation";
 import {
     SidebarInset,
     SidebarProvider,
-    SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { AppSidebar } from "../components/sidebar/app-sidebar";
 import { Separator } from "@/components/ui/separator";
@@ -43,9 +42,6 @@ export function LayoutSideBar({
     children,
 }: AppSidebarProps) {
     // const pathname = usePathname();
-    const {user: useUserStore} = useAuthStore()
-    console.log(user)
-
     // const isActive = (href: string) =>
     //     pathname !== null &&
     //     (href === pathname || pathname.startsWith(href + "/"));
@@ -69,7 +65,7 @@ export function LayoutSideBar({
 
     return (
         <SidebarProvider>
-            <AppSidebar navItems={navItems}/>
+            <AppSidebar navItems={navItems} onLogout={onLogout}/>
             <SidebarInset>
                <AppHeader />
                 <div className="flex flex-1 flex-col gap-4 p-4 pt-0">

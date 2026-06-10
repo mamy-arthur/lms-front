@@ -9,7 +9,7 @@ import {
     Sparkles,
 } from "lucide-react";
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -26,6 +26,7 @@ import {
     useSidebar,
 } from "@/components/ui/sidebar";
 import { useAuthStore } from "@/shared/stores/auth.store";
+import { useTenantStore } from "@/shared/stores/tenant.store";
 
 function getInitials(name?: string) {
     if (!name) return "";
@@ -38,7 +39,7 @@ function getInitials(name?: string) {
         .toUpperCase();
 }
 
-export function NavUser() {
+export function NavUser({ onLogout }: { onLogout?: () => void }) {
     const { isMobile } = useSidebar();
     const { user } = useAuthStore();
     return (
@@ -116,7 +117,7 @@ export function NavUser() {
                             </DropdownMenuItem>
                         </DropdownMenuGroup>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => onLogout?.()} variant="destructive">
                             <LogOut />
                             Log out
                         </DropdownMenuItem>
