@@ -22,7 +22,7 @@ export const AdminInfoStep = React.memo(function AdminInfoStep({ form, showPassw
         name="firstName"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Prénom</FormLabel>
+            <FormLabel className="text-xs">Prénom</FormLabel>
             <FormControl>
               <Input placeholder="Jean" className="h-10 px-3 text-sm" {...field} />
             </FormControl>
@@ -36,7 +36,7 @@ export const AdminInfoStep = React.memo(function AdminInfoStep({ form, showPassw
         name="lastName"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Nom</FormLabel>
+            <FormLabel className="text-xs">Nom</FormLabel>
             <FormControl>
               <Input placeholder="Dupont" className="h-10 px-3 text-sm" {...field} />
             </FormControl>
@@ -50,7 +50,7 @@ export const AdminInfoStep = React.memo(function AdminInfoStep({ form, showPassw
         name="email"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Email</FormLabel>
+            <FormLabel className="text-xs">Email</FormLabel>
             <FormControl>
               <Input type="email" placeholder="jean.dupont@exemple.com" className="h-10 px-3 text-sm" {...field} />
             </FormControl>
@@ -64,7 +64,7 @@ export const AdminInfoStep = React.memo(function AdminInfoStep({ form, showPassw
         name="password"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Mot de passe</FormLabel>
+            <FormLabel className="text-xs">Mot de passe</FormLabel>
             <FormControl>
               <div className="relative">
                 <Input type={showPassword ? "text" : "password"} placeholder="Minimum 8 caractères" className="h-10 px-3 pr-11 text-sm" {...field} />
@@ -83,7 +83,7 @@ export const AdminInfoStep = React.memo(function AdminInfoStep({ form, showPassw
         name="confirmPassword"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Confirmer le mot de passe</FormLabel>
+            <FormLabel className="text-xs">Confirmer le mot de passe</FormLabel>
             <FormControl>
               <div className="relative">
                 <Input type={showPassword ? "text" : "password"} placeholder="Confirmez le mot de passe" className="h-10 px-3 pr-11 text-sm" {...field} />

@@ -34,7 +34,7 @@ export const TenantInfoStep = React.memo(function TenantInfoStep({
         name="name"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Nom du tenant</FormLabel>
+            <FormLabel className="text-xs">Nom du tenant</FormLabel>
             <FormControl>
               <Input placeholder="Ex: Académie Pro" className="h-10 px-3 text-sm" {...field} />
             </FormControl>
@@ -48,7 +48,7 @@ export const TenantInfoStep = React.memo(function TenantInfoStep({
         name="subdomain"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Sous-domaine</FormLabel>
+            <FormLabel className="text-xs">Sous-domaine</FormLabel>
             <FormControl>
               <div className="relative">
                 <Input placeholder="mon-tenant" className="h-10 px-3 pr-24 text-sm" {...field} />
@@ -67,7 +67,7 @@ export const TenantInfoStep = React.memo(function TenantInfoStep({
         name="logo"
         render={({ field: { value, onChange, ...field } }) => (
           <FormItem>
-            <FormLabel>Logo</FormLabel>
+            <FormLabel className="text-xs">Logo</FormLabel>
             <FormControl>
               <div>
                 <input
@@ -80,7 +80,7 @@ export const TenantInfoStep = React.memo(function TenantInfoStep({
                 <div
                   onClick={() => fileInputRef.current?.click()}
                   className={cn(
-                    "flex cursor-pointer items-center gap-3 rounded-xl border-2 border-dashed p-4 transition-colors",
+                    "flex cursor-pointer items-center gap-3 rounded-xl border border-dashed p-4 transition-colors",
                     "hover:border-primary/40 hover:bg-muted/20",
                     logoPreview ? "border-primary/20" : "border-muted-foreground/15",
                   )}
@@ -93,7 +93,7 @@ export const TenantInfoStep = React.memo(function TenantInfoStep({
                     </div>
                   )}
                   <div className="flex-1 text-left">
-                    <p className="text-sm font-medium text-foreground">{logoPreview ? "Changer le logo" : "Télécharger un logo"}</p>
+                    <p className="text-xs font-medium text-foreground">{logoPreview ? "Changer le logo" : "Télécharger un logo"}</p>
                     <p className="mt-px text-xs text-muted-foreground">PNG, JPG ou SVG</p>
                   </div>
                 </div>
@@ -109,10 +109,10 @@ export const TenantInfoStep = React.memo(function TenantInfoStep({
         name="color"
         render={({ field: { value, onChange, ...field } }) => (
           <FormItem>
-            <FormLabel>Couleur principale</FormLabel>
+            <FormLabel className="text-xs">Couleur principale</FormLabel>
             <FormControl>
               <div className="flex items-center gap-3">
-                <input type="color" value={value} onChange={onChange} className="h-10 w-10 cursor-pointer rounded-lg border border-input bg-transparent p-0.5" {...field} />
+                <input type="color" value={value} onChange={onChange} className="h-10 w-10 cursor-pointer rounded-full border border-input bg-transparent p-0.5" {...field} />
                 <span className="h-10 flex-1 rounded-lg border border-input px-3 text-sm leading-10" style={{ backgroundColor: color, color: "#fff" }}>
                   {color}
                 </span>

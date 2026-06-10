@@ -146,15 +146,14 @@ export function CreateTenantWizard({ open, onOpenChange }: Props) {
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent
         className="max-w-xl rounded-2xl p-0 gap-0"
-        showCloseButton={false}
         onInteractOutside={(e) => e.preventDefault()}
       >
         <DialogHeader className="px-8 pt-6 pb-0 shrink-0">
           <div>
-            <DialogTitle className="text-lg font-bold tracking-tight text-blue-500">
-              CREER UN TENANT
+            <DialogTitle className="text-lg tracking-tight">
+              Créer un tenant
             </DialogTitle>
-            <DialogDescription className="mt-0.5 text-sm text-muted-foreground">
+            <DialogDescription className="mt-0.5 text-xs text-muted-foreground">
               {step === 0
                 ? "Étape 1 sur 2 — Informations du tenant"
                 : "Étape 2 sur 2 — Administrateur principal"}
@@ -198,7 +197,7 @@ export function CreateTenantWizard({ open, onOpenChange }: Props) {
           <div className="flex items-center justify-between gap-3">
             <Button
               type="button"
-              variant="ghost"
+              variant="outline"
               onClick={handleClose}
               disabled={loading}
               size="lg"
@@ -224,8 +223,9 @@ export function CreateTenantWizard({ open, onOpenChange }: Props) {
                   type="button"
                   onClick={handleNext}
                   disabled={hasStep1Error}
+                  variant="outline"
                   size="lg"
-                  className="bg-blue-500 hover:bg-blue-600 text-white"
+                  className="text-white bg-(--color-primary) hover:bg-(--color-primary) hover:text-white"
                 >
                   Suivant
                   <ArrowRight className="size-4" />
@@ -236,7 +236,7 @@ export function CreateTenantWizard({ open, onOpenChange }: Props) {
                   disabled={!isValid || loading}
                   onClick={form.handleSubmit(onSubmit)}
                   size="lg"
-                  className="bg-blue-500 hover:bg-blue-600 text-white"
+                  className="text-white bg-(--color-primary) hover:bg-(--color-primary) hover:text-white"
                 >
                   {loading ? <Loader2 className="size-4 animate-spin" /> : null}
                   Créer
