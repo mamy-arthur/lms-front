@@ -1,3 +1,2 @@
-export { CourseList } from "./pages/CourseList";
-export { CourseShow } from "./pages/CourseShow";
-export type { Course } from "./types";
+export { CoursesList } from "./pages/CourseList";
+export type { Course, Category } from "./types";

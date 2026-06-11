@@ -1,70 +1,84 @@
-"use client";
+"use client"
+
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { DataGrid, type GridColDef } from "@mui/x-data-grid";
-import Box from "@mui/material/Box";
-import Typography from "@mui/material/Typography";
-import TextField from "@mui/material/TextField";
-import Chip from "@mui/material/Chip";
-import { useCoursesQuery } from "../hooks/useCoursesQuery";
-import { ROUTES } from "@/shared/constants/routes";
+import { Plus, Settings2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { CoursesProvider } from "../lib/course-store";
+import { CourseTable } from "../components/courses/course-table";
+import { CourseDrawer } from "../components/courses/course-drawer";
+import { CategoryDrawer } from "../components/categories/category-drawer";
+import type { Course } from "../types/index";
 
-const columns: GridColDef[] = [
-  { field: "title",       headerName: "Titre",   flex: 1 },
-  { field: "slug",        headerName: "Slug",    flex: 1 },
-  {
-    field: "isPublished",
-    headerName: "Publié",
-    width: 120,
-    renderCell: ({ value }) =>
-      value ? (
-        <Chip label="Publié" color="success" size="small" />
-      ) : (
-        <Chip label="Brouillon" size="small" />
-      ),
-  },
-  { field: "createdAt", headerName: "Créé le", width: 180 },
-];
+export function CoursesList() {
+    return (
+        <CoursesProvider>
+            <CoursesInner />
+        </CoursesProvider>
+    );
+}
 
-export function CourseList() {
-  const router = useRouter();
-  const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 25 });
-  const [search, setSearch] = useState("");
+function CoursesInner() {
+    const [courseDrawer, setCourseDrawer] = useState<{
+        open: boolean;
+        course: Course | null;
+    }>({
+        open: false,
+        course: null,
+    });
+    const [categoryDrawerOpen, setCategoryDrawerOpen] = useState(false);
 
-  const { data, isLoading } = useCoursesQuery({
-    page: paginationModel.page + 1,
-    perPage: paginationModel.pageSize,
-    q: search || undefined,
-  });
+    return (
+        <div className="min-h-screen bg-background">
+            <div className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-8 lg:py-14">
+                <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <h1 className="text-3xl font-semibold tracking-tight">
+                            Courses
+                        </h1>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                            Gérez vos cours et leurs catégories.
+                        </p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <Button
+                            variant="outline"
+                            onClick={() => setCategoryDrawerOpen(true)}
+                        >
+                            <Settings2 className="mr-1 size-4" />
+                            Gérer les catégories
+                        </Button>
+                        <Button
+                            onClick={() =>
+                                setCourseDrawer({ open: true, course: null })
+                            }
+                        >
+                            <Plus className="mr-1 size-4" />
+                            Nouveau cours
+                        </Button>
+                    </div>
+                </header>
 
-  return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h5" sx={{ fontWeight: 700, mb: 3 }}>
-        Formations
-      </Typography>
+                <CourseTable
+                    onNew={() => setCourseDrawer({ open: true, course: null })}
+                    onEdit={(course) => setCourseDrawer({ open: true, course })}
+                />
+            </div>
 
-      <TextField
-        size="small"
-        placeholder="Rechercher..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        sx={{ mb: 2, width: 280 }}
-      />
+            <CourseDrawer
+                open={courseDrawer.open}
+                onOpenChange={(o) =>
+                    setCourseDrawer((s) => ({
+                        open: o,
+                        course: o ? s.course : null,
+                    }))
+                }
+                course={courseDrawer.course}
+            />
 
-      <DataGrid
-        rows={data?.data ?? []}
-        rowCount={data?.total ?? 0}
-        columns={columns}
-        loading={isLoading}
-        paginationMode="server"
-        paginationModel={paginationModel}
-        onPaginationModelChange={setPaginationModel}
-        pageSizeOptions={[25, 50, 100]}
-        onRowClick={({ row }) => router.push(`${ROUTES.admin.courses}/${row.id}`)}
-        disableRowSelectionOnClick
-        autoHeight
-        sx={{ cursor: "pointer" }}
-      />
-    </Box>
-  );
+            <CategoryDrawer
+                open={categoryDrawerOpen}
+                onOpenChange={setCategoryDrawerOpen}
+            />
+        </div>
+    );
 }

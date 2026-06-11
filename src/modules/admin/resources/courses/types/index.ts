@@ -1,21 +1,18 @@
-export interface Course {
+export type Category = {
   id: string;
-  title: string;
-  slug: string;
-  description: string;
-  tenantId: string;
-  isPublished: boolean;
-  createdAt: string;
-}
+  name: string;
+  identifier: string;
+  parentId: string | null;
+  visible: boolean;
+  description?: string;
+};
 
-export function normalizeCourse(raw: Record<string, unknown>): Course {
-  return {
-    id: String(raw.id ?? raw._id ?? ""),
-    title: String(raw.title ?? raw.titre ?? ""),
-    slug: String(raw.slug ?? ""),
-    description: String(raw.description ?? ""),
-    tenantId: String(raw.tenantId ?? raw.tenant_id ?? ""),
-    isPublished: Boolean(raw.isPublished ?? raw.is_published ?? raw.published),
-    createdAt: String(raw.createdAt ?? raw.created_at ?? ""),
-  };
-}
+export type Course = {
+  id: string;
+  fullName: string;
+  shortName: string;
+  categoryId: string | null;
+  identifier: string;
+  visible: boolean;
+  description?: string;
+};

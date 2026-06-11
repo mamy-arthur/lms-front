@@ -1,4 +1,4 @@
-import { CourseList } from "@/modules/admin/resources/courses";
+import { CoursesList } from "@/modules/admin/resources/courses";
 export default function CoursesPage() {
-  return <CourseList />;
+  return <CoursesList />;
 }
