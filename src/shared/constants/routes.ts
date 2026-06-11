@@ -24,5 +24,6 @@ export const ROUTES = {
     profile: "/profile",
     certificates: "/certificates",
     users: "/users",
+    modules: "/modules",
   },
 } as const;

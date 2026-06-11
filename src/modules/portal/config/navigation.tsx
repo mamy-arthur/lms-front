@@ -5,6 +5,7 @@ import {
     Award,
     Users,
     User,
+    FolderKanban,
 } from "lucide-react";
 import { ROUTES } from "@/shared/constants/routes";
 
@@ -34,6 +35,12 @@ export const PORTAL_NAV: PortalNavItem[] = [
         title: "Certificats",
         icon: Award,
         items:[]
+    },
+    {
+        url: ROUTES.portal.modules,
+        title: "Modules",
+        icon: FolderKanban,
+        items:[{ title: "Liste des modules", url: ROUTES.portal.modules }]
     },
     {
         url: ROUTES.portal.users,
