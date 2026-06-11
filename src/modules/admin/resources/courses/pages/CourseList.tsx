@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { CoursesProvider } from "../lib/course-store";
 import { CourseTable } from "../components/courses/course-table";
 import { CourseDrawer } from "../components/courses/course-drawer";
-import { CategoryDrawer } from "../components/categories/category-drawer";
 import type { Course } from "../types/index";
 
 export function CoursesList() {
@@ -25,7 +24,6 @@ function CoursesInner() {
         open: false,
         course: null,
     });
-    const [categoryDrawerOpen, setCategoryDrawerOpen] = useState(false);
 
     return (
         <div className="bg-background">
@@ -36,13 +34,12 @@ function CoursesInner() {
                             Courses
                         </h1>
                         <p className="mt-1 text-sm text-muted-foreground">
-                            Gérez vos cours et leurs catégories.
+                            Gérez vos cours.
                         </p>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
                         <Button
                             variant="outline"
-                            onClick={() => setCategoryDrawerOpen(true)}
                         >
                             <Settings2 className="mr-1 size-4" />
                             Gérer les catégories
@@ -76,10 +73,6 @@ function CoursesInner() {
                 course={courseDrawer.course}
             />
 
-            <CategoryDrawer
-                open={categoryDrawerOpen}
-                onOpenChange={setCategoryDrawerOpen}
-            />
         </div>
     );
 }

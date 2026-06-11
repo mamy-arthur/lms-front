@@ -39,7 +39,10 @@ export const ADMIN_NAV: AdminNavItem[] = [
         title: "Formations",
         icon: GraduationCap,
         access: ACCESS.courses,
-        items: [{ title: "Cours", url: ROUTES.admin.courses }],
+        items: [
+            { title: "Cours", url: ROUTES.admin.courses },
+            { title: "Catégories", url: ROUTES.admin.category },
+        ],
     },
     {
         url: ROUTES.admin.trainees,

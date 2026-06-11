@@ -58,11 +58,19 @@ export function CategoryTable({ onEdit, onAddChild }: Props) {
         <div className="overflow-hidden rounded-xl border bg-card">
             <Table>
                 <TableHeader>
-                    <TableRow className="hover:bg-transparent">
-                        <TableHead>Nom</TableHead>
-                        <TableHead>Catégorie supérieure</TableHead>
-                        <TableHead>Identifiant</TableHead>
-                        <TableHead>Visibilité</TableHead>
+                    <TableRow className="bg-muted/50 hover:bg-muted/50">
+                        <TableHead className="w-70 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                            Nom
+                        </TableHead>
+                        <TableHead className="w-70 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                            Catégorie supérieure
+                        </TableHead>
+                        <TableHead className="w-70 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                            Identifiant
+                        </TableHead>
+                        <TableHead className="w-70 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                            Visibilité
+                        </TableHead>
                         <TableHead className="w-12" />
                     </TableRow>
                 </TableHeader>
@@ -108,15 +116,15 @@ export function CategoryTable({ onEdit, onAddChild }: Props) {
                                 <TableCell>
                                     {category.visible ? (
                                         <Badge
-                                            variant="secondary"
-                                            className="gap-1"
+                                            variant="outline"
+                                            className="gap-1 bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-50"
                                         >
                                             <Eye className="size-3" /> Visible
                                         </Badge>
                                     ) : (
                                         <Badge
                                             variant="outline"
-                                            className="gap-1 text-muted-foreground"
+                                            className="gap-1 bg-red-50 text-red-700 border-red-200 hover:bg-red-50"
                                         >
                                             <EyeOff className="size-3" /> Caché
                                         </Badge>
