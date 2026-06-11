@@ -1,29 +1,36 @@
 "use client";
 
-import { memo, useState, useCallback } from "react";
-import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { memo, useCallback, useState } from "react";
+import { useForm } from "react-hook-form";
 import { z } from "zod";
-import Dialog from "@mui/material/Dialog";
-import DialogTitle from "@mui/material/DialogTitle";
-import DialogContent from "@mui/material/DialogContent";
-import DialogActions from "@mui/material/DialogActions";
-import Box from "@mui/material/Box";
-import TextField from "@mui/material/TextField";
-import Select from "@mui/material/Select";
-import MenuItem from "@mui/material/MenuItem";
-import FormControl from "@mui/material/FormControl";
-import InputLabel from "@mui/material/InputLabel";
-import FormHelperText from "@mui/material/FormHelperText";
-import Button from "@mui/material/Button";
-import Alert from "@mui/material/Alert";
-import CircularProgress from "@mui/material/CircularProgress";
-import IconButton from "@mui/material/IconButton";
-import InputAdornment from "@mui/material/InputAdornment";
-import Visibility from "@mui/icons-material/Visibility";
-import VisibilityOff from "@mui/icons-material/VisibilityOff";
-import { useCreateTenantUser } from "../hooks/useCreateTenantUser";
+import { Button } from "@/components/ui/button";
+import {
+  Field,
+  FieldContent,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+  FieldRoot,
+} from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { useTenantStore } from "@/shared/stores/tenant.store";
+import { useCreateTenantUser } from "../hooks/useCreateTenantUser";
+import type { CreateTenantUserPayload } from "../types";
 
 // ─── Schema ──────────────────────────────────────────────────────────────────
 
@@ -33,7 +40,7 @@ const createTenantUserSchema = z.object({
   email: z.string().email("Email invalide").max(255),
   password: z.string().min(8, "Minimum 8 caractères").max(255),
   role: z.enum(["CLIENT_MANAGER", "TRAINEE"]),
-  is_active: z.boolean().default(true),
+  is_active: z.boolean(),
 });
 
 type FormValues = z.infer<typeof createTenantUserSchema>;
@@ -89,22 +96,16 @@ function UserFormModalBase({ open, onClose, onSuccess }: UserFormModalProps) {
   } = useCreateTenantUser();
   const tenantId = useTenantStore((s) => s.tenant?.id ?? null);
 
-  const {
-    register,
-    handleSubmit,
-    control,
-    reset: resetForm,
-    formState: { errors },
-  } = useForm<FormValues>({
+  const form = useForm<FormValues>({
     resolver: zodResolver(createTenantUserSchema),
     defaultValues: DEFAULT_VALUES,
   });
 
   const handleClose = useCallback(() => {
-    resetForm();
+    form.reset();
     resetMutation();
     onClose();
-  }, [resetForm, resetMutation, onClose]);
+  }, [form, resetMutation, onClose]);
 
   const togglePasswordVisibility = useCallback(
     () => setShowPassword((v) => !v),
@@ -113,146 +114,196 @@ function UserFormModalBase({ open, onClose, onSuccess }: UserFormModalProps) {
 
   const onSubmit = useCallback(
     (values: FormValues) => {
-      mutate(
-        { ...values, tenant_id: tenantId },
-        {
-          onSuccess: () => {
-            resetForm();
-            resetMutation();
-            onSuccess?.();
-          },
+      mutate({ ...values, tenant_id: tenantId } as CreateTenantUserPayload, {
+        onSuccess: () => {
+          form.reset();
+          resetMutation();
+          onSuccess?.();
         },
-      );
+      });
     },
-    [mutate, tenantId, resetForm, resetMutation, onSuccess],
+    [mutate, tenantId, form, resetMutation, onSuccess],
   );
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-      <DialogTitle>Créer un utilisateur</DialogTitle>
-
-      <Box
-        component="form"
-        onSubmit={handleSubmit(onSubmit)}
-        noValidate
+    <Sheet open={open}>
+      <SheetContent
+        className="sm:max-w-lg"
+        showCloseButton={false}
         data-testid="user-form"
+        onInteractOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => e.preventDefault()}
       >
-        <DialogContent
-          sx={{ display: "flex", flexDirection: "column", gap: 2.5, pt: 1 }}
-        >
-          {isError && (
-            <Alert severity="error" role="alert">
-              {extractApiError(error)}
-            </Alert>
-          )}
+        <SheetHeader>
+          <SheetTitle>Créer un utilisateur</SheetTitle>
+        </SheetHeader>
 
-          <Box sx={{ display: "flex", gap: 2 }}>
-            <TextField
-              label="Prénom"
-              fullWidth
-              autoFocus
-              {...register("first_name")}
-              error={!!errors.first_name}
-              helperText={errors.first_name?.message}
-              slotProps={{ htmlInput: { "aria-label": "Prénom" } }}
-            />
-            <TextField
-              label="Nom"
-              fullWidth
-              {...register("last_name")}
-              error={!!errors.last_name}
-              helperText={errors.last_name?.message}
-              slotProps={{ htmlInput: { "aria-label": "Nom" } }}
-            />
-          </Box>
 
-          <TextField
-            label="Email"
-            type="email"
-            fullWidth
-            {...register("email")}
-            error={!!errors.email}
-            helperText={errors.email?.message}
-            slotProps={{ htmlInput: { "aria-label": "Email" } }}
-          />
-
-          <TextField
-            label="Mot de passe"
-            type={showPassword ? "text" : "password"}
-            fullWidth
-            {...register("password")}
-            error={!!errors.password}
-            helperText={errors.password?.message}
-            slotProps={{
-              htmlInput: { "aria-label": "Mot de passe" },
-              input: {
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton
-                      onClick={togglePasswordVisibility}
-                      edge="end"
-                      aria-label={
-                        showPassword
-                          ? "Masquer le mot de passe"
-                          : "Afficher le mot de passe"
-                      }
-                    >
-                      {showPassword ? <VisibilityOff /> : <Visibility />}
-                    </IconButton>
-                  </InputAdornment>
-                ),
-              },
-            }}
-          />
-
-          <Controller
-            name="role"
-            control={control}
-            render={({ field }) => (
-              <FormControl fullWidth error={!!errors.role}>
-                <InputLabel id="role-select-label">Rôle</InputLabel>
-                <Select
-                  {...field}
-                  labelId="role-select-label"
-                  label="Rôle"
-                  inputProps={{ "aria-label": "Rôle" }} // Select conserve inputProps pour l'id natif
-                >
-                  {Object.entries(ROLE_LABELS).map(([value, label]) => (
-                    <MenuItem key={value} value={value}>
-                      {label}
-                    </MenuItem>
-                  ))}
-                </Select>
-                {errors.role && (
-                  <FormHelperText>{errors.role.message}</FormHelperText>
-                )}
-              </FormControl>
-            )}
-          />
-        </DialogContent>
-
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={handleClose} disabled={isPending}>
-            Annuler
-          </Button>
-          <Button
-            type="submit"
-            variant="contained"
-            disabled={isPending}
-            startIcon={
-              isPending ? <CircularProgress size={16} color="inherit" /> : null
-            }
+        <Field {...form}>
+          <form
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="flex flex-1 flex-col"
+            noValidate
           >
-            {isPending ? "Création…" : "Créer"}
-          </Button>
-        </DialogActions>
-      </Box>
-    </Dialog>
+            <div className="flex-1 space-y-5 overflow-y-auto px-6 py-4">
+              {isError && (
+                <div
+                  role="alert"
+                  className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive"
+                >
+                  {extractApiError(error)}
+                </div>
+              )}
+
+              <FieldRoot
+                control={form.control}
+                name="last_name"
+                render={({ field }) => (
+                  <FieldGroup>
+                    <FieldLabel>Nom</FieldLabel>
+                    <FieldContent>
+                      <Input
+                        autoFocus
+                        aria-label="Nom"
+                        className="h-9 px-3 text-sm"
+                        {...field}
+                      />
+                    </FieldContent>
+                    <FieldError />
+                  </FieldGroup>
+                )}
+              />
+              <FieldRoot
+                control={form.control}
+                name="first_name"
+                render={({ field }) => (
+                  <FieldGroup>
+                    <FieldLabel>Prénom</FieldLabel>
+                    <FieldContent>
+                      <Input
+                        aria-label="Prénom"
+                        className="h-9 px-3 text-sm"
+                        {...field}
+                      />
+                    </FieldContent>
+                    <FieldError />
+                  </FieldGroup>
+                )}
+              />
+
+              <FieldRoot
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FieldGroup>
+                    <FieldLabel>Email</FieldLabel>
+                    <FieldContent>
+                      <Input
+                        type="email"
+                        aria-label="Email"
+                        className="h-9 px-3 text-sm"
+                        {...field}
+                      />
+                    </FieldContent>
+                    <FieldError />
+                  </FieldGroup>
+                )}
+              />
+
+              <FieldRoot
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FieldGroup>
+                    <FieldLabel>Mot de passe</FieldLabel>
+                    <FieldContent>
+                      <div className="relative">
+                        <Input
+                          type={showPassword ? "text" : "password"}
+                          aria-label="Mot de passe"
+                          className="h-9 px-3 pr-10 text-sm"
+                          {...field}
+                        />
+                        <button
+                          type="button"
+                          onClick={togglePasswordVisibility}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                          tabIndex={-1}
+                          aria-label={
+                            showPassword
+                              ? "Masquer le mot de passe"
+                              : "Afficher le mot de passe"
+                          }
+                        >
+                          {showPassword ? (
+                            <EyeOff className="size-4" />
+                          ) : (
+                            <Eye className="size-4" />
+                          )}
+                        </button>
+                      </div>
+                    </FieldContent>
+                    <FieldError />
+                  </FieldGroup>
+                )}
+              />
+
+              <FieldRoot
+                control={form.control}
+                name="role"
+                render={({ field }) => (
+                  <FieldGroup>
+                    <FieldLabel>Rôle</FieldLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FieldContent>
+                        <SelectTrigger
+                          aria-label="Rôle"
+                          className="h-9 px-3 text-sm"
+                        >
+                          <SelectValue placeholder="Sélectionner un rôle" />
+                        </SelectTrigger>
+                      </FieldContent>
+                      <SelectContent>
+                        {Object.entries(ROLE_LABELS).map(([value, label]) => (
+                          <SelectItem key={value} value={value}>
+                            {label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FieldError />
+                  </FieldGroup>
+                )}
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-3 border-t px-6 py-4 shrink-0">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleClose}
+                disabled={isPending}
+                size="lg"
+              >
+                Annuler
+              </Button>
+              <Button type="submit" disabled={isPending} size="lg">
+                {isPending && <Loader2 className="size-4 animate-spin" />}
+                {isPending ? "Création…" : "Créer"}
+              </Button>
+            </div>
+          </form>
+        </Field>
+      </SheetContent>
+    </Sheet>
   );
 }
 
 /**
- * Mémoïsé : le Dialog ne se re-rend pas quand le parent change
+ * Mémoïsé : le Sheet ne se re-rend pas quand le parent change
  * (ex. search input), sauf si ses props changent.
  */
 export const UserFormModal = memo(UserFormModalBase);

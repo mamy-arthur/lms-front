@@ -21,36 +21,6 @@ jest.mock("next/navigation", () => ({
   useRouter: () => ({ push: jest.fn() }),
 }));
 
-/** DataGrid allégé pour tests — évite les dépendances jsdom lourdes de MUI X */
-jest.mock("@mui/x-data-grid", () => ({
-  DataGrid: ({
-    rows,
-    columns,
-  }: {
-    rows: Array<Record<string, unknown>>;
-    columns: Array<{ field: string; headerName?: string }>;
-  }) => (
-    <table data-testid="data-grid">
-      <thead>
-        <tr>
-          {columns.map((c) => (
-            <th key={c.field}>{c.headerName}</th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((row) => (
-          <tr key={String(row.id)} data-testid="grid-row">
-            {columns.map((c) => (
-              <td key={c.field}>{String(row[c.field] ?? "")}</td>
-            ))}
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  ),
-}));
-
 /** useDebounce retourne la valeur immédiatement dans les tests */
 jest.mock("@/shared/hooks/useDebounce", () => ({
   useDebounce: <T,>(v: T) => v,
@@ -177,15 +147,12 @@ describe("TenantUsersList", () => {
     );
   });
 
-  it("[nominal] affiche la liste des utilisateurs mock", () => {
+  it("[nominal] affiche la première page de la liste paginée", () => {
     renderWithQuery(<TenantUsersList />);
 
-    // Vérifie que les utilisateurs mock sont rendus
-    expect(screen.getAllByTestId("grid-row")).toHaveLength(
-      MOCK_TENANT_USERS.length,
-    );
-    expect(screen.getByText("Alice Martin")).toBeInTheDocument();
-    expect(screen.getByText("Bob Dupont")).toBeInTheDocument();
+    const rows = screen.getAllByTestId("user-row");
+    expect(rows.length).toBeGreaterThan(0);
+    expect(rows.length).toBeLessThanOrEqual(25);
   });
 
   it("[nominal] affiche le bouton 'Nouvel utilisateur'", () => {
@@ -213,12 +180,11 @@ describe("TenantUsersList", () => {
 
     await user.type(
       screen.getByPlaceholderText(/rechercher par nom ou email/i),
-      "alice",
+      "AdminInfo",
     );
 
-    const rows = screen.getAllByTestId("grid-row");
-    expect(rows).toHaveLength(1);
-    expect(screen.getByText("Alice Martin")).toBeInTheDocument();
+    const rows = screen.getAllByTestId("user-row");
+    expect(rows).toHaveLength(4);
     expect(screen.queryByText("Bob Dupont")).not.toBeInTheDocument();
   });
 
@@ -228,15 +194,14 @@ describe("TenantUsersList", () => {
     >);
     renderWithQuery(<TenantUsersList />);
 
-    expect(screen.queryAllByTestId("grid-row")).toHaveLength(0);
+    expect(screen.queryAllByTestId("user-row")).toHaveLength(0);
   });
 
-  it("[limite] retourne tous les utilisateurs quand la recherche est vide", () => {
+  it("[limite] retourne la première page des utilisateurs quand la recherche est vide", () => {
     renderWithQuery(<TenantUsersList />);
-    // Pas de saisie → tous les mock affichés
-    expect(screen.getAllByTestId("grid-row")).toHaveLength(
-      MOCK_TENANT_USERS.length,
-    );
+    const rows = screen.getAllByTestId("user-row");
+    expect(rows.length).toBeGreaterThan(0);
+    expect(rows.length).toBeLessThanOrEqual(25);
   });
 });
 

@@ -1,50 +1,24 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
-import { DataGrid, type GridColDef } from "@mui/x-data-grid";
-import Box from "@mui/material/Box";
-import Typography from "@mui/material/Typography";
-import TextField from "@mui/material/TextField";
-import Button from "@mui/material/Button";
-import AddIcon from "@mui/icons-material/Add";
+import { useState, useMemo, useCallback, useEffect } from "react";
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Plus } from "lucide-react"
 import { useDebounce } from "@/shared/hooks/useDebounce";
 import { useTenantUsersQuery } from "../hooks/useTenantUsersQuery";
 import { UserFormModal } from "../components/UserFormModal";
-import type { TenantUser } from "../types";
-
-// ─── Columns (référence stable — définie hors composant) ─────────────────────
-
-const COLUMNS: GridColDef<TenantUser>[] = [
-  { field: "name", headerName: "Nom", flex: 1, minWidth: 160 },
-  { field: "email", headerName: "Email", flex: 1.5, minWidth: 200 },
-  { field: "role", headerName: "Rôle", width: 180 },
-  {
-    field: "isActive",
-    headerName: "Actif",
-    type: "boolean",
-    width: 100,
-  },
-  {
-    field: "createdAt",
-    headerName: "Créé le",
-    width: 180,
-    valueFormatter: (value: string) =>
-      value ? new Date(value).toLocaleDateString("fr-FR") : "—",
-  },
-];
-
-// ─── Component ───────────────────────────────────────────────────────────────
+import { TenantUsersTable } from "./_components/tenant-users-table";
 
 export function TenantUsersList() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(12);
 
-  // Debounce 300 ms pour éviter un filtre à chaque frappe
   const debouncedSearch = useDebounce(search, 300);
 
   const { data: allUsers = [] } = useTenantUsersQuery();
 
-  // Filtre côté client sur le mock — remplacé par un param API quand disponible
   const filteredUsers = useMemo(() => {
     if (!debouncedSearch) return allUsers;
     const q = debouncedSearch.toLowerCase();
@@ -54,64 +28,68 @@ export function TenantUsersList() {
     );
   }, [allUsers, debouncedSearch]);
 
+  const total = filteredUsers.length;
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  const safePage = Math.min(page, pageCount - 1);
+  const paginatedUsers = useMemo(
+    () => filteredUsers.slice(safePage * pageSize, (safePage + 1) * pageSize),
+    [filteredUsers, safePage, pageSize],
+  );
+
+  useEffect(() => {
+    setPage(0);
+  }, [debouncedSearch]);
+
   const handleOpenModal = useCallback(() => setIsModalOpen(true), []);
-
   const handleCloseModal = useCallback(() => setIsModalOpen(false), []);
-
-  // Ferme la modale après création réussie
   const handleCreateSuccess = useCallback(() => setIsModalOpen(false), []);
 
+  const handlePageChange = useCallback((newPage: number) => setPage(newPage), []);
+  const handlePageSizeChange = useCallback(
+    (newSize: number) => {
+      setPageSize(newSize);
+      setPage(0);
+    },
+    [],
+  );
+
   return (
-    <Box sx={{ p: 3 }}>
-      {/* En-tête */}
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          mb: 3,
-        }}
-      >
-        <Typography variant="h5" sx={{ fontWeight: 700 }}>
+      <div className="space-y-3 p-3">     
+       <div className="flex items-center justify-between">
+        <h1 className="text-lg font-extrabold">
           Utilisateurs
-        </Typography>
+        </h1>
         <Button
-          variant="contained"
-          startIcon={<AddIcon />}
           onClick={handleOpenModal}
+          size="lg"
+          className="bg-(--color-primary) text-primary-foreground"
         >
+          <Plus className="size-4" />
           Nouvel utilisateur
         </Button>
-      </Box>
+      </div>
 
-      {/* Recherche */}
-      <TextField
-        size="small"
-        placeholder="Rechercher par nom ou email…"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        sx={{ mb: 2, width: 320 }}
-        slotProps={{ htmlInput: { "aria-label": "Rechercher" } }}
+      <Input placeholder="Rechercher par nom ou email…" className="w-80" aria-label="Rechercher" value={search} onChange={(e) => setSearch(e.target.value)} />
+
+      <TenantUsersTable
+        users={paginatedUsers}
+        hasQuery={!!debouncedSearch}
+        page={safePage}
+        pageSize={pageSize}
+        total={total}
+        onPageChange={handlePageChange}
+        onPageSizeChange={handlePageSizeChange}
+        onView={() => {}}
+        onEdit={() => {}}
+        onToggleActive={() => {}}
+        onDelete={() => {}}
       />
 
-      {/* Tableau */}
-      <DataGrid
-        rows={filteredUsers}
-        columns={COLUMNS}
-        pageSizeOptions={[25, 50, 100]}
-        initialState={{
-          pagination: { paginationModel: { pageSize: 25 } },
-        }}
-        disableRowSelectionOnClick
-        autoHeight
-      />
-
-      {/* Modale de création */}
       <UserFormModal
         open={isModalOpen}
         onClose={handleCloseModal}
         onSuccess={handleCreateSuccess}
       />
-    </Box>
+    </div>
   );
 }
