@@ -1,16 +1,13 @@
 "use client";
 import { useState } from "react";
-import { DataGrid, type GridColDef } from "@mui/x-data-grid";
-import Box from "@mui/material/Box";
-import Typography from "@mui/material/Typography";
-import TextField from "@mui/material/TextField";
+import { type GridColDef } from "@mui/x-data-grid";
 // import { useTenantsQuery } from "../hooks/useTenantsQuery";
 import { TenantsTable } from "./_components/tenant-table";
 import { MOCK_TENANTS } from "@/shared/mocks/tenant/mock-tenants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CreateTenantWizard } from "../components/CreateTenantWizard";
-import { Plus } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 
 const columns: GridColDef[] = [
     { field: "name", headerName: "Nom", flex: 1 },
@@ -35,69 +32,60 @@ export function TenantList() {
     // });
 
     return (
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+        <div className="flex flex-col bg-background">
             {/* HEADER */}
-            <Box
-                sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                }}
-            >
-                <Typography variant="h5" sx={{ fontWeight: 800 }}>
-                    Tenants
-                </Typography>
+            <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <h1 className="text-2xl font-bold tracking-tight">
+                        Tenants
+                    </h1>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                        Gérez vos tenants ici.
+                    </p>
+                </div>
                 <Button
                     onClick={() => setWizardOpen(true)}
                     size="lg"
-                    className="bg-(--color-primary) text-primary-foreground"
+                    className="bg-(--color-primary) hover:bg-(--color-primary)/80 text-primary-foreground"
                 >
                     <Plus className="size-4" />
                     Créer un tenant
                 </Button>
-            </Box>
+            </header>
 
-            {/* SEARCH BAR AREA */}
-            <Box
-                sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 2,
-                    p: 1,
-                    border: "1px solid",
-                    borderColor: "divider",
-                    borderRadius: 2,
-                    backgroundColor: "background.paper",
-                }}
-            >
-                <Input
-                    placeholder="Rechercher un tenant..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    style={{
-                        width: 320,
-                    }}
+            <div className="space-y-4">
+                {/* SEARCH BAR AREA */}
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="relative w-full sm:max-w-sm">
+                        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                            placeholder="Rechercher un tenant..."
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            className="pl-9"
+                        />
+                    </div>
+
+                    {/* Optionnel: filtres futurs */}
+                    <div className="ml-auto text-xs">
+                        {MOCK_TENANTS.length} tenants
+                    </div>
+                </div>
+                {/* TABLE WRAPPER */}
+                <TenantsTable
+                    tenants={MOCK_TENANTS}
+                    onDelete={() => {}}
+                    onView={() => {}}
+                    onToggleSuspend={() => {}}
+                    onImpersonate={() => {}}
+                    onEdit={() => {}}
                 />
 
-                {/* Optionnel: filtres futurs */}
-                <Box sx={{ ml: "auto", opacity: 0.7, fontSize: 13 }}>
-                    {MOCK_TENANTS.length} tenants
-                </Box>
-            </Box>
-            {/* TABLE WRAPPER */}
-            <TenantsTable
-                tenants={MOCK_TENANTS}
-                onDelete={() => {}}
-                onView={() => {}}
-                onToggleSuspend={() => {}}
-                onImpersonate={() => {}}
-                onEdit={() => {}}
-            />
-
-            <CreateTenantWizard
-                open={wizardOpen}
-                onOpenChange={setWizardOpen}
-            />
-        </Box>
+                <CreateTenantWizard
+                    open={wizardOpen}
+                    onOpenChange={setWizardOpen}
+                />
+            </div>
+        </div>
     );
 }

@@ -115,12 +115,22 @@ export function CourseTable({ onEdit, onNew }: Props) {
             <div className="overflow-hidden rounded-xl border bg-card">
                 <Table>
                     <TableHeader>
-                        <TableRow className="hover:bg-transparent">
-                            <TableHead>Nom complet</TableHead>
-                            <TableHead>Nom abrégé</TableHead>
-                            <TableHead>Catégorie</TableHead>
-                            <TableHead>Identifiant</TableHead>
-                            <TableHead>Visibilité</TableHead>
+                        <TableRow className="bg-muted/50 hover:bg-muted/50">
+                            <TableHead className="w-70 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                Nom complet
+                            </TableHead>
+                            <TableHead className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                Nom abrégé
+                            </TableHead>
+                            <TableHead className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                Catégorie
+                            </TableHead>
+                            <TableHead className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                Identifiant
+                            </TableHead>
+                            <TableHead className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                Visibilité
+                            </TableHead>
                             <TableHead className="w-12" />
                         </TableRow>
                     </TableHeader>
@@ -181,8 +191,8 @@ export function CourseTable({ onEdit, onNew }: Props) {
                                     <TableCell>
                                         {course.visible ? (
                                             <Badge
-                                                variant="secondary"
-                                                className="gap-1"
+                                                variant="outline"
+                                                className="gap-1 bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-50"
                                             >
                                                 <Eye className="size-3" />
                                                 Visible
@@ -190,7 +200,7 @@ export function CourseTable({ onEdit, onNew }: Props) {
                                         ) : (
                                             <Badge
                                                 variant="outline"
-                                                className="gap-1 text-muted-foreground"
+                                                className="gap-1 bg-red-50 text-red-700 border-red-200 hover:bg-red-50"
                                             >
                                                 <EyeOff className="size-3" />
                                                 Caché

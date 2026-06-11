@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { useState } from "react";
 import { Plus, Settings2 } from "lucide-react";
@@ -28,11 +28,11 @@ function CoursesInner() {
     const [categoryDrawerOpen, setCategoryDrawerOpen] = useState(false);
 
     return (
-        <div className="min-h-screen bg-background">
-            <div className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-8 lg:py-14">
+        <div className="bg-background">
+            <div className="mx-auto w-full">
                 <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                        <h1 className="text-3xl font-semibold tracking-tight">
+                        <h1 className="text-2xl font-bold tracking-tight">
                             Courses
                         </h1>
                         <p className="mt-1 text-sm text-muted-foreground">
@@ -51,6 +51,7 @@ function CoursesInner() {
                             onClick={() =>
                                 setCourseDrawer({ open: true, course: null })
                             }
+                            className="bg-(--color-primary) hover:bg-(--color-primary)/80 text-primary-foreground"
                         >
                             <Plus className="mr-1 size-4" />
                             Nouveau cours
