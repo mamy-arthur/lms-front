@@ -7,6 +7,7 @@ import { CoursesProvider } from "../lib/course-store";
 import { CourseTable } from "../components/courses/course-table";
 import { CourseDrawer } from "../components/courses/course-drawer";
 import type { Course } from "../types/index";
+import Link from "next/link";
 
 export function CoursesList() {
     return (
@@ -38,11 +39,11 @@ function CoursesInner() {
                         </p>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
-                        <Button
-                            variant="outline"
-                        >
-                            <Settings2 className="mr-1 size-4" />
-                            Gérer les catégories
+                        <Button variant="outline" asChild>
+                            <Link href="/admin/category">
+                                <Settings2 className="mr-1 size-4" />
+                                Gérer les catégories
+                            </Link>
                         </Button>
                         <Button
                             onClick={() =>
@@ -72,7 +73,6 @@ function CoursesInner() {
                 }
                 course={courseDrawer.course}
             />
-
         </div>
     );
 }
