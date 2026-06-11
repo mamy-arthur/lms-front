@@ -104,7 +104,7 @@ export function CourseDrawer({ open, onOpenChange, course }: Props) {
 
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
-            <SheetContent className="flex w-full flex-col gap-0 p-0 sm:max-w-xl">
+            <SheetContent className="flex w-full flex-col gap-0 p-0 sm:max-w-2xl lg:max-w-4xl">
                 <SheetHeader className="border-b px-6 py-5">
                     <SheetTitle>
                         {course ? "Modifier le cours" : "Nouveau cours"}
@@ -120,7 +120,7 @@ export function CourseDrawer({ open, onOpenChange, course }: Props) {
                     onSubmit={form.handleSubmit(onSubmit)}
                     className="flex min-h-0 flex-1 flex-col"
                 >
-                    <div className="flex-1 space-y-5 overflow-y-auto px-6 py-6">
+                    <div className="flex-1 space-y-5 overflow-y-auto px-4 py-6">
                         <div className="space-y-2">
                             <Label htmlFor="fullName">
                                 Nom complet du cours
@@ -324,6 +324,7 @@ export function CourseDrawer({ open, onOpenChange, course }: Props) {
                                 onCheckedChange={(v) =>
                                     form.setValue("visible", v)
                                 }
+                                className="data-[state=checked]:bg-(--color-primary)"
                             />
                         </div>
 
@@ -346,7 +347,12 @@ export function CourseDrawer({ open, onOpenChange, course }: Props) {
                         >
                             Annuler
                         </Button>
-                        <Button type="submit">Sauvegarder</Button>
+                        <Button
+                            type="submit"
+                            className="bg-(--color-primary) hover:bg-(--color-primary)/80"
+                        >
+                            Sauvegarder
+                        </Button>
                     </div>
                 </form>
             </SheetContent>

@@ -78,7 +78,7 @@ export function CategoryForm({ category, defaultParentId = null, onDone }: Props
   };
 
   return (
-    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 rounded-xl border bg-card p-5">
+    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 rounded-sm border bg-card p-3">
       <div className="flex items-center justify-between">
         <h3 className="font-semibold">{category ? "Modifier la catégorie" : "Nouvelle catégorie"}</h3>
       </div>

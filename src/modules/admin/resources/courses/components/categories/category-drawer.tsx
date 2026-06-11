@@ -30,7 +30,7 @@ export function CategoryDrawer({ open, onOpenChange }: Props) {
                 }
             }}
         >
-            <SheetContent className="flex w-full flex-col gap-0 overflow-y-auto p-0 sm:max-w-2xl">
+            <SheetContent className="flex w-full flex-col gap-0 overflow-y-auto p-0 sm:w-[90vw]">
                 <SheetHeader className="border-b px-6 py-5">
                     <SheetTitle>Gérer les catégories</SheetTitle>
                     <SheetDescription>
@@ -38,7 +38,7 @@ export function CategoryDrawer({ open, onOpenChange }: Props) {
                     </SheetDescription>
                 </SheetHeader>
 
-                <div className="space-y-6 px-6 py-6">
+                <div className="space-y-6 px py-6">
                     <CategoryForm
                         category={editing}
                         defaultParentId={defaultParentId}

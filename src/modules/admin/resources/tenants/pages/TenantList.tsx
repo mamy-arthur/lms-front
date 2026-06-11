@@ -1,6 +1,5 @@
 "use client";
 import { useState } from "react";
-import { type GridColDef } from "@mui/x-data-grid";
 // import { useTenantsQuery } from "../hooks/useTenantsQuery";
 import { TenantsTable } from "./_components/tenant-table";
 import { MOCK_TENANTS } from "@/shared/mocks/tenant/mock-tenants";
@@ -8,13 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CreateTenantWizard } from "../components/CreateTenantWizard";
 import { Plus, Search } from "lucide-react";
-
-const columns: GridColDef[] = [
-    { field: "name", headerName: "Nom", flex: 1 },
-    { field: "slug", headerName: "Slug", flex: 1 },
-    { field: "domain", headerName: "Domaine", flex: 1 },
-    { field: "status", headerName: "Statut", width: 130 },
-];
 
 export function TenantList() {
     const [paginationModel, setPaginationModel] = useState({
