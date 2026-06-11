@@ -1,8 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { tenantUsersApi } from "../api";
+import type { CreateTenantUserPayload, TenantUser } from "../types";
 import { normalizeTenantUser } from "../types";
 import { TENANT_USERS_QUERY_KEY } from "./useTenantUsersQuery";
-import type { CreateTenantUserPayload, TenantUser } from "../types";
 
 /**
  * Mutation de création d'un utilisateur via POST /v1/users.

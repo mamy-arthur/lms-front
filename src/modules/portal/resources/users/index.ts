@@ -1,3 +1,7 @@
+export { UserFormDrawer } from "./components/UserFormDrawer";
 export { TenantUsersList } from "./pages/TenantUsersList";
-export { UserFormModal } from "./components/UserFormModal";
-export type { TenantUser, CreateTenantUserPayload } from "./types";
+export type {
+  CreateTenantUserPayload,
+  TenantUser,
+  UpdateTenantUserPayload,
+} from "./types";

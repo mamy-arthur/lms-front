@@ -39,7 +39,7 @@ export const PORTAL_NAV: PortalNavItem[] = [
         url: ROUTES.portal.users,
         title: "Utilisateurs",
         icon: Users,
-        items:[]
+        items:[{ title: "Liste des utilisateurs", url: ROUTES.portal.users }]
     },
     {
         url: ROUTES.portal.profile,

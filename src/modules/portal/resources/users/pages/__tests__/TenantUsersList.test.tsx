@@ -3,17 +3,17 @@
  *
  * Couvre :
  *   - normalizeTenantUser (fonction pure)
- *   - TenantUsersList     (rendu, recherche, ouverture modale)
- *   - UserFormModal       (validation, soumission, erreur serveur, annulation)
+ *   - TenantUsersList     (rendu, recherche, ouverture drawer)
+ *   - UserFormDrawer      (validation, soumission création, soumission édition, erreur serveur, annulation)
  */
 
-import React from "react";
-import { render, screen, waitFor, act } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { act, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import type { ReactElement } from "react";
 import { Role } from "@/shared/constants/roles";
-import { normalizeTenantUser } from "../../types";
 import { MOCK_TENANT_USERS } from "../../mocks/users.mock";
+import { normalizeTenantUser } from "../../types";
 
 // ─── Mocks globaux ────────────────────────────────────────────────────────────
 
@@ -21,52 +21,51 @@ jest.mock("next/navigation", () => ({
   useRouter: () => ({ push: jest.fn() }),
 }));
 
-/** useDebounce retourne la valeur immédiatement dans les tests */
 jest.mock("@/shared/hooks/useDebounce", () => ({
   useDebounce: <T,>(v: T) => v,
 }));
 
-/** Mock du store tenant — fournit un tenant_id fixe */
 jest.mock("@/shared/stores/tenant.store", () => ({
   useTenantStore: (selector: (s: { tenant: { id: string } }) => unknown) =>
     selector({ tenant: { id: "tenant-001" } }),
 }));
 
-// ─── Fixtures ─────────────────────────────────────────────────────────────────
+// ─── Mutation mock helpers ────────────────────────────────────────────────────
 
-const mockMutate = jest.fn();
-const mockResetMutation = jest.fn();
-
-function makeMutateMock(
-  overrides: Partial<ReturnType<typeof makeUseMutationResult>> = {},
-) {
+function createMutationResult(overrides: Record<string, unknown> = {}) {
   return {
-    mutate: mockMutate,
+    mutate: jest.fn(),
     isPending: false,
     isError: false,
     error: null,
-    reset: mockResetMutation,
+    reset: jest.fn(),
     ...overrides,
   };
-}
-type MutationResult = ReturnType<typeof makeMutateMock>;
-function makeUseMutationResult(
-  o: Partial<MutationResult> = {},
-): MutationResult {
-  return makeMutateMock(o);
 }
 
 jest.mock("../../hooks/useCreateTenantUser", () => ({
   useCreateTenantUser: jest.fn(),
 }));
+
 import { useCreateTenantUser } from "../../hooks/useCreateTenantUser";
+
 const mockUseCreateTenantUser = jest.mocked(useCreateTenantUser);
+
+jest.mock("../../hooks/useUpdateTenantUser", () => ({
+  useUpdateTenantUser: jest.fn(),
+}));
+
+import { useUpdateTenantUser } from "../../hooks/useUpdateTenantUser";
+
+const mockUseUpdateTenantUser = jest.mocked(useUpdateTenantUser);
 
 jest.mock("../../hooks/useTenantUsersQuery", () => ({
   useTenantUsersQuery: jest.fn(),
   TENANT_USERS_QUERY_KEY: ["tenant", "users"],
 }));
+
 import { useTenantUsersQuery } from "../../hooks/useTenantUsersQuery";
+
 const mockUseTenantUsersQuery = jest.mocked(useTenantUsersQuery);
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -77,15 +76,15 @@ function createQueryClient() {
   });
 }
 
-function renderWithQuery(ui: React.ReactElement) {
+function renderWithQuery(ui: ReactElement) {
   const qc = createQueryClient();
   return render(<QueryClientProvider client={qc}>{ui}</QueryClientProvider>);
 }
 
 // ─── Import composants après les mocks ───────────────────────────────────────
 
+import { UserFormDrawer } from "../../components/UserFormDrawer";
 import { TenantUsersList } from "../../pages/TenantUsersList";
-import { UserFormModal } from "../../components/UserFormModal";
 
 // ─── Suite ────────────────────────────────────────────────────────────────────
 
@@ -103,6 +102,8 @@ describe("normalizeTenantUser — fonction pure", () => {
     const user = normalizeTenantUser(raw);
 
     expect(user.id).toBe("abc-123");
+    expect(user.first_name).toBe("");
+    expect(user.last_name).toBe("");
     expect(user.name).toBe("Jean Dupont");
     expect(user.email).toBe("jean@acme.io");
     expect(user.role).toBe(Role.TRAINEE);
@@ -110,7 +111,7 @@ describe("normalizeTenantUser — fonction pure", () => {
     expect(user.createdAt).toBe("2025-03-01T10:00:00Z");
   });
 
-  it("[limite] construit le nom depuis first_name + last_name si full_name absent", () => {
+  it("[limite] extrait first_name et last_name quand présents", () => {
     const raw = {
       id: "x",
       first_name: "Marie",
@@ -118,17 +119,19 @@ describe("normalizeTenantUser — fonction pure", () => {
       email: "m@a.io",
     };
     const user = normalizeTenantUser(raw);
+    expect(user.first_name).toBe("Marie");
+    expect(user.last_name).toBe("Curie");
     expect(user.name).toBe("Marie Curie");
   });
 
   it("[limite] retourne '—' quand tous les champs de nom sont absents", () => {
     const user = normalizeTenantUser({ id: "x", email: "x@x.io" });
+    expect(user.first_name).toBe("");
+    expect(user.last_name).toBe("");
     expect(user.name).toBe("—");
   });
 
   it("[limite] is_active faux par défaut si champ absent", () => {
-    // Aucun champ is_active / isActive / active → Boolean(undefined) = false
-    // Mais on a mis ?? true dans normalizer → doit retourner true
     const user = normalizeTenantUser({ id: "x" });
     expect(user.isActive).toBe(true);
   });
@@ -141,10 +144,9 @@ describe("TenantUsersList", () => {
     jest.clearAllMocks();
     mockUseTenantUsersQuery.mockReturnValue({
       data: MOCK_TENANT_USERS,
-    } as ReturnType<typeof useTenantUsersQuery>);
-    mockUseCreateTenantUser.mockReturnValue(
-      makeUseMutationResult() as ReturnType<typeof useCreateTenantUser>,
-    );
+    } as any);
+    mockUseCreateTenantUser.mockReturnValue(createMutationResult() as any);
+    mockUseUpdateTenantUser.mockReturnValue(createMutationResult() as any);
   });
 
   it("[nominal] affiche la première page de la liste paginée", () => {
@@ -162,7 +164,7 @@ describe("TenantUsersList", () => {
     ).toBeInTheDocument();
   });
 
-  it("[nominal] ouvre la modale au clic sur 'Nouvel utilisateur'", async () => {
+  it("[nominal] ouvre le drawer au clic sur 'Nouvel utilisateur'", async () => {
     const user = userEvent.setup();
     renderWithQuery(<TenantUsersList />);
 
@@ -189,61 +191,53 @@ describe("TenantUsersList", () => {
   });
 
   it("[limite] affiche une table vide quand la liste est vide", () => {
-    mockUseTenantUsersQuery.mockReturnValue({ data: [] } as ReturnType<
-      typeof useTenantUsersQuery
-    >);
+    mockUseTenantUsersQuery.mockReturnValue({ data: [] } as any);
     renderWithQuery(<TenantUsersList />);
 
     expect(screen.queryAllByTestId("user-row")).toHaveLength(0);
-  });
-
-  it("[limite] retourne la première page des utilisateurs quand la recherche est vide", () => {
-    renderWithQuery(<TenantUsersList />);
-    const rows = screen.getAllByTestId("user-row");
-    expect(rows.length).toBeGreaterThan(0);
-    expect(rows.length).toBeLessThanOrEqual(25);
   });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-describe("UserFormModal", () => {
+describe("UserFormDrawer — création", () => {
   const onClose = jest.fn();
   const onSuccess = jest.fn();
+  let createResult: ReturnType<typeof createMutationResult>;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockUseCreateTenantUser.mockReturnValue(
-      makeUseMutationResult() as ReturnType<typeof useCreateTenantUser>,
-    );
+    createResult = createMutationResult();
+    mockUseCreateTenantUser.mockReturnValue(createResult as any);
+    mockUseUpdateTenantUser.mockReturnValue(createMutationResult() as any);
   });
 
   it("[nominal] affiche tous les champs du formulaire", () => {
     renderWithQuery(
-      <UserFormModal open onClose={onClose} onSuccess={onSuccess} />,
+      <UserFormDrawer open onClose={onClose} onSuccess={onSuccess} />,
     );
 
     expect(screen.getByRole("dialog")).toBeInTheDocument();
-    expect(screen.getByLabelText(/prénom/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/^nom/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/mot de passe/i)).toBeInTheDocument();
+    expect(screen.getByLabelText("Prénom")).toBeInTheDocument();
+    expect(screen.getByLabelText("Nom")).toBeInTheDocument();
+    expect(screen.getByLabelText("Email")).toBeInTheDocument();
+    expect(screen.getByLabelText("Mot de passe")).toBeInTheDocument();
   });
 
   it("[nominal] soumet le formulaire avec des données valides et appelle mutate", async () => {
     const user = userEvent.setup();
     renderWithQuery(
-      <UserFormModal open onClose={onClose} onSuccess={onSuccess} />,
+      <UserFormDrawer open onClose={onClose} onSuccess={onSuccess} />,
     );
 
-    await user.type(screen.getByLabelText(/prénom/i), "Paul");
-    await user.type(screen.getByLabelText(/^nom/i), "Test");
-    await user.type(screen.getByLabelText(/email/i), "paul@acme.io");
-    await user.type(screen.getByLabelText(/mot de passe/i), "password123");
+    await user.type(screen.getByLabelText("Prénom"), "Paul");
+    await user.type(screen.getByLabelText("Nom"), "Test");
+    await user.type(screen.getByLabelText("Email"), "paul@acme.io");
+    await user.type(screen.getByLabelText("Mot de passe"), "password123");
     await user.click(screen.getByRole("button", { name: /créer/i }));
 
     await waitFor(() => {
-      expect(mockMutate).toHaveBeenCalledWith(
+      expect(createResult.mutate).toHaveBeenCalledWith(
         expect.objectContaining({
           first_name: "Paul",
           last_name: "Test",
@@ -258,7 +252,7 @@ describe("UserFormModal", () => {
 
   it("[erreur] affiche les erreurs de validation si le formulaire est soumis vide", async () => {
     const user = userEvent.setup();
-    renderWithQuery(<UserFormModal open onClose={onClose} />);
+    renderWithQuery(<UserFormDrawer open onClose={onClose} />);
 
     await user.click(screen.getByRole("button", { name: /créer/i }));
 
@@ -266,20 +260,17 @@ describe("UserFormModal", () => {
       expect(screen.getByText("Prénom requis")).toBeInTheDocument();
       expect(screen.getByText("Nom requis")).toBeInTheDocument();
     });
-    expect(mockMutate).not.toHaveBeenCalled();
+    expect(createResult.mutate).not.toHaveBeenCalled();
   });
 
   it("[erreur] affiche l'erreur serveur retournée par l'API", () => {
     const apiError = Object.assign(new Error("Unprocessable Entity"), {
       json: { message: "L'email est déjà utilisé." },
     });
-    mockUseCreateTenantUser.mockReturnValue(
-      makeUseMutationResult({ isError: true, error: apiError }) as ReturnType<
-        typeof useCreateTenantUser
-      >,
-    );
+    createResult = createMutationResult({ isError: true, error: apiError });
+    mockUseCreateTenantUser.mockReturnValue(createResult as any);
 
-    renderWithQuery(<UserFormModal open onClose={onClose} />);
+    renderWithQuery(<UserFormDrawer open onClose={onClose} />);
 
     expect(screen.getByRole("alert")).toBeInTheDocument();
     expect(screen.getByText("L'email est déjà utilisé.")).toBeInTheDocument();
@@ -287,13 +278,10 @@ describe("UserFormModal", () => {
 
   it("[erreur] affiche un message générique si l'erreur ne contient pas de json.message", () => {
     const apiError = new Error("Internal Server Error");
-    mockUseCreateTenantUser.mockReturnValue(
-      makeUseMutationResult({ isError: true, error: apiError }) as ReturnType<
-        typeof useCreateTenantUser
-      >,
-    );
+    createResult = createMutationResult({ isError: true, error: apiError });
+    mockUseCreateTenantUser.mockReturnValue(createResult as any);
 
-    renderWithQuery(<UserFormModal open onClose={onClose} />);
+    renderWithQuery(<UserFormDrawer open onClose={onClose} />);
 
     expect(screen.getByRole("alert")).toBeInTheDocument();
     expect(screen.getByText(/une erreur est survenue/i)).toBeInTheDocument();
@@ -301,35 +289,153 @@ describe("UserFormModal", () => {
 
   it("[nominal] appelle onClose et réinitialise le formulaire au clic Annuler", async () => {
     const user = userEvent.setup();
-    renderWithQuery(<UserFormModal open onClose={onClose} />);
+    renderWithQuery(<UserFormDrawer open onClose={onClose} />);
 
-    await user.type(screen.getByLabelText(/prénom/i), "Test");
+    await user.type(screen.getByLabelText("Prénom"), "Test");
     await user.click(screen.getByRole("button", { name: /annuler/i }));
 
     expect(onClose).toHaveBeenCalledTimes(1);
-    // Après réouverture le champ doit être vide
-    act(() => {
-      /* le state de reset est synchrone */
-    });
-    // Le champ est réinitialisé (controlled par react-hook-form)
+    act(() => {});
     expect(screen.queryByDisplayValue("Test")).not.toBeInTheDocument();
   });
 
   it("[limite] désactive le bouton Créer pendant la soumission (isPending)", () => {
-    mockUseCreateTenantUser.mockReturnValue(
-      makeUseMutationResult({ isPending: true }) as ReturnType<
-        typeof useCreateTenantUser
-      >,
-    );
+    createResult = createMutationResult({ isPending: true });
+    mockUseCreateTenantUser.mockReturnValue(createResult as any);
 
-    renderWithQuery(<UserFormModal open onClose={onClose} />);
+    renderWithQuery(<UserFormDrawer open onClose={onClose} />);
 
     expect(screen.getByRole("button", { name: /création/i })).toBeDisabled();
     expect(screen.getByRole("button", { name: /annuler/i })).toBeDisabled();
   });
 
   it("[limite] n'affiche pas le dialog si open=false", () => {
-    renderWithQuery(<UserFormModal open={false} onClose={onClose} />);
+    renderWithQuery(<UserFormDrawer open={false} onClose={onClose} />);
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("UserFormDrawer — édition", () => {
+  const onClose = jest.fn();
+  const onSuccess = jest.fn();
+  const mockUser = MOCK_TENANT_USERS[0];
+  let updateResult: ReturnType<typeof createMutationResult>;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    updateResult = createMutationResult();
+    mockUseCreateTenantUser.mockReturnValue(createMutationResult() as any);
+    mockUseUpdateTenantUser.mockReturnValue(updateResult as any);
+  });
+
+  it("[nominal] affiche le titre et les champs pré-remplis en mode édition", () => {
+    renderWithQuery(
+      <UserFormDrawer
+        open
+        onClose={onClose}
+        onSuccess={onSuccess}
+        user={mockUser}
+      />,
+    );
+
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByText("Modifier l'utilisateur")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /enregistrer/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("[nominal] soumet les modifications avec les données modifiées", async () => {
+    const user = userEvent.setup();
+    renderWithQuery(
+      <UserFormDrawer
+        open
+        onClose={onClose}
+        onSuccess={onSuccess}
+        user={mockUser}
+      />,
+    );
+
+    await user.clear(screen.getByLabelText("Email"));
+    await user.type(screen.getByLabelText("Email"), "alice.new@acme.io");
+    await user.click(screen.getByRole("button", { name: /enregistrer/i }));
+
+    await waitFor(() => {
+      expect(updateResult.mutate).toHaveBeenCalledWith(
+        {
+          id: mockUser.id,
+          data: {
+            first_name: "Alice",
+            last_name: "Martin",
+            email: "alice.new@acme.io",
+            role: mockUser.role,
+            city: "Paris",
+            country: "France",
+          },
+        },
+        expect.any(Object),
+      );
+    });
+  });
+
+  it("[nominal] envoie le mot de passe uniquement s'il est renseigné", async () => {
+    const user = userEvent.setup();
+    renderWithQuery(
+      <UserFormDrawer
+        open
+        onClose={onClose}
+        onSuccess={onSuccess}
+        user={mockUser}
+      />,
+    );
+
+    await user.type(screen.getByLabelText("Mot de passe"), "newpass123");
+    await user.click(screen.getByRole("button", { name: /enregistrer/i }));
+
+    await waitFor(() => {
+      expect(updateResult.mutate).toHaveBeenCalledWith(
+        {
+          id: mockUser.id,
+          data: expect.objectContaining({
+            password: "newpass123",
+          }),
+        },
+        expect.any(Object),
+      );
+    });
+  });
+
+  it("[limite] n'envoie pas le mot de passe s'il est vide", async () => {
+    const user = userEvent.setup();
+    renderWithQuery(
+      <UserFormDrawer
+        open
+        onClose={onClose}
+        onSuccess={onSuccess}
+        user={mockUser}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /enregistrer/i }));
+
+    await waitFor(() => {
+      const callArg = updateResult.mutate.mock.calls[0][0];
+      expect(callArg.data.password).toBeUndefined();
+    });
+  });
+
+  it("[erreur] affiche l'erreur serveur en mode édition", () => {
+    const apiError = Object.assign(new Error("Conflict"), {
+      json: { message: "Email déjà pris." },
+    });
+    updateResult = createMutationResult({ isError: true, error: apiError });
+    mockUseUpdateTenantUser.mockReturnValue(updateResult as any);
+
+    renderWithQuery(<UserFormDrawer open onClose={onClose} user={mockUser} />);
+
+    expect(screen.getByRole("alert")).toBeInTheDocument();
+    expect(screen.getByText("Email déjà pris.")).toBeInTheDocument();
   });
 });

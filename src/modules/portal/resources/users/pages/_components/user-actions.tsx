@@ -1,14 +1,21 @@
 "use client";
 
 import {
+  Ban,
+  CheckCircle,
+  Eye,
+  MoreHorizontal,
+  Pencil,
+  Trash2,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Eye, Pencil, Ban, CheckCircle, Trash2 } from "lucide-react";
 import type { TenantUser } from "../../types";
 
 interface UserActionsProps {
@@ -33,7 +40,7 @@ export function UserActions({
           variant="ghost"
           size="icon"
           className="size-8 text-muted-foreground hover:text-foreground data-[state=open]:bg-muted"
-          aria-label={`Actions pour ${user.name}`}
+          aria-label={`Actions pour ${user.first_name} ${user.last_name}`}
         >
           <MoreHorizontal className="size-4" />
         </Button>

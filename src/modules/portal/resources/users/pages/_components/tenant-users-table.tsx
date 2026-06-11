@@ -1,16 +1,7 @@
 "use client";
 
+import { ArrowDown, ArrowUp, ArrowUpDown, Users } from "lucide-react";
 import { useCallback } from "react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Users } from "lucide-react";
 import {
   Pagination,
   PaginationContent,
@@ -20,11 +11,21 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { cn } from "@/lib/utils";
 import type { TenantUser } from "../../types";
+import { UserActions } from "./user-actions";
+import { UserActiveBadge } from "./user-active-badge";
 import { UserAvatar } from "./user-avatar";
 import { UserRoleBadge } from "./user-role-badge";
-import { UserActiveBadge } from "./user-active-badge";
-import { UserActions } from "./user-actions";
 
 function EmptyState({ hasQuery }: { hasQuery: boolean }) {
   return (
@@ -55,13 +56,44 @@ function SkeletonRow() {
           </div>
         </div>
       </TableCell>
-      <TableCell><Skeleton className="h-3 w-32" /></TableCell>
-      <TableCell><Skeleton className="h-5 w-20 rounded-md" /></TableCell>
-      <TableCell><Skeleton className="h-5 w-16 rounded-full" /></TableCell>
-      <TableCell><Skeleton className="h-3 w-20" /></TableCell>
+      <TableCell>
+        <Skeleton className="h-3 w-32" />
+      </TableCell>
+      <TableCell>
+        <Skeleton className="h-5 w-20 rounded-md" />
+      </TableCell>
+      <TableCell>
+        <Skeleton className="h-3 w-16" />
+      </TableCell>
+      <TableCell>
+        <Skeleton className="h-3 w-16" />
+      </TableCell>
+      <TableCell>
+        <Skeleton className="h-5 w-16 rounded-full" />
+      </TableCell>
+      <TableCell>
+        <Skeleton className="h-3 w-20" />
+      </TableCell>
+      <TableCell>
+        <Skeleton className="h-3 w-20" />
+      </TableCell>
       <TableCell />
     </TableRow>
   );
+}
+
+export type SortColumn =
+  | "name"
+  | "email"
+  | "role"
+  | "city"
+  | "country"
+  | "lastLogin"
+  | "createdAt";
+
+export interface SortConfig {
+  column: SortColumn;
+  direction: "asc" | "desc";
 }
 
 interface TenantUsersTableProps {
@@ -71,6 +103,8 @@ interface TenantUsersTableProps {
   page: number;
   pageSize: number;
   total: number;
+  sort?: SortConfig;
+  onSort?: (column: SortColumn) => void;
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
   onView: (user: TenantUser) => void;
@@ -81,6 +115,29 @@ interface TenantUsersTableProps {
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100] as const;
 
+function SortIcon({ column, sort }: { column: SortColumn; sort?: SortConfig }) {
+  if (!sort || sort.column !== column) {
+    return (
+      <ArrowUpDown className="ml-1 size-3 shrink-0 text-muted-foreground/40" />
+    );
+  }
+  return sort.direction === "asc" ? (
+    <ArrowUp className="ml-1 size-3 shrink-0 text-muted-foreground" />
+  ) : (
+    <ArrowDown className="ml-1 size-3 shrink-0 text-muted-foreground" />
+  );
+}
+
+const SORTABLE_COLUMNS: { key: SortColumn; label: string }[] = [
+  { key: "name", label: "Utilisateur" },
+  { key: "email", label: "Email" },
+  { key: "role", label: "Rôle" },
+  { key: "city", label: "Ville" },
+  { key: "country", label: "Pays" },
+  { key: "lastLogin", label: "Dernière connexion" },
+  { key: "createdAt", label: "Création" },
+];
+
 export function TenantUsersTable({
   users,
   isLoading = false,
@@ -88,6 +145,8 @@ export function TenantUsersTable({
   page,
   pageSize,
   total,
+  sort,
+  onSort,
   onPageChange,
   onPageSizeChange,
   onView,
@@ -127,21 +186,39 @@ export function TenantUsersTable({
       <Table>
         <TableHeader>
           <TableRow className="bg-muted/50 hover:bg-muted/50">
-            <TableHead className="w-70 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Utilisateur
-            </TableHead>
-            <TableHead className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Email
-            </TableHead>
-            <TableHead className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Rôle
-            </TableHead>
+            {SORTABLE_COLUMNS.slice(0, 5).map((col) => (
+              <TableHead
+                key={col.key}
+                className={cn(
+                  "text-xs font-medium uppercase tracking-wide text-muted-foreground",
+                  onSort && "cursor-pointer select-none hover:text-foreground",
+                )}
+                onClick={() => onSort?.(col.key)}
+              >
+                <span className="inline-flex items-center">
+                  {col.label}
+                  <SortIcon column={col.key} sort={sort} />
+                </span>
+              </TableHead>
+            ))}
             <TableHead className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Statut
             </TableHead>
-            <TableHead className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Création
-            </TableHead>
+            {SORTABLE_COLUMNS.slice(5).map((col) => (
+              <TableHead
+                key={col.key}
+                className={cn(
+                  "text-xs font-medium uppercase tracking-wide text-muted-foreground",
+                  onSort && "cursor-pointer select-none hover:text-foreground",
+                )}
+                onClick={() => onSort?.(col.key)}
+              >
+                <span className="inline-flex items-center">
+                  {col.label}
+                  <SortIcon column={col.key} sort={sort} />
+                </span>
+              </TableHead>
+            ))}
             <TableHead className="w-12" />
           </TableRow>
         </TableHeader>
@@ -150,7 +227,7 @@ export function TenantUsersTable({
             Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)
           ) : users.length === 0 ? (
             <TableRow className="hover:bg-transparent">
-              <TableCell colSpan={6} className="p-0">
+              <TableCell colSpan={9} className="p-0">
                 <EmptyState hasQuery={hasQuery} />
               </TableCell>
             </TableRow>
@@ -171,8 +248,17 @@ export function TenantUsersTable({
                 <TableCell>
                   <UserRoleBadge role={user.role} />
                 </TableCell>
+                <TableCell className="text-xs text-muted-foreground">
+                  {user.city || "—"}
+                </TableCell>
+                <TableCell className="text-xs text-muted-foreground">
+                  {user.country || "—"}
+                </TableCell>
                 <TableCell>
                   <UserActiveBadge isActive={user.isActive} />
+                </TableCell>
+                <TableCell className="text-xs text-muted-foreground tabular-nums">
+                  {user.lastLogin ? formatDate(user.lastLogin) : "—"}
                 </TableCell>
                 <TableCell className="text-xs text-muted-foreground tabular-nums">
                   {formatDate(user.createdAt)}
@@ -211,7 +297,8 @@ export function TenantUsersTable({
               ))}
             </select>
             <span>
-              {page * pageSize + 1}–{Math.min((page + 1) * pageSize, total)} sur {total}
+              {page * pageSize + 1}–{Math.min((page + 1) * pageSize, total)} sur{" "}
+              {total}
             </span>
           </div>
 
