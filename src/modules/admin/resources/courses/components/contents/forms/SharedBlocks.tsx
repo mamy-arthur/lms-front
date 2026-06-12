@@ -17,8 +17,7 @@ export function MainBlock({
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-xl border border-border bg-card p-6">
-      <h2 className="mb-4 text-base font-semibold text-foreground">{title}</h2>
+    <section>
       <div className="space-y-4">{children}</div>
     </section>
   );

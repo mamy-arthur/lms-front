@@ -65,7 +65,7 @@ export function FormActions({
       <Button type="button" variant="outline" onClick={onCancel}>
         Annuler
       </Button>
-      <Button type="submit" disabled={submitting}>
+      <Button type="submit" disabled={submitting} className="bg-(--color-primary) hover:bg-(--color-primary)/80">
         Enregistrer
       </Button>
     </div>

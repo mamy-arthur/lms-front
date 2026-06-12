@@ -12,12 +12,15 @@ export function AddContentModal({
     open,
     onOpenChange,
     sectionId,
+    setType,
 }: {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     sectionId: string;
+    setType:(type : ContentType) => void
 }) {
     const handleSelect = (type: ContentType) => {
+        setType(type)
         onOpenChange(false);
     };
 

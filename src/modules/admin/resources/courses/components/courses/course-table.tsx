@@ -160,7 +160,7 @@ export function CourseTable({ onEdit, onNew }: Props) {
                         >
                             <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0">
                                 <div className="space-y-1.5">
-                                    <CardTitle className="text-base leading-tight">
+                                    <CardTitle className="text-sm font-semibold leading-tight">
                                         {course.fullName}
                                     </CardTitle>
                                     <CardDescription>
