@@ -8,15 +8,17 @@ import {
     Search,
     BookOpen,
     Plus,
+    FolderTree,
+    Hash,
 } from "lucide-react";
 import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from "@/components/ui/table";
+    Card,
+    CardHeader,
+    CardTitle,
+    CardDescription,
+    CardContent,
+    CardFooter,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -48,6 +50,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { getCategoryPath, useCoursesStore } from "../../lib/course-store";
 import type { Course } from "../../types/index";
 import { toast } from "sonner";
+import Link from "next/link";
 
 type Props = {
     onEdit: (course: Course) => void;
@@ -112,167 +115,166 @@ export function CourseTable({ onEdit, onNew }: Props) {
                 </Select>
             </div>
 
-            <div className="overflow-hidden rounded-xl border bg-card">
-                <Table>
-                    <TableHeader>
-                        <TableRow className="bg-muted/50 hover:bg-muted/50">
-                            <TableHead className="w-70 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                                Nom complet
-                            </TableHead>
-                            <TableHead className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                                Nom abrégé
-                            </TableHead>
-                            <TableHead className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                                Catégorie
-                            </TableHead>
-                            <TableHead className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                                Identifiant
-                            </TableHead>
-                            <TableHead className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                                Visibilité
-                            </TableHead>
-                            <TableHead className="w-12" />
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {loading ? (
-                            Array.from({ length: 4 }).map((_, i) => (
-                                <TableRow key={i}>
-                                    {Array.from({ length: 6 }).map((_, j) => (
-                                        <TableCell key={j}>
-                                            <Skeleton className="h-4 w-full" />
-                                        </TableCell>
-                                    ))}
-                                </TableRow>
-                            ))
-                        ) : filtered.length === 0 ? (
-                            <TableRow className="hover:bg-transparent">
-                                <TableCell colSpan={6} className="py-16">
-                                    <div className="flex flex-col items-center justify-center gap-3 text-center">
-                                        <div className="flex size-12 items-center justify-center rounded-full bg-muted">
-                                            <BookOpen className="size-6 text-muted-foreground" />
-                                        </div>
-                                        <div>
-                                            <p className="font-medium">
-                                                Aucun cours trouvé
-                                            </p>
-                                            <p className="text-sm text-muted-foreground">
-                                                Commencez par créer votre
-                                                premier cours.
-                                            </p>
-                                        </div>
-                                        <Button size="sm" onClick={onNew}>
-                                            <Plus className="mr-1 size-4" />
-                                            Nouveau cours
-                                        </Button>
-                                    </div>
-                                </TableCell>
-                            </TableRow>
-                        ) : (
-                            filtered.map((course) => (
-                                <TableRow key={course.id} className="group">
-                                    <TableCell className="font-medium">
+            {loading ? (
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    {Array.from({ length: 6 }).map((_, i) => (
+                        <Card key={i}>
+                            <CardHeader className="space-y-2">
+                                <Skeleton className="h-5 w-3/4" />
+                                <Skeleton className="h-4 w-1/3" />
+                            </CardHeader>
+                            <CardContent className="space-y-2">
+                                <Skeleton className="h-4 w-full" />
+                                <Skeleton className="h-4 w-2/3" />
+                            </CardContent>
+                            <CardFooter>
+                                <Skeleton className="h-5 w-20" />
+                            </CardFooter>
+                        </Card>
+                    ))}
+                </div>
+            ) : filtered.length === 0 ? (
+                <Card className="border-dashed">
+                    <CardContent className="flex flex-col items-center justify-center gap-3 py-16 text-center">
+                        <div className="flex size-12 items-center justify-center rounded-full bg-muted">
+                            <BookOpen className="size-6 text-muted-foreground" />
+                        </div>
+                        <div>
+                            <p className="font-medium">Aucun cours trouvé</p>
+                            <p className="text-sm text-muted-foreground">
+                                Commencez par créer votre premier cours.
+                            </p>
+                        </div>
+                        <Button size="sm" onClick={onNew}>
+                            <Plus className="mr-1 size-4" />
+                            Nouveau cours
+                        </Button>
+                    </CardContent>
+                </Card>
+            ) : (
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    {filtered.map((course) => (
+                        <Card
+                            key={course.id}
+                            className="group flex flex-col transition-shadow hover:shadow-md"
+                        >
+                            <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0">
+                                <div className="space-y-1.5">
+                                    <CardTitle className="text-base leading-tight">
                                         {course.fullName}
-                                    </TableCell>
-                                    <TableCell className="text-muted-foreground">
+                                    </CardTitle>
+                                    <CardDescription>
                                         <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
                                             {course.shortName}
                                         </code>
-                                    </TableCell>
-                                    <TableCell className="text-muted-foreground">
+                                    </CardDescription>
+                                </div>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="size-8 shrink-0 opacity-0 transition group-hover:opacity-100 data-[state=open]:opacity-100"
+                                        >
+                                            <MoreHorizontal className="size-4" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent
+                                        align="end"
+                                        className="w-48"
+                                    >
+                                        <DropdownMenuItem
+                                            onClick={() => onEdit(course)}
+                                        >
+                                            <Pencil className="mr-2 size-4" />
+                                            Modifier
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                            onClick={() => {
+                                                toggleCourseVisibility(
+                                                    course.id,
+                                                );
+                                                toast.success(
+                                                    course.visible
+                                                        ? "Cours masqué"
+                                                        : "Cours rendu visible",
+                                                );
+                                            }}
+                                        >
+                                            {course.visible ? (
+                                                <>
+                                                    <EyeOff className="mr-2 size-4" />
+                                                    Cacher
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Eye className="mr-2 size-4" />
+                                                    Afficher
+                                                </>
+                                            )}
+                                        </DropdownMenuItem>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem
+                                            className="text-destructive focus:text-destructive"
+                                            onClick={() =>
+                                                setConfirmDelete(course)
+                                            }
+                                        >
+                                            <Trash2 className="mr-2 size-4" />
+                                            Supprimer
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </CardHeader>
+
+                            <CardContent className="flex-1 space-y-2 text-sm">
+                                <div className="flex items-center gap-2 text-muted-foreground">
+                                    <FolderTree className="size-4 shrink-0" />
+                                    <span className="truncate">
                                         {getCategoryPath(
                                             categories,
                                             course.categoryId,
                                         )}
-                                    </TableCell>
-                                    <TableCell className="text-muted-foreground">
+                                    </span>
+                                </div>
+                                <div className="flex items-center gap-2 text-muted-foreground">
+                                    <Hash className="size-4 shrink-0" />
+                                    <span className="truncate">
                                         {course.identifier}
-                                    </TableCell>
-                                    <TableCell>
-                                        {course.visible ? (
-                                            <Badge
-                                                variant="outline"
-                                                className="gap-1 bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-50"
-                                            >
-                                                <Eye className="size-3" />
-                                                Visible
-                                            </Badge>
-                                        ) : (
-                                            <Badge
-                                                variant="outline"
-                                                className="gap-1 bg-red-50 text-red-700 border-red-200 hover:bg-red-50"
-                                            >
-                                                <EyeOff className="size-3" />
-                                                Caché
-                                            </Badge>
-                                        )}
-                                    </TableCell>
-                                    <TableCell>
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="size-8 opacity-0 transition group-hover:opacity-100 data-[state=open]:opacity-100"
-                                                >
-                                                    <MoreHorizontal className="size-4" />
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent
-                                                align="end"
-                                                className="w-48"
-                                            >
-                                                <DropdownMenuItem
-                                                    onClick={() =>
-                                                        onEdit(course)
-                                                    }
-                                                >
-                                                    <Pencil className="mr-2 size-4" />
-                                                    Modifier
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem
-                                                    onClick={() => {
-                                                        toggleCourseVisibility(
-                                                            course.id,
-                                                        );
-                                                        toast.success(
-                                                            course.visible
-                                                                ? "Cours masqué"
-                                                                : "Cours rendu visible",
-                                                        );
-                                                    }}
-                                                >
-                                                    {course.visible ? (
-                                                        <>
-                                                            <EyeOff className="mr-2 size-4" />
-                                                            Cacher
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <Eye className="mr-2 size-4" />
-                                                            Afficher
-                                                        </>
-                                                    )}
-                                                </DropdownMenuItem>
-                                                <DropdownMenuSeparator />
-                                                <DropdownMenuItem
-                                                    className="text-destructive focus:text-destructive"
-                                                    onClick={() =>
-                                                        setConfirmDelete(course)
-                                                    }
-                                                >
-                                                    <Trash2 className="mr-2 size-4" />
-                                                    Supprimer
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </TableCell>
-                                </TableRow>
-                            ))
-                        )}
-                    </TableBody>
-                </Table>
-            </div>
+                                    </span>
+                                </div>
+                            </CardContent>
+
+                            <CardFooter>
+                                <div className="flex gap-2 items-center justify-between w-full">
+                                    {course.visible ? (
+                                        <Badge
+                                            variant="outline"
+                                            className="gap-1 bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-50"
+                                        >
+                                            <Eye className="size-3" />
+                                            Visible
+                                        </Badge>
+                                    ) : (
+                                        <Badge
+                                            variant="outline"
+                                            className="gap-1 bg-red-50 text-red-700 border-red-200 hover:bg-red-50"
+                                        >
+                                            <EyeOff className="size-3" />
+                                            Caché
+                                        </Badge>
+                                    )}
+                                    <Button asChild>
+                                        <Link href={`/admin/courses/${course.id}`}>
+                                            Contenu du cours
+                                        </Link> 
+                                        </Button>
+                                </div>
+                            </CardFooter>
+                        </Card>
+                    ))}
+                </div>
+            )}
 
             <AlertDialog
                 open={!!confirmDelete}
