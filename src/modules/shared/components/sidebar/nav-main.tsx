@@ -18,6 +18,8 @@ import {
     SidebarMenuSubItem,
 } from "@/components/ui/sidebar";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { cn } from "@/lib/utils";
 
 export function NavMain({
     items,
@@ -33,6 +35,7 @@ export function NavMain({
         }[];
     }[];
 }) {
+    const pathname = usePathname();
     return (
         <SidebarGroup>
             <SidebarGroupLabel>Platform</SidebarGroupLabel>
@@ -54,15 +57,30 @@ export function NavMain({
                             </CollapsibleTrigger>
                             <CollapsibleContent>
                                 <SidebarMenuSub>
-                                    {item.items?.map((subItem) => (
-                                        <SidebarMenuSubItem key={subItem.title}>
-                                            <SidebarMenuSubButton asChild>
-                                                <Link href={subItem.url}>
-                                                    <span>{subItem.title}</span>
-                                                </Link>
-                                            </SidebarMenuSubButton>
-                                        </SidebarMenuSubItem>
-                                    ))}
+                                    {item.items?.map((subItem) => {
+                                        const isSubActive =
+                                            pathname === subItem.url;
+
+                                        return (
+                                            <SidebarMenuSubItem
+                                                key={subItem.title}
+                                            >
+                                                <SidebarMenuSubButton
+                                                    asChild
+                                                    className={cn(
+                                                        isSubActive &&
+                                                            "bg-(--color-primary)/10 text-(--color-primary) hover:bg-(--color-primary)/15 hover:text-(--color-primary)",
+                                                    )}
+                                                >
+                                                    <Link href={subItem.url}>
+                                                        <span>
+                                                            {subItem.title}
+                                                        </span>
+                                                    </Link>
+                                                </SidebarMenuSubButton>
+                                            </SidebarMenuSubItem>
+                                        );
+                                    })}
                                 </SidebarMenuSub>
                             </CollapsibleContent>
                         </SidebarMenuItem>

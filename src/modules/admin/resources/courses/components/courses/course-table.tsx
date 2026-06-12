@@ -10,6 +10,7 @@ import {
     Plus,
     FolderTree,
     Hash,
+    MoreVertical,
 } from "lucide-react";
 import {
     Card,
@@ -156,9 +157,13 @@ export function CourseTable({ onEdit, onNew }: Props) {
                     {filtered.map((course) => (
                         <Card
                             key={course.id}
-                            className="group flex flex-col transition-shadow hover:shadow-md"
+                            className="group relative flex flex-col overflow-hidden transition-shadow hover:shadow-md cursor-pointer"
                         >
-                            <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0">
+                            <div
+                                aria-hidden
+                                className="pointer-events-none absolute -right-10 -top-10 size-32 rounded-full bg-gradient-to-br from-(--color-primary)/20 to-(--color-primary)/0 blur-2xl"
+                            />
+                            <CardHeader className="relative z-10 flex flex-row items-start justify-between gap-2 space-y-0">
                                 <div className="space-y-1.5">
                                     <CardTitle className="text-sm font-semibold leading-tight">
                                         {course.fullName}
@@ -174,15 +179,23 @@ export function CourseTable({ onEdit, onNew }: Props) {
                                         <Button
                                             variant="ghost"
                                             size="icon"
-                                            className="size-8 shrink-0 opacity-0 transition group-hover:opacity-100 data-[state=open]:opacity-100"
+                                            className="size-5 cursor-pointer"
                                         >
-                                            <MoreHorizontal className="size-4" />
+                                            <MoreVertical className="size-3" />
                                         </Button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent
                                         align="end"
                                         className="w-48"
                                     >
+                                        <DropdownMenuItem asChild>
+                                            <Link
+                                                href={`/admin/courses/${course.id}`}
+                                            >
+                                                <BookOpen className="mr-2 size-4" />
+                                                Contenu du cours
+                                            </Link>
+                                        </DropdownMenuItem>
                                         <DropdownMenuItem
                                             onClick={() => onEdit(course)}
                                         >
@@ -227,7 +240,7 @@ export function CourseTable({ onEdit, onNew }: Props) {
                                 </DropdownMenu>
                             </CardHeader>
 
-                            <CardContent className="flex-1 space-y-2 text-xs">
+                            <CardContent className="relative z-10 flex-1 space-y-2 text-xs">
                                 <div className="flex items-center gap-2 text-muted-foreground">
                                     <FolderTree className="size-4 shrink-0" />
                                     <span className="truncate">
@@ -245,7 +258,7 @@ export function CourseTable({ onEdit, onNew }: Props) {
                                 </div>
                             </CardContent>
 
-                            <CardFooter>
+                            <CardFooter className="relative z-10">
                                 <div className="flex gap-2 items-center justify-between w-full">
                                     {course.visible ? (
                                         <Badge
@@ -264,13 +277,16 @@ export function CourseTable({ onEdit, onNew }: Props) {
                                             Caché
                                         </Badge>
                                     )}
-                                    <Button asChild className="bg-(--color-primary) hover:bg-(--color-primary)/80">
+                                    {/* <Button
+                                        asChild
+                                        className="bg-(--color-primary) hover:bg-(--color-primary)/80"
+                                    >
                                         <Link
                                             href={`/admin/courses/${course.id}`}
                                         >
                                             Contenu du cours
                                         </Link>
-                                    </Button>
+                                    </Button> */}
                                 </div>
                             </CardFooter>
                         </Card>
