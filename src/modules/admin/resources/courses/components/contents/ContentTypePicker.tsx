@@ -44,7 +44,7 @@ export function ContentTypePicker({
             key={type}
             type="button"
             onClick={() => onSelect(type)}
-            className="group flex flex-col items-start gap-2 rounded-xl border border-border bg-card p-4 text-left transition-all hover:border-foreground/30 hover:shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="group flex flex-col items-start gap-2 rounded-xl border border-border bg-card p-4 text-left transition-all hover:border-(--color-primary)/80 hover:shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"
           >
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted text-foreground group-hover:bg-accent">
               <Icon className="h-5 w-5" />
