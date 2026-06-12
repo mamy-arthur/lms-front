@@ -99,34 +99,6 @@ export function SectionCard({ section }: { section: CourseSection }) {
                 </div>
             </div>
 
-            {section.contents.length > 0 && (
-                <ul className="mt-4 space-y-1">
-                    {section.contents.map((c) => {
-                        const Icon = ICONS[c.type];
-                        return (
-                            <li
-                                key={c.id}
-                                className="group flex items-center gap-3 rounded-lg px-2 py-1.5 text-sm hover:bg-accent"
-                            >
-                                <Icon className="h-4 w-4 text-muted-foreground" />
-                                <span className="flex-1 truncate text-foreground">
-                                    {c.title}
-                                </span>
-                                <button
-                                    onClick={() =>
-                                        removeContent(section.id, c.id)
-                                    }
-                                    className="opacity-0 transition-opacity group-hover:opacity-100"
-                                    aria-label="Supprimer"
-                                >
-                                    <Trash2 className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive" />
-                                </button>
-                            </li>
-                        );
-                    })}
-                </ul>
-            )}
-
             {!type && (
                 <Button
                     variant="ghost"
