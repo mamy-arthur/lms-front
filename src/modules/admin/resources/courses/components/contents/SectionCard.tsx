@@ -1,0 +1,178 @@
+import { useState } from "react";
+import {
+    MoreVertical,
+    Plus,
+    Pencil,
+    Trash2,
+    FileText,
+    File as FileIcon,
+    Folder,
+    Package,
+    Link as LinkIcon,
+    BarChart3,
+    Type as TypeIcon,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+    DropdownMenu,
+    DropdownMenuTrigger,
+    DropdownMenuContent,
+    DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { AddContentModal } from "./AddContentModal";
+
+import { ContentType, CourseSection } from "../../types";
+import { useCourseStore } from "../../hooks/useCouseContentStore";
+
+const ICONS: Record<ContentType, typeof FileText> = {
+    page: FileText,
+    file: FileIcon,
+    folder: Folder,
+    scorm: Package,
+    url: LinkIcon,
+    survey: BarChart3,
+    "text-media": TypeIcon,
+};
+
+export function SectionCard({ section }: { section: CourseSection }) {
+    const [addOpen, setAddOpen] = useState(false);
+    const [editOpen, setEditOpen] = useState(false);
+    const [title, setTitle] = useState(section.title);
+    const [description, setDescription] = useState(section.description ?? "");
+    const updateSection = useCourseStore((s) => s.updateSection);
+    const removeSection = useCourseStore((s) => s.removeSection);
+    const removeContent = useCourseStore((s) => s.removeContent);
+
+    const save = () => {
+        updateSection(section.id, {
+            title: title.trim() || "Section",
+            description,
+        });
+        setEditOpen(false);
+    };
+
+    return (
+        <div className="rounded-sm border border-border bg-card p-4 shadow-sm transition-shadow hover:shadow-md">
+            <div className="flex items-start justify-between gap-3">
+                <div className="flex-1">
+                    <h3 className="truncate text-base font-semibold text-foreground">
+                        {section.title}
+                    </h3>
+                    {section.description && (
+                        <p className="mt-1 text-sm text-muted-foreground">
+                            {section.description}
+                        </p>
+                    )}
+                </div>
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 shrink-0"
+                        >
+                            <MoreVertical className="h-4 w-4" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => setEditOpen(true)}>
+                            <Pencil className="mr-2 h-4 w-4" /> Modifier
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                            onClick={() => removeSection(section.id)}
+                            className="text-destructive focus:text-destructive"
+                        >
+                            <Trash2 className="mr-2 h-4 w-4" /> Supprimer
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            </div>
+
+            {section.contents.length > 0 && (
+                <ul className="mt-4 space-y-1">
+                    {section.contents.map((c) => {
+                        const Icon = ICONS[c.type];
+                        return (
+                            <li
+                                key={c.id}
+                                className="group flex items-center gap-3 rounded-lg px-2 py-1.5 text-sm hover:bg-accent"
+                            >
+                                <Icon className="h-4 w-4 text-muted-foreground" />
+                                <span className="flex-1 truncate text-foreground">
+                                    {c.title}
+                                </span>
+                                <button
+                                    onClick={() =>
+                                        removeContent(section.id, c.id)
+                                    }
+                                    className="opacity-0 transition-opacity group-hover:opacity-100"
+                                    aria-label="Supprimer"
+                                >
+                                    <Trash2 className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive" />
+                                </button>
+                            </li>
+                        );
+                    })}
+                </ul>
+            )}
+
+            <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setAddOpen(true)}
+                className="mt-4 w-full justify-start text-muted-foreground hover:text-foreground"
+            >
+                <Plus className="mr-2 h-4 w-4" /> Ajouter un contenu
+            </Button>
+
+            <AddContentModal
+                open={addOpen}
+                onOpenChange={setAddOpen}
+                sectionId={section.id}
+            />
+
+            <Dialog open={editOpen} onOpenChange={setEditOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Modifier la section</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-3">
+                        <div className="space-y-1.5">
+                            <Label>Nom</Label>
+                            <Input
+                                value={title}
+                                onChange={(e) => setTitle(e.target.value)}
+                            />
+                        </div>
+                        <div className="space-y-1.5">
+                            <Label>Description</Label>
+                            <Textarea
+                                value={description}
+                                onChange={(e) => setDescription(e.target.value)}
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => setEditOpen(false)}
+                        >
+                            Annuler
+                        </Button>
+                        <Button onClick={save}>Enregistrer</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </div>
+    );
+}

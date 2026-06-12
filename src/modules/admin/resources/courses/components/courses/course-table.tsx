@@ -264,11 +264,13 @@ export function CourseTable({ onEdit, onNew }: Props) {
                                             Caché
                                         </Badge>
                                     )}
-                                    <Button asChild>
-                                        <Link href={`/admin/courses/${course.id}`}>
+                                    <Button asChild className="bg-(--color-primary) hover:bg-(--color-primary)/80">
+                                        <Link
+                                            href={`/admin/courses/${course.id}`}
+                                        >
                                             Contenu du cours
-                                        </Link> 
-                                        </Button>
+                                        </Link>
+                                    </Button>
                                 </div>
                             </CardFooter>
                         </Card>
