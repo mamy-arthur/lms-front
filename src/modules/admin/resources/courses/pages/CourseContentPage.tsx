@@ -21,7 +21,7 @@ export function CourseContentPage() {
         <div className="bg-background">
             <header className="flex justify-between items-end">
                 <div>
-                    <h1 className="mt-1 text-2xl font-semibold tracking-tight text-foreground">
+                          <h1 className="text-2xl font-bold tracking-tight">
                         Contenu du cours
                     </h1>
                     <p className="mt-1 text-xs text-muted-foreground">

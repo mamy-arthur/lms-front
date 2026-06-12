@@ -10,7 +10,6 @@ import {
     Field,
 } from "./SharedBlocks";
 import { FormActions } from "./PageForm";
-import { AdvancedSettingsDialog } from "../AdvancedSettingsDialog";
 import { Label } from "@/components/ui/label";
 
 const schema = z.object({
@@ -66,15 +65,10 @@ export function FileForm({
                     </span>
                 </div>
             </MainBlock>
-            <div className="flex items-center justify-between">
-                <AdvancedSettingsDialog>
-                    <SecondaryAccordions appearance={<AppearanceStandard />} />
-                </AdvancedSettingsDialog>
                 <FormActions
                     onCancel={onCancel}
                     submitting={formState.isSubmitting}
                 />
-            </div>
         </form>
     );
 }

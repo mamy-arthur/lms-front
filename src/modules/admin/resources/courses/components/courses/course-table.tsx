@@ -152,7 +152,7 @@ export function CourseTable({ onEdit, onNew }: Props) {
                     </CardContent>
                 </Card>
             ) : (
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                     {filtered.map((course) => (
                         <Card
                             key={course.id}
@@ -227,7 +227,7 @@ export function CourseTable({ onEdit, onNew }: Props) {
                                 </DropdownMenu>
                             </CardHeader>
 
-                            <CardContent className="flex-1 space-y-2 text-sm">
+                            <CardContent className="flex-1 space-y-2 text-xs">
                                 <div className="flex items-center gap-2 text-muted-foreground">
                                     <FolderTree className="size-4 shrink-0" />
                                     <span className="truncate">
@@ -237,7 +237,7 @@ export function CourseTable({ onEdit, onNew }: Props) {
                                         )}
                                     </span>
                                 </div>
-                                <div className="flex items-center gap-2 text-muted-foreground">
+                                <div className="flex items-center gap-2 text-muted-foreground text-xs">
                                     <Hash className="size-4 shrink-0" />
                                     <span className="truncate">
                                         {course.identifier}
