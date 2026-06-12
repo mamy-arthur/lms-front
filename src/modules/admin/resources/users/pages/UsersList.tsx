@@ -1,55 +1,104 @@
 "use client";
-import { useState } from "react";
-import { DataGrid, type GridColDef } from "@mui/x-data-grid";
-import Box from "@mui/material/Box";
-import Typography from "@mui/material/Typography";
-import TextField from "@mui/material/TextField";
-import { useUsersQuery } from "../hooks/useUsersQuery";
 
-const columns: GridColDef[] = [
-  { field: "name",      headerName: "Nom",    flex: 1 },
-  { field: "email",     headerName: "Email",  flex: 1 },
-  { field: "role",      headerName: "Rôle",   width: 160 },
-  { field: "isActive",  headerName: "Actif",  type: "boolean", width: 100 },
-  { field: "createdAt", headerName: "Créé le", width: 180 },
-];
+import { Plus } from "lucide-react";
+import { useMemo } from "react";
+import { Button } from "@/components/ui/button";
+import type { UsersTableSort } from "@/shared/components/users";
+import { useAllTenantsQuery } from "../hooks/useAllTenantsQuery";
+import { AdminUserFormDrawer } from "./_components/admin-user-form-drawer";
+import { AdminUsersFilters } from "./_components/admin-users-filters";
+import { AdminUsersTable } from "./_components/admin-users-table";
+import { useUsersQuery } from "../hooks/useUsersQuery";
+import type { User, UserSearchParams } from "../types";
+import { useUsersListController } from "@/modules/shared/hooks/useUsersListController";
 
 export function UsersList() {
-  const [paginationModel, setPaginationModel] = useState({ page: 0, pageSize: 25 });
-  const [search, setSearch] = useState("");
+  const { isDrawerOpen,
+    editingUser,
+    draftSearch,
+    setDraftSearch,
+    draftRole,
+    setDraftRole,
+    draftStatus,
+    setDraftStatus,
+    draftTenant,
+    setDraftTenant,
+    params,
+    sort,
+    handleSearch,
+    handleSort,
+    handleOpenCreate,
+    handleCloseDrawer,
+    handleSuccess,
+    handleEdit,
+    handlePageChange,
+    handlePageSizeChange,
+    page,
+    pageSize,
+    hasQuery,
+  } = useUsersListController<User, UserSearchParams>({ includeTenantFilter: true, defaultPageSize: 25 });
 
-  const { data, isLoading } = useUsersQuery({
-    page: paginationModel.page + 1,
-    perPage: paginationModel.pageSize,
-    q: search || undefined,
-  });
+  const { data: tenantsData } = useAllTenantsQuery();
+  const tenants = tenantsData?.data ?? [];
+
+  const tenantNames = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const t of tenants) {
+      map[t.id] = t.name;
+    }
+    return map;
+  }, [tenants]);
+
+  const { data, isLoading } = useUsersQuery(params);
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h5" sx={{ fontWeight: 700, mb: 3 }}>
-        Utilisateurs
-      </Typography>
+    <div className="space-y-6 p-3">
+      <div className="flex items-center justify-between">
+        <h1 className="text-lg font-extrabold">Utilisateurs</h1>
+        <Button onClick={handleOpenCreate} size="lg" className="bg-(--color-primary) text-primary-foreground">
+          <Plus className="size-4" />
+          Nouvel utilisateur
+        </Button>
+      </div>
 
-      <TextField
-        size="small"
-        placeholder="Rechercher..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        sx={{ mb: 2, width: 280 }}
+      <AdminUsersFilters
+        search={draftSearch}
+        roleFilter={draftRole}
+        statusFilter={draftStatus}
+        tenantFilter={draftTenant}
+        onSearchChange={setDraftSearch}
+        onRoleFilterChange={setDraftRole}
+        onStatusFilterChange={setDraftStatus}
+        onTenantFilterChange={setDraftTenant}
+        onSearch={handleSearch}
+        tenants={tenants}
       />
 
-      <DataGrid
-        rows={data?.data ?? []}
-        rowCount={data?.total ?? 0}
-        columns={columns}
-        loading={isLoading}
-        paginationMode="server"
-        paginationModel={paginationModel}
-        onPaginationModelChange={setPaginationModel}
-        pageSizeOptions={[25, 50, 100]}
-        disableRowSelectionOnClick
-        autoHeight
+      <AdminUsersTable
+        users={data?.data ?? []}
+        isLoading={isLoading}
+        hasQuery={hasQuery}
+        page={page}
+        pageSize={pageSize}
+        total={data?.total ?? 0}
+        sort={sort}
+        onSort={handleSort}
+        onPageChange={handlePageChange}
+        onPageSizeChange={handlePageSizeChange}
+        onView={() => {}}
+        onEdit={handleEdit}
+        onToggleActive={() => {}}
+        onDelete={() => {}}
+        tenantNames={tenantNames}
       />
-    </Box>
+
+      <AdminUserFormDrawer
+        open={isDrawerOpen}
+        onClose={handleCloseDrawer}
+        onSuccess={handleSuccess}
+        user={editingUser}
+        tenants={tenants}
+      />
+    </div>
   );
 }

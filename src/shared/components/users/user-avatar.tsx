@@ -1,11 +1,9 @@
-import type { TenantUser } from "../../types";
-
-function getInitials(first_name: string, last_name: string): string {
+function getInitials(first_name?: string, last_name?: string): string {
   const first = first_name ? first_name[0] : "";
   const last = last_name ? last_name[0] : "";
   return (
     (first + last).toUpperCase().slice(0, 2) ||
-    first_name.slice(0, 2).toUpperCase()
+    (first_name || "").slice(0, 2).toUpperCase()
   );
 }
 
@@ -27,13 +25,15 @@ function hashColor(str: string) {
 }
 
 interface UserAvatarProps {
-  user: Pick<TenantUser, "first_name" | "last_name" | "name">;
+  name: string;
+  first_name?: string;
+  last_name?: string;
 }
 
-export function UserAvatar({ user }: UserAvatarProps) {
-  const colors = hashColor(user.name);
+export function UserAvatar({ name, first_name, last_name }: UserAvatarProps) {
+  const colors = hashColor(name);
   const displayName =
-    [user.first_name, user.last_name].filter(Boolean).join(" ") || user.name;
+    [first_name, last_name].filter(Boolean).join(" ") || name;
 
   return (
     <div className="flex items-center gap-3">
@@ -41,7 +41,7 @@ export function UserAvatar({ user }: UserAvatarProps) {
         className={`size-9 rounded-full flex items-center justify-center text-xs font-semibold shrink-0 ${colors.bg} ${colors.text}`}
         aria-hidden="true"
       >
-        {getInitials(user.first_name, user.last_name)}
+        {getInitials(first_name, last_name)}
       </div>
       <div className="min-w-0">
         <p className="text-xs font-medium text-foreground truncate">

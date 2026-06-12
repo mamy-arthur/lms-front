@@ -27,6 +27,7 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
+  SheetDescription,
 } from "@/components/ui/sheet";
 import { useTenantStore } from "@/shared/stores/tenant.store";
 import { useCreateTenantUser } from "../hooks/useCreateTenantUser";
@@ -37,11 +38,10 @@ import type {
   UpdateTenantUserPayload,
 } from "../types";
 
-// ─── Schema ──────────────────────────────────────────────────────────────────
-
 const createSchema = z.object({
   first_name: z.string().min(1, "Prénom requis").max(120),
   last_name: z.string().min(1, "Nom requis").max(120),
+  username: z.string().max(120).optional().or(z.literal("")),
   email: z.string().email("Email invalide").max(255),
   password: z.string().min(8, "Minimum 8 caractères").max(255),
   role: z.enum(["CLIENT_MANAGER", "TRAINEE"]),
@@ -52,6 +52,7 @@ const createSchema = z.object({
 const updateSchema = z.object({
   first_name: z.string().min(1, "Prénom requis").max(120),
   last_name: z.string().min(1, "Nom requis").max(120),
+  username: z.string().max(120).optional().or(z.literal("")),
   email: z.string().email("Email invalide").max(255),
   password: z
     .string()
@@ -67,8 +68,6 @@ const updateSchema = z.object({
 type CreateFormValues = z.infer<typeof createSchema>;
 type UpdateFormValues = z.infer<typeof updateSchema>;
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
 function extractApiError(err: unknown, isEdit: boolean): string {
   if (err && typeof err === "object") {
     const maybeJson = (err as Record<string, unknown>).json;
@@ -82,8 +81,6 @@ function extractApiError(err: unknown, isEdit: boolean): string {
     : "Une erreur est survenue lors de la création.";
 }
 
-// ─── Constants ───────────────────────────────────────────────────────────────
-
 const ROLE_LABELS: Record<"CLIENT_MANAGER" | "TRAINEE", string> = {
   CLIENT_MANAGER: "Responsable",
   TRAINEE: "Stagiaire",
@@ -92,6 +89,7 @@ const ROLE_LABELS: Record<"CLIENT_MANAGER" | "TRAINEE", string> = {
 const CREATE_DEFAULTS: CreateFormValues = {
   first_name: "",
   last_name: "",
+  username: "",
   email: "",
   password: "",
   role: "TRAINEE",
@@ -99,16 +97,12 @@ const CREATE_DEFAULTS: CreateFormValues = {
   country: "",
 };
 
-// ─── Props ───────────────────────────────────────────────────────────────────
-
 export interface UserFormDrawerProps {
   open: boolean;
   onClose: () => void;
   onSuccess?: () => void;
   user?: TenantUser;
 }
-
-// ─── Component ───────────────────────────────────────────────────────────────
 
 function UserFormDrawerBase({
   open,
@@ -126,20 +120,24 @@ function UserFormDrawerBase({
   const tenantId = useTenantStore((s) => s.tenant?.id ?? null);
 
   const schema = isEdit ? updateSchema : createSchema;
-  const defaultValues = useMemo(() => {
-    if (user) {
+
+  const buildDefaults = useCallback((u?: TenantUser) => {
+    if (u) {
       return {
-        first_name: user.first_name,
-        last_name: user.last_name,
-        email: user.email,
+        first_name: u.first_name,
+        last_name: u.last_name,
+        username: u.username,
+        email: u.email,
         password: "",
-        role: user.role as "CLIENT_MANAGER" | "TRAINEE",
-        city: user.city,
-        country: user.country,
+        role: u.role as "CLIENT_MANAGER" | "TRAINEE",
+        city: u.city,
+        country: u.country,
       };
     }
     return CREATE_DEFAULTS;
-  }, [user]);
+  }, []);
+
+  const defaultValues = useMemo(() => buildDefaults(user), [user, buildDefaults]);
 
   const form = useForm<CreateFormValues | UpdateFormValues>({
     resolver: zodResolver(schema),
@@ -147,21 +145,8 @@ function UserFormDrawerBase({
   });
 
   useEffect(() => {
-    if (open) {
-      const vals = user
-        ? {
-            first_name: user.first_name,
-            last_name: user.last_name,
-            email: user.email,
-            password: "",
-            role: user.role as "CLIENT_MANAGER" | "TRAINEE",
-            city: user.city,
-            country: user.country,
-          }
-        : CREATE_DEFAULTS;
-      form.reset(vals);
-    }
-  }, [open, user, form]);
+    if (open) form.reset(buildDefaults(user));
+  }, [open, user, form, buildDefaults]);
 
   const handleClose = useCallback(() => {
     form.reset(CREATE_DEFAULTS);
@@ -186,6 +171,7 @@ function UserFormDrawerBase({
           city: values.city ?? "",
           country: values.country ?? "",
         };
+        if (values.username) data.username = values.username;
         if (values.password) data.password = values.password;
         updateMutation.mutate(
           { id: user.id, data },
@@ -199,22 +185,25 @@ function UserFormDrawerBase({
           },
         );
       } else {
-        createMutation.mutate(
-          {
-            ...values,
-            city: values.city ?? "",
-            country: values.country ?? "",
-            tenant_id: tenantId,
-          } as CreateTenantUserPayload,
-          {
-            onSuccess: () => {
-              form.reset();
-              createMutation.reset();
-              updateMutation.reset();
-              onSuccess?.();
-            },
+        const payload: CreateTenantUserPayload = {
+          first_name: values.first_name,
+          last_name: values.last_name,
+          email: values.email,
+          password: values.password as string,
+          role: values.role as CreateTenantUserPayload["role"],
+          city: values.city ?? "",
+          country: values.country ?? "",
+          tenant_id: tenantId,
+        };
+        if (values.username) payload.username = values.username;
+        createMutation.mutate(payload, {
+          onSuccess: () => {
+            form.reset();
+            createMutation.reset();
+            updateMutation.reset();
+            onSuccess?.();
           },
-        );
+        });
       }
     },
     [isEdit, user, tenantId, createMutation, updateMutation, form, onSuccess],
@@ -233,8 +222,10 @@ function UserFormDrawerBase({
           <SheetTitle>
             {isEdit ? "Modifier l'utilisateur" : "Créer un utilisateur"}
           </SheetTitle>
+          <SheetDescription className="sr-only">
+            {isEdit ? "Formulaire de modification d'utilisateur" : "Formulaire de création d'utilisateur"}
+          </SheetDescription>
         </SheetHeader>
-
 
         <Field {...form}>
           <form
@@ -279,6 +270,24 @@ function UserFormDrawerBase({
                     <FieldContent>
                       <Input
                         aria-label="Prénom"
+                        className="h-9 px-3 text-sm"
+                        {...field}
+                      />
+                    </FieldContent>
+                    <FieldError />
+                  </FieldGroup>
+                )}
+              />
+
+              <FieldRoot
+                control={form.control}
+                name="username"
+                render={({ field }) => (
+                  <FieldGroup>
+                    <FieldLabel>Nom d'utilisateur</FieldLabel>
+                    <FieldContent>
+                      <Input
+                        aria-label="Nom d'utilisateur"
                         className="h-9 px-3 text-sm"
                         {...field}
                       />
@@ -461,8 +470,4 @@ function UserFormDrawerBase({
   );
 }
 
-/**
- * Mémoïsé : le Sheet ne se re-rend pas quand le parent change
- * (ex. search input), sauf si ses props changent.
- */
 export const UserFormDrawer = memo(UserFormDrawerBase);

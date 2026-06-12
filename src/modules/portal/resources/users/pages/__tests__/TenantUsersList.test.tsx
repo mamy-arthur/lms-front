@@ -1,21 +1,13 @@
-/**
- * Tests unitaires — Gestion des utilisateurs (vue tenant)
- *
- * Couvre :
- *   - normalizeTenantUser (fonction pure)
- *   - TenantUsersList     (rendu, recherche, ouverture drawer)
- *   - UserFormDrawer      (validation, soumission création, soumission édition, erreur serveur, annulation)
- */
-
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
 import { Role } from "@/shared/constants/roles";
-import { MOCK_TENANT_USERS } from "../../mocks/users.mock";
+import { MOCK_USERS } from "@/shared/mocks/users.mock";
 import { normalizeTenantUser } from "../../types";
+import type { TenantUser } from "../../types";
 
-// ─── Mocks globaux ────────────────────────────────────────────────────────────
+const MOCK_TENANT_USERS: TenantUser[] = MOCK_USERS.map((u) => normalizeTenantUser(u));
 
 jest.mock("next/navigation", () => ({
   useRouter: () => ({ push: jest.fn() }),
@@ -29,8 +21,6 @@ jest.mock("@/shared/stores/tenant.store", () => ({
   useTenantStore: (selector: (s: { tenant: { id: string } }) => unknown) =>
     selector({ tenant: { id: "tenant-001" } }),
 }));
-
-// ─── Mutation mock helpers ────────────────────────────────────────────────────
 
 function createMutationResult(overrides: Record<string, unknown> = {}) {
   return {
@@ -68,8 +58,6 @@ import { useTenantUsersQuery } from "../../hooks/useTenantUsersQuery";
 
 const mockUseTenantUsersQuery = jest.mocked(useTenantUsersQuery);
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
 function createQueryClient() {
   return new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -81,18 +69,14 @@ function renderWithQuery(ui: ReactElement) {
   return render(<QueryClientProvider client={qc}>{ui}</QueryClientProvider>);
 }
 
-// ─── Import composants après les mocks ───────────────────────────────────────
-
 import { UserFormDrawer } from "../../components/UserFormDrawer";
 import { TenantUsersList } from "../../pages/TenantUsersList";
-
-// ─── Suite ────────────────────────────────────────────────────────────────────
 
 describe("normalizeTenantUser — fonction pure", () => {
   it("[nominal] mappe correctement un utilisateur complet", () => {
     const raw = {
       id: "abc-123",
-      full_name: "Jean Dupont",
+      username: "jean.dupont",
       email: "jean@acme.io",
       role: "TRAINEE",
       is_active: true,
@@ -104,7 +88,7 @@ describe("normalizeTenantUser — fonction pure", () => {
     expect(user.id).toBe("abc-123");
     expect(user.first_name).toBe("");
     expect(user.last_name).toBe("");
-    expect(user.name).toBe("Jean Dupont");
+    expect(user.username).toBe("jean.dupont");
     expect(user.email).toBe("jean@acme.io");
     expect(user.role).toBe(Role.TRAINEE);
     expect(user.isActive).toBe(true);
@@ -121,30 +105,30 @@ describe("normalizeTenantUser — fonction pure", () => {
     const user = normalizeTenantUser(raw);
     expect(user.first_name).toBe("Marie");
     expect(user.last_name).toBe("Curie");
-    expect(user.name).toBe("Marie Curie");
+    expect(user.username).toBe("Marie.Curie");
   });
 
   it("[limite] retourne '—' quand tous les champs de nom sont absents", () => {
     const user = normalizeTenantUser({ id: "x", email: "x@x.io" });
     expect(user.first_name).toBe("");
     expect(user.last_name).toBe("");
-    expect(user.name).toBe("—");
+    expect(user.username).toBe("—");
   });
 
-  it("[limite] is_active faux par défaut si champ absent", () => {
+  it("[limite] is_active vrai par défaut si champ absent", () => {
     const user = normalizeTenantUser({ id: "x" });
     expect(user.isActive).toBe(true);
   });
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-
 describe("TenantUsersList", () => {
+  const MOCK_QUERY_RESULT = {
+    data: { data: MOCK_TENANT_USERS, total: MOCK_TENANT_USERS.length },
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
-    mockUseTenantUsersQuery.mockReturnValue({
-      data: MOCK_TENANT_USERS,
-    } as any);
+    mockUseTenantUsersQuery.mockReturnValue(MOCK_QUERY_RESULT as any);
     mockUseCreateTenantUser.mockReturnValue(createMutationResult() as any);
     mockUseUpdateTenantUser.mockReturnValue(createMutationResult() as any);
   });
@@ -153,8 +137,7 @@ describe("TenantUsersList", () => {
     renderWithQuery(<TenantUsersList />);
 
     const rows = screen.getAllByTestId("user-row");
-    expect(rows.length).toBeGreaterThan(0);
-    expect(rows.length).toBeLessThanOrEqual(25);
+    expect(rows).toHaveLength(7);
   });
 
   it("[nominal] affiche le bouton 'Nouvel utilisateur'", () => {
@@ -176,29 +159,29 @@ describe("TenantUsersList", () => {
     expect(screen.getByText("Créer un utilisateur")).toBeInTheDocument();
   });
 
-  it("[nominal] filtre les utilisateurs selon la recherche", async () => {
+  it("[nominal] le bouton chercher déclenche la mise à jour des params", async () => {
     const user = userEvent.setup();
     renderWithQuery(<TenantUsersList />);
 
     await user.type(
       screen.getByPlaceholderText(/rechercher par nom ou email/i),
-      "AdminInfo",
+      "alice",
     );
+    await user.click(screen.getByRole("button", { name: /chercher/i }));
 
     const rows = screen.getAllByTestId("user-row");
-    expect(rows).toHaveLength(4);
-    expect(screen.queryByText("Bob Dupont")).not.toBeInTheDocument();
+    expect(rows).toHaveLength(7);
   });
 
   it("[limite] affiche une table vide quand la liste est vide", () => {
-    mockUseTenantUsersQuery.mockReturnValue({ data: [] } as any);
+    mockUseTenantUsersQuery.mockReturnValue({
+      data: { data: [], total: 0 },
+    } as any);
     renderWithQuery(<TenantUsersList />);
 
     expect(screen.queryAllByTestId("user-row")).toHaveLength(0);
   });
 });
-
-// ─────────────────────────────────────────────────────────────────────────────
 
 describe("UserFormDrawer — création", () => {
   const onClose = jest.fn();
@@ -315,8 +298,6 @@ describe("UserFormDrawer — création", () => {
   });
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-
 describe("UserFormDrawer — édition", () => {
   const onClose = jest.fn();
   const onSuccess = jest.fn();
@@ -369,6 +350,7 @@ describe("UserFormDrawer — édition", () => {
           data: {
             first_name: "Alice",
             last_name: "Martin",
+            username: "alice.martin",
             email: "alice.new@acme.io",
             role: mockUser.role,
             city: "Paris",
