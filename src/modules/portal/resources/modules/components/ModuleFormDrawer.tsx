@@ -43,10 +43,10 @@ import {
 } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { CATEGORY_OPTIONS } from "@/shared/constants/modules";
+import { MOCK_COURSES } from "@/shared/mocks/courses.mock";
 import { useCreateModule } from "../hooks/useCreateModule";
 import { useUpdateModule } from "../hooks/useUpdateModule";
-import { useModuleCategoryStore } from "../lib/module-store";
-import { MOCK_COURSES_FOR_SELECT } from "../mocks/modules.mock";
 import type { CreateModulePayload, Module, UpdateModulePayload } from "../types";
 
 const createSchema = z.object({
@@ -114,7 +114,6 @@ function ModuleFormDrawerBase({
   onSuccess,
   module: mod,
 }: ModuleFormDrawerProps) {
-  const { categories } = useModuleCategoryStore();
   const [coursePopoverOpen, setCoursePopoverOpen] = useState(false);
   const isEdit = !!mod;
 
@@ -325,7 +324,7 @@ function ModuleFormDrawerBase({
                         </SelectTrigger>
                       </FieldContent>
                       <SelectContent>
-                        {categories.map((opt) => (
+                        {CATEGORY_OPTIONS.map((opt) => (
                           <SelectItem key={opt.value} value={opt.value}>
                             {opt.label}
                           </SelectItem>
@@ -392,7 +391,7 @@ function ModuleFormDrawerBase({
                               Aucun cours trouvé.
                             </CommandEmpty>
                             <CommandGroup>
-                              {MOCK_COURSES_FOR_SELECT.map((course) => (
+                              {MOCK_COURSES.map((course) => (
                                 <CommandItem
                                   key={course.id}
                                   value={course.fullName}

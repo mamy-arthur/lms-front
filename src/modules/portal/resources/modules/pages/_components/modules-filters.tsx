@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useModuleCategoryStore } from "../../lib/module-store";
+import { CATEGORY_OPTIONS } from "@/shared/constants/modules";
 
 interface ModulesFiltersProps {
   search: string;
@@ -28,7 +28,6 @@ export function ModulesFilters({
   onCategoryFilterChange,
   onSearch,
 }: ModulesFiltersProps) {
-  const { categories } = useModuleCategoryStore();
   return (
     <div className="rounded-xl border border-border bg-card p-4 space-y-3 md:flex md:items-end md:gap-3 md:space-y-0">
       <div className="space-y-1 md:flex-4">
@@ -50,7 +49,7 @@ export function ModulesFilters({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Toutes</SelectItem>
-              {categories.map((opt) => (
+              {CATEGORY_OPTIONS.map((opt) => (
                 <SelectItem key={opt.value} value={opt.value}>
                   {opt.label}
                 </SelectItem>

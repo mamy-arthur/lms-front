@@ -13,7 +13,6 @@ export type SortConfig = UsersTableSort;
 
 interface ModulesTableProps {
   modules: Module[];
-  isLoading?: boolean;
   hasQuery?: boolean;
   page: number;
   pageSize: number;
@@ -22,15 +21,13 @@ interface ModulesTableProps {
   onSort?: (column: string) => void;
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
-  onView: (mod: Module) => void;
   onEdit: (mod: Module) => void;
-  onDelete: (mod: Module) => void;
+  onDelete?: (mod: Module) => void;
   onCategoryChange?: (moduleId: string, newCategory: string) => void;
 }
 
 export function ModulesTable({
   modules,
-  isLoading = false,
   hasQuery = false,
   page,
   pageSize,
@@ -39,7 +36,6 @@ export function ModulesTable({
   onSort,
   onPageChange,
   onPageSizeChange,
-  onView,
   onEdit,
   onDelete,
   onCategoryChange,
@@ -72,16 +68,6 @@ export function ModulesTable({
       ),
     },
     {
-      key: "owner",
-      label: "Propriétaire",
-      sortable: true,
-      render: (mod) => (
-        <span className="text-xs text-muted-foreground">
-          {mod.owner || "—"}
-        </span>
-      ),
-    },
-    {
       key: "actions",
       label: "",
       sortable: false,
@@ -89,9 +75,8 @@ export function ModulesTable({
         <div className="text-right" onClick={(e) => e.stopPropagation()}>
           <ModuleActions
             module={mod}
-            onView={() => onView(mod)}
             onEdit={() => onEdit(mod)}
-            onDelete={() => onDelete(mod)}
+            onDelete={onDelete ? () => onDelete(mod) : undefined}
           />
         </div>
       ),
@@ -102,7 +87,6 @@ export function ModulesTable({
     <UsersTable<Module>
       data={modules}
       columns={columns}
-      isLoading={isLoading}
       hasQuery={hasQuery}
       page={page}
       pageSize={pageSize}
@@ -111,7 +95,6 @@ export function ModulesTable({
       onSort={onSort}
       onPageChange={onPageChange}
       onPageSizeChange={onPageSizeChange}
-      onRowClick={onView}
       rowTestId="module-row"
       emptyMessages={{
         default:

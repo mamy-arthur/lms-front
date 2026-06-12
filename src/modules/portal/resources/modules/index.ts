@@ -1,5 +1,5 @@
 export { ModuleFormDrawer } from "./components/ModuleFormDrawer";
-export { ModuleList } from "./pages/ModuleList";
+export { ModuleTenantList } from "./pages/ModuleTenantList";
 export type {
   CreateModulePayload,
   Module,

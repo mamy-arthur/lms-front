@@ -4,7 +4,6 @@ export interface Module {
   identifier: string;
   description: string;
   category: string;
-  owner: string;
   courseIds: string[];
   createdAt: string;
 }
@@ -25,6 +24,15 @@ export interface UpdateModulePayload {
   course_ids: string[];
 }
 
+export interface ModuleSearchParams {
+  q?: string;
+  category?: string;
+  sort_by?: string;
+  sort_dir?: "asc" | "desc";
+  page?: number;
+  page_size?: number;
+}
+
 export function normalizeModule(raw: Record<string, unknown>): Module {
   return {
     id: String(raw.id ?? raw._id ?? ""),
@@ -32,7 +40,6 @@ export function normalizeModule(raw: Record<string, unknown>): Module {
     identifier: String(raw.identifier ?? ""),
     description: String(raw.description ?? ""),
     category: String(raw.category ?? ""),
-    owner: String(raw.owner ?? raw.ownerName ?? ""),
     courseIds: (() => {
       const ids = raw.courseIds ?? raw.course_ids;
       return Array.isArray(ids) ? ids.map(String) : [];

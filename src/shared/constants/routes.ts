@@ -12,6 +12,7 @@ export const ROUTES = {
     root: "/admin",
     users: "/admin/users",
     courses: "/admin/courses",
+    modules: "/admin/modules",
     trainees: "/admin/trainees",
     tenants: "/admin/tenants",
     reports: "/admin/reports",

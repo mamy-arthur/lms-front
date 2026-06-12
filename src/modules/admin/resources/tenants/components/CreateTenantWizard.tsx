@@ -6,18 +6,18 @@ import { useCallback, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Form } from "@/components/ui/form";
 import { Separator } from "@/components/ui/separator";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
-import TenantInfoStep from "./wizard/TenantInfoStep";
 import AdminStep from "./wizard/AdminInfoStep";
+import TenantInfoStep from "./wizard/TenantInfoStep";
 
 const wizardSchema = z.object({
   name: z.string().min(1, "Le nom du tenant est requis"),
@@ -30,8 +30,9 @@ const wizardSchema = z.object({
     ),
   logo: z.instanceof(File).nullable().optional(),
   color: z.string().min(1, "La couleur est requise"),
-  firstName: z.string().min(1, "Le prénom est requis"),
-  lastName: z.string().min(1, "Le nom est requis"),
+  first_name: z.string().min(1, "Le prénom est requis"),
+  last_name: z.string().min(1, "Le nom est requis"),
+  username: z.string().max(120).optional().or(z.literal("")),
   email: z
     .string()
     .min(1, "L'email est requis")
@@ -39,18 +40,11 @@ const wizardSchema = z.object({
   password: z
     .string()
     .min(8, "Le mot de passe doit contenir au moins 8 caractères"),
-  confirmPassword: z.string().min(8, "La confirmation du mot de passe est requise"),
+  city: z.string().max(120).optional().or(z.literal("")),
+  country: z.string().max(120).optional().or(z.literal("")),
 });
 
 export type WizardFormData = z.infer<typeof wizardSchema>;
-
-// Ensure password and confirmation match
-wizardSchema.refine((data) => data.password === data.confirmPassword, {
-  message: "Les mots de passe ne correspondent pas",
-  path: ["confirmPassword"],
-});
-
-
 
 interface Props {
   open: boolean;
@@ -72,11 +66,13 @@ export function CreateTenantWizard({ open, onOpenChange }: Props) {
       subdomain: "",
       logo: null,
       color: "#2563eb",
-      firstName: "",
-      lastName: "",
+      first_name: "",
+      last_name: "",
+      username: "",
       email: "",
       password: "",
-      confirmPassword: "",
+      city: "",
+      country: "",
     },
   });
 
@@ -88,7 +84,6 @@ export function CreateTenantWizard({ open, onOpenChange }: Props) {
   } = form;
 
   const color = watch("color");
-
 
   const handleClose = useCallback(() => {
     reset();
@@ -143,25 +138,27 @@ export function CreateTenantWizard({ open, onOpenChange }: Props) {
   );
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent
-        className="max-w-xl rounded-2xl p-0 gap-0"
+    <Sheet open={open} onOpenChange={handleClose}>
+      <SheetContent
+        className="flex w-full flex-col gap-0 p-0 sm:max-w-xl"
+        showCloseButton={false}
         onInteractOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => e.preventDefault()}
       >
-        <DialogHeader className="px-8 pt-6 pb-0 shrink-0">
+        <SheetHeader className="px-8 pt-6 pb-0 shrink-0">
           <div>
-            <DialogTitle className="text-lg tracking-tight">
+            <SheetTitle className="text-lg tracking-tight">
               Créer un tenant
-            </DialogTitle>
-            <DialogDescription className="mt-0.5 text-xs text-muted-foreground">
+            </SheetTitle>
+            <SheetDescription className="mt-0.5 text-xs text-muted-foreground">
               {step === 0
                 ? "Étape 1 sur 2 — Informations du tenant"
                 : "Étape 2 sur 2 — Administrateur principal"}
-            </DialogDescription>
+            </SheetDescription>
           </div>
 
           <Separator className="mt-4" />
-        </DialogHeader>
+        </SheetHeader>
 
         <Form {...form}>
           <form className="flex-1 px-8 py-6">
@@ -174,7 +171,13 @@ export function CreateTenantWizard({ open, onOpenChange }: Props) {
                     : "opacity-0 -translate-x-6 absolute inset-x-0 pointer-events-none",
                 )}
               >
-                  <TenantInfoStep form={form} fileInputRef={fileInputRef} logoPreview={logoPreview} handleLogoChange={handleLogoChange} color={color} />
+                <TenantInfoStep
+                  form={form}
+                  fileInputRef={fileInputRef}
+                  logoPreview={logoPreview}
+                  handleLogoChange={handleLogoChange}
+                  color={color}
+                />
               </div>
 
               <div
@@ -185,7 +188,11 @@ export function CreateTenantWizard({ open, onOpenChange }: Props) {
                     : "opacity-0 translate-x-6 absolute inset-x-0 pointer-events-none",
                 )}
               >
-                <AdminStep form={form} showPassword={showPassword} setShowPassword={setShowPassword} />
+                <AdminStep
+                  form={form}
+                  showPassword={showPassword}
+                  setShowPassword={setShowPassword}
+                />
               </div>
             </div>
           </form>
@@ -245,7 +252,7 @@ export function CreateTenantWizard({ open, onOpenChange }: Props) {
             </div>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }

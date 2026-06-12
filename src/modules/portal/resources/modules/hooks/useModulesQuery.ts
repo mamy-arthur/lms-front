@@ -1,17 +1,17 @@
 import { useQuery } from "@tanstack/react-query";
 import { MOCK_MODULES } from "../mocks/modules.mock";
-import type { Module } from "../types";
+import type { Module, ModuleSearchParams } from "../types";
 
 export const MODULES_QUERY_KEY = ["portal", "modules"] as const;
 
 function applyParams(
   modules: Module[],
-  params?: Record<string, unknown>,
+  params?: ModuleSearchParams,
 ): { data: Module[]; total: number } {
   let filtered = [...modules];
 
   if (params?.q) {
-    const q = String(params.q).toLowerCase();
+    const q = params.q.toLowerCase();
     filtered = filtered.filter(
       (m) =>
         m.name.toLowerCase().includes(q) ||
@@ -20,12 +20,11 @@ function applyParams(
   }
 
   if (params?.category) {
-    const category = String(params.category);
-    filtered = filtered.filter((m) => m.category === category);
+    filtered = filtered.filter((m) => m.category === params.category);
   }
 
-  const sortBy = params?.sort_by ? String(params.sort_by) : "name";
-  const sortDir = params?.sort_dir === "desc" ? "desc" : "asc";
+  const sortBy = params?.sort_by ?? "name";
+  const sortDir = params?.sort_dir ?? "asc";
 
   filtered.sort((a, b) => {
     const aVal = String(a[sortBy as keyof Module] ?? "");
@@ -34,8 +33,8 @@ function applyParams(
     return sortDir === "desc" ? -cmp : cmp;
   });
 
-  const page = Number(params?.page ?? 0);
-  const pageSize = Number(params?.page_size ?? 12);
+  const page = params?.page ?? 0;
+  const pageSize = params?.page_size ?? 12;
   const start = page * pageSize;
   const paginated = filtered.slice(start, start + pageSize);
 
@@ -43,7 +42,7 @@ function applyParams(
 }
 
 export function useModulesQuery(
-  params?: Record<string, unknown>,
+  params?: ModuleSearchParams,
 ) {
   return useQuery<{ data: Module[]; total: number }>({
     queryKey: [...MODULES_QUERY_KEY, params],

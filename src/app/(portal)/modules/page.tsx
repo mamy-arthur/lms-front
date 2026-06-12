@@ -1,5 +1,5 @@
-import { ModuleList } from "@/modules/portal/resources/modules";
+import { ModuleTenantList } from "@/modules/portal/resources/modules";
 
 export default function ModulePage() {
-  return <ModuleList />;
+  return <ModuleTenantList />;
 }
