@@ -1,16 +1,14 @@
+"use client";
+
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import {
-    MainBlock,
-    SecondaryAccordions,
-    AppearanceStandard,
-    Field,
-} from "./SharedBlocks";
+import { MainBlock, Field } from "./SharedBlocks";
 import { FormActions } from "./PageForm";
 import { Label } from "@/components/ui/label";
+import { RichTextEditor } from "@/modules/shared/components/tiptap/RichTextEditor";
 
 const schema = z.object({
     title: z.string().min(1, "Le nom est obligatoire"),
@@ -32,7 +30,7 @@ export function FileForm({
             defaultValues: { title: "", description: "", fileName: "" },
         });
     const fileName = watch("fileName");
-
+    const description = watch("description");
     return (
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <MainBlock>
@@ -47,7 +45,15 @@ export function FileForm({
                 </div>
                 <div className="space-y-2">
                     <Label>Description</Label>
-                    <Textarea {...register("description")} rows={2} />
+                    <RichTextEditor
+                        value={description ?? ""}
+                        onChange={(md) =>
+                            setValue("description", md, {
+                                shouldDirty: true,
+                            })
+                        }
+                        placeholder="Décrivez le fichier…"
+                    />
                 </div>
                 <div className="space-y-2">
                     <Label>Fichier</Label>
@@ -60,15 +66,15 @@ export function FileForm({
                             )
                         }
                     />
-                    <span>
+                    <span className="text-xs text-gray-600">
                         {fileName ? `Sélectionné : ${fileName}` : undefined}
                     </span>
                 </div>
             </MainBlock>
-                <FormActions
-                    onCancel={onCancel}
-                    submitting={formState.isSubmitting}
-                />
+            <FormActions
+                onCancel={onCancel}
+                submitting={formState.isSubmitting}
+            />
         </form>
     );
 }
