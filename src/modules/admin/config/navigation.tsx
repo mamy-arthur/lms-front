@@ -41,6 +41,7 @@ export const ADMIN_NAV: AdminNavItem[] = [
         access: ACCESS.courses,
         items: [
             { title: "Cours", url: ROUTES.admin.courses }, 
+            { title: "Catégories", url: ROUTES.admin.category },
             { title: "Modules", url: ROUTES.admin.modules },
         ],
     },
