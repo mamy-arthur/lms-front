@@ -5,7 +5,7 @@ import {
     useState,
     type ReactNode,
 } from "react";
-import type { Category, Course } from "../types/index"
+import type { Category, Course } from "../types/index";
 
 const uid = () => Math.random().toString(36).slice(2, 10);
 
@@ -73,6 +73,91 @@ const initialCourses: Course[] = [
         categoryId: "c4",
         identifier: "DSN-301",
         visible: false,
+    },
+    {
+        id: "co4",
+        fullName: "TypeScript avancé pour développeurs React",
+        shortName: "TS-ADV",
+        categoryId: "c2",
+        identifier: "FE-102",
+        visible: true,
+        description: "Maîtriser TypeScript dans un contexte React moderne.",
+    },
+    {
+        id: "co5",
+        fullName: "Architecture backend avec NestJS",
+        shortName: "NEST-ARCH",
+        categoryId: "c3",
+        identifier: "BE-202",
+        visible: true,
+        description: "Structurer une application backend scalable avec NestJS.",
+    },
+    {
+        id: "co6",
+        fullName: "UI/UX Design fundamentals",
+        shortName: "UIUX-101",
+        categoryId: "c4",
+        identifier: "DSN-302",
+        visible: true,
+        description:
+            "Principes essentiels du design d’interface et expérience utilisateur.",
+    },
+    {
+        id: "co7",
+        fullName: "Gestion d’état avec Redux Toolkit",
+        shortName: "REDUX-RTK",
+        categoryId: "c2",
+        identifier: "FE-103",
+        visible: false,
+        description:
+            "Simplifier la gestion d’état global dans les applications React.",
+    },
+    {
+        id: "co8",
+        fullName: "Docker pour développeurs web",
+        shortName: "DOCKER-WEB",
+        categoryId: "c3",
+        identifier: "DEVOPS-101",
+        visible: true,
+        description: "Conteneurisation des applications web avec Docker.",
+    },
+    {
+        id: "co9",
+        fullName: "Bases de données relationnelles avec PostgreSQL",
+        shortName: "POSTGRES-101",
+        categoryId: "c3",
+        identifier: "DB-101",
+        visible: true,
+        description: "Comprendre et utiliser PostgreSQL efficacement.",
+    },
+    {
+        id: "co10",
+        fullName: "Next.js 15 pour applications modernes",
+        shortName: "NEXT15",
+        categoryId: "c2",
+        identifier: "FE-104",
+        visible: true,
+        description:
+            "Construire des applications performantes avec Next.js 15.",
+    },
+    {
+        id: "co11",
+        fullName: "Méthodologies Agile et Scrum",
+        shortName: "AGILE-SCRUM",
+        categoryId: "c1",
+        identifier: "PM-101",
+        visible: true,
+        description: "Introduction aux pratiques Agile et Scrum en équipe.",
+    },
+    {
+        id: "co12",
+        fullName: "Sécurité des applications web",
+        shortName: "WEB-SEC",
+        categoryId: "c3",
+        identifier: "SEC-101",
+        visible: false,
+        description:
+            "Bonnes pratiques pour sécuriser une application web moderne.",
     },
 ];
 

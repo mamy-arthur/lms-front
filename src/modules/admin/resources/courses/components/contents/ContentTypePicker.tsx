@@ -44,13 +44,13 @@ export function ContentTypePicker({
             key={type}
             type="button"
             onClick={() => onSelect(type)}
-            className="group flex flex-col items-start gap-2 rounded-xl border border-border bg-card p-4 text-left transition-all hover:border-gray-600/50 hover:shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"
+            className={`group flex flex-col items-start gap-2 rounded-xl border border-border  p-4 text-left transition-all hover:border-gray-600/50 hover:shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer ${meta.bgColor}`}
           >
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted text-foreground group-hover:bg-accent">
               <Icon className="h-5 w-5" />
             </div>
-            <div className="text-sm font-medium text-foreground">{meta.label}</div>
-            <div className="text-xs text-muted-foreground">{meta.description}</div>
+            <div className="text-sm font-medium text-white">{meta.label}</div>
+            <div className="text-xs text-gray-700">{meta.description}</div>
           </button>
         );
       })}
