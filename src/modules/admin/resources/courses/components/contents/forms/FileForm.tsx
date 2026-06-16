@@ -8,6 +8,8 @@ import { MainBlock } from "./SharedBlocks";
 import { FormActions } from "./PageForm";
 import { Label } from "@/components/ui/label";
 import { RichTextEditor } from "@/modules/shared/components/tiptap/RichTextEditor";
+import { useState } from "react";
+import { FileUploadField } from "@/modules/shared/components/input-upload/FileUploadField";
 
 const schema = z.object({
     title: z.string().min(1, "Le nom est obligatoire"),
@@ -20,7 +22,7 @@ export function FileForm({
     onSubmit,
     onCancel,
 }: {
-    onSubmit: (v: FileFormValues) => void;
+    onSubmit: (v: FileFormValues, file: File | null) => void;
     onCancel: () => void;
 }) {
     const { register, handleSubmit, formState, setValue, watch } =
@@ -28,14 +30,22 @@ export function FileForm({
             resolver: zodResolver(schema),
             defaultValues: { title: "", description: "", fileName: "" },
         });
+    const [fileObject, setFileObject] = useState<File | null>(null);
     const fileName = watch("fileName");
     const description = watch("description");
+    const submitWithFile = (values: FileFormValues) => {
+        onSubmit(values, fileObject);
+    };
+
     return (
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={handleSubmit(submitWithFile)} className="space-y-4">
             <MainBlock>
                 <div className="space-y-2">
                     <Label>Nom</Label>
-                    <Input {...register("title")} />
+                    <Input
+                        {...register("title")}
+                        placeholder="Ex : Module SCORM - Sécurité incendie"
+                    />
                     {formState.errors.title && (
                         <p className="text-xs text-destructive">
                             {formState.errors.title.message}
@@ -54,21 +64,19 @@ export function FileForm({
                         placeholder="Décrivez le fichier…"
                     />
                 </div>
-                <div className="space-y-2">
-                    <Label>Fichier</Label>
-                    <Input
-                        type="file"
-                        onChange={(e) =>
-                            setValue(
-                                "fileName",
-                                e.target.files?.[0]?.name ?? "",
-                            )
-                        }
-                    />
-                    <span className="text-xs text-gray-600">
-                        {fileName ? `Sélectionné : ${fileName}` : undefined}
-                    </span>
-                </div>
+                <FileUploadField
+                    label="Fichier"
+                    fileName={fileName}
+                    onFileSelect={(file) => {
+                        setValue("fileName", file.name);
+                        setFileObject(file);
+                    }}
+                    onRemove={() => {
+                        setValue("fileName", "");
+                        setFileObject(null);
+                    }}
+                    hint="PDF ou WORD"
+                />
             </MainBlock>
             <FormActions
                 onCancel={onCancel}

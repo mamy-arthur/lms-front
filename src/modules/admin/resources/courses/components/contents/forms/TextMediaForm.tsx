@@ -3,57 +3,62 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  MainBlock,
-  SecondaryAccordions,
-  Field,
-  CheckboxRow,
-} from "./SharedBlocks";
+import { MainBlock, Field } from "./SharedBlocks";
 import { FormActions } from "./PageForm";
+import { RichTextEditor } from "@/modules/shared/components/tiptap/RichTextEditor";
+import { Label } from "@/components/ui/label";
 
 const schema = z.object({
-  title: z.string().min(1, "Le nom est obligatoire"),
-  text: z.string().optional(),
+    title: z.string().min(1, "Le nom est obligatoire"),
+    text: z.string().optional(),
 });
 export type TextMediaFormValues = z.infer<typeof schema>;
 
 export function TextMediaForm({
-  onSubmit,
-  onCancel,
+    onSubmit,
+    onCancel,
 }: {
-  onSubmit: (v: TextMediaFormValues) => void;
-  onCancel: () => void;
+    onSubmit: (v: TextMediaFormValues) => void;
+    onCancel: () => void;
 }) {
-  const { register, handleSubmit, formState } = useForm<TextMediaFormValues>({
-    resolver: zodResolver(schema),
-    defaultValues: { title: "", text: "" },
-  });
-
-  return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      <MainBlock>
-        <Field label="Nom" required>
-          <Input {...register("title")} />
-          {formState.errors.title && (
-            <p className="text-xs text-destructive">{formState.errors.title.message}</p>
-          )}
-        </Field>
-        <Field label="Texte">
-          <Textarea {...register("text")} rows={8} />
-        </Field>
-      </MainBlock>
-      <SecondaryAccordions
-        appearance={
-          <div className="space-y-3">
-            <CheckboxRow id="tm-show-desc" label="Afficher la description" />
-            <CheckboxRow
-              id="tm-show-modified"
-              label="Afficher la date de dernière modification"
+    const { register, handleSubmit, formState, setValue, watch } =
+        useForm<TextMediaFormValues>({
+            resolver: zodResolver(schema),
+            defaultValues: { title: "", text: "" },
+        });
+    const text = watch("text");
+    return (
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <MainBlock>
+                <div className="space-y-2">
+                    <Label>Nom</Label>
+                    <Input
+                        {...register("title")}
+                        placeholder="Ex : Module SCORM - Sécurité incendie"
+                    />
+                    {formState.errors.title && (
+                        <p className="text-xs text-destructive">
+                            {formState.errors.title.message}
+                        </p>
+                    )}
+                </div>
+                <div className="space-y-2">
+                    <Label>Texte</Label>
+                    <RichTextEditor
+                        value={text ?? ""}
+                        onChange={(md) =>
+                            setValue("text", md, {
+                                shouldDirty: true,
+                            })
+                        }
+                        placeholder="Décrivez le fichier…"
+                    />
+                </div>
+            </MainBlock>
+            <FormActions
+                onCancel={onCancel}
+                submitting={formState.isSubmitting}
             />
-          </div>
-        }
-      />
-      <FormActions onCancel={onCancel} submitting={formState.isSubmitting} />
-    </form>
-  );
+        </form>
+    );
 }

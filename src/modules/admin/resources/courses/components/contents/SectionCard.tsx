@@ -53,7 +53,6 @@ export function SectionCard({ section }: { section: CourseSection }) {
     const [description, setDescription] = useState(section.description ?? "");
     const updateSection = useCourseStore((s) => s.updateSection);
     const removeSection = useCourseStore((s) => s.removeSection);
-    const removeContent = useCourseStore((s) => s.removeContent);
     const [type, setType] = useState<ContentType | null>(null);
 
     const save = () => {
@@ -73,7 +72,7 @@ export function SectionCard({ section }: { section: CourseSection }) {
                     </h3>
                 </div>
                 <div className="flex gap-2 items-center">
-                    <Badge variant='secondary'>{typeMeta.label}</Badge>
+                    <Badge className={`${typeMeta.bgColor}`}>{typeMeta.label}</Badge>
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button
