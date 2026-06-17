@@ -1,6 +1,7 @@
 "use client";
 
 import { Search } from "lucide-react";
+import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,12 +14,13 @@ import {
 } from "@/components/ui/select";
 import { CATEGORY_OPTIONS } from "@/shared/constants/modules";
 
-interface ModulesFiltersProps {
+export interface ModulesFiltersProps {
   search: string;
   categoryFilter: string;
   onSearchChange: (value: string) => void;
   onCategoryFilterChange: (value: string) => void;
   onSearch: () => void;
+  extraFields?: ReactNode;
 }
 
 export function ModulesFilters({
@@ -27,10 +29,11 @@ export function ModulesFilters({
   onSearchChange,
   onCategoryFilterChange,
   onSearch,
+  extraFields,
 }: ModulesFiltersProps) {
   return (
-    <div className="bg-card p-4 space-y-3 md:flex md:items-end md:gap-3 md:space-y-0">
-      <div className="space-y-1 md:flex-4">
+    <div className="bg-card py-4 space-y-3 md:flex md:items-end md:gap-3 md:space-y-0">
+      <div className="space-y-1 md:flex-1">
         <Label className="text-xs text-muted-foreground">Recherche</Label>
         <Input
           placeholder="Rechercher par nom ou identifiant…"
@@ -57,6 +60,8 @@ export function ModulesFilters({
             </SelectContent>
           </Select>
         </div>
+
+        {extraFields}
       </div>
 
       <Button

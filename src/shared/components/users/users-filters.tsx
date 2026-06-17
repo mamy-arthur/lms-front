@@ -1,6 +1,7 @@
 "use client";
 
 import { Search } from "lucide-react";
+import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,6 +27,7 @@ export interface UsersFiltersProps {
   onStatusFilterChange: (value: string) => void;
   onSearch: () => void;
   roleOptions: readonly { value: string; label: string }[];
+  extraFields?: ReactNode;
 }
 
 export function UsersFilters({
@@ -37,9 +39,10 @@ export function UsersFilters({
   onStatusFilterChange,
   onSearch,
   roleOptions,
+  extraFields,
 }: UsersFiltersProps) {
   return (
-    <div className="rounded-xl border border-border bg-card p-4 space-y-3 md:flex md:items-end md:gap-3 md:space-y-0">
+    <div className="bg-card py-4 space-y-3 md:flex md:items-end md:gap-3 md:space-y-0">
       <div className="space-y-1 md:flex-1">
         <Label className="text-xs text-muted-foreground">Recherche</Label>
         <Input
@@ -67,6 +70,8 @@ export function UsersFilters({
             </SelectContent>
           </Select>
         </div>
+
+        {extraFields}
 
         <div className="flex-1 space-y-1">
           <Label className="text-xs text-muted-foreground">Statut</Label>
