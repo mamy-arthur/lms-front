@@ -4,6 +4,7 @@ import { PageContentView } from "./components/PageView";
 import { UrlContentView } from "./components/UrlView";
 import { TextContentView } from "./components/TextView";
 import { FolderContentView } from "./components/FolderView";
+import { SurveyContentView } from "./components/SurveyView";
 
 interface ContentRendererProps {
     content: CourseContent;
@@ -51,6 +52,18 @@ export function ContentRenderer({ content }: ContentRendererProps) {
                     description={content.data?.description as string}
                     fileCount={content.data?.fileCount as number}
                     filesNames={content.data?.filesNames as string[]}
+                />
+            );
+        case "survey":
+            return (
+                <SurveyContentView
+                    title={content.title}
+                    surveyType={
+                        (content.data?.surveyType as string) ?? undefined
+                    }
+                    description={
+                        (content.data?.description as string) ?? undefined
+                    }
                 />
             );
 
