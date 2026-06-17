@@ -4,10 +4,12 @@ import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCourseStore } from "../hooks/useCouseContentStore";
 import { SectionCard } from "../components/contents/SectionCard";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { BookOpen } from "lucide-react";
+import { ContentPreviewDrawer } from "../components/contents/preview/components/ContentPreviewDrawer";
 
 export function CourseContentPage() {
+    const [isOpen, setIsOpen] = useState(false);
     const sections = useMemo(
         () =>
             [...useCourseStore.getState().sections].sort(
@@ -21,7 +23,7 @@ export function CourseContentPage() {
         <div className="bg-background">
             <header className="flex justify-between items-end">
                 <div>
-                          <h1 className="text-2xl font-bold tracking-tight">
+                    <h1 className="text-2xl font-bold tracking-tight">
                         Contenu du cours
                     </h1>
                     <p className="mt-1 text-xs text-muted-foreground">
@@ -29,7 +31,10 @@ export function CourseContentPage() {
                     </p>
                 </div>
                 <div>
-                    <Button className="bg-(--color-primary) hover:bg-(--color-primary)/80">
+                    <Button
+                        className="bg-(--color-primary) hover:bg-(--color-primary)/80"
+                        onClick={() => setIsOpen(true)}
+                    >
                         <BookOpen className="size-4" />
                         Prévisualisation
                     </Button>
@@ -57,6 +62,7 @@ export function CourseContentPage() {
                     </p>
                 )}
             </main>
+            <ContentPreviewDrawer open={isOpen} onOpenChange={setIsOpen} />
         </div>
     );
 }

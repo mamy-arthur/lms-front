@@ -123,16 +123,6 @@ export function SectionCard({ section }: { section: CourseSection }) {
             </div>
 
             <CollapsibleContent className="data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down overflow-hidden">
-                {!type && (
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setAddOpen(true)}
-                        className="mt-4 w-full justify-start text-muted-foreground hover:text-foreground"
-                    >
-                        <Plus className="mr-2 h-4 w-4" /> Ajouter un contenu
-                    </Button>
-                )}
                 <AddContentModal
                     open={addOpen}
                     onOpenChange={setAddOpen}
@@ -140,6 +130,14 @@ export function SectionCard({ section }: { section: CourseSection }) {
                     setType={setType}
                 />
                 {type && <SectionContent sectionId={section.id} type={type} />}
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setAddOpen(true)}
+                    className="mt-4 w-full justify-start text-muted-foreground hover:text-foreground"
+                >
+                    <Plus className="mr-2 h-4 w-4" /> Ajouter un contenu
+                </Button>
             </CollapsibleContent>
 
             <Dialog open={editOpen} onOpenChange={setEditOpen}>

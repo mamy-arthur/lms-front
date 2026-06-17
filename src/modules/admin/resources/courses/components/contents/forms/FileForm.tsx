@@ -37,6 +37,8 @@ export function FileForm({
         onSubmit(values, fileObject);
     };
 
+    console.log('description : ' ,  description)
+
     return (
         <form onSubmit={handleSubmit(submitWithFile)} className="space-y-4">
             <MainBlock>

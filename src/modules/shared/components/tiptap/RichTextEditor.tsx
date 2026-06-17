@@ -29,6 +29,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
+declare module "@tiptap/core" {
+    interface Storage {
+        markdown: {
+            getMarkdown: () => string;
+        };
+    }
+}
+
 type Props = {
     value: string;
     onChange: (markdown: string) => void;
@@ -279,6 +287,9 @@ export function RichTextEditor({
                     "[&_a]:text-primary [&_a]:underline",
                 ),
             },
+        },
+        onUpdate: ({ editor }) => {
+            onChange(editor.storage.markdown.getMarkdown());
         },
     });
 

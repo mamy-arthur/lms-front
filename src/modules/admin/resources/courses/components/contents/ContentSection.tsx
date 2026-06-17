@@ -27,13 +27,13 @@ export function SectionContent({
     sectionId: string;
     type: ContentType;
 }) {
-    const section = useCourseStore((s) => s.getSection(sectionId));
     const addContent = useCourseStore((s) => s.addContent);
     const ctype = type;
 
     const goBack = () => {};
 
     const handleSave = (title: string, data: Record<string, unknown>) => {
+        console.log(title , data)
         addContent(sectionId, ctype, title, data);
     };
 
