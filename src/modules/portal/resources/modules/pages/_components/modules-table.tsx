@@ -74,7 +74,7 @@ export function ModulesTable({
       render: (mod) => (
         <div className="text-right" onClick={(e) => e.stopPropagation()}>
           <ModuleActions
-            module={mod}
+            moduleLabel={mod.name}
             onEdit={() => onEdit(mod)}
             onDelete={onDelete ? () => onDelete(mod) : undefined}
           />
