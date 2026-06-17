@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/dialog";
 import { ContentTypePicker } from "./ContentTypePicker";
 import { ContentType } from "../../types";
+import { useCourseStore } from "../../hooks/useCouseContentStore";
 
 export function AddContentModal({
     open,
@@ -17,10 +18,12 @@ export function AddContentModal({
     open: boolean;
     onOpenChange: (open: boolean) => void;
     sectionId: string;
-    setType:(type : ContentType) => void
+    setType: (type: ContentType) => void;
 }) {
+    const cours = useCourseStore();
     const handleSelect = (type: ContentType) => {
-        setType(type)
+        setType(type);
+        cours.addContent(sectionId, type, "");
         onOpenChange(false);
     };
 

@@ -33,7 +33,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { AddContentModal } from "./AddContentModal";
 
-import { CONTENT_TYPE_META, ContentType, CourseSection } from "../../types";
+import {ContentType, CourseSection } from "../../types";
 import { useCourseStore } from "../../hooks/useCouseContentStore";
 import { SectionContent } from "./ContentSection";
 import { Badge } from "@/components/ui/badge";
@@ -70,7 +70,7 @@ export function SectionCard({ section }: { section: CourseSection }) {
         });
         setEditOpen(false);
     };
-    const typeMeta = CONTENT_TYPE_META[type ?? "file"];
+
     return (
         <Collapsible
             open={isOpen}
@@ -92,11 +92,6 @@ export function SectionCard({ section }: { section: CourseSection }) {
                 </CollapsibleTrigger>
 
                 <div className="flex gap-2 items-center">
-                    {type && (
-                        <Badge className={`${typeMeta.bgColor}`}>
-                            {typeMeta.label}
-                        </Badge>
-                    )}
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button
@@ -129,7 +124,11 @@ export function SectionCard({ section }: { section: CourseSection }) {
                     sectionId={section.id}
                     setType={setType}
                 />
-                {type && <SectionContent sectionId={section.id} type={type} />}
+                <div className="flex flex-col space-y-2">
+                    {section.contents.map((content) =>(
+                        <SectionContent key={content.id} sectionId={section.id} type={content.type} contentId={content.id}/>
+                    ))}
+                </div>
                 <Button
                     variant="ghost"
                     size="sm"
