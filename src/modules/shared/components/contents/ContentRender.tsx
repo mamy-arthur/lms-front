@@ -1,0 +1,50 @@
+import { CourseContent } from "@/modules/admin/resources/courses/types";
+import { FileContentView } from "./components/FileView";
+import { PageContentView } from "./components/PageView";
+import { UrlContentView } from "./components/UrlView";
+import { TextContentView } from "./components/TextView";
+
+interface ContentRendererProps {
+    content: CourseContent;
+}
+
+export function ContentRenderer({ content }: ContentRendererProps) {
+    switch (content.type) {
+        case "file":
+            return (
+                <FileContentView
+                    title={content.title}
+                    description={content.data?.description as string}
+                    fileName={content.data?.fileName as string}
+                />
+            );
+
+        case "page":
+            return (
+                <PageContentView
+                    title={content.title}
+                    description={content.data?.description as string}
+                    contenu={content.data?.content as string}
+                />
+            );
+
+        case "url":
+            return (
+                <UrlContentView
+                    title={content.title}
+                    description={content.data?.description as string}
+                    url={content.data?.url as string}
+                />
+            );
+        case "text-media":
+            return (
+                <TextContentView
+                    title={content.title}
+                    text={content.data?.text as string}
+                />
+            );
+
+        default:
+            return null;
+    }
+}

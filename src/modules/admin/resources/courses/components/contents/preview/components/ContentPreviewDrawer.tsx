@@ -1,9 +1,12 @@
 "use client";
 
-import { Eye } from "lucide-react";
+import {
+    Collapsible,
+    CollapsibleContent,
+    CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
-import { Button } from "@/components/ui/button";
-
+import { ChevronDown } from "lucide-react";
 import {
     Sheet,
     SheetContent,
@@ -11,10 +14,8 @@ import {
     SheetHeader,
     SheetTitle,
 } from "@/components/ui/sheet";
-import { FileContentView } from "@/modules/shared/components/contents/components/FileView";
 import { useCourseStore } from "../../../../hooks/useCouseContentStore";
-import { PageContentView } from "@/modules/shared/components/contents/components/PageView";
-import { UrlContentView } from "@/modules/shared/components/contents/components/UrlView";
+import { ContentRenderer } from "@/modules/shared/components/contents/ContentRender";
 
 type Props = {
     open: boolean;
@@ -37,61 +38,29 @@ export function ContentPreviewDrawer({ open, onOpenChange }: Props) {
                         Aperçu de ce que l'étudiant voit
                     </SheetDescription>
                 </SheetHeader>
-                <div>
+                <div className="space-y-2 mt-2 p-2">
                     {sections.map((section) => (
-                        <div className="flex flex-col space-y-4 p-4">
-                            <span className="font-bold">{section.title}</span>
-                            {section.contents.map((content) => (
-                                <div key={`${section.id}-${content.id}`}>
-                                    {content.type === "file" && (
-                                        <FileContentView
-                                            key={content.id}
-                                            title={content.title}
-                                            description={
-                                                (content.data?.[
-                                                    "description"
-                                                ] as string) ?? undefined
-                                            }
-                                            fileName={
-                                                (content.data?.[
-                                                    "fileName"
-                                                ] as string) ?? undefined
-                                            }
-                                        />
-                                    )}
-                                    {content.type === "page" && (
-                                        <PageContentView
-                                            title={content.title}
-                                            description={
-                                                (content.data?.[
-                                                    "description"
-                                                ] as string) ?? undefined
-                                            }
-                                            contenu={
-                                                (content.data?.[
-                                                    "content"
-                                                ] as string) ?? undefined
-                                            }
-                                        />
-                                    )}
-                                    {content.type === "url" && (
-                                        <UrlContentView
-                                            title={content.title}
-                                            description={
-                                                (content.data?.[
-                                                    "description"
-                                                ] as string) ?? undefined
-                                            }
-                                            url={
-                                                (content.data?.[
-                                                    "url"
-                                                ] as string) ?? undefined
-                                            }
-                                        />
-                                    )}
+                        <Collapsible defaultOpen>
+                            <CollapsibleTrigger className="flex w-full items-center justify-between rounded-lg border px-4 py-3 cursor-pointer">
+                                <span className="font-semibold">
+                                    {section.title}
+                                </span>
+                                <ChevronDown className="size-4" />
+                            </CollapsibleTrigger>
+                            <CollapsibleContent>
+                                <div className="flex flex-col space-y-4 p-1">
+                                    {section.contents.map((content) => (
+                                        <div
+                                            key={`${section.id}-${content.id}`}
+                                        >
+                                            <ContentRenderer
+                                                content={content}
+                                            />
+                                        </div>
+                                    ))}
                                 </div>
-                            ))}
-                        </div>
+                            </CollapsibleContent>
+                        </Collapsible>
                     ))}
                 </div>
             </SheetContent>
