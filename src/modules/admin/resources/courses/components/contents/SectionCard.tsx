@@ -11,6 +11,8 @@ import {
     Link as LinkIcon,
     BarChart3,
     Type as TypeIcon,
+    ChevronDownIcon,
+    ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -35,6 +37,11 @@ import { CONTENT_TYPE_META, ContentType, CourseSection } from "../../types";
 import { useCourseStore } from "../../hooks/useCouseContentStore";
 import { SectionContent } from "./ContentSection";
 import { Badge } from "@/components/ui/badge";
+import {
+    Collapsible,
+    CollapsibleContent,
+    CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 const ICONS: Record<ContentType, typeof FileText> = {
     page: FileText,
@@ -53,8 +60,8 @@ export function SectionCard({ section }: { section: CourseSection }) {
     const [description, setDescription] = useState(section.description ?? "");
     const updateSection = useCourseStore((s) => s.updateSection);
     const removeSection = useCourseStore((s) => s.removeSection);
-    const removeContent = useCourseStore((s) => s.removeContent);
     const [type, setType] = useState<ContentType | null>(null);
+    const [isOpen, setIsOpen] = useState(false);
 
     const save = () => {
         updateSection(section.id, {
@@ -63,17 +70,33 @@ export function SectionCard({ section }: { section: CourseSection }) {
         });
         setEditOpen(false);
     };
-    const typeMeta = CONTENT_TYPE_META[type ?? 'file']
+    const typeMeta = CONTENT_TYPE_META[type ?? "file"];
     return (
-        <div className="rounded-xl border border-border bg-card p-4 shadow-xs transition-shadow hover:shadow-md">
+        <Collapsible
+            open={isOpen}
+            onOpenChange={setIsOpen}
+            className="rounded-xl border border-border bg-card p-4 shadow-xs transition-shadow hover:shadow-md"
+        >
             <div className="flex items-start justify-between gap-1">
-                <div className="flex-1">
-                    <h3 className="truncate text-sm font-semibold text-foreground">
-                        {section.title}
-                    </h3>
-                </div>
+                <CollapsibleTrigger asChild>
+                    <button className="flex flex-1 items-center gap-2 min-w-0 text-left">
+                        <ChevronRight
+                            className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 ${
+                                isOpen ? "rotate-90" : ""
+                            }`}
+                        />
+                        <h3 className="truncate text-sm font-semibold text-foreground">
+                            {section.title}
+                        </h3>
+                    </button>
+                </CollapsibleTrigger>
+
                 <div className="flex gap-2 items-center">
-                    <Badge variant='secondary'>{typeMeta.label}</Badge>
+                    {type && (
+                        <Badge className={`${typeMeta.bgColor}`}>
+                            {typeMeta.label}
+                        </Badge>
+                    )}
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button
@@ -99,25 +122,25 @@ export function SectionCard({ section }: { section: CourseSection }) {
                 </div>
             </div>
 
-            {!type && (
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setAddOpen(true)}
-                    className="mt-4 w-full justify-start text-muted-foreground hover:text-foreground"
-                >
-                    <Plus className="mr-2 h-4 w-4" /> Ajouter un contenu
-                </Button>
-            )}
-
-            <AddContentModal
-                open={addOpen}
-                onOpenChange={setAddOpen}
-                sectionId={section.id}
-                setType={setType}
-            />
-
-            {type && <SectionContent sectionId={section.id} type={type} />}
+            <CollapsibleContent className="data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down overflow-hidden">
+                {!type && (
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setAddOpen(true)}
+                        className="mt-4 w-full justify-start text-muted-foreground hover:text-foreground"
+                    >
+                        <Plus className="mr-2 h-4 w-4" /> Ajouter un contenu
+                    </Button>
+                )}
+                <AddContentModal
+                    open={addOpen}
+                    onOpenChange={setAddOpen}
+                    sectionId={section.id}
+                    setType={setType}
+                />
+                {type && <SectionContent sectionId={section.id} type={type} />}
+            </CollapsibleContent>
 
             <Dialog open={editOpen} onOpenChange={setEditOpen}>
                 <DialogContent>
@@ -151,6 +174,6 @@ export function SectionCard({ section }: { section: CourseSection }) {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-        </div>
+        </Collapsible>
     );
 }

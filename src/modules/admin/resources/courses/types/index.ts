@@ -44,41 +44,48 @@ export interface CourseSection {
 
 export const CONTENT_TYPE_META: Record<
     ContentType,
-    { label: string; icon: string; description: string }
+    { label: string; icon: string; description: string; bgColor: string }
 > = {
     page: {
         label: "Page",
         icon: "FileText",
         description: "Une page de contenu riche",
+        bgColor: "bg-blue-400",
     },
     file: {
         label: "Fichier",
         icon: "File",
         description: "Téléverser un fichier",
+        bgColor: "bg-yellow-500",
     },
     folder: {
         label: "Dossier",
         icon: "Folder",
         description: "Regrouper plusieurs fichiers",
+        bgColor: "bg-red-400",
     },
     scorm: {
         label: "SCORM",
         icon: "Package",
         description: "Paquet SCORM interactif",
+        bgColor: "bg-orange-500",
     },
     url: {
         label: "URL",
         icon: "Link",
         description: "Lien vers une ressource externe",
+        bgColor: "bg-green-400",
     },
     survey: {
         label: "Sondage",
         icon: "BarChart3",
         description: "Recueillir des réponses",
+        bgColor: "bg-gray-400",
     },
     "text-media": {
         label: "Texte et média",
         icon: "Type",
         description: "Texte enrichi et médias",
+        bgColor: "bg-purple-400",
     },
 };

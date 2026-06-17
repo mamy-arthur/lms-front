@@ -3,9 +3,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import {
-    MainBlock,
-} from "./SharedBlocks";
+import { MainBlock } from "./SharedBlocks";
 import { Label } from "@/components/ui/label";
 import { RichTextEditor } from "@/modules/shared/components/tiptap/RichTextEditor";
 
@@ -36,7 +34,10 @@ export function PageForm({
             <MainBlock>
                 <div className="space-y-2">
                     <Label>Nom</Label>
-                    <Input {...register("title")} />
+                    <Input
+                        {...register("title")}
+                        placeholder="Ex : Module SCORM - Sécurité incendie"
+                    />
                     {formState.errors.title && (
                         <p className="text-xs text-destructive">
                             {formState.errors.title.message}

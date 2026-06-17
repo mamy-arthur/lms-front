@@ -33,6 +33,7 @@ import { useCoursesStore, getCategoryPath } from "../../lib/course-store";
 import type { Course } from "../../types/index";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useRouter } from "next/navigation";
 
 const schema = z.object({
     fullName: z.string().min(2, "Nom requis (min 2 caractères)"),
@@ -67,6 +68,7 @@ export function CourseDrawer({ open, onOpenChange, course }: Props) {
     const { categories, upsertCourse, upsertCategory } = useCoursesStore();
     const [catOpen, setCatOpen] = useState(false);
     const [newCatName, setNewCatName] = useState("");
+    const router = useRouter();
 
     const defaults = useMemo<FormValues>(
         () => ({
@@ -100,6 +102,7 @@ export function CourseDrawer({ open, onOpenChange, course }: Props) {
         upsertCourse({ ...values, id: course?.id });
         toast.success(course ? "Cours mis à jour" : "Cours créé");
         onOpenChange(false);
+        router.push("/admin/courses/4545454");
     };
 
     return (
@@ -314,7 +317,7 @@ export function CourseDrawer({ open, onOpenChange, course }: Props) {
                                 <Label htmlFor="visible">Visibilité</Label>
                                 <p className="text-xs text-muted-foreground">
                                     {visible
-                                        ? "Visible par les étudiants"
+                                        ? "Visible"
                                         : "Masqué pour le moment"}
                                 </p>
                             </div>
