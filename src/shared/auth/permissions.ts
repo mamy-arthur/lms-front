@@ -25,6 +25,8 @@ export function canAccess(
 export const ACCESS = {
   users:    { anyRoles: [Role.SUPER_ADMIN, Role.CLIENT_MANAGER] },
   courses:  { anyRoles: [Role.SUPER_ADMIN, Role.EDITOR] },
+  quizzes:  { anyRoles: [Role.SUPER_ADMIN, Role.EDITOR] },
+  modules:  { anyRoles: [Role.SUPER_ADMIN, Role.EDITOR] },
   trainees: { anyRoles: [Role.SUPER_ADMIN, Role.CLIENT_MANAGER] },
   reports:  { anyRoles: [Role.SUPER_ADMIN, Role.CLIENT_MANAGER] },
   tenants:  { superAdminOnly: true },

@@ -29,7 +29,7 @@ export function useModuleFormDrawer({
   open,
   onClose,
   onSuccess,
-  module: mod,
+  module,
   createMutation,
   updateMutation,
   schema,
@@ -51,7 +51,7 @@ export function useModuleFormDrawer({
   buildUpdatePayload: (values: FieldValues, id: string) => unknown;
 }) {
   const [coursePopoverOpen, setCoursePopoverOpen] = useState(false);
-  const isEdit = !!mod;
+  const isEdit = !!module;
 
   const mutation = isEdit ? updateMutation : createMutation;
 
@@ -115,9 +115,9 @@ export function useModuleFormDrawer({
 
   const onSubmit = useCallback(
     (values: FieldValues) => {
-      if (isEdit && mod) {
+      if (isEdit && module) {
         updateMutation.mutate(
-          buildUpdatePayload(values, mod.id),
+          buildUpdatePayload(values, module.id),
           {
             onSuccess: () => {
               form.reset();
@@ -141,7 +141,7 @@ export function useModuleFormDrawer({
         );
       }
     },
-    [isEdit, mod, createMutation, updateMutation, form, onSuccess, buildCreatePayload, buildUpdatePayload],
+    [isEdit, module, createMutation, updateMutation, form, onSuccess, buildCreatePayload, buildUpdatePayload],
   );
 
   return {

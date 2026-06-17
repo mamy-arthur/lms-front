@@ -52,14 +52,27 @@ export function UsersList() {
   const { data, isLoading } = useUsersQuery(params);
 
   return (
-    <div className="space-y-6 p-3">
-      <div className="flex items-center justify-between">
-        <h1 className="text-lg font-extrabold">Utilisateurs</h1>
-        <Button onClick={handleOpenCreate} size="lg" className="bg-(--color-primary) text-primary-foreground">
-          <Plus className="size-4" />
-          Nouvel utilisateur
-        </Button>
-      </div>
+    
+    <div className="bg-background">
+      <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+              <h1 className="text-2xl font-bold tracking-tight">
+                  Utilisateurs
+              </h1>
+              <p className="mt-1 text-sm text-muted-foreground">
+                  Gérez tous les utilisareurs ici.
+              </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+              <Button
+                  onClick={handleOpenCreate}
+                  className="bg-(--color-primary) hover:bg-(--color-primary)/80 text-primary-foreground"
+              >
+                  <Plus className="mr-1 size-4" />
+                   Nouvel utilisateur
+              </Button>
+          </div>
+      </header>
 
       <AdminUsersFilters
         search={draftSearch}

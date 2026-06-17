@@ -32,7 +32,7 @@ export function ModulesFilters({
   extraFields,
 }: ModulesFiltersProps) {
   return (
-    <div className="bg-card py-4 space-y-3 md:flex md:items-end md:gap-3 md:space-y-0">
+    <div className="bg-card pb-4 space-y-3 md:flex md:items-end md:gap-3 md:space-y-0">
       <div className="space-y-1 md:flex-1">
         <Label className="text-xs text-muted-foreground">Recherche</Label>
         <Input

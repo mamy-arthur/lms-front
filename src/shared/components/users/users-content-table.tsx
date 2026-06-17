@@ -1,37 +1,18 @@
 "use client";
 
-import { Role } from "@/shared/constants/roles";
 import {
-  UserActiveBadge,
   UserActions,
+  UserActiveBadge,
   UserAvatar,
   UserRoleBadge,
   UsersTable,
   type UsersTableColumn,
   type UsersTableSort,
 } from "@/shared/components/users";
+import { formatDate, formatDateWithTime } from "@/shared/lib/date";
+import type { Role } from "@/shared/constants/roles";
 
-function formatDate(dateStr: string): string {
-  if (!dateStr) return "—";
-  return new Date(dateStr).toLocaleDateString("fr-FR", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-}
-
-function formatDateWithTime(dateStr: string): string {
-  if (!dateStr) return "—";
-  return new Date(dateStr).toLocaleDateString("fr-FR", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-interface UserRow {
+interface UsersContentRow {
   id: string;
   username: string;
   first_name: string;
@@ -46,7 +27,7 @@ interface UserRow {
   tenantId?: string;
 }
 
-export interface UsersContentTableProps<T extends { id: string | number }> {
+export interface UsersContentTableProps<T extends UsersContentRow = UsersContentRow> {
   users: T[];
   isLoading?: boolean;
   hasQuery?: boolean;
@@ -67,7 +48,7 @@ export interface UsersContentTableProps<T extends { id: string | number }> {
   rowTestId?: string;
 }
 
-export function UsersContentTable<T extends { id: string | number }>({
+export function UsersContentTable<T extends UsersContentRow = UsersContentRow>({
   users,
   isLoading = false,
   hasQuery = false,
@@ -94,9 +75,9 @@ export function UsersContentTable<T extends { id: string | number }>({
       sortable: true,
       render: (user) => (
         <UserAvatar
-          name={(user as unknown as UserRow).username}
-          first_name={(user as unknown as UserRow).first_name}
-          last_name={(user as unknown as UserRow).last_name}
+          name={user.username}
+          first_name={user.first_name}
+          last_name={user.last_name}
         />
       ),
       skeleton: (
@@ -111,33 +92,26 @@ export function UsersContentTable<T extends { id: string | number }>({
       label: "Email",
       sortable: true,
       render: (user) => (
-        <span className="text-xs text-muted-foreground">
-          {(user as unknown as UserRow).email}
-        </span>
+        <span className="text-xs text-muted-foreground">{user.email}</span>
       ),
     },
     {
       key: "role",
       label: "Rôle",
       sortable: true,
-      render: (user) => (
-        <UserRoleBadge role={(user as unknown as UserRow).role} />
-      ),
+      render: (user) => <UserRoleBadge role={user.role} />,
     },
     ...(tenantNames
       ? [
           {
-            key: "tenantId",
+            key: "tenantId" as const,
             label: "Tenant" as const,
             sortable: true,
-            render: (user: T) => {
-              const u = user as unknown as UserRow;
-              return (
-                <span className="text-xs text-muted-foreground">
-                  {tenantNames[u.tenantId ?? ""] || u.tenantId || "—"}
-                </span>
-              );
-            },
+            render: (user: T) => (
+              <span className="text-xs text-muted-foreground">
+                {tenantNames[user.tenantId ?? ""] || user.tenantId || "—"}
+              </span>
+            ),
           },
         ]
       : []),
@@ -147,7 +121,7 @@ export function UsersContentTable<T extends { id: string | number }>({
       sortable: true,
       render: (user) => (
         <span className="text-xs text-muted-foreground">
-          {(user as unknown as UserRow).city || "—"}
+          {user.city || "—"}
         </span>
       ),
     },
@@ -157,7 +131,7 @@ export function UsersContentTable<T extends { id: string | number }>({
       sortable: true,
       render: (user) => (
         <span className="text-xs text-muted-foreground">
-          {(user as unknown as UserRow).country || "—"}
+          {user.country || "—"}
         </span>
       ),
     },
@@ -165,26 +139,19 @@ export function UsersContentTable<T extends { id: string | number }>({
       key: "lastLogin",
       label: "Dernière connexion",
       sortable: true,
-      render: (user) => {
-        const lastLogin = (user as unknown as UserRow).lastLogin;
-        return (
-          <span className="text-xs text-muted-foreground tabular-nums">
-            {showTimeInLastLogin
-              ? formatDateWithTime(lastLogin)
-              : formatDate(lastLogin)}
-          </span>
-        );
-      },
+      render: (user) => (
+        <span className="text-xs text-muted-foreground tabular-nums">
+          {showTimeInLastLogin
+            ? formatDateWithTime(user.lastLogin)
+            : formatDate(user.lastLogin)}
+        </span>
+      ),
     },
     {
       key: "isActive",
       label: "Statut",
       sortable: isActiveSortable,
-      render: (user) => (
-        <UserActiveBadge
-          isActive={(user as unknown as UserRow).isActive}
-        />
-      ),
+      render: (user) => <UserActiveBadge isActive={user.isActive} />,
     },
     {
       key: "createdAt",
@@ -192,7 +159,7 @@ export function UsersContentTable<T extends { id: string | number }>({
       sortable: true,
       render: (user) => (
         <span className="text-xs text-muted-foreground tabular-nums">
-          {formatDate((user as unknown as UserRow).createdAt)}
+          {formatDate(user.createdAt)}
         </span>
       ),
     },
@@ -200,21 +167,18 @@ export function UsersContentTable<T extends { id: string | number }>({
       key: "actions",
       label: "",
       sortable: false,
-      render: (user) => {
-        const u = user as unknown as UserRow;
-        return (
-          <div className="text-right" onClick={(e) => e.stopPropagation()}>
-            <UserActions
-              isActive={u.isActive}
-              userLabel={u.username}
-              onView={() => onView?.(user)}
-              onEdit={() => onEdit?.(user)}
-              onToggleActive={() => onToggleActive?.(user)}
-              onDelete={() => onDelete?.(user)}
-            />
-          </div>
-        );
-      },
+      render: (user) => (
+        <div className="text-right" onClick={(e) => e.stopPropagation()}>
+          <UserActions
+            isActive={user.isActive}
+            userLabel={user.username}
+            onView={() => onView?.(user)}
+            onEdit={() => onEdit?.(user)}
+            onToggleActive={() => onToggleActive?.(user)}
+            onDelete={() => onDelete?.(user)}
+          />
+        </div>
+      ),
     },
   ];
 

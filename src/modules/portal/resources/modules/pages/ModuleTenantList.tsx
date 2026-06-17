@@ -5,12 +5,12 @@ import { Plus } from "lucide-react";
 import { useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { useModuleListController } from "@/modules/shared/hooks/useModuleListController";
+import { ModulesFilters } from "@/shared/components/modules";
 import { ModuleFormDrawer } from "../components/ModuleFormDrawer";
-import { useModulesQuery, MODULES_QUERY_KEY } from "../hooks/useModulesQuery";
+import { MODULES_QUERY_KEY, useModulesQuery } from "../hooks/useModulesQuery";
 import { ModuleCategoryProvider } from "../lib/module-store";
 import type { Module } from "../types";
-import { ModulesFilters } from "@/shared/components/modules";
-import { ModulesTable, type SortConfig } from "./_components/modules-table";
+import { ModulesTable } from "./_components/modules-table";
 
 function ModuleTenantListInner() {
   const ctrl = useModuleListController<Module>({ defaultPageSize: 12 });
@@ -36,19 +36,24 @@ function ModuleTenantListInner() {
   );
 
   return (
-    <div className="space-y-6 p-3">
-      <div className="flex items-center justify-between">
-        <h1 className="text-lg font-extrabold">Gestion des modules</h1>
-        <Button
-          onClick={ctrl.handleOpenCreate}
-          size="lg"
-          className="bg-(--color-primary) text-primary-foreground"
-        >
-          <Plus className="size-4" />
-          Ajouter un module
-        </Button>
-      </div>
-
+    <div className="bg-background">
+      <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Modules</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Gérez vos modules ici.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            onClick={ctrl.handleOpenCreate}
+            className="bg-(--color-primary) hover:bg-(--color-primary)/80 text-primary-foreground"
+          >
+            <Plus className="mr-1 size-4" />
+            Nouveau module
+          </Button>
+        </div>
+      </header>
       <ModulesFilters
         search={ctrl.draftSearch}
         categoryFilter={ctrl.draftCategory}
@@ -68,6 +73,7 @@ function ModuleTenantListInner() {
         onPageChange={ctrl.handlePageChange}
         onPageSizeChange={ctrl.handlePageSizeChange}
         onEdit={ctrl.handleEdit}
+        onDelete={() => {}}
         onCategoryChange={handleCategoryChange}
       />
 

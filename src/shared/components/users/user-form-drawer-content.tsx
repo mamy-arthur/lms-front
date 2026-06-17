@@ -306,7 +306,7 @@ export function UserFormDrawerContent({
             >
               Annuler
             </Button>
-            <Button type="submit" disabled={mutation.isPending} size="lg">
+            <Button type="submit" disabled={mutation.isPending} size="lg" className="bg-(--color-primary) hover:bg-(--color-primary)/80">
               {mutation.isPending && (
                 <Loader2 className="size-4 animate-spin" />
               )}

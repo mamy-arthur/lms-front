@@ -23,49 +23,4 @@ export function genIdentifier(name: string) {
   return slug ? `${slug}-${rand}` : `MOD-${rand}`;
 }
 
-export function applyModuleParams<T extends { name: string; identifier: string; category: string; tenantId?: string }>(
-  modules: T[],
-  params?: {
-    q?: string;
-    category?: string;
-    tenant_id?: string;
-    sort_by?: string;
-    sort_dir?: "asc" | "desc";
-    page?: number;
-    page_size?: number;
-  },
-  defaultPageSize = 12,
-): { data: T[]; total: number } {
-  let data = [...modules];
 
-  if (params?.q) {
-    const q = params.q.toLowerCase();
-    data = data.filter(
-      (m) =>
-        m.name.toLowerCase().includes(q) ||
-        m.identifier.toLowerCase().includes(q),
-    );
-  }
-  if (params?.category) {
-    data = data.filter((m) => m.category === params.category);
-  }
-  if (params?.tenant_id) {
-    data = data.filter((m) => m.tenantId === params.tenant_id);
-  }
-
-  const col = params?.sort_by || "name";
-  const dir = params?.sort_dir || "asc";
-  data.sort((a, b) => {
-    const aVal = String(a[col as keyof T] ?? "");
-    const bVal = String(b[col as keyof T] ?? "");
-    const cmp = aVal.localeCompare(bVal);
-    return dir === "asc" ? cmp : -cmp;
-  });
-
-  const total = data.length;
-  const page = params?.page ?? 0;
-  const pageSize = params?.page_size ?? defaultPageSize;
-  data = data.slice(page * pageSize, (page + 1) * pageSize);
-
-  return { data, total };
-}
