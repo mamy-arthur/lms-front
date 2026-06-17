@@ -5,6 +5,7 @@ import { UrlContentView } from "./components/UrlView";
 import { TextContentView } from "./components/TextView";
 import { FolderContentView } from "./components/FolderView";
 import { SurveyContentView } from "./components/SurveyView";
+import { ScormContentView } from "./components/ScormView";
 
 interface ContentRendererProps {
     content: CourseContent;
@@ -63,6 +64,18 @@ export function ContentRenderer({ content }: ContentRendererProps) {
                     }
                     description={
                         (content.data?.description as string) ?? undefined
+                    }
+                />
+            );
+        case "scorm":
+            return (
+                <ScormContentView
+                    title={content.title}
+                    description={
+                        (content.data?.description as string) ?? undefined
+                    }
+                    packageFile={
+                        (content.data?.packageFile as string) ?? undefined
                     }
                 />
             );
