@@ -103,7 +103,7 @@ export function MultiFileUploadField({
                             className="flex items-center gap-3 w-full rounded-md border bg-background px-3 py-2"
                         >
                             <FileArchive className="h-5 w-5 text-muted-foreground shrink-0" />
-                            <span className="truncate text-sm flex-1 text-left">
+                            <span className="truncate text-xs flex-1 text-left">
                                 {file.name}
                             </span>
                             <span className="text-xs text-muted-foreground shrink-0">

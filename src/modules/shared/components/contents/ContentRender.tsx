@@ -3,6 +3,7 @@ import { FileContentView } from "./components/FileView";
 import { PageContentView } from "./components/PageView";
 import { UrlContentView } from "./components/UrlView";
 import { TextContentView } from "./components/TextView";
+import { FolderContentView } from "./components/FolderView";
 
 interface ContentRendererProps {
     content: CourseContent;
@@ -41,6 +42,15 @@ export function ContentRenderer({ content }: ContentRendererProps) {
                 <TextContentView
                     title={content.title}
                     text={content.data?.text as string}
+                />
+            );
+        case "folder":
+            return (
+                <FolderContentView
+                    title={content.title}
+                    description={content.data?.description as string}
+                    fileCount={content.data?.fileCount as number}
+                    filesNames={content.data?.filesNames as string[]}
                 />
             );
 

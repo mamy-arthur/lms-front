@@ -13,6 +13,7 @@ const schema = z.object({
     title: z.string().min(1, "Le nom est obligatoire"),
     description: z.string().optional(),
     fileCount: z.number().optional(),
+    filesNames: z.array(z.string()),
 });
 export type FolderFormValues = z.infer<typeof schema>;
 
@@ -34,6 +35,10 @@ export function FolderForm({
     const handleFilesChange = (files: File[]) => {
         setPackageFiles(files);
         setValue("fileCount", files.length, { shouldDirty: true });
+        setValue(
+            "filesNames",
+            files.map((file) => file.name),
+        );
     };
 
     const submitWithFiles = (values: FolderFormValues) => {

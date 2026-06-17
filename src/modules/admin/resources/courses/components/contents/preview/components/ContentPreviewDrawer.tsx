@@ -40,7 +40,7 @@ export function ContentPreviewDrawer({ open, onOpenChange }: Props) {
                 </SheetHeader>
                 <div className="space-y-2 mt-2 p-2">
                     {sections.map((section) => (
-                        <Collapsible defaultOpen>
+                        <Collapsible defaultOpen key={section.id}>
                             <CollapsibleTrigger className="flex w-full items-center justify-between rounded-lg border px-4 py-3 cursor-pointer">
                                 <span className="font-semibold">
                                     {section.title}
