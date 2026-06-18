@@ -8,7 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { QuizzesFilters } from "@/shared/components/quizzes";
+import { QuizzesFilters } from "@modules/shared/components/quizzes";
 import type { Tenant } from "@/shared/types/tenant.types";
 
 interface AdminQuizzesFiltersProps {

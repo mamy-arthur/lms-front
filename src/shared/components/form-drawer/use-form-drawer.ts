@@ -1,46 +1,17 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useCallback, useEffect, useMemo } from "react";
-import type { FieldValues } from "react-hook-form";
+import { useCallback, useEffect } from "react";
 import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import type { FieldValues } from "react-hook-form";
 import type { z } from "zod";
-import { MOCK_COURSES } from "@/shared/mocks/courses.mock";
+import type { MutationLike } from "@/shared/types/mutation";
 
-export interface MutationLike {
-  mutate: (...args: any[]) => void;
-  isPending: boolean;
-  isError: boolean;
-  error: unknown;
-  reset: () => void;
-}
-
-export interface QuizFormQuiz {
-  id: string;
-  title: string;
-  slug: string;
-  description: string;
-  isFinalEvaluation: boolean;
-  formationId: string;
-}
-
-export function useQuizFormDrawer({
-  open,
-  onClose,
-  onSuccess,
-  quiz,
-  createMutation,
-  updateMutation,
-  schema,
-  defaultValues,
-  createDefaults,
-  buildCreatePayload,
-  buildUpdatePayload,
-}: {
+export interface UseFormDrawerOptions {
   open: boolean;
   onClose: () => void;
   onSuccess?: () => void;
-  quiz?: QuizFormQuiz;
+  entity?: { id: string };
   createMutation: MutationLike;
   updateMutation: MutationLike;
   schema: z.ZodSchema<any>;
@@ -48,8 +19,22 @@ export function useQuizFormDrawer({
   createDefaults: FieldValues;
   buildCreatePayload: (values: FieldValues) => unknown;
   buildUpdatePayload: (values: FieldValues, id: string) => unknown;
-}) {
-  const isEdit = !!quiz;
+}
+
+export function useFormDrawer({
+  open,
+  onClose,
+  onSuccess,
+  entity,
+  createMutation,
+  updateMutation,
+  schema,
+  defaultValues,
+  createDefaults,
+  buildCreatePayload,
+  buildUpdatePayload,
+}: UseFormDrawerOptions) {
+  const isEdit = !!entity;
 
   const mutation = isEdit ? updateMutation : createMutation;
 
@@ -71,14 +56,10 @@ export function useQuizFormDrawer({
     onClose();
   }, [form, createMutation, updateMutation, onClose, createDefaults]);
 
-  const title = form.watch("title") as unknown as string;
-
-  const formationOptions = useMemo(() => MOCK_COURSES, []);
-
   const onSubmit = useCallback(
     (values: FieldValues) => {
-      if (isEdit && quiz) {
-        updateMutation.mutate(buildUpdatePayload(values, quiz.id), {
+      if (isEdit && entity) {
+        updateMutation.mutate(buildUpdatePayload(values, entity.id), {
           onSuccess: () => {
             form.reset();
             createMutation.reset();
@@ -99,7 +80,7 @@ export function useQuizFormDrawer({
     },
     [
       isEdit,
-      quiz,
+      entity,
       createMutation,
       updateMutation,
       form,
@@ -115,7 +96,5 @@ export function useQuizFormDrawer({
     onSubmit,
     mutation,
     isEdit,
-    title,
-    formationOptions,
   };
 }

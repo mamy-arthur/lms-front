@@ -2,7 +2,7 @@
 
 import { memo, useMemo } from "react";
 import { z } from "zod";
-import { Sheet } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import {
   FieldContent,
   FieldError,
@@ -17,14 +17,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  ModuleFormDrawerContent,
-} from "@/shared/components/modules/module-form-drawer-content";
+import { ModuleForm } from "@modules/shared/components/modules/module-form";
 import {
   extractApiError,
   genIdentifier,
-} from "@/shared/components/modules/module-form-utils";
-import { useModuleFormDrawer } from "@/shared/components/modules/use-module-form-drawer";
+} from "@modules/shared/components/modules/module-form-utils";
+import { useModuleFormDrawer } from "@modules/shared/components/modules/use-module-form-drawer";
 import type { Tenant } from "@/shared/types/tenant.types";
 import { useCreateModule } from "../../hooks/useCreateModule";
 import { useUpdateModule } from "../../hooks/useUpdateModule";
@@ -163,27 +161,36 @@ function AdminModuleFormDrawerBase({
 
   return (
     <Sheet open={open} onOpenChange={(nextOpen) => !nextOpen && formState.handleClose()}>
-      <ModuleFormDrawerContent
-        form={formState.form}
-        open={open}
-        onClose={onClose}
-        mutation={formState.mutation}
-        isEdit={formState.isEdit}
-        handleClose={formState.handleClose}
-        onSubmit={formState.onSubmit}
-        selectedCourseIds={formState.selectedCourseIds}
-        toggleCourse={formState.toggleCourse}
-        coursesByCategory={formState.coursesByCategory}
-        openCategories={formState.openCategories}
-        toggleCategory={formState.toggleCategory}
-        name={formState.name}
-        coursePopoverOpen={formState.coursePopoverOpen}
-        setCoursePopoverOpen={formState.setCoursePopoverOpen}
-        title={isEdit ? "Modifier le module" : "Ajouter un module"}
-        genIdentifierFn={genIdentifier}
-        extractApiErrorFn={extractApiError}
-        extraFields={tenantField}
-      />
+      <SheetContent
+        className="flex w-full flex-col gap-0 p-0 sm:max-w-2xl lg:max-w-4xl"
+        showCloseButton={true}
+        onInteractOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => e.preventDefault()}
+      >
+        <SheetHeader className="border-b px-4 py-4">
+          <SheetTitle>{isEdit ? "Modifier le module" : "Ajouter un module"}</SheetTitle>
+          <SheetDescription>
+            Renseignez les informations pour le module.
+          </SheetDescription>
+        </SheetHeader>
+        <ModuleForm
+          form={formState.form}
+          mutation={formState.mutation}
+          isEdit={formState.isEdit}
+          handleClose={formState.handleClose}
+          onSubmit={formState.onSubmit}
+          selectedCourseIds={formState.selectedCourseIds}
+          toggleCourse={formState.toggleCourse}
+          coursesByCategory={formState.coursesByCategory}
+          openCategories={formState.openCategories}
+          toggleCategory={formState.toggleCategory}
+          name={formState.name}
+          coursePopoverOpen={formState.coursePopoverOpen}
+          setCoursePopoverOpen={formState.setCoursePopoverOpen}
+          genIdentifierFn={genIdentifier}
+          extraFields={tenantField}
+        />
+      </SheetContent>
     </Sheet>
   );
 }

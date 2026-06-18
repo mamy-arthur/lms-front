@@ -8,7 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { UsersFilters } from "@/shared/components/users";
+import { UsersFilters } from "@modules/shared/components/users";
 import type { Tenant } from "@/shared/types/tenant.types";
 
 const ROLE_OPTIONS = [

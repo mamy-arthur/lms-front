@@ -3,7 +3,7 @@ import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactElement } from "react";
 import { Role } from "@/shared/constants/roles";
-import { MOCK_USERS } from "@/shared/mocks/users.mock";
+import { MOCK_USERS } from "@modules/shared/components/users/mocks/users.mock";
 import { normalizeTenantUser } from "../../types";
 import type { TenantUser } from "../../types";
 

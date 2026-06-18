@@ -1,6 +1,6 @@
 "use client";
 
-import { UsersFilters } from "@/shared/components/users";
+import { UsersFilters } from "@modules/shared/components/users";
 
 const ROLE_OPTIONS = [
   { value: "CLIENT_MANAGER", label: "Responsable" },

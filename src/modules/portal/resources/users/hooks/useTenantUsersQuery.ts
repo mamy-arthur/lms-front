@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { MOCK_USERS } from "@/shared/mocks/users.mock";
+import { MOCK_USERS } from "@modules/shared/components/users/mocks/users.mock";
 import { normalizeTenantUser } from "../types";
 import type { TenantUser, TenantUserSearchParams } from "../types";
 

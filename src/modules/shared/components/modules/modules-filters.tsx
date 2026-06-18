@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CATEGORY_OPTIONS } from "@/shared/constants/modules";
+import { CATEGORY_OPTIONS } from "./constants/modules";
 
 export interface ModulesFiltersProps {
   search: string;

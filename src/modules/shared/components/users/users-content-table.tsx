@@ -8,7 +8,7 @@ import {
   UsersTable,
   type UsersTableColumn,
   type UsersTableSort,
-} from "@/shared/components/users";
+} from "./";
 import { formatDate, formatDateWithTime } from "@/shared/lib/date";
 import type { Role } from "@/shared/constants/roles";
 

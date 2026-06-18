@@ -16,13 +16,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Sheet } from "@/components/ui/sheet";
-import { QuizFormDrawerContent } from "@/shared/components/quizzes";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { QuizForm } from "@modules/shared/components/quizzes/quiz-form";
 import {
   extractApiError,
   genQuizId,
-} from "@/shared/components/quizzes/quiz-form-utils";
-import { useQuizFormDrawer } from "@/shared/components/quizzes/use-quiz-form-drawer";
+} from "@modules/shared/components/quizzes/quiz-form-utils";
+import { useQuizFormDrawer } from "@modules/shared/components/quizzes/use-quiz-form-drawer";
 import type { Tenant } from "@/shared/types/tenant.types";
 import { useCreateQuiz } from "../../hooks/useCreateQuiz";
 import { useUpdateQuiz } from "../../hooks/useUpdateQuiz";
@@ -162,19 +162,28 @@ function AdminQuizFormDrawerBase({
 
   return (
     <Sheet open={open} onOpenChange={(nextOpen) => !nextOpen && formState.handleClose()}>
-      <QuizFormDrawerContent
-        form={formState.form}
-        open={open}
-        onClose={onClose}
-        mutation={formState.mutation}
-        isEdit={formState.isEdit}
-        handleClose={formState.handleClose}
-        onSubmit={formState.onSubmit}
-        genSlugFn={genQuizId}
-        extractApiErrorFn={extractApiError}
-        extraFields={tenantField}
-        drawerTitle={isEdit ? "Modifier le quiz" : "Ajouter un quiz"}
-      />
+      <SheetContent
+        className="flex w-full flex-col gap-0 p-0 sm:max-w-2xl lg:max-w-4xl"
+        showCloseButton={true}
+        onInteractOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => e.preventDefault()}
+      >
+        <SheetHeader className="border-b px-4 py-4">
+          <SheetTitle>{isEdit ? "Modifier le quiz" : "Ajouter un quiz"}</SheetTitle>
+          <SheetDescription>
+            Renseignez les informations pour le quiz.
+          </SheetDescription>
+        </SheetHeader>
+        <QuizForm
+          form={formState.form}
+          mutation={formState.mutation}
+          isEdit={formState.isEdit}
+          handleClose={formState.handleClose}
+          onSubmit={formState.onSubmit}
+          genSlugFn={genQuizId}
+          extraFields={tenantField}
+        />
+      </SheetContent>
     </Sheet>
   );
 }

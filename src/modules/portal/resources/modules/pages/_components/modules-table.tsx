@@ -1,6 +1,6 @@
 "use client";
 
-import { ModuleActions } from "@/shared/components/modules";
+import { ModuleActions } from "@modules/shared/components/modules";
 import {
   DataTable,
   type DataTableColumn,

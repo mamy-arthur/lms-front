@@ -1,20 +1,14 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useCallback, useMemo, useState } from "react";
 import type { FieldValues } from "react-hook-form";
 import type { z } from "zod";
 import {
   MOCK_COURSE_CATEGORIES,
   MOCK_COURSES,
 } from "@/shared/mocks/courses.mock";
+import type { MutationLike } from "@/shared/types/mutation";
+import { useFormDrawer as _useFormDrawer } from "@/shared/components/form-drawer/use-form-drawer";
 
-export interface MutationLike {
-  mutate: (...args: any[]) => void;
-  isPending: boolean;
-  isError: boolean;
-  error: unknown;
-  reset: () => void;
-}
+export type { MutationLike };
 
 export interface ModuleFormModule {
   id: string;
@@ -51,39 +45,32 @@ export function useModuleFormDrawer({
   buildUpdatePayload: (values: FieldValues, id: string) => unknown;
 }) {
   const [coursePopoverOpen, setCoursePopoverOpen] = useState(false);
-  const isEdit = !!module;
 
-  const mutation = isEdit ? updateMutation : createMutation;
-
-  const form = useForm({
-    resolver: zodResolver(schema as any),
+  const base = _useFormDrawer({
+    open,
+    onClose,
+    onSuccess,
+    entity: module,
+    createMutation,
+    updateMutation,
+    schema,
     defaultValues,
+    createDefaults,
+    buildCreatePayload,
+    buildUpdatePayload,
   });
 
-  useEffect(() => {
-    if (open) {
-      form.reset(defaultValues);
-    }
-  }, [open, defaultValues, form]);
-
-  const handleClose = useCallback(() => {
-    form.reset(createDefaults);
-    createMutation.reset();
-    updateMutation.reset();
-    onClose();
-  }, [form, createMutation, updateMutation, onClose, createDefaults]);
-
-  const selectedCourseIds = form.watch("courseIds") as unknown as string[];
+  const selectedCourseIds = base.form.watch("courseIds") as unknown as string[];
 
   const toggleCourse = useCallback(
     (courseId: string) => {
-      const current = form.getValues("courseIds") as unknown as string[];
+      const current = base.form.getValues("courseIds") as unknown as string[];
       const next = current.includes(courseId)
         ? current.filter((id: string) => id !== courseId)
         : [...current, courseId];
-      form.setValue("courseIds", next, { shouldValidate: true });
+      base.form.setValue("courseIds", next, { shouldValidate: true });
     },
-    [form],
+    [base.form],
   );
 
   const coursesByCategory = useMemo(() => {
@@ -111,51 +98,16 @@ export function useModuleFormDrawer({
     });
   }, []);
 
-  const name = form.watch("name") as unknown as string;
-
-  const onSubmit = useCallback(
-    (values: FieldValues) => {
-      if (isEdit && module) {
-        updateMutation.mutate(
-          buildUpdatePayload(values, module.id),
-          {
-            onSuccess: () => {
-              form.reset();
-              createMutation.reset();
-              updateMutation.reset();
-              onSuccess?.();
-            },
-          },
-        );
-      } else {
-        createMutation.mutate(
-          buildCreatePayload(values),
-          {
-            onSuccess: () => {
-              form.reset();
-              createMutation.reset();
-              updateMutation.reset();
-              onSuccess?.();
-            },
-          },
-        );
-      }
-    },
-    [isEdit, module, createMutation, updateMutation, form, onSuccess, buildCreatePayload, buildUpdatePayload],
-  );
+  const name = base.form.watch("name") as unknown as string;
 
   return {
-    form,
-    handleClose,
+    ...base,
     selectedCourseIds,
     toggleCourse,
     coursesByCategory,
     openCategories,
     toggleCategory,
     name,
-    onSubmit,
-    mutation,
-    isEdit,
     coursePopoverOpen,
     setCoursePopoverOpen,
   };

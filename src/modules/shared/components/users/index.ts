@@ -9,3 +9,5 @@ export { UserActions } from "./user-actions";
 export type { UserActionsProps } from "./user-actions";
 export { UsersContentTable } from "./users-content-table";
 export type { UsersContentTableProps } from "./users-content-table";
+export { UserForm } from "./user-form";
+export type { UserFormProps } from "./user-form";

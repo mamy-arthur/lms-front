@@ -3,7 +3,7 @@
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useModuleListController } from "@/modules/shared/hooks/useModuleListController";
-import { QuizzesFilters } from "@/shared/components/quizzes";
+import { QuizzesFilters } from "@modules/shared/components/quizzes";
 import { QuizFormDrawer } from "../components/QuizFormDrawer";
 import { useQuizzesQuery } from "../hooks/useQuizzesQuery";
 import type { Quiz } from "../types";

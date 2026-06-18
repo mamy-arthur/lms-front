@@ -5,7 +5,7 @@ import { Plus } from "lucide-react";
 import { useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { useModuleListController } from "@/modules/shared/hooks/useModuleListController";
-import { ModulesFilters } from "@/shared/components/modules";
+import { ModulesFilters } from "@modules/shared/components/modules";
 import { ModuleFormDrawer } from "../components/ModuleFormDrawer";
 import { MODULES_QUERY_KEY, useModulesQuery } from "../hooks/useModulesQuery";
 import { ModuleCategoryProvider } from "../lib/module-store";

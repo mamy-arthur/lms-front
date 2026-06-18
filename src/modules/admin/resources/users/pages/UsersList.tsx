@@ -3,7 +3,7 @@
 import { Plus } from "lucide-react";
 import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import type { UsersTableSort } from "@/shared/components/users";
+import type { UsersTableSort } from "@modules/shared/components/users";
 import { useAllTenantsQuery } from "@/modules/shared/hooks/useAllTenantsQuery";
 import { AdminUserFormDrawer } from "./_components/admin-user-form-drawer";
 import { AdminUsersFilters } from "./_components/admin-users-filters";

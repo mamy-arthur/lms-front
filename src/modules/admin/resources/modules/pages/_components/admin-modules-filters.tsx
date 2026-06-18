@@ -8,7 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ModulesFilters } from "@/shared/components/modules";
+import { ModulesFilters } from "@modules/shared/components/modules";
 import type { Tenant } from "@/shared/types/tenant.types";
 
 interface AdminModulesFiltersProps {
