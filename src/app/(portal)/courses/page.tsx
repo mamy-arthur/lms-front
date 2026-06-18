@@ -1,7 +1,7 @@
 export default function CoursesPage() {
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Mes formations</h1>
+      <h1 className="text-2xl font-bold text-gray-900 mb-6">COURS</h1>
     </div>
   );
 }

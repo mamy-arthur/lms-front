@@ -21,33 +21,35 @@ export const PORTAL_NAV: PortalNavItem[] = [
         url: ROUTES.portal.dashboard,
         title: "Tableau de bord",
         icon: LayoutDashboard,
-        items:[]
+        items: [],
     },
     {
         url: ROUTES.portal.courses,
         title: "Mes formations",
         icon: GraduationCap,
-        items:[
+        items: [
+            { title: "Cours", url: ROUTES.portal.courses },
+            { title: "Catégories", url: ROUTES.portal.category },
             { title: "Modules", url: ROUTES.portal.modules },
             { title: "Quizzes", url: ROUTES.portal.quizzes },
-        ]
+        ],
     },
-    {
-        url: ROUTES.portal.certificates,
-        title: "Certificats",
-        icon: Award,
-        items:[]
-    },
+    // {
+    //     url: ROUTES.portal.certificates,
+    //     title: "Certificats",
+    //     icon: Award,
+    //     items: [],
+    // },
     {
         url: ROUTES.portal.users,
         title: "Utilisateurs",
         icon: Users,
-        items:[{ title: "utilisateurs", url: ROUTES.portal.users }]
+        items: [{ title: "utilisateurs", url: ROUTES.portal.users }],
     },
-    {
-        url: ROUTES.portal.profile,
-        title: "Profil",
-        icon: User,
-        items:[]
-    },
+    // {
+    //     url: ROUTES.portal.profile,
+    //     title: "Profil",
+    //     icon: User,
+    //     items: [],
+    // },
 ];
