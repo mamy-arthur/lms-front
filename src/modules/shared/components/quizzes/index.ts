@@ -1,6 +1,6 @@
 export { QuizActions } from "./quiz-actions";
 export type { QuizActionsProps } from "./quiz-actions";
-export { QuizzesFilters } from "./quizzes-filters";
-export type { QuizzesFiltersProps } from "./quizzes-filters";
+export { QuizSearch } from "./quiz-search";
+export type { QuizSearchProps } from "./quiz-search";
 export { QuizForm } from "./quiz-form";
 export type { QuizFormProps } from "./quiz-form";

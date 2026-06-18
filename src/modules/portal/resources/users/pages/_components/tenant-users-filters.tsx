@@ -1,6 +1,6 @@
 "use client";
 
-import { UsersFilters } from "@modules/shared/components/users";
+import { UsersFilter } from "@modules/shared/components/users";
 
 const ROLE_OPTIONS = [
   { value: "CLIENT_MANAGER", label: "Responsable" },
@@ -9,16 +9,14 @@ const ROLE_OPTIONS = [
 
 export { ROLE_OPTIONS as TENANT_ROLE_OPTIONS };
 
-interface TenantUsersFiltersProps {
-  search: string;
+interface TenantUsersFilterProps {
   roleFilter: string;
   statusFilter: string;
-  onSearchChange: (value: string) => void;
   onRoleFilterChange: (value: string) => void;
   onStatusFilterChange: (value: string) => void;
   onSearch: () => void;
 }
 
-export function TenantUsersFilters(props: TenantUsersFiltersProps) {
-  return <UsersFilters {...props} roleOptions={ROLE_OPTIONS} />;
+export function TenantUsersFilter(props: TenantUsersFilterProps) {
+  return <UsersFilter {...props} roleOptions={ROLE_OPTIONS} />;
 }

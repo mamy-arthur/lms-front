@@ -1,13 +1,12 @@
 "use client";
 
 import { Plus } from "lucide-react";
-import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import type { UsersTableSort } from "@modules/shared/components/users";
+import { UserSearch } from "@modules/shared/components/users";
 import { UserFormDrawer } from "../components/UserFormDrawer";
 import { useTenantUsersQuery } from "../hooks/useTenantUsersQuery";
 import type { TenantUser, TenantUserSearchParams } from "../types";
-import { TenantUsersFilters } from "./_components/tenant-users-filters";
+import { TenantUsersFilter } from "./_components/tenant-users-filters";
 import { TenantUsersTable } from "./_components/tenant-users-table";
 import { useUsersListController } from "@/modules/shared/hooks/useUsersListController";
 
@@ -40,7 +39,7 @@ export function TenantUsersList() {
 
   return (
      <div className="bg-background">
-      <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <header className="mb-6">
           <div>
               <h1 className="text-2xl font-bold tracking-tight">
                   Utilisateurs
@@ -49,26 +48,31 @@ export function TenantUsersList() {
                   Ajoutez, modifiez et gérez vos utilisateurs.
               </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-              <Button
-                  onClick={handleOpenCreate}
-                  className="bg-(--color-primary) hover:bg-(--color-primary)/80 text-primary-foreground"
-              >
-                  <Plus className="mr-1 size-4" />
-                   Nouvel utilisateur
-              </Button>
-          </div>
       </header>
 
-      <TenantUsersFilters
-        search={draftSearch}
-        roleFilter={draftRole}
-        statusFilter={draftStatus}
-        onSearchChange={setDraftSearch}
-        onRoleFilterChange={setDraftRole}
-        onStatusFilterChange={setDraftStatus}
-        onSearch={handleSearch}
-      />
+      <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center gap-2">
+        <UserSearch
+          value={draftSearch}
+          onChange={setDraftSearch}
+          onSearch={handleSearch}
+        />
+        <div className="flex items-center gap-2 sm:ml-auto">
+          <TenantUsersFilter
+            roleFilter={draftRole}
+            statusFilter={draftStatus}
+            onRoleFilterChange={setDraftRole}
+            onStatusFilterChange={setDraftStatus}
+            onSearch={handleSearch}
+          />
+          <Button
+            onClick={handleOpenCreate}
+            className="bg-(--color-primary) hover:bg-(--color-primary)/80 text-primary-foreground shrink-0"
+          >
+            <Plus className="size-4" />
+            Nouveau
+          </Button>
+        </div>
+      </div>
 
       <TenantUsersTable
         users={queryResult?.data ?? []}

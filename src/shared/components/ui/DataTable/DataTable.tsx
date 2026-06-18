@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import {
   Pagination,
   PaginationContent,
@@ -126,6 +126,25 @@ export function DataTable<T extends { id: string | number }>({
 }: DataTableProps<T>) {
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
 
+  const sortedData = useMemo(() => {
+    if (!sort) return data;
+    return [...data].sort((a, b) => {
+      const aVal = a[sort.column as keyof T];
+      const bVal = b[sort.column as keyof T];
+      if (aVal == null) return 1;
+      if (bVal == null) return -1;
+      let cmp = 0;
+      if (typeof aVal === "string" && typeof bVal === "string") {
+        cmp = aVal.localeCompare(bVal);
+      } else if (typeof aVal === "number" && typeof bVal === "number") {
+        cmp = aVal - bVal;
+      } else {
+        cmp = String(aVal).localeCompare(String(bVal));
+      }
+      return sort.direction === "asc" ? cmp : -cmp;
+    });
+  }, [data, sort]);
+
   const buildPages = useCallback(() => {
     const pages: (number | "ellipsis")[] = [];
     if (pageCount <= 7) {
@@ -179,14 +198,14 @@ export function DataTable<T extends { id: string | number }>({
             <TableRow className="hover:bg-transparent">
               {skeletonCells}
             </TableRow>
-          ) : data.length === 0 ? (
+          ) : sortedData.length === 0 ? (
             <TableRow className="hover:bg-transparent">
               <TableCell colSpan={columns.length} className="p-0">
                 <EmptyState hasQuery={hasQuery} state={emptyState} />
               </TableCell>
             </TableRow>
           ) : (
-            data.map((row) => (
+            sortedData.map((row) => (
               <TableRow
                 key={row.id}
                 data-testid={rowTestId}
