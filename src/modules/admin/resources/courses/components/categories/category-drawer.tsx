@@ -44,6 +44,7 @@ export function CategoryDrawer({ open, onOpenChange }: Props) {
                     onDone={() => {
                         setEditing(null);
                         setDefaultParentId(null);
+                        onOpenChange(false)
                     }}
                 />
             </SheetContent>

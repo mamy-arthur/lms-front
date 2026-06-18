@@ -99,10 +99,10 @@ export function CategoryForm({
                                 )
                             }
                         >
-                            <SelectTrigger>
+                            <SelectTrigger className="w-full">
                                 <SelectValue placeholder="Aucune (racine)" />
                             </SelectTrigger>
-                            <SelectContent>
+                            <SelectContent className="w-full">
                                 <SelectItem value="none">
                                     Aucune (racine)
                                 </SelectItem>
@@ -172,7 +172,7 @@ export function CategoryForm({
                 <Button
                     type="button"
                     variant="ghost"
-                    onClick={() => onDone?.()}
+                    onClick={onDone}
                 >
                     Annuler
                 </Button>
