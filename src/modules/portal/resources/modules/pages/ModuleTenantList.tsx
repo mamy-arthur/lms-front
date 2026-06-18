@@ -9,7 +9,7 @@ import { ModuleFormDrawer } from "../components/ModuleFormDrawer";
 import { useModulesQuery, MODULES_QUERY_KEY } from "../hooks/useModulesQuery";
 import { ModuleCategoryProvider } from "../lib/module-store";
 import type { Module } from "../types";
-import { ModulesFilters } from "./_components/modules-filters";
+import { ModulesFilters } from "@/shared/components/modules";
 import { ModulesTable, type SortConfig } from "./_components/modules-table";
 
 function ModuleTenantListInner() {

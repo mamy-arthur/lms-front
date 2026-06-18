@@ -7,3 +7,5 @@ export { UsersFilters } from "./users-filters";
 export type { UsersFiltersProps } from "./users-filters";
 export { UserActions } from "./user-actions";
 export type { UserActionsProps } from "./user-actions";
+export { UsersContentTable } from "./users-content-table";
+export type { UsersContentTableProps } from "./users-content-table";

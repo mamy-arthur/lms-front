@@ -32,7 +32,7 @@ export const ADMIN_NAV: AdminNavItem[] = [
         title: "Utilisateurs",
         icon: Users,
         access: ACCESS.users,
-        items: [{ title: "Liste des users", url: ROUTES.admin.users }],
+        items: [{ title: "Utilisateurs", url: ROUTES.admin.users }],
     },
     {
         url: ROUTES.admin.courses,
@@ -64,6 +64,6 @@ export const ADMIN_NAV: AdminNavItem[] = [
         title: "Tenants",
         icon: Building2,
         access: ACCESS.tenants,
-        items: [{ title: "Liste des tenants", url: ROUTES.admin.tenants }],
+        items: [{ title: "Tenants", url: ROUTES.admin.tenants }],
     },
 ];

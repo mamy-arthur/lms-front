@@ -6,8 +6,8 @@ import {
   type UsersTableSort,
 } from "@/shared/components/users";
 import type { Module } from "../../types";
+import { ModuleActions } from "@/shared/components/modules";
 import { CategoryCell } from "./category-cell";
-import { ModuleActions } from "./module-actions";
 
 export type SortConfig = UsersTableSort;
 
@@ -74,7 +74,7 @@ export function ModulesTable({
       render: (mod) => (
         <div className="text-right" onClick={(e) => e.stopPropagation()}>
           <ModuleActions
-            module={mod}
+            moduleLabel={mod.name}
             onEdit={() => onEdit(mod)}
             onDelete={onDelete ? () => onDelete(mod) : undefined}
           />

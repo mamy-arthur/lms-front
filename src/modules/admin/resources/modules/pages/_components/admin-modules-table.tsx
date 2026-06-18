@@ -1,7 +1,6 @@
 "use client";
 
-import { Pencil, Trash2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ModuleActions } from "@/shared/components/modules";
 import {
   UsersTable,
   type UsersTableColumn,
@@ -42,7 +41,6 @@ export function AdminModulesTable({
   onDelete,
   tenantNames,
 }: AdminModulesTableProps) {
-  const handleDelete = onDelete ?? (() => {});
   const columns: UsersTableColumn<Module>[] = [
     {
       key: "name",
@@ -50,7 +48,7 @@ export function AdminModulesTable({
       sortable: true,
       render: (mod) => (
         <div className="flex flex-col">
-          <span className="text-sm font-medium text-foreground">
+          <span className="text-xs font-medium text-foreground">
             {mod.name}
           </span>
           <span className="text-xs text-muted-foreground">
@@ -100,25 +98,12 @@ export function AdminModulesTable({
       label: "",
       sortable: false,
       render: (mod) => (
-        <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-8 text-muted-foreground hover:text-foreground"
-            onClick={() => onEdit(mod)}
-            aria-label={`Modifier ${mod.name}`}
-          >
-            <Pencil className="size-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-8 text-muted-foreground hover:text-destructive"
-            onClick={() => handleDelete(mod)}
-            aria-label={`Supprimer ${mod.name}`}
-          >
-            <Trash2 className="size-4" />
-          </Button>
+        <div className="text-right" onClick={(e) => e.stopPropagation()}>
+          <ModuleActions
+            moduleLabel={mod.name}
+            onEdit={() => onEdit(mod)}
+            onDelete={onDelete ? () => onDelete(mod) : undefined}
+          />
         </div>
       ),
     },
@@ -139,8 +124,7 @@ export function AdminModulesTable({
       onPageSizeChange={onPageSizeChange}
       rowTestId="admin-module-row"
       emptyMessages={{
-        default:
-          "Aucun module pour le moment.",
+        default: "Aucun module pour le moment.",
         filtered:
           "Modifiez votre recherche ou vos filtres pour trouver ce que vous cherchez.",
       }}

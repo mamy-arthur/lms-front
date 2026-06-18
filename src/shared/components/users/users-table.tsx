@@ -146,7 +146,7 @@ export function UsersTable<T extends { id: string | number }>({
   ));
 
   return (
-    <div className="rounded-xl border border-border bg-card overflow-hidden">
+    <div className="bg-card overflow-hidden">
       <Table>
         <TableHeader>
           <TableRow className="bg-muted/50 hover:bg-muted/50">

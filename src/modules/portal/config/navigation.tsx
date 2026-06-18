@@ -27,7 +27,7 @@ export const PORTAL_NAV: PortalNavItem[] = [
         url: ROUTES.portal.courses,
         title: "Mes formations",
         icon: GraduationCap,
-        items:[{ title: "Liste des modules", url: ROUTES.portal.modules }]
+        items:[{ title: "Modules", url: ROUTES.portal.modules }]
     },
     {
         url: ROUTES.portal.certificates,
@@ -39,7 +39,7 @@ export const PORTAL_NAV: PortalNavItem[] = [
         url: ROUTES.portal.users,
         title: "Utilisateurs",
         icon: Users,
-        items:[{ title: "Liste des utilisateurs", url: ROUTES.portal.users }]
+        items:[{ title: "utilisateurs", url: ROUTES.portal.users }]
     },
     {
         url: ROUTES.portal.profile,
