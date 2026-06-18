@@ -27,8 +27,8 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getCategoryPath, useCoursesStore } from "../../lib/course-store";
-import type { Course } from "../../types/index";
+import { getCategoryPath, useCoursesStore } from "../lib/course-store";
+import type { Course } from "../types/index";
 import { toast } from "sonner";
 import { CourseCard } from "@/modules/shared/components/courses/components/CourseCard";
 

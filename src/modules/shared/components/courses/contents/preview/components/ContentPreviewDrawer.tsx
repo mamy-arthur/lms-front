@@ -14,7 +14,7 @@ import {
     SheetHeader,
     SheetTitle,
 } from "@/components/ui/sheet";
-import { useCourseStore } from "../../../../hooks/useCouseContentStore";
+import { useCourseStore } from "../../../hooks/useCouseContentStore";
 import { ContentRenderer } from "@/modules/shared/components/contents/ContentRender";
 
 type Props = {

@@ -33,7 +33,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Category, Course } from "@/modules/admin/resources/courses/types";
+import { Category, Course } from "@/modules/shared/components/courses/types";
 
 interface CourseCardProps {
     course: Course;

@@ -2,13 +2,14 @@
 
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useCourseStore } from "../hooks/useCouseContentStore";
-import { SectionCard } from "../components/contents/SectionCard";
+import { useCourseStore } from "../../../../shared/components/courses/hooks/useCouseContentStore";
+
 import { useMemo, useState } from "react";
 import { BookOpen } from "lucide-react";
-import { ContentPreviewDrawer } from "../components/contents/preview/components/ContentPreviewDrawer";
-import { CourseContent } from "../types";
-import { SectionContent } from "../components/contents/ContentSection";
+import { CourseContent } from "../../../../shared/components/courses/types";
+import { SectionCard } from "@/modules/shared/components/courses/contents/SectionCard";
+import { SectionContent } from "@/modules/shared/components/courses/contents/ContentSection";
+import { ContentPreviewDrawer } from "@/modules/shared/components/courses/contents/preview/components/ContentPreviewDrawer";
 
 export function CourseContentPage() {
     const [isOpen, setIsOpen] = useState(false);

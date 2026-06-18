@@ -37,8 +37,8 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { buildCategoryTree, useCoursesStore } from "../../lib/course-store";
-import type { Category } from "../../types/index";
+import { buildCategoryTree, useCoursesStore } from "../lib/course-store";
+import type { Category } from "../types/index";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 

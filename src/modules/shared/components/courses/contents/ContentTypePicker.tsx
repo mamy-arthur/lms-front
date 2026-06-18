@@ -7,7 +7,7 @@ import {
     BarChart3,
     Type as TypeIcon,
 } from "lucide-react";
-import { CONTENT_TYPE_META, ContentType } from "../../types";
+import { CONTENT_TYPE_META, ContentType } from "../types";
 
 const ICONS = {
     FileText,

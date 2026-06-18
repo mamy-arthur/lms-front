@@ -6,8 +6,8 @@ import {
     DialogDescription,
 } from "@/components/ui/dialog";
 import { ContentTypePicker } from "./ContentTypePicker";
-import { ContentType } from "../../types";
-import { useCourseStore } from "../../hooks/useCouseContentStore";
+import { ContentType } from "../types";
+import { useCourseStore } from "../hooks/useCouseContentStore";
 
 export function AddContentModal({
     open,

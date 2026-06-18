@@ -7,8 +7,7 @@ import {
     SheetTitle,
 } from "@/components/ui/sheet";
 import { CategoryForm } from "./category-form";
-import { CategoryTable } from "./category-table";
-import type { Category } from "../../types/index";
+import type { Category } from "../types/index";
 
 type Props = {
     open: boolean;

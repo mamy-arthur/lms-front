@@ -2,40 +2,39 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { MainBlock, Field } from "./SharedBlocks";
 import { FormActions } from "./PageForm";
-import { RichTextEditor } from "@/modules/shared/components/tiptap/RichTextEditor";
 import { Label } from "@/components/ui/label";
+import { RichTextEditor } from "@/modules/shared/components/tiptap/RichTextEditor";
 
 const schema = z.object({
     title: z.string().min(1, "Le nom est obligatoire"),
-    text: z.string().optional(),
+    url: z.string().url("URL invalide"),
+    description: z.string().optional(),
 });
-export type TextMediaFormValues = z.infer<typeof schema>;
+export type UrlFormValues = z.infer<typeof schema>;
 
-export function TextMediaForm({
+export function UrlForm({
     onSubmit,
     onCancel,
 }: {
-    onSubmit: (v: TextMediaFormValues) => void;
+    onSubmit: (v: UrlFormValues) => void;
     onCancel: () => void;
 }) {
     const { register, handleSubmit, formState, setValue, watch } =
-        useForm<TextMediaFormValues>({
+        useForm<UrlFormValues>({
             resolver: zodResolver(schema),
-            defaultValues: { title: "", text: "" },
+            defaultValues: { title: "", url: "", description: "" },
         });
-    const text = watch("text");
+
+    const description = watch("description");
+
     return (
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <MainBlock>
                 <div className="space-y-2">
                     <Label>Nom</Label>
-                    <Input
-                        {...register("title")}
-                        placeholder="Ex : Module SCORM - Sécurité incendie"
-                    />
+                    <Input {...register("title")} />
                     {formState.errors.title && (
                         <p className="text-xs text-destructive">
                             {formState.errors.title.message}
@@ -43,11 +42,24 @@ export function TextMediaForm({
                     )}
                 </div>
                 <div className="space-y-2">
-                    <Label>Texte</Label>
+                    <Label>URL</Label>
+                    <Input
+                        type="url"
+                        placeholder="https://..."
+                        {...register("url")}
+                    />
+                    {formState.errors.url && (
+                        <p className="text-xs text-destructive">
+                            {formState.errors.url.message}
+                        </p>
+                    )}
+                </div>
+                <div className="space-y-2">
+                    <Label>Description</Label>
                     <RichTextEditor
-                        value={text ?? ""}
+                        value={description ?? ""}
                         onChange={(md) =>
-                            setValue("text", md, {
+                            setValue("description", md, {
                                 shouldDirty: true,
                             })
                         }

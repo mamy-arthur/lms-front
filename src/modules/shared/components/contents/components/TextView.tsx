@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { CONTENT_TYPE_META } from "@/modules/admin/resources/courses/types";
+import { CONTENT_TYPE_META } from "@/modules/shared/components/courses/types";
 
 interface TextContentViewProps {
     title: string;

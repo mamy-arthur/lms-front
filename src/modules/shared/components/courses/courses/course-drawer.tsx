@@ -29,8 +29,8 @@ import {
     CommandList,
     CommandSeparator,
 } from "@/components/ui/command";
-import { useCoursesStore, getCategoryPath } from "../../lib/course-store";
-import type { Course } from "../../types/index";
+import { useCoursesStore, getCategoryPath } from "../lib/course-store";
+import type { Course } from "../types/index";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";

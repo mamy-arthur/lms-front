@@ -3,11 +3,11 @@
 import { useState } from "react";
 import { Plus, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { CoursesProvider } from "../lib/course-store";
-import { CourseTable } from "../components/courses/course-table";
-import { CourseDrawer } from "../components/courses/course-drawer";
-import type { Course } from "../types/index";
+import type { Course } from "../../../../shared/components/courses/types/index";
 import Link from "next/link";
+import { CoursesProvider } from "@/modules/shared/components/courses/lib/course-store";
+import { CourseTable } from "@/modules/shared/components/courses/courses/course-table";
+import { CourseDrawer } from "@/modules/shared/components/courses/courses/course-drawer";
 
 export function CoursesList() {
     return (

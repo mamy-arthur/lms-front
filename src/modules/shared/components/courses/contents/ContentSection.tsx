@@ -1,5 +1,5 @@
-import { useCourseStore } from "../../hooks/useCouseContentStore";
-import { CONTENT_TYPE_META, ContentType } from "../../types";
+import { useCourseStore } from "../hooks/useCouseContentStore";
+import { CONTENT_TYPE_META, ContentType } from "../types";
 import { PageForm } from "./forms/PageForm";
 import { FileForm } from "./forms/FileForm";
 import { FolderForm } from "./forms/FolderForm";

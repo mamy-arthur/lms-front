@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { CategoryTable } from "../components/categories/category-table";
-import { Category } from "../types";
-import { CategoryDrawer } from "../components/categories/category-drawer";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
-import { CoursesProvider } from "../lib/course-store";
+import { CoursesProvider } from "@/modules/shared/components/courses/lib/course-store";
+import { CategoryTable } from "@/modules/shared/components/courses/categories/category-table";
+import { CategoryDrawer } from "@/modules/shared/components/courses/categories/category-drawer";
+import { Category } from "@/modules/shared/components/courses/types";
 
 export function CategoryList() {
     return (

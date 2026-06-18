@@ -16,8 +16,8 @@ import {
 } from "@/components/ui/select";
 
 import { toast } from "sonner";
-import { getCategoryPath, useCoursesStore } from "../../lib/course-store";
-import { Category } from "../../types";
+import { getCategoryPath, useCoursesStore } from "../lib/course-store";
+import { Category } from "../types";
 
 const schema = z.object({
     name: z.string().min(2, "Nom requis"),

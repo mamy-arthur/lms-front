@@ -1,4 +1,4 @@
-import { CourseContent } from "@/modules/admin/resources/courses/types";
+import { CourseContent } from "@/modules/shared/components/courses/types";
 import { FileContentView } from "./components/FileView";
 import { PageContentView } from "./components/PageView";
 import { UrlContentView } from "./components/UrlView";

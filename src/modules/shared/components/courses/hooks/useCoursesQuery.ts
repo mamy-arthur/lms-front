@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { adminCoursesApi } from "../api";
+import { adminCoursesApi } from "../../../../admin/resources/courses/api";
 import { normalizeCourse } from "../types";
 
 interface Params {

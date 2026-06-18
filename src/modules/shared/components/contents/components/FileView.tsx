@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import ReactMarkdown from "react-markdown";
 import { Separator } from "@/components/ui/separator";
-import { CONTENT_TYPE_META } from "@/modules/admin/resources/courses/types";
+import { CONTENT_TYPE_META } from "@/modules/shared/components/courses/types";
 import { Badge } from "@/components/ui/badge";
 
 interface FileContentViewProps {

@@ -40,8 +40,8 @@ import {
     CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 
-import { ContentType, CourseSection, CourseContent } from "../../types";
-import { useCourseStore } from "../../hooks/useCouseContentStore";
+import { ContentType, CourseSection, CourseContent } from "../types";
+import { useCourseStore } from "../hooks/useCouseContentStore";
 
 const ICONS: Record<ContentType, typeof FileText> = {
     page: FileText,

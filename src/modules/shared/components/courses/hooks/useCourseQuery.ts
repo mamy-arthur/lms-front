@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { adminCoursesApi } from "../api";
+import { adminCoursesApi } from "../../../../admin/resources/courses/api";
 
 export function useCourseQuery(id: string) {
     return useQuery({
