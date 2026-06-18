@@ -46,7 +46,7 @@ export function QuizzesTable({
       sortable: true,
       render: (quiz) => (
         <div className="flex flex-col">
-          <span className="text-sm font-medium text-foreground">
+          <span className="text-xs font-medium text-foreground">
             {quiz.title}
           </span>
           <span className="text-xs text-muted-foreground">{quiz.slug}</span>

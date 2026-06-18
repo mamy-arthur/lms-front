@@ -68,19 +68,17 @@ export function UserFormDrawerContent({
 }: UserFormDrawerContentProps) {
   return (
     <SheetContent
-      className="sm:max-w-lg"
-      showCloseButton={false}
-      data-testid="user-form"
+      className="flex w-full flex-col gap-0 p-0 sm:max-w-2xl lg:max-w-4xl"
+      showCloseButton={true}
       onInteractOutside={(e) => e.preventDefault()}
       onEscapeKeyDown={(e) => e.preventDefault()}
     >
-      <SheetHeader>
+      <SheetHeader className="border-b px-4 py-4">
         <SheetTitle>{title}</SheetTitle>
-        <SheetDescription className="sr-only">
-          {isEdit ? "Formulaire de modification d'utilisateur" : "Formulaire de création d'utilisateur"}
-        </SheetDescription>
+          <SheetDescription>
+            Renseignez les informations de l'utilisateur.
+          </SheetDescription>
       </SheetHeader>
-
       <Field {...form}>
         <form
           onSubmit={form.handleSubmit(onSubmit)}

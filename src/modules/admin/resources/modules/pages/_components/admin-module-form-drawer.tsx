@@ -162,7 +162,7 @@ function AdminModuleFormDrawerBase({
   );
 
   return (
-    <Sheet open={open}>
+    <Sheet open={open} onOpenChange={(nextOpen) => !nextOpen && formState.handleClose()}>
       <ModuleFormDrawerContent
         form={formState.form}
         open={open}

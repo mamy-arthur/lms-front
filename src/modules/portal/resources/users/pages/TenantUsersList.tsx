@@ -46,7 +46,7 @@ export function TenantUsersList() {
                   Utilisateurs
               </h1>
               <p className="mt-1 text-sm text-muted-foreground">
-                  Gérez vos utilisateurs ici.
+                  Ajoutez, modifiez et gérez vos utilisateurs.
               </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">

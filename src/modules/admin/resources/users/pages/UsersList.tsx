@@ -60,7 +60,7 @@ export function UsersList() {
                   Utilisateurs
               </h1>
               <p className="mt-1 text-sm text-muted-foreground">
-                  Gérez tous les utilisareurs ici.
+                  Ajoutez, modifiez et gérez les utilisateurs.
               </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">

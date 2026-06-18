@@ -34,7 +34,7 @@ export function ModuleList() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Modules</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Gérez vos modules ici.
+            Créez, modifiez et gérez les modules.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">

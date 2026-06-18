@@ -33,6 +33,7 @@ import {
 import {
   Sheet,
   SheetContent,
+  SheetDescription,
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
@@ -95,14 +96,17 @@ export function ModuleFormDrawerContent({
   extraFields,
 }: ModuleFormDrawerContentProps) {
   return (
+
     <SheetContent
-      className="sm:max-w-lg"
-      showCloseButton={false}
+      className="flex w-full flex-col gap-0 p-0 sm:max-w-2xl lg:max-w-4xl"
       onInteractOutside={(e) => e.preventDefault()}
       onEscapeKeyDown={(e) => e.preventDefault()}
     >
-      <SheetHeader>
+      <SheetHeader className="border-b px-4 py-4">
         <SheetTitle>{title}</SheetTitle>
+          <SheetDescription>
+            Renseignez les informations pour le module.
+          </SheetDescription>
       </SheetHeader>
 
       <Field {...form}>

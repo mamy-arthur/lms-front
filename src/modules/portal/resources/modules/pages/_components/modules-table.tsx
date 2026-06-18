@@ -47,7 +47,7 @@ export function ModulesTable({
       sortable: true,
       render: (mod) => (
         <div className="flex flex-col">
-          <span className="text-sm font-medium text-foreground">
+          <span className="text-xs font-medium text-foreground">
             {mod.name}
           </span>
           <span className="text-xs text-muted-foreground">

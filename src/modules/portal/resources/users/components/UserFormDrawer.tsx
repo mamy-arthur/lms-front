@@ -138,7 +138,7 @@ function UserFormDrawerBase({
   });
 
   return (
-    <Sheet open={open}>
+    <Sheet open={open} onOpenChange={(nextOpen) => !nextOpen && formState.handleClose()}>
       <UserFormDrawerContent
         form={formState.form}
         mutation={formState.mutation}

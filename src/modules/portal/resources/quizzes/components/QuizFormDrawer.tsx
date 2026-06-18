@@ -109,7 +109,7 @@ function QuizFormDrawerBase({
   });
 
   return (
-    <Sheet open={open}>
+    <Sheet open={open} onOpenChange={(nextOpen) => !nextOpen && formState.handleClose()}>
       <QuizFormDrawerContent
         form={formState.form}
         open={open}
