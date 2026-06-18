@@ -32,10 +32,11 @@ function CoursesInner() {
                 <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                         <h1 className="text-2xl font-bold tracking-tight">
-                            Courses
+                            Gestion des cours
                         </h1>
                         <p className="mt-1 text-sm text-muted-foreground">
-                            Gérez vos cours.
+                            Créez, modifiez et organisez les cours de votre
+                            plateforme.
                         </p>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">

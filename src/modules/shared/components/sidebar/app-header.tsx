@@ -20,7 +20,7 @@ export function AppHeader() {
             </div>
 
             {/* RIGHT */}
-            <div className="flex items-center rounded-full border border-border/60 bg-background/60 p-1 shadow-sm backdrop-blur-md supports-backdrop-filter:bg-background/40">
+            <div className="flex items-center gap-1 rounded-full border border-border/60 bg-background/60 p-1 shadow-sm backdrop-blur-md supports-backdrop-filter:bg-background/40">
                 <Popover>
                     <PopoverTrigger asChild>
                         <Button
@@ -112,7 +112,7 @@ export function AppHeader() {
                             aria-label="Panier"
                         >
                             <ShoppingCart className="h-4.5 w-4.5" />
-                            <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground ring-2 ring-background">
+                            <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-(--color-primary) px-1 text-[10px] font-semibold text-primary-foreground ring-2 ring-background">
                                 0
                             </span>
                         </Button>

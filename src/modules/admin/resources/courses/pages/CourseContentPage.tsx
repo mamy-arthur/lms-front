@@ -7,9 +7,13 @@ import { SectionCard } from "../components/contents/SectionCard";
 import { useMemo, useState } from "react";
 import { BookOpen } from "lucide-react";
 import { ContentPreviewDrawer } from "../components/contents/preview/components/ContentPreviewDrawer";
+import { CourseContent } from "../types";
+import { SectionContent } from "../components/contents/ContentSection";
 
 export function CourseContentPage() {
     const [isOpen, setIsOpen] = useState(false);
+    const [selectedContent, setSelectedContent] =
+        useState<CourseContent | null>(null);
     const sections = useMemo(
         () =>
             [...useCourseStore.getState().sections].sort(
@@ -42,25 +46,56 @@ export function CourseContentPage() {
             </header>
 
             <main className="mx-auto py-8">
-                <div className="space-y-4">
-                    {sections.map((section) => (
-                        <SectionCard key={section.id} section={section} />
-                    ))}
+                <div className="grid gap-4 lg:grid-cols-[320px_1fr]">
+                    {/* Navigation */}
+                    <aside className="space-y-3">
+                        {sections.map((section) => (
+                            <SectionCard
+                                key={section.id}
+                                section={section}
+                                selectedContentId={selectedContent?.id}
+                                onSelectContent={setSelectedContent}
+                            />
+                        ))}
+                        <Button
+                            variant="outline"
+                            onClick={() => addSection()}
+                            className="w-full border-dashed py-6 text-muted-foreground hover:text-foreground"
+                        >
+                            <Plus className="mr-2 h-4 w-4" /> Ajouter une
+                            section
+                        </Button>
+                        {sections.length === 0 && (
+                            <p className="mt-8 text-center text-sm text-muted-foreground">
+                                Aucune section pour le moment.
+                            </p>
+                        )}
+                    </aside>
+
+                    {/* Edition */}
+                    <main className="min-h-125 rounded-xl border bg-card p-4">
+                        {selectedContent ? (
+                            <SectionContent
+                                key={selectedContent.id}
+                                sectionId={selectedContent.sectionId}
+                                contentId={selectedContent.id}
+                                type={selectedContent.type}
+                            />
+                        ) : (
+                            <div className="flex h-full items-center justify-center text-center">
+                                <div>
+                                    <h3 className="font-medium text-sm">
+                                        Aucun contenu sélectionné
+                                    </h3>
+                                    <p className="mt-1 text-xs text-muted-foreground">
+                                        Sélectionnez un contenu dans la liste
+                                        pour commencer l'édition.
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+                    </main>
                 </div>
-
-                <Button
-                    variant="outline"
-                    onClick={() => addSection()}
-                    className="mt-6 w-full border-dashed py-6 text-muted-foreground hover:text-foreground"
-                >
-                    <Plus className="mr-2 h-4 w-4" /> Ajouter une section
-                </Button>
-
-                {sections.length === 0 && (
-                    <p className="mt-8 text-center text-sm text-muted-foreground">
-                        Aucune section pour le moment.
-                    </p>
-                )}
             </main>
             <ContentPreviewDrawer open={isOpen} onOpenChange={setIsOpen} />
         </div>

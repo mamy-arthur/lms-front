@@ -1,5 +1,3 @@
-import { ArrowLeft } from "lucide-react";
-import Link from "next/link";
 import { useCourseStore } from "../../hooks/useCouseContentStore";
 import { CONTENT_TYPE_META, ContentType } from "../../types";
 import { PageForm } from "./forms/PageForm";
@@ -10,7 +8,7 @@ import { UrlForm } from "./forms/UrlForm";
 import { TextMediaForm } from "./forms/TextMediaForm";
 import { SurveyForm } from "./forms/SurveyForm";
 import { Badge } from "@/components/ui/badge";
-import { id } from "zod/v4/locales";
+import { Separator } from "@/components/ui/separator";
 
 const VALID: ContentType[] = [
     "page",
@@ -32,9 +30,12 @@ export function SectionContent({
     contentId: string;
 }) {
     const update = useCourseStore((s) => s.updateContent);
+    const remove = useCourseStore((s) => s.removeContent);
     const ctype = type;
 
-    const goBack = () => {};
+    const goBack = () => {
+        remove(sectionId, contentId);
+    };
 
     const handleSave = (title: string, data: Record<string, unknown>) => {
         update(sectionId, contentId, {
@@ -47,13 +48,21 @@ export function SectionContent({
     };
     const typeMeta = CONTENT_TYPE_META[type ?? "file"];
     return (
-        <div className="flex flex-col space-y-2 border rounded-md p-4">
-            <div className="w-full flex justify-end">
-                <Badge className={`${typeMeta.bgColor}`}>
-                    {typeMeta.label}
-                </Badge>
+        <div className="flex flex-col space">
+            <div className="mb-5 flex items-center justify-between">
+                <div>
+                    <p className="text-sm font-medium">
+                        Configuration du contenu
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                        Renseignez les informations du contenu.
+                    </p>
+                </div>
+                <Badge className={typeMeta.bgColor}>{typeMeta.label}</Badge>
             </div>
-            <main>
+
+            <Separator/>
+            <main className="mt-5">
                 {ctype === "page" && (
                     <PageForm
                         onCancel={goBack}

@@ -1,3 +1,5 @@
+"use client";
+
 import { useState } from "react";
 import {
     MoreVertical,
@@ -11,9 +13,9 @@ import {
     Link as LinkIcon,
     BarChart3,
     Type as TypeIcon,
-    ChevronDownIcon,
     ChevronRight,
 } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import {
     DropdownMenu,
@@ -32,16 +34,14 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { AddContentModal } from "./AddContentModal";
-
-import {ContentType, CourseSection } from "../../types";
-import { useCourseStore } from "../../hooks/useCouseContentStore";
-import { SectionContent } from "./ContentSection";
-import { Badge } from "@/components/ui/badge";
 import {
     Collapsible,
     CollapsibleContent,
     CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+
+import { ContentType, CourseSection, CourseContent } from "../../types";
+import { useCourseStore } from "../../hooks/useCouseContentStore";
 
 const ICONS: Record<ContentType, typeof FileText> = {
     page: FileText,
@@ -53,21 +53,35 @@ const ICONS: Record<ContentType, typeof FileText> = {
     "text-media": TypeIcon,
 };
 
-export function SectionCard({ section }: { section: CourseSection }) {
+interface Props {
+    section: CourseSection;
+    selectedContentId?: string;
+    onSelectContent: (content: CourseContent) => void;
+}
+
+export function SectionCard({
+    section,
+    selectedContentId,
+    onSelectContent,
+}: Props) {
     const [addOpen, setAddOpen] = useState(false);
     const [editOpen, setEditOpen] = useState(false);
+    const [isOpen, setIsOpen] = useState(true);
+
     const [title, setTitle] = useState(section.title);
     const [description, setDescription] = useState(section.description ?? "");
+
     const updateSection = useCourseStore((s) => s.updateSection);
     const removeSection = useCourseStore((s) => s.removeSection);
+
     const [type, setType] = useState<ContentType | null>(null);
-    const [isOpen, setIsOpen] = useState(false);
 
     const save = () => {
         updateSection(section.id, {
             title: title.trim() || "Section",
             description,
         });
+
         setEditOpen(false);
     };
 
@@ -75,68 +89,89 @@ export function SectionCard({ section }: { section: CourseSection }) {
         <Collapsible
             open={isOpen}
             onOpenChange={setIsOpen}
-            className="rounded-xl border border-border bg-card p-4 shadow-xs transition-shadow hover:shadow-md"
+            className="rounded-xl border bg-card"
         >
-            <div className="flex items-start justify-between gap-1">
+            <div className="flex items-center justify-between p-3">
                 <CollapsibleTrigger asChild>
-                    <button className="flex flex-1 items-center gap-2 min-w-0 text-left">
+                    <button className="flex min-w-0 flex-1 items-center gap-2 text-left">
                         <ChevronRight
-                            className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 ${
+                            className={`size-4 transition-transform ${
                                 isOpen ? "rotate-90" : ""
                             }`}
                         />
-                        <h3 className="truncate text-sm font-semibold text-foreground">
+
+                        <span className="truncate text-xs font-semibold">
                             {section.title}
-                        </h3>
+                        </span>
                     </button>
                 </CollapsibleTrigger>
 
-                <div className="flex gap-2 items-center">
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 shrink-0"
-                            >
-                                <MoreVertical className="h-4 w-4" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => setEditOpen(true)}>
-                                <Pencil className="mr-2 h-4 w-4" /> Modifier
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                                onClick={() => removeSection(section.id)}
-                                className="text-destructive focus:text-destructive"
-                            >
-                                <Trash2 className="mr-2 h-4 w-4" /> Supprimer
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                </div>
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                            <MoreVertical className="size-4" />
+                        </Button>
+                    </DropdownMenuTrigger>
+
+                    <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => setEditOpen(true)}>
+                            <Pencil className="mr-2 size-4" />
+                            Modifier
+                        </DropdownMenuItem>
+
+                        <DropdownMenuItem
+                            onClick={() => removeSection(section.id)}
+                            className="text-destructive"
+                        >
+                            <Trash2 className="mr-2 size-4" />
+                            Supprimer
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
             </div>
 
-            <CollapsibleContent className="data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down overflow-hidden">
+            <CollapsibleContent>
+                <div className="space-y-1 px-2 pb-2">
+                    {section.contents.map((content) => {
+                        const Icon = ICONS[content.type];
+
+                        return (
+                            <button
+                                key={content.id}
+                                onClick={() => onSelectContent(content)}
+                                className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors
+                                ${
+                                    selectedContentId === content.id
+                                        ? "bg-(--color-primary)/90 text-white"
+                                        : "hover:bg-muted"
+                                }`}
+                            >
+                                <Icon className="size-4 shrink-0" />
+
+                                <span className="truncate text-xs">
+                                    {content.title || "Nouveau contenu"}
+                                </span>
+                            </button>
+                        );
+                    })}
+
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setAddOpen(true)}
+                        className="mt-2 w-full justify-start"
+                    >
+                        <Plus className="mr-2 size-4" />
+                        Ajouter un contenu
+                    </Button>
+                </div>
+
                 <AddContentModal
                     open={addOpen}
                     onOpenChange={setAddOpen}
                     sectionId={section.id}
                     setType={setType}
                 />
-                <div className="flex flex-col space-y-2">
-                    {section.contents.map((content) =>(
-                        <SectionContent key={content.id} sectionId={section.id} type={content.type} contentId={content.id}/>
-                    ))}
-                </div>
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setAddOpen(true)}
-                    className="mt-4 w-full justify-start text-muted-foreground hover:text-foreground"
-                >
-                    <Plus className="mr-2 h-4 w-4" /> Ajouter un contenu
-                </Button>
             </CollapsibleContent>
 
             <Dialog open={editOpen} onOpenChange={setEditOpen}>
@@ -144,15 +179,17 @@ export function SectionCard({ section }: { section: CourseSection }) {
                     <DialogHeader>
                         <DialogTitle>Modifier la section</DialogTitle>
                     </DialogHeader>
+
                     <div className="space-y-3">
-                        <div className="space-y-1.5">
+                        <div>
                             <Label>Nom</Label>
                             <Input
                                 value={title}
                                 onChange={(e) => setTitle(e.target.value)}
                             />
                         </div>
-                        <div className="space-y-1.5">
+
+                        <div>
                             <Label>Description</Label>
                             <Textarea
                                 value={description}
@@ -160,6 +197,7 @@ export function SectionCard({ section }: { section: CourseSection }) {
                             />
                         </div>
                     </div>
+
                     <DialogFooter>
                         <Button
                             variant="outline"
@@ -167,6 +205,7 @@ export function SectionCard({ section }: { section: CourseSection }) {
                         >
                             Annuler
                         </Button>
+
                         <Button onClick={save}>Enregistrer</Button>
                     </DialogFooter>
                 </DialogContent>

@@ -25,10 +25,10 @@ export function CategoryInner() {
             <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight">
-                        Catégories
+                        Catégories de formation
                     </h1>
                     <p className="mt-1 text-sm text-muted-foreground">
-                        Gérez vos catégories pour les utiliser dans les cours.
+                        Classez et organisez vos formations par catégories.
                     </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
