@@ -2,13 +2,14 @@
 
 import { ModuleActions } from "@/shared/components/modules";
 import {
-  UsersTable,
-  type UsersTableColumn,
-  type UsersTableSort,
-} from "@/shared/components/users";
+  DataTable,
+  type DataTableColumn,
+  type DataTableSort,
+} from "@/shared/components/ui/DataTable";
+import { formatDate } from "@/shared/lib/date";
 import type { Module } from "../../types";
 
-export type SortConfig = UsersTableSort;
+export type SortConfig = DataTableSort;
 
 interface AdminModulesTableProps {
   modules: Module[];
@@ -41,7 +42,7 @@ export function AdminModulesTable({
   onDelete,
   tenantNames,
 }: AdminModulesTableProps) {
-  const columns: UsersTableColumn<Module>[] = [
+  const columns: DataTableColumn<Module>[] = [
     {
       key: "name",
       label: "Module",
@@ -83,13 +84,7 @@ export function AdminModulesTable({
       sortable: true,
       render: (mod) => (
         <span className="text-xs text-muted-foreground tabular-nums">
-          {mod.createdAt
-            ? new Date(mod.createdAt).toLocaleDateString("fr-FR", {
-                day: "2-digit",
-                month: "short",
-                year: "numeric",
-              })
-            : "—"}
+          {mod.createdAt ? formatDate(mod.createdAt) : "—"}
         </span>
       ),
     },
@@ -110,7 +105,7 @@ export function AdminModulesTable({
   ];
 
   return (
-    <UsersTable<Module>
+    <DataTable
       data={modules}
       columns={columns}
       isLoading={isLoading}
@@ -123,10 +118,9 @@ export function AdminModulesTable({
       onPageChange={onPageChange}
       onPageSizeChange={onPageSizeChange}
       rowTestId="admin-module-row"
-      emptyMessages={{
-        default: "Aucun module pour le moment.",
-        filtered:
-          "Modifiez votre recherche ou vos filtres pour trouver ce que vous cherchez.",
+      emptyState={{
+        title: "Aucun module",
+        description: "Aucun module pour le moment.",
       }}
     />
   );

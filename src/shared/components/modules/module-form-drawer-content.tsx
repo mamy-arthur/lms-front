@@ -320,7 +320,7 @@ export function ModuleFormDrawerContent({
             />
           </div>
 
-          <div className="flex items-center justify-end gap-3 border-t px-6 py-4 shrink-0">
+          <div className="flex items-center justify-end gap-3 border-t bg-background px-6 py-4 shrink-0">
             <Button
               type="button"
               variant="outline"
@@ -330,7 +330,12 @@ export function ModuleFormDrawerContent({
             >
               Annuler
             </Button>
-            <Button type="submit" disabled={mutation.isPending} size="lg">
+            <Button 
+              type="submit" 
+              disabled={mutation.isPending} 
+              size="lg"
+              className="bg-(--color-primary) hover:bg-(--color-primary)/80"
+              >
               {mutation.isPending && (
                 <Loader2 className="size-4 animate-spin" />
               )}

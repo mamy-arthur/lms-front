@@ -13,6 +13,7 @@ export const ROUTES = {
     users: "/admin/users",
     courses: "/admin/courses",
     modules: "/admin/modules",
+    quizzes: "/admin/quizzes",
     category: "/admin/category",
     trainees: "/admin/trainees",
     tenants: "/admin/tenants",
@@ -27,5 +28,6 @@ export const ROUTES = {
     certificates: "/certificates",
     users: "/users",
     modules: "/modules",
+    quizzes: "/quizzes",
   },
 } as const;

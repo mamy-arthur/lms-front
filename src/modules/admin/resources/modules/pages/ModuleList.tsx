@@ -9,7 +9,7 @@ import { useModulesQuery } from "../hooks/useModulesQuery";
 import type { Module } from "../types";
 import { AdminModuleFormDrawer } from "./_components/admin-module-form-drawer";
 import { AdminModulesFilters } from "./_components/admin-modules-filters";
-import { AdminModulesTable, type SortConfig } from "./_components/admin-modules-table";
+import { AdminModulesTable } from "./_components/admin-modules-table";
 
 export function ModuleList() {
   const ctrl = useModuleListController<Module>({
@@ -29,19 +29,24 @@ export function ModuleList() {
   }, [tenants]);
 
   return (
-    <div className="space-y-6 p-3">
-      <div className="flex items-center justify-between">
-        <h1 className="text-lg font-extrabold">Modules</h1>
-        <Button
-          onClick={ctrl.handleOpenCreate}
-          size="lg"
-          className="bg-(--color-primary) text-primary-foreground"
-        >
-          <Plus className="size-4" />
-          Nouveau module
-        </Button>
-      </div>
-
+    <div className="bg-background">
+      <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Modules</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Gérez vos modules ici.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            onClick={ctrl.handleOpenCreate}
+            className="bg-(--color-primary) hover:bg-(--color-primary)/80 text-primary-foreground"
+          >
+            <Plus className="mr-1 size-4" />
+            Nouveau module
+          </Button>
+        </div>
+      </header>
       <AdminModulesFilters
         search={ctrl.draftSearch}
         categoryFilter={ctrl.draftCategory}
@@ -65,6 +70,7 @@ export function ModuleList() {
         onPageChange={ctrl.handlePageChange}
         onPageSizeChange={ctrl.handlePageSizeChange}
         onEdit={ctrl.handleEdit}
+        onDelete={() => {}}
         tenantNames={tenantNames}
       />
 

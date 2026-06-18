@@ -27,7 +27,10 @@ export const PORTAL_NAV: PortalNavItem[] = [
         url: ROUTES.portal.courses,
         title: "Mes formations",
         icon: GraduationCap,
-        items:[{ title: "Modules", url: ROUTES.portal.modules }]
+        items:[
+            { title: "Modules", url: ROUTES.portal.modules },
+            { title: "Quizzes", url: ROUTES.portal.quizzes },
+        ]
     },
     {
         url: ROUTES.portal.certificates,

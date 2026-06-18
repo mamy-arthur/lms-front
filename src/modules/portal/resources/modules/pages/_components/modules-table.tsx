@@ -1,15 +1,15 @@
 "use client";
 
-import {
-  UsersTable,
-  type UsersTableColumn,
-  type UsersTableSort,
-} from "@/shared/components/users";
-import type { Module } from "../../types";
 import { ModuleActions } from "@/shared/components/modules";
+import {
+  DataTable,
+  type DataTableColumn,
+  type DataTableSort,
+} from "@/shared/components/ui/DataTable";
+import type { Module } from "../../types";
 import { CategoryCell } from "./category-cell";
 
-export type SortConfig = UsersTableSort;
+export type SortConfig = DataTableSort;
 
 interface ModulesTableProps {
   modules: Module[];
@@ -40,7 +40,7 @@ export function ModulesTable({
   onDelete,
   onCategoryChange,
 }: ModulesTableProps) {
-  const columns: UsersTableColumn<Module>[] = [
+  const columns: DataTableColumn<Module>[] = [
     {
       key: "name",
       label: "Module",
@@ -84,7 +84,7 @@ export function ModulesTable({
   ];
 
   return (
-    <UsersTable<Module>
+    <DataTable
       data={modules}
       columns={columns}
       hasQuery={hasQuery}
@@ -96,11 +96,10 @@ export function ModulesTable({
       onPageChange={onPageChange}
       onPageSizeChange={onPageSizeChange}
       rowTestId="module-row"
-      emptyMessages={{
-        default:
+      emptyState={{
+        title: "Aucun module",
+        description:
           "Créez votre premier module en cliquant sur « Ajouter un module ».",
-        filtered:
-          "Modifiez votre recherche ou vos filtres pour trouver ce que vous cherchez.",
       }}
     />
   );
