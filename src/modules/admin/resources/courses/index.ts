@@ -1,2 +1,4 @@
-export { CourseList, CourseShow } from "./pages/CourseList";
-export type { Course } from "./types";
+export { CoursesList } from "./pages/CourseList";
+export { CategoryList } from "./pages/CategoryList";
+export { CourseContentPage } from "./pages/CourseContentPage";
+export type { Course, Category } from "../../../shared/components/courses/types";

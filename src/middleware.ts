@@ -1,10 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const PUBLIC_PATHS = ["/login", "/forgot-password", "/reset-password"];
+const PUBLIC_PATHS = [
+  "/login",
+  "/admin/login",
+  "/forgot-password",
+  "/reset-password",
+  "/tenant-not-found",
+  "/tenant-inactive",
+];
 const STATIC_PATHS = ["/_next", "/favicon.ico", "/public"];
 
 // e.g. "learneo.local" in dev, "learneo.dev-test2.nacre-solutions.com" in staging
-const BASE_DOMAIN = (process.env.NEXT_PUBLIC_BASE_DOMAIN ?? "localhost").split(":")[0];
+const BASE_DOMAIN = (process.env.NEXT_PUBLIC_BASE_DOMAIN ?? "localhost").split(
+  ":",
+)[0];
 
 /**
  * Returns the tenant slug from the host, or null when on the central domain.
@@ -18,7 +27,7 @@ function extractTenantSlug(host: string): string | null {
   if (clean === BASE_DOMAIN) return null;
 
   if (clean.endsWith(`.${BASE_DOMAIN}`)) {
-    const slug = clean.slice(0, -(`.${BASE_DOMAIN}`).length);
+    const slug = clean.slice(0, -`.${BASE_DOMAIN}`.length);
     return slug || null;
   }
 
@@ -42,11 +51,13 @@ export function middleware(req: NextRequest) {
     headers.delete("x-tenant-slug");
   }
 
-  const token = req.cookies.get("auth-token")?.value;
+  const token = req.cookies.get("auth_token")?.value;
   const isPublic = PUBLIC_PATHS.some((p) => pathname.startsWith(p));
 
   if (!isPublic && !token) {
-    const loginUrl = new URL("/login", req.url);
+    const isAdminPath = pathname.startsWith("/admin");
+    const loginPath = isAdminPath ? "/admin/login" : "/login";
+    const loginUrl = new URL(loginPath, req.url);
     loginUrl.searchParams.set("from", pathname);
     return NextResponse.redirect(loginUrl);
   }

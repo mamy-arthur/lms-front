@@ -5,19 +5,46 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import {
+  Box,
+  TextField,
+  Button,
+  Alert,
+  CircularProgress,
+  InputAdornment,
+  IconButton,
+  Typography,
+} from "@mui/material";
+import Visibility from "@mui/icons-material/Visibility";
+import VisibilityOff from "@mui/icons-material/VisibilityOff";
 
 import { loginSchema, type LoginSchema } from "@/shared/schemas/auth.schema";
-import { authApi } from "@/shared/api/auth.api";
 import { useAuthStore } from "@/shared/stores/auth.store";
-import { ADMIN_ROLES } from "@/shared/constants/roles";
+import { useTenantStore } from "@/shared/stores/tenant.store";
+import {
+  resolveLogin,
+  resolveRedirectPath,
+} from "@/modules/auth/utils/loginUtils";
 import { ROUTES } from "@/shared/constants/routes";
-import { Button } from "@/shared/components/ui/Button/Button";
-import { cn } from "@/shared/lib/cn";
+
+const pillInputSx = {
+  "& .MuiOutlinedInput-root": {
+    borderRadius: "50px",
+    bgcolor: "#f0f2f5",
+    "& fieldset": { border: "none" },
+    "&:hover fieldset": { border: "none" },
+    "&.Mui-focused": {
+      bgcolor: "#fff",
+      boxShadow: "0 0 0 2px rgba(26,35,126,0.25)",
+    },
+  },
+} as const;
 
 export function LoginForm() {
   const router = useRouter();
   const setAuth = useAuthStore((s) => s.setAuth);
   const [serverError, setServerError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   const {
     register,
@@ -30,76 +57,130 @@ export function LoginForm() {
   const onSubmit = async (data: LoginSchema) => {
     setServerError(null);
     try {
-      const { token, user } = await authApi.login(data.email, data.password);
-      setAuth({ token, user });
-      const dest = ADMIN_ROLES.includes(user.role) ? ROUTES.admin.root : ROUTES.portal.dashboard;
-      router.replace(dest);
+      const hasTenant = !!useTenantStore.getState().tenant;
+      const { user } = await resolveLogin(data.email, data.password);
+      setAuth(user);
+      router.replace(resolveRedirectPath(user, hasTenant));
     } catch {
       setServerError("Email ou mot de passe incorrect.");
     }
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
+    <Box
+      component="form"
+      onSubmit={handleSubmit(onSubmit)}
+      noValidate
+      sx={{ display: "flex", flexDirection: "column", gap: 2 }}
+    >
       {serverError && (
-        <div className="rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+        <Alert severity="error" sx={{ borderRadius: 3 }}>
           {serverError}
-        </div>
+        </Alert>
       )}
 
-      <div className="space-y-1">
-        <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-          Email
-        </label>
-        <input
+      <Box>
+        <Typography
+          variant="body2"
+          sx={{ fontWeight: 500, mb: 0.75, color: "text.secondary" }}
+        >
+          Email :
+        </Typography>
+        <TextField
           id="email"
           type="email"
           autoComplete="email"
-          {...register("email")}
-          className={cn(
-            "w-full rounded-md border px-3 py-2 text-sm shadow-sm outline-none",
-            "placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500",
-            errors.email ? "border-red-400 bg-red-50" : "border-gray-300 bg-white"
-          )}
           placeholder="vous@exemple.com"
+          fullWidth
+          {...register("email")}
+          error={!!errors.email}
+          helperText={errors.email?.message}
+          sx={pillInputSx}
         />
-        {errors.email && (
-          <p className="text-xs text-red-600">{errors.email.message}</p>
-        )}
-      </div>
+      </Box>
 
-      <div className="space-y-1">
-        <div className="flex items-center justify-between">
-          <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-            Mot de passe
-          </label>
-          <Link
-            href={ROUTES.auth.forgotPassword}
-            className="text-xs text-blue-600 hover:underline"
-          >
-            Mot de passe oublié ?
-          </Link>
-        </div>
-        <input
+      <Box>
+        <Typography
+          variant="body2"
+          sx={{ fontWeight: 500, mb: 0.75, color: "text.secondary" }}
+        >
+          Mot de passe :
+        </Typography>
+        <TextField
           id="password"
-          type="password"
+          type={showPassword ? "text" : "password"}
           autoComplete="current-password"
-          {...register("password")}
-          className={cn(
-            "w-full rounded-md border px-3 py-2 text-sm shadow-sm outline-none",
-            "placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500",
-            errors.password ? "border-red-400 bg-red-50" : "border-gray-300 bg-white"
-          )}
           placeholder="••••••••"
+          fullWidth
+          {...register("password")}
+          error={!!errors.password}
+          helperText={errors.password?.message}
+          sx={pillInputSx}
+          slotProps={{
+            input: {
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    onClick={() => setShowPassword((v) => !v)}
+                    edge="end"
+                    size="small"
+                    aria-label={
+                      showPassword
+                        ? "Masquer le mot de passe"
+                        : "Afficher le mot de passe"
+                    }
+                  >
+                    {showPassword ? (
+                      <VisibilityOff fontSize="small" />
+                    ) : (
+                      <Visibility fontSize="small" />
+                    )}
+                  </IconButton>
+                </InputAdornment>
+              ),
+            },
+          }}
         />
-        {errors.password && (
-          <p className="text-xs text-red-600">{errors.password.message}</p>
-        )}
-      </div>
+      </Box>
 
-      <Button type="submit" size="lg" loading={isSubmitting} className="w-full">
-        Se connecter
-      </Button>
-    </form>
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          mt: 1,
+        }}
+      >
+        <Link
+          href={ROUTES.auth.forgotPassword}
+          style={{ fontSize: 12, color: "#666", textDecoration: "none" }}
+        >
+          Nom d&apos;utilisateur ou mot de passe oublié&nbsp;?
+        </Link>
+        <Button
+          type="submit"
+          variant="contained"
+          disabled={isSubmitting}
+          startIcon={
+            isSubmitting ? <CircularProgress size={16} color="inherit" /> : null
+          }
+          sx={{
+            borderRadius: "50px",
+            px: 4,
+            py: 1.2,
+            bgcolor: "var(--color-primary)",
+            fontWeight: 700,
+            letterSpacing: 1,
+            textTransform: "uppercase",
+            "&:hover": {
+              filter: "brightness(0.85)",
+              bgcolor: "var(--color-primary)",
+            },
+          }}
+        >
+          Connexion
+        </Button>
+      </Box>
+    </Box>
   );
 }

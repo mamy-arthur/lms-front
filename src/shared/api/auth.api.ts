@@ -19,8 +19,6 @@ interface BackendUser {
 interface LoginApiResponse {
   message: string;
   user: BackendUser;
-  token: string;
-  token_type: "Bearer";
 }
 
 interface MessageApiResponse {
@@ -44,29 +42,45 @@ function toAuthUser(raw: BackendUser): AuthUser {
 }
 
 export const authApi = {
-  login: async (email: string, password: string) => {
-    const res = await apiPost<LoginApiResponse>("auth/login", { email, password });
-    return { token: res.token, user: toAuthUser(res.user) };
+  login: async (
+    email: string,
+    password: string,
+  ): Promise<{ user: AuthUser }> => {
+    const res = await apiPost<LoginApiResponse>("auth/login", {
+      email,
+      password,
+    });
+    return { user: toAuthUser(res.user) };
   },
 
-  logout: () => apiPost<MessageApiResponse>("auth/logout"),
+  logout: (): Promise<MessageApiResponse> =>
+    apiPost<MessageApiResponse>("auth/logout"),
 
-  forgotPassword: (email: string) =>
+  forgotPassword: (email: string): Promise<MessageApiResponse> =>
     apiPost<MessageApiResponse>("auth/forgot-password", { email }),
 
-  resetPassword: (payload: ResetPasswordPayload) =>
+  resetPassword: (payload: ResetPasswordPayload): Promise<MessageApiResponse> =>
     apiPost<MessageApiResponse>("auth/reset-password", payload),
 
-  platformLogin: async (email: string, password: string) => {
-    const res = await apiPost<LoginApiResponse>("platform/auth/login", { email, password });
-    return { token: res.token, user: toAuthUser(res.user) };
+  platformLogin: async (
+    email: string,
+    password: string,
+  ): Promise<{ user: AuthUser }> => {
+    const res = await apiPost<LoginApiResponse>("platform/auth/login", {
+      email,
+      password,
+    });
+    return { user: toAuthUser(res.user) };
   },
 
-  platformLogout: () => apiPost<MessageApiResponse>("platform/auth/logout"),
+  platformLogout: (): Promise<MessageApiResponse> =>
+    apiPost<MessageApiResponse>("platform/auth/logout"),
 
-  platformForgotPassword: (email: string) =>
+  platformForgotPassword: (email: string): Promise<MessageApiResponse> =>
     apiPost<MessageApiResponse>("platform/auth/forgot-password", { email }),
 
-  platformResetPassword: (payload: ResetPasswordPayload) =>
+  platformResetPassword: (
+    payload: ResetPasswordPayload,
+  ): Promise<MessageApiResponse> =>
     apiPost<MessageApiResponse>("platform/auth/reset-password", payload),
 };

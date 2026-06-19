@@ -1,5 +1,5 @@
 import { apiGet, apiPost, apiPut, apiDelete } from "@/shared/lib/apiClient";
-import { Course } from "../types";
+import { Course } from "../../../../shared/components/courses/types";
 
 interface CourseListResponse {
   items?: Course[];

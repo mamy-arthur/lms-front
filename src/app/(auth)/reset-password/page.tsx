@@ -11,7 +11,7 @@ export default async function ResetPasswordPage({ searchParams }: Props) {
 
   if (!token || !email) {
     return (
-      <div className="rounded-xl border border-gray-200 bg-white p-8 shadow-sm space-y-4">
+      <div className="w-full max-w-md mx-auto rounded-3xl bg-white px-10 py-12 shadow-[0_24px_80px_rgba(0,0,0,0.45)] space-y-4">
         <h1 className="text-2xl font-bold text-gray-900">Lien invalide</h1>
         <p className="text-sm text-gray-500">
           Ce lien de réinitialisation est invalide ou a expiré.
@@ -27,9 +27,13 @@ export default async function ResetPasswordPage({ searchParams }: Props) {
   }
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-8 shadow-sm">
-      <h1 className="text-2xl font-bold text-gray-900 mb-2">Nouveau mot de passe</h1>
-      <p className="text-sm text-gray-500 mb-6">Choisissez un mot de passe d'au moins 8 caractères.</p>
+    <div className="w-full max-w-md mx-auto rounded-3xl bg-white px-10 py-12 shadow-[0_24px_80px_rgba(0,0,0,0.45)]">
+      <h1 className="text-2xl font-bold text-gray-900 mb-1">
+        Nouveau mot de passe
+      </h1>
+      <p className="text-sm text-gray-500 mb-8">
+        Choisissez un mot de passe d'au moins 8 caractères.
+      </p>
       <ResetPasswordForm email={email} token={token} />
     </div>
   );

@@ -17,8 +17,10 @@ const SKIP_HEADERS = new Set([
 
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse
+  res: NextApiResponse,
 ) {
+  // Strip the /api prefix added by Next.js Pages Router.
+  // Caddy (local) and nginx (prod) handle the /api/ → /api/v1/ rewrite upstream.
   const destPath = req.url!.replace(/^\/api/, "");
   const destUrl = `${BACKEND_BASE}${destPath}`;
 
@@ -57,6 +59,21 @@ export default async function handler(
       }
 
       const text = await response.text();
+
+      // Relayer les headers de la réponse backend vers le navigateur.
+      // Le header Set-Cookie est indispensable pour poser le cookie httpOnly d'auth.
+      for (const [key, value] of response.headers.entries()) {
+        const lkey = key.toLowerCase();
+        if (lkey === "set-cookie") continue; // géré séparément ci-dessous
+        if (["content-encoding", "transfer-encoding"].includes(lkey)) continue;
+        res.setHeader(key, value);
+      }
+      // getSetCookie() préserve les entrées multiples (une par cookie)
+      const setCookies = response.headers.getSetCookie?.() ?? [];
+      if (setCookies.length > 0) {
+        res.setHeader("Set-Cookie", setCookies);
+      }
+
       res.status(response.status).send(text);
       return;
     } catch (e: unknown) {

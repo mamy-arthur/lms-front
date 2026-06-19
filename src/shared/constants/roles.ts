@@ -5,8 +5,8 @@ export enum Role {
   TRAINEE = "TRAINEE",
 }
 
-export const ADMIN_ROLES: Role[] = [
-  Role.SUPER_ADMIN,
-  Role.EDITOR,
-  Role.CLIENT_MANAGER,
-];
+/** Utilisateurs de la plateforme centrale — login via POST /platform/auth/login */
+export const PLATFORM_ROLES: Role[] = [Role.SUPER_ADMIN, Role.EDITOR];
+
+/** Utilisateurs d'un tenant — login via POST /auth/login */
+export const TENANT_ROLES: Role[] = [Role.CLIENT_MANAGER, Role.TRAINEE];
