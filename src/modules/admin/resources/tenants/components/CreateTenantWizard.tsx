@@ -141,7 +141,7 @@ export function CreateTenantWizard({ open, onOpenChange }: Props) {
     <Sheet open={open} onOpenChange={handleClose}>
       <SheetContent
         className="flex w-full flex-col gap-0 p-0 sm:max-w-xl"
-        showCloseButton={false}
+        showCloseButton={true}
         onInteractOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
       >

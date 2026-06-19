@@ -66,12 +66,12 @@ export function QuizForm({
             name="title"
             render={({ field }) => (
               <FieldGroup>
-                <FieldLabel>Titre *</FieldLabel>
+                <FieldLabel className="text-xs">Titre *</FieldLabel>
                 <FieldContent>
                   <Input
                     autoFocus
                     aria-label="Titre"
-                    className="h-9 px-3 text-sm"
+                    className="text-xs"
                     {...field}
                     onChange={(e) => {
                       field.onChange(e);
@@ -91,11 +91,11 @@ export function QuizForm({
             name="slug"
             render={({ field }) => (
               <FieldGroup>
-                <FieldLabel>ID Quiz</FieldLabel>
+                <FieldLabel className="text-xs">ID Quiz</FieldLabel>
                 <FieldContent>
                   <Input
                     aria-label="ID Quiz"
-                    className="h-9 px-3 text-sm bg-muted"
+                    className="text-xs bg-muted"
                     readOnly
                     {...field}
                   />
@@ -113,7 +113,7 @@ export function QuizForm({
             name="isFinalEvaluation"
             render={({ field }) => (
               <FieldGroup>
-                <FieldLabel>Évaluation finale</FieldLabel>
+                <FieldLabel className="text-xs">Évaluation finale</FieldLabel>
                 <Select
                   onValueChange={(val) => field.onChange(val === "true")}
                   value={String(field.value)}
@@ -122,7 +122,7 @@ export function QuizForm({
                     <SelectTrigger
                       size="default"
                       aria-label="Évaluation finale"
-                      className="w-full"
+                      className="w-full text-xs"
                     >
                       <SelectValue placeholder="Choisir…" />
                     </SelectTrigger>
@@ -142,7 +142,7 @@ export function QuizForm({
             name="formationId"
             render={({ field }) => (
               <FieldGroup>
-                <FieldLabel>Formation</FieldLabel>
+                <FieldLabel className="text-xs">Formation</FieldLabel>
                 <Select onValueChange={field.onChange} value={field.value}>
                   <FieldContent>
                     <SelectTrigger
@@ -173,7 +173,7 @@ export function QuizForm({
             name="description"
             render={({ field }) => (
               <FieldGroup>
-                <FieldLabel>Description</FieldLabel>
+                <FieldLabel className="text-xs">Description</FieldLabel>
                 <FieldContent>
                   <Textarea
                     aria-label="Description"

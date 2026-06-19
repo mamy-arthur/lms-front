@@ -71,12 +71,12 @@ export function UserForm({
               name="last_name"
               render={({ field }) => (
                 <FieldGroup>
-                  <FieldLabel>Nom</FieldLabel>
+                  <FieldLabel className="text-xs">Nom</FieldLabel>
                   <FieldContent>
                     <Input
                       autoFocus
                       aria-label="Nom"
-                      className="h-9 px-3 text-sm"
+                      className="text-xs"
                       {...field}
                     />
                   </FieldContent>
@@ -89,11 +89,11 @@ export function UserForm({
               name="first_name"
               render={({ field }) => (
                 <FieldGroup>
-                  <FieldLabel>Prénom</FieldLabel>
+                  <FieldLabel className="text-xs">Prénom</FieldLabel>
                   <FieldContent>
                     <Input
                       aria-label="Prénom"
-                      className="h-9 px-3 text-sm"
+                      className="text-xs"
                       {...field}
                     />
                   </FieldContent>
@@ -108,11 +108,11 @@ export function UserForm({
             name="username"
             render={({ field }) => (
               <FieldGroup>
-                <FieldLabel>Nom d'utilisateur</FieldLabel>
+                <FieldLabel className="text-xs">Nom d'utilisateur</FieldLabel>
                 <FieldContent>
                   <Input
                     aria-label="Nom d'utilisateur"
-                    className="h-9 px-3 text-sm"
+                    className="text-xs"
                     {...field}
                   />
                 </FieldContent>
@@ -126,12 +126,12 @@ export function UserForm({
             name="email"
             render={({ field }) => (
               <FieldGroup>
-                <FieldLabel>Email</FieldLabel>
+                <FieldLabel className="text-xs">Email</FieldLabel>
                 <FieldContent>
                   <Input
                     type="email"
                     aria-label="Email"
-                    className="h-9 px-3 text-sm"
+                    className="text-xs"
                     {...field}
                   />
                 </FieldContent>
@@ -145,7 +145,7 @@ export function UserForm({
             name="role"
             render={({ field }) => (
               <FieldGroup>
-                <FieldLabel>Rôle</FieldLabel>
+                <FieldLabel className="text-xs">Rôle</FieldLabel>
                 <Select
                   onValueChange={field.onChange}
                   defaultValue={field.value}
@@ -179,11 +179,11 @@ export function UserForm({
             name="city"
             render={({ field }) => (
               <FieldGroup>
-                <FieldLabel>Ville</FieldLabel>
+                <FieldLabel className="text-xs">Ville</FieldLabel>
                 <FieldContent>
                   <Input
                     aria-label="Ville"
-                    className="h-9 px-3 text-sm"
+                    className="text-xs"
                     {...field}
                   />
                 </FieldContent>
@@ -197,11 +197,11 @@ export function UserForm({
             name="country"
             render={({ field }) => (
               <FieldGroup>
-                <FieldLabel>Pays</FieldLabel>
+                <FieldLabel className="text-xs">Pays</FieldLabel>
                 <FieldContent>
                   <Input
                     aria-label="Pays"
-                    className="h-9 px-3 text-sm"
+                    className="text-xs"
                     {...field}
                   />
                 </FieldContent>
@@ -232,13 +232,13 @@ export function UserForm({
             name="password"
             render={({ field }) => (
               <FieldGroup>
-                <FieldLabel>Mot de passe</FieldLabel>
+                <FieldLabel className="text-xs">Mot de passe</FieldLabel>
                 <FieldContent>
                   <div className="relative">
                     <Input
                       type={showPassword ? "text" : "password"}
                       aria-label="Mot de passe"
-                      className="h-9 px-3 pr-10 text-sm"
+                      className="text-xs"
                       {...field}
                     />
                     <button

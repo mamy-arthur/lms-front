@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import type { FieldValues } from "react-hook-form";
+import { useWatch } from "react-hook-form";
 import type { z } from "zod";
 import {
   MOCK_COURSE_CATEGORIES,
@@ -60,7 +61,10 @@ export function useModuleFormDrawer({
     buildUpdatePayload,
   });
 
-  const selectedCourseIds = base.form.watch("courseIds") as unknown as string[];
+  const selectedCourseIds = useWatch({
+    control: base.form.control,
+    name: "courseIds",
+  }) as unknown as string[];
 
   const toggleCourse = useCallback(
     (courseId: string) => {
@@ -98,7 +102,10 @@ export function useModuleFormDrawer({
     });
   }, []);
 
-  const name = base.form.watch("name") as unknown as string;
+  const name = useWatch({
+    control: base.form.control,
+    name: "name",
+  }) as unknown as string;
 
   return {
     ...base,

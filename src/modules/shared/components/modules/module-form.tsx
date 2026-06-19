@@ -107,12 +107,12 @@ export function ModuleForm({
             name="name"
             render={({ field }) => (
               <FieldGroup>
-                <FieldLabel>Nom</FieldLabel>
+                <FieldLabel className="text-xs">Nom</FieldLabel>
                 <FieldContent>
                   <Input
                     autoFocus
                     aria-label="Nom"
-                    className="h-9 px-3 text-sm"
+                    className="text-xs"
                     {...field}
                   />
                 </FieldContent>
@@ -126,18 +126,18 @@ export function ModuleForm({
             name="identifier"
             render={({ field }) => (
               <FieldGroup>
-                <FieldLabel>Identifiant</FieldLabel>
+                <FieldLabel className="text-xs">Identifiant</FieldLabel>
                 <FieldContent>
                   <div className="flex gap-2">
                     <Input
                       aria-label="Identifiant"
-                      className="h-9 px-3 text-sm flex-1"
+                      className="text-xs"
                       {...field}
                     />
                     <Button
                       type="button"
                       variant="outline"
-                      size="sm"
+                      size="xs"
                       onClick={() =>
                         form.setValue(
                           "identifier",
@@ -160,7 +160,7 @@ export function ModuleForm({
             name="category"
             render={({ field }) => (
               <FieldGroup>
-                <FieldLabel>Catégorie</FieldLabel>
+                <FieldLabel className="text-xs">Catégorie</FieldLabel>
                 <Select
                   onValueChange={field.onChange}
                   defaultValue={field.value}
@@ -170,7 +170,7 @@ export function ModuleForm({
                     <SelectTrigger
                       size="default"
                       aria-label="Catégorie"
-                      className="w-full"
+                      className="w-full text-xs"
                     >
                       <SelectValue placeholder="Sélectionner une catégorie" />
                     </SelectTrigger>
@@ -195,11 +195,11 @@ export function ModuleForm({
             name="description"
             render={({ field }) => (
               <FieldGroup>
-                <FieldLabel>Description</FieldLabel>
+                <FieldLabel className="text-xs">Description</FieldLabel>
                 <FieldContent>
                   <Textarea
                     aria-label="Description"
-                    className="min-h-24 resize-y text-sm"
+                    className="min-h-24 resize-y text-xs"
                     {...field}
                   />
                 </FieldContent>
@@ -213,7 +213,7 @@ export function ModuleForm({
             name="courseIds"
             render={({ field }) => (
               <FieldGroup>
-                <FieldLabel>Cours liés</FieldLabel>
+                <FieldLabel className="text-xs">Cours liés</FieldLabel>
                 <Popover
                   open={coursePopoverOpen}
                   onOpenChange={setCoursePopoverOpen}
@@ -225,7 +225,7 @@ export function ModuleForm({
                         variant="outline"
                         role="combobox"
                         aria-label="Cours liés"
-                        className="h-9 w-full justify-between font-normal"
+                        className="h-9 w-full justify-between font-normal text-xs"
                       >
                         {selectedCourseIds.length > 0
                           ? `${selectedCourseIds.length} cours sélectionné${

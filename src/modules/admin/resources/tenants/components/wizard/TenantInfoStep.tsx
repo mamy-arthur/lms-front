@@ -36,7 +36,7 @@ export const TenantInfoStep = React.memo(function TenantInfoStep({
           <FormItem>
             <FormLabel className="text-xs">Nom du tenant</FormLabel>
             <FormControl>
-              <Input placeholder="Ex: Académie Pro" className="h-10 px-3 text-sm" {...field} />
+              <Input placeholder="Ex: Académie Pro" className="text-xs" {...field} />
             </FormControl>
             <FormMessage />
           </FormItem>
@@ -51,7 +51,7 @@ export const TenantInfoStep = React.memo(function TenantInfoStep({
             <FormLabel className="text-xs">Sous-domaine</FormLabel>
             <FormControl>
               <div className="relative">
-                <Input placeholder="mon-tenant" className="h-10 px-3 pr-24 text-sm" {...field} />
+                <Input placeholder="mon-tenant" className="text-xs" {...field} />
                 <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground select-none pointer-events-none">
                   .learno.app
                 </span>
@@ -80,7 +80,7 @@ export const TenantInfoStep = React.memo(function TenantInfoStep({
                 <div
                   onClick={() => fileInputRef.current?.click()}
                   className={cn(
-                    "flex cursor-pointer items-center gap-3 rounded-xl border border-dashed p-4 transition-colors",
+                    "flex cursor-pointer items-center gap-3 rounded-xl border border-dashed p-4 transition-colors text-xs",
                     "hover:border-primary/40 hover:bg-muted/20",
                     logoPreview ? "border-primary/20" : "border-muted-foreground/15",
                   )}
@@ -112,8 +112,8 @@ export const TenantInfoStep = React.memo(function TenantInfoStep({
             <FormLabel className="text-xs">Couleur principale</FormLabel>
             <FormControl>
               <div className="flex items-center gap-3">
-                <input type="color" value={value} onChange={onChange} className="h-10 w-10 cursor-pointer rounded-full border border-input bg-transparent p-0.5" {...field} />
-                <span className="h-10 flex-1 rounded-lg border border-input px-3 text-sm leading-10" style={{ backgroundColor: color, color: "#fff" }}>
+                <input type="color" value={value} onChange={onChange} className="h-10 w-10 cursor-pointer rounded-full border border-input bg-transparent p-0.5 text-xs" {...field} />
+                <span className="h-10 flex-1 rounded-lg border border-input px-3 text-xs leading-10" style={{ backgroundColor: color, color: "#fff" }}>
                   {color}
                 </span>
               </div>
