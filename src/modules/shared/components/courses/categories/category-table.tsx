@@ -41,6 +41,7 @@ import { buildCategoryTree, useCoursesStore } from "../lib/course-store";
 import type { Category } from "../types/index";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
+import { CategoryDrawer } from "./category-drawer";
 
 type Props = {
     onEdit: (category: Category) => void;
@@ -52,7 +53,7 @@ export function CategoryTable({ onEdit, onAddChild }: Props) {
         useCoursesStore();
     const tree = buildCategoryTree(categories);
     const [confirmDelete, setConfirmDelete] = useState<Category | null>(null);
-
+    const [categoryDrawerOpen, setCategoryDrawerOpen] = useState(false);
     const parentName = (id: string | null) =>
         id ? (categories.find((c) => c.id === id)?.name ?? "—") : "—";
 
@@ -66,6 +67,13 @@ export function CategoryTable({ onEdit, onAddChild }: Props) {
                         className="pl-9"
                     />
                 </div>
+                <Button
+                    onClick={() => setCategoryDrawerOpen(true)}
+                    className="bg-(--color-primary) hover:bg-(--color-primary)/80 text-primary-foreground"
+                >
+                    <Plus className="mr-1 size-4" />
+                    Nouveau catégories
+                </Button>
             </div>
             <div className="overflow-hidden rounded-xl border bg-card">
                 <Table>
@@ -253,6 +261,10 @@ export function CategoryTable({ onEdit, onAddChild }: Props) {
                     </AlertDialogContent>
                 </AlertDialog>
             </div>
+            <CategoryDrawer
+                open={categoryDrawerOpen}
+                onOpenChange={setCategoryDrawerOpen}
+            />
         </div>
     );
 }

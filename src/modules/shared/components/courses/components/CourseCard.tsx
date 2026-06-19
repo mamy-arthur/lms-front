@@ -45,6 +45,7 @@ interface CourseCardProps {
         categories: Category[],
         categoryId: string | null,
     ) => string;
+    href: (courseId: string) => string;
 }
 export function CourseCard({
     course,
@@ -53,6 +54,7 @@ export function CourseCard({
     onDelete,
     onToggleVisibility,
     getCategoryPath,
+    href,
 }: CourseCardProps) {
     return (
         <Card className="group relative flex flex-col overflow-hidden transition-shadow hover:shadow-md cursor-pointer">
@@ -95,10 +97,7 @@ export function CourseCard({
                         </Button>
                     </DropdownMenuTrigger>
 
-                    <DropdownMenuContent
-                        align="end"
-                        className="w-48"
-                    >
+                    <DropdownMenuContent align="end" className="w-48">
                         <DropdownMenuItem asChild>
                             <Link href={`/admin/courses/${course.id}`}>
                                 <BookOpen className="mr-2 size-4" />
@@ -106,9 +105,7 @@ export function CourseCard({
                             </Link>
                         </DropdownMenuItem>
 
-                        <DropdownMenuItem
-                            onClick={() => onEdit(course)}
-                        >
+                        <DropdownMenuItem onClick={() => onEdit(course)}>
                             <Pencil className="mr-2 size-4" />
                             Modifier
                         </DropdownMenuItem>
@@ -146,18 +143,13 @@ export function CourseCard({
                 <div className="flex items-center gap-2 text-muted-foreground">
                     <FolderTree className="size-4 shrink-0" />
                     <span className="truncate">
-                        {getCategoryPath(
-                            categories,
-                            course.categoryId,
-                        )}
+                        {getCategoryPath(categories, course.categoryId)}
                     </span>
                 </div>
 
                 <div className="flex items-center gap-2 text-muted-foreground">
                     <Hash className="size-4 shrink-0" />
-                    <span className="truncate">
-                        {course.identifier}
-                    </span>
+                    <span className="truncate">{course.identifier}</span>
                 </div>
             </CardContent>
 
@@ -185,7 +177,7 @@ export function CourseCard({
                         asChild
                         className="bg-(--color-primary) hover:bg-(--color-primary)/80"
                     >
-                        <Link href={`/admin/courses/${course.id}`}>
+                        <Link href={href(course.id)}>
                             <ArrowRight />
                         </Link>
                     </Button>

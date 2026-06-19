@@ -1,7 +1,5 @@
+import { CoursesList } from "@/modules/portal/resources/courses";
+
 export default function CoursesPage() {
-  return (
-    <div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">COURS</h1>
-    </div>
-  );
+  return <CoursesList />;
 }
