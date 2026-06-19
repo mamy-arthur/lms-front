@@ -3,12 +3,13 @@
 import { Plus } from "lucide-react";
 import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
+import { QuizSearch } from "@modules/shared/components/quizzes";
 import { useAllTenantsQuery } from "@/modules/shared/hooks/useAllTenantsQuery";
 import { useModuleListController } from "@/modules/shared/hooks/useModuleListController";
 import { useQuizzesQuery } from "../hooks/useQuizzesQuery";
 import type { Quiz } from "../types";
 import { AdminQuizFormDrawer } from "./_components/admin-quiz-form-drawer";
-import { AdminQuizzesFilters } from "./_components/admin-quizzes-filters";
+import { AdminQuizzesFilter } from "./_components/admin-quizzes-filter";
 import { AdminQuizzesTable } from "./_components/admin-quizzes-table";
 
 export function QuizList() {
@@ -30,34 +31,39 @@ export function QuizList() {
 
   return (
     <div className="bg-background">
-      <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <header className="mb-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Quizzes</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Créez, modifiez et organisez les quizzes.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+      </header>
+
+      <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center gap-2">
+        <QuizSearch
+          value={ctrl.draftSearch}
+          onChange={ctrl.setDraftSearch}
+          onSearch={ctrl.handleSearch}
+        />
+        <div className="flex items-center gap-2 sm:ml-auto">
+          <AdminQuizzesFilter
+            formationFilter={ctrl.draftCategory}
+            tenantFilter={ctrl.draftTenant}
+            onFormationFilterChange={ctrl.setDraftCategory}
+            onTenantFilterChange={ctrl.setDraftTenant}
+            onSearch={ctrl.handleSearch}
+            tenants={tenants}
+          />
           <Button
             onClick={ctrl.handleOpenCreate}
-            className="bg-(--color-primary) hover:bg-(--color-primary)/80 text-primary-foreground"
+            className="bg-(--color-primary) hover:bg-(--color-primary)/80 text-primary-foreground shrink-0"
           >
-            <Plus className="mr-1 size-4" />
+            <Plus className="size-4" />
             Nouveau quiz
           </Button>
         </div>
-      </header>
-
-      <AdminQuizzesFilters
-        search={ctrl.draftSearch}
-        formationFilter={ctrl.draftCategory}
-        tenantFilter={ctrl.draftTenant}
-        onSearchChange={ctrl.setDraftSearch}
-        onFormationFilterChange={ctrl.setDraftCategory}
-        onTenantFilterChange={ctrl.setDraftTenant}
-        onSearch={ctrl.handleSearch}
-        tenants={tenants}
-      />
+      </div>
 
       <AdminQuizzesTable
         quizzes={data?.data ?? []}

@@ -3,7 +3,7 @@
 import {
   UsersContentTable,
   type UsersTableSort,
-} from "@/shared/components/users";
+} from "@modules/shared/components/users";
 import type { TenantUser } from "../../types";
 
 export type SortColumn =

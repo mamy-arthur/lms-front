@@ -8,7 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { UsersFilters } from "@/shared/components/users";
+import { UsersFilter } from "@modules/shared/components/users";
 import type { Tenant } from "@/shared/types/tenant.types";
 
 const ROLE_OPTIONS = [
@@ -18,12 +18,10 @@ const ROLE_OPTIONS = [
   { value: "TRAINEE", label: "Stagiaire" },
 ] as const;
 
-interface AdminUsersFiltersProps {
-  search: string;
+interface AdminUsersFilterProps {
   roleFilter: string;
   statusFilter: string;
   tenantFilter: string;
-  onSearchChange: (value: string) => void;
   onRoleFilterChange: (value: string) => void;
   onStatusFilterChange: (value: string) => void;
   onTenantFilterChange: (value: string) => void;
@@ -31,20 +29,18 @@ interface AdminUsersFiltersProps {
   tenants: Tenant[];
 }
 
-export function AdminUsersFilters({
-  search,
+export function AdminUsersFilter({
   roleFilter,
   statusFilter,
   tenantFilter,
-  onSearchChange,
   onRoleFilterChange,
   onStatusFilterChange,
   onTenantFilterChange,
   onSearch,
   tenants,
-}: AdminUsersFiltersProps) {
+}: AdminUsersFilterProps) {
   const tenantField = (
-    <div className="flex-1 space-y-1">
+    <div className="space-y-1">
       <Label className="text-xs text-muted-foreground">Tenant</Label>
       <Select value={tenantFilter} onValueChange={onTenantFilterChange}>
         <SelectTrigger aria-label="Filtrer par tenant" className="w-full">
@@ -63,11 +59,9 @@ export function AdminUsersFilters({
   );
 
   return (
-    <UsersFilters
-      search={search}
+    <UsersFilter
       roleFilter={roleFilter}
       statusFilter={statusFilter}
-      onSearchChange={onSearchChange}
       onRoleFilterChange={onRoleFilterChange}
       onStatusFilterChange={onStatusFilterChange}
       onSearch={onSearch}

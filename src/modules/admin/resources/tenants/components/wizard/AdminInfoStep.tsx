@@ -36,7 +36,7 @@ export const AdminInfoStep = React.memo(function AdminInfoStep({
               <FormControl>
                 <Input
                   placeholder="Jean"
-                  className="h-10 px-3 text-sm"
+                  className="text-xs"
                   {...field}
                 />
               </FormControl>
@@ -54,7 +54,7 @@ export const AdminInfoStep = React.memo(function AdminInfoStep({
               <FormControl>
                 <Input
                   placeholder="Dupont"
-                  className="h-10 px-3 text-sm"
+                  className="text-xs"
                   {...field}
                 />
               </FormControl>
@@ -73,7 +73,7 @@ export const AdminInfoStep = React.memo(function AdminInfoStep({
             <FormControl>
               <Input
                 placeholder="jean.dupont"
-                className="h-10 px-3 text-sm"
+                className="text-xs"
                 {...field}
               />
             </FormControl>
@@ -92,7 +92,7 @@ export const AdminInfoStep = React.memo(function AdminInfoStep({
               <Input
                 type="email"
                 placeholder="jean.dupont@exemple.com"
-                className="h-10 px-3 text-sm"
+                className="text-xs"
                 {...field}
               />
             </FormControl>
@@ -144,7 +144,7 @@ export const AdminInfoStep = React.memo(function AdminInfoStep({
               <FormControl>
                 <Input
                   placeholder="Paris"
-                  className="h-10 px-3 text-sm"
+                  className="text-xs"
                   {...field}
                 />
               </FormControl>
@@ -162,7 +162,7 @@ export const AdminInfoStep = React.memo(function AdminInfoStep({
               <FormControl>
                 <Input
                   placeholder="France"
-                  className="h-10 px-3 text-sm"
+                  className="text-xs"
                   {...field}
                 />
               </FormControl>

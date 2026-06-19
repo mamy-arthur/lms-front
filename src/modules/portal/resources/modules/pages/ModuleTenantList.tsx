@@ -4,8 +4,16 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
 import { useCallback } from "react";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useModuleListController } from "@/modules/shared/hooks/useModuleListController";
-import { ModulesFilters } from "@/shared/components/modules";
+import { ModuleSearch, CATEGORY_OPTIONS } from "@modules/shared/components/modules";
 import { ModuleFormDrawer } from "../components/ModuleFormDrawer";
 import { MODULES_QUERY_KEY, useModulesQuery } from "../hooks/useModulesQuery";
 import { ModuleCategoryProvider } from "../lib/module-store";
@@ -37,30 +45,46 @@ function ModuleTenantListInner() {
 
   return (
     <div className="bg-background">
-      <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <header className="mb-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Modules</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Créez, modifiez et gérez vos modules.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+      </header>
+
+      <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center gap-2">
+        <ModuleSearch
+          value={ctrl.draftSearch}
+          onChange={ctrl.setDraftSearch}
+          onSearch={ctrl.handleSearch}
+        />
+        <div className="flex items-center gap-2 sm:ml-auto">
+          <div className="space-y-1">
+            <Select value={ctrl.draftCategory} onValueChange={ctrl.setDraftCategory}>
+              <SelectTrigger aria-label="Filtrer par catégorie" className="w-44">
+                <SelectValue placeholder="Toutes les catégories" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Toutes les catégories</SelectItem>
+                {CATEGORY_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <Button
             onClick={ctrl.handleOpenCreate}
-            className="bg-(--color-primary) hover:bg-(--color-primary)/80 text-primary-foreground"
+            className="bg-(--color-primary) hover:bg-(--color-primary)/80 text-primary-foreground shrink-0"
           >
-            <Plus className="mr-1 size-4" />
-            Nouveau module
+            <Plus className="size-4" />
+            Nouveau
           </Button>
         </div>
-      </header>
-      <ModulesFilters
-        search={ctrl.draftSearch}
-        categoryFilter={ctrl.draftCategory}
-        onSearchChange={ctrl.setDraftSearch}
-        onCategoryFilterChange={ctrl.setDraftCategory}
-        onSearch={ctrl.handleSearch}
-      />
+      </div>
 
       <ModulesTable
         modules={queryResult?.data ?? []}

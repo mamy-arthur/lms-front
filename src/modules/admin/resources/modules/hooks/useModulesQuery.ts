@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { MOCK_ADMIN_MODULES } from "@/shared/mocks/modules-admin.mock";
+import { MOCK_ADMIN_MODULES } from "@modules/shared/components/modules/mocks/modules-admin.mock";
 import type { ModuleSearchParams } from "../types";
 import { normalizeModule } from "../types";
 

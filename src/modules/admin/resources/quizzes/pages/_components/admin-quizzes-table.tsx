@@ -1,6 +1,6 @@
 "use client";
 
-import { QuizActions } from "@/shared/components/quizzes";
+import { QuizActions } from "@modules/shared/components/quizzes";
 import {
   DataTable,
   type DataTableColumn,

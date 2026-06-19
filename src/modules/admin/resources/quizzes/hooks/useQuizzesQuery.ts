@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { MOCK_QUIZZES } from "@/shared/mocks/quizzes.mock";
+import { MOCK_QUIZZES } from "@modules/shared/components/quizzes/mocks/quizzes.mock";
 import type { Quiz, QuizSearchParams } from "../types";
 import { normalizeQuiz } from "../types";
 

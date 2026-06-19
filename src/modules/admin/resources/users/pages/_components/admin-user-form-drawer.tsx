@@ -2,7 +2,7 @@
 
 import { memo, useCallback, useMemo } from "react";
 import { z } from "zod";
-import { Sheet } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import {
   FieldContent,
   FieldError,
@@ -19,11 +19,9 @@ import {
 } from "@/components/ui/select";
 import { Role } from "@/shared/constants/roles";
 import {
-  UserFormDrawerContent,
-} from "@/shared/components/users/user-form-drawer-content";
-import {
   useUserFormDrawer,
-} from "@/shared/components/users/use-user-form-drawer";
+} from "@modules/shared/components/users/use-user-form-drawer";
+import { UserForm } from "@modules/shared/components/users/user-form";
 import type { Tenant } from "@/shared/types/tenant.types";
 import { useCreateUser } from "../../hooks/useCreateUser";
 import { useUpdateUser } from "../../hooks/useUpdateUser";
@@ -192,19 +190,31 @@ function AdminUserFormDrawerBase({
 
   return (
     <Sheet open={open} onOpenChange={(nextOpen) => !nextOpen && formState.handleClose()}>
-      <UserFormDrawerContent
-        form={formState.form}
-        mutation={formState.mutation}
-        isEdit={formState.isEdit}
-        handleClose={formState.handleClose}
-        onSubmit={formState.onSubmit}
-        showPassword={formState.showPassword}
-        togglePasswordVisibility={formState.togglePasswordVisibility}
-        title={isEdit ? "Modifier l'utilisateur" : "Créer un utilisateur"}
-        roleLabels={ROLE_LABELS}
-        lastLogin={user?.lastLogin}
-        extraFields={tenantField}
-      />
+      <SheetContent
+        className="flex w-full flex-col gap-0 p-0 sm:max-w-2xl lg:max-w-4xl"
+        showCloseButton={true}
+        onInteractOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => e.preventDefault()}
+      >
+        <SheetHeader className="border-b px-4 py-4">
+          <SheetTitle>{isEdit ? "Modifier l'utilisateur" : "Créer un utilisateur"}</SheetTitle>
+          <SheetDescription>
+            Renseignez les informations de l'utilisateur.
+          </SheetDescription>
+        </SheetHeader>
+        <UserForm
+          form={formState.form}
+          mutation={formState.mutation}
+          isEdit={formState.isEdit}
+          handleClose={formState.handleClose}
+          onSubmit={formState.onSubmit}
+          showPassword={formState.showPassword}
+          togglePasswordVisibility={formState.togglePasswordVisibility}
+          roleLabels={ROLE_LABELS}
+          lastLogin={user?.lastLogin}
+          extraFields={tenantField}
+        />
+      </SheetContent>
     </Sheet>
   );
 }

@@ -2,15 +2,13 @@
 
 import { memo, useMemo } from "react";
 import { z } from "zod";
-import { Sheet } from "@/components/ui/sheet";
-import {
-  ModuleFormDrawerContent,
-} from "@/shared/components/modules/module-form-drawer-content";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { ModuleForm } from "@modules/shared/components/modules/module-form";
 import {
   extractApiError,
   genIdentifier,
-} from "@/shared/components/modules/module-form-utils";
-import { useModuleFormDrawer } from "@/shared/components/modules/use-module-form-drawer";
+} from "@modules/shared/components/modules/module-form-utils";
+import { useModuleFormDrawer } from "@modules/shared/components/modules/use-module-form-drawer";
 import { useCreateModule } from "../hooks/useCreateModule";
 import { useUpdateModule } from "../hooks/useUpdateModule";
 import type { CreateModulePayload, Module, UpdateModulePayload } from "../types";
@@ -105,26 +103,35 @@ function ModuleFormDrawerBase({
 
   return (
     <Sheet open={open} onOpenChange={(nextOpen) => !nextOpen && formState.handleClose()}>
-      <ModuleFormDrawerContent
-        form={formState.form}
-        open={open}
-        onClose={onClose}
-        mutation={formState.mutation}
-        isEdit={formState.isEdit}
-        handleClose={formState.handleClose}
-        onSubmit={formState.onSubmit}
-        selectedCourseIds={formState.selectedCourseIds}
-        toggleCourse={formState.toggleCourse}
-        coursesByCategory={formState.coursesByCategory}
-        openCategories={formState.openCategories}
-        toggleCategory={formState.toggleCategory}
-        name={formState.name}
-        coursePopoverOpen={formState.coursePopoverOpen}
-        setCoursePopoverOpen={formState.setCoursePopoverOpen}
-        title={isEdit ? "Modifier le module" : "Ajouter un module"}
-        genIdentifierFn={genIdentifier}
-        extractApiErrorFn={extractApiError}
-      />
+      <SheetContent
+        className="flex w-full flex-col gap-0 p-0 sm:max-w-2xl lg:max-w-4xl"
+        showCloseButton={true}
+        onInteractOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => e.preventDefault()}
+      >
+        <SheetHeader className="border-b px-4 py-4">
+          <SheetTitle>{isEdit ? "Modifier le module" : "Ajouter un module"}</SheetTitle>
+          <SheetDescription>
+            Renseignez les informations pour le module.
+          </SheetDescription>
+        </SheetHeader>
+        <ModuleForm
+          form={formState.form}
+          mutation={formState.mutation}
+          isEdit={formState.isEdit}
+          handleClose={formState.handleClose}
+          onSubmit={formState.onSubmit}
+          selectedCourseIds={formState.selectedCourseIds}
+          toggleCourse={formState.toggleCourse}
+          coursesByCategory={formState.coursesByCategory}
+          openCategories={formState.openCategories}
+          toggleCategory={formState.toggleCategory}
+          name={formState.name}
+          coursePopoverOpen={formState.coursePopoverOpen}
+          setCoursePopoverOpen={formState.setCoursePopoverOpen}
+          genIdentifierFn={genIdentifier}
+        />
+      </SheetContent>
     </Sheet>
   );
 }
