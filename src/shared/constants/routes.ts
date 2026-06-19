@@ -22,6 +22,7 @@ export const ROUTES = {
   portal: {
     dashboard: "/dashboard",
     courses: "/courses",
+    category: "/category",
     course: (slug: string) => `/courses/${slug}`,
     lesson: (slug: string, lessonId: string) => `/courses/${slug}/${lessonId}`,
     profile: "/profile",

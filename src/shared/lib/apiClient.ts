@@ -32,7 +32,7 @@ export const httpClient = async (
 }> => {
   let finalUrl = url;
   if (!url.startsWith("/api") && !url.startsWith("http")) {
-    finalUrl = `/api/${url.replace(/^\/+/, "")}`;
+    finalUrl = `/api/v1/${url.replace(/^\/+/, "")}`;
   }
 
   const headers = new Headers(options.headers as HeadersInit | undefined);
@@ -76,7 +76,7 @@ export const httpClient = async (
 };
 
 export async function apiGet<T>(path: string): Promise<T> {
-  const { json } = await httpClient(`/api/${path.replace(/^\/+/, "")}`);
+  const { json } = await httpClient(`/api/v1/${path.replace(/^\/+/, "")}`);
   return json as T;
 }
 
@@ -84,7 +84,7 @@ export async function apiPost<T, B = unknown>(
   path: string,
   body?: B,
 ): Promise<T> {
-  const { json } = await httpClient(`/api/${path.replace(/^\/+/, "")}`, {
+  const { json } = await httpClient(`/api/v1/${path.replace(/^\/+/, "")}`, {
     method: "POST",
     body: JSON.stringify(body),
   });
@@ -95,7 +95,7 @@ export async function apiPut<T, B = unknown>(
   path: string,
   body?: B,
 ): Promise<T> {
-  const { json } = await httpClient(`/api/${path.replace(/^\/+/, "")}`, {
+  const { json } = await httpClient(`/api/v1/${path.replace(/^\/+/, "")}`, {
     method: "PUT",
     body: JSON.stringify(body),
   });
@@ -103,5 +103,5 @@ export async function apiPut<T, B = unknown>(
 }
 
 export async function apiDelete(path: string): Promise<void> {
-  await httpClient(`/api/${path.replace(/^\/+/, "")}`, { method: "DELETE" });
+  await httpClient(`/api/v1/${path.replace(/^\/+/, "")}`, { method: "DELETE" });
 }
