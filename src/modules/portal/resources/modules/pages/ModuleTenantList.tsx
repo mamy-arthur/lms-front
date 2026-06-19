@@ -45,7 +45,7 @@ function ModuleTenantListInner() {
 
   return (
     <div className="bg-background">
-      <header className="mb-6">
+      <header className="mb-8">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Modules</h1>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -54,7 +54,8 @@ function ModuleTenantListInner() {
         </div>
       </header>
 
-      <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center gap-2">
+      <div className="space-y-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <ModuleSearch
           value={ctrl.draftSearch}
           onChange={ctrl.setDraftSearch}
@@ -107,6 +108,7 @@ function ModuleTenantListInner() {
         onSuccess={ctrl.handleSuccess}
         module={ctrl.editingModule}
       />
+      </div>
     </div>
   );
 }

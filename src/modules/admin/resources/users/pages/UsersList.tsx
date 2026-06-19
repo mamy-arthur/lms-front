@@ -54,7 +54,7 @@ export function UsersList() {
   return (
     
     <div className="bg-background">
-      <header className="mb-6">
+      <header className="mb-8">
           <div>
               <h1 className="text-2xl font-bold tracking-tight">
                   Utilisateurs
@@ -65,50 +65,52 @@ export function UsersList() {
           </div>
       </header>
 
-      <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center gap-2">
-        <UserSearch
-          value={draftSearch}
-          onChange={setDraftSearch}
-          onSearch={handleSearch}
-        />
-        <div className="flex items-center gap-2 sm:ml-auto">
-          <AdminUsersFilter
-            roleFilter={draftRole}
-            statusFilter={draftStatus}
-            tenantFilter={draftTenant}
-            onRoleFilterChange={setDraftRole}
-            onStatusFilterChange={setDraftStatus}
-            onTenantFilterChange={setDraftTenant}
+      <div className="space-y-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <UserSearch
+            value={draftSearch}
+            onChange={setDraftSearch}
             onSearch={handleSearch}
-            tenants={tenants}
           />
-          <Button
-            onClick={handleOpenCreate}
-            className="bg-(--color-primary) hover:bg-(--color-primary)/80 text-primary-foreground shrink-0"
-          >
-            <Plus className="size-4" />
-            Nouveau
-          </Button>
+          <div className="flex items-center gap-2 sm:ml-auto">
+            <AdminUsersFilter
+              roleFilter={draftRole}
+              statusFilter={draftStatus}
+              tenantFilter={draftTenant}
+              onRoleFilterChange={setDraftRole}
+              onStatusFilterChange={setDraftStatus}
+              onTenantFilterChange={setDraftTenant}
+              onSearch={handleSearch}
+              tenants={tenants}
+            />
+            <Button
+              onClick={handleOpenCreate}
+              className="bg-(--color-primary) hover:bg-(--color-primary)/80 text-primary-foreground shrink-0"
+            >
+              <Plus className="size-4" />
+              Nouveau
+            </Button>
+          </div>
         </div>
-      </div>
 
-      <AdminUsersTable
-        users={data?.data ?? []}
-        isLoading={isLoading}
-        hasQuery={hasQuery}
-        page={page}
-        pageSize={pageSize}
-        total={data?.total ?? 0}
-        sort={sort}
-        onSort={handleSort}
-        onPageChange={handlePageChange}
-        onPageSizeChange={handlePageSizeChange}
-        onView={() => {}}
-        onEdit={handleEdit}
-        onToggleActive={() => {}}
-        onDelete={() => {}}
-        tenantNames={tenantNames}
-      />
+        <AdminUsersTable
+          users={data?.data ?? []}
+          isLoading={isLoading}
+          hasQuery={hasQuery}
+          page={page}
+          pageSize={pageSize}
+          total={data?.total ?? 0}
+          sort={sort}
+          onSort={handleSort}
+          onPageChange={handlePageChange}
+          onPageSizeChange={handlePageSizeChange}
+          onView={() => {}}
+          onEdit={handleEdit}
+          onToggleActive={() => {}}
+          onDelete={() => {}}
+          tenantNames={tenantNames}
+        />
+      </div>
 
       <AdminUserFormDrawer
         open={isDrawerOpen}

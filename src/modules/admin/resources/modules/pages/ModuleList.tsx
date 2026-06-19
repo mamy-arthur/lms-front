@@ -31,7 +31,7 @@ export function ModuleList() {
 
   return (
     <div className="bg-background">
-      <header className="mb-6">
+      <header className="mb-8">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Modules</h1>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -40,46 +40,48 @@ export function ModuleList() {
         </div>
       </header>
 
-      <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center gap-2">
-        <ModuleSearch
-          value={ctrl.draftSearch}
-          onChange={ctrl.setDraftSearch}
-          onSearch={ctrl.handleSearch}
-        />
-        <div className="flex items-center gap-2 sm:ml-auto">
-          <AdminModulesFilter
-            categoryFilter={ctrl.draftCategory}
-            tenantFilter={ctrl.draftTenant}
-            onCategoryFilterChange={ctrl.setDraftCategory}
-            onTenantFilterChange={ctrl.setDraftTenant}
+      <div className="space-y-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <ModuleSearch
+            value={ctrl.draftSearch}
+            onChange={ctrl.setDraftSearch}
             onSearch={ctrl.handleSearch}
-            tenants={tenants}
           />
-          <Button
-            onClick={ctrl.handleOpenCreate}
-            className="bg-(--color-primary) hover:bg-(--color-primary)/80 text-primary-foreground shrink-0"
-          >
-            <Plus className="size-4" />
-            Nouveau module
-          </Button>
+          <div className="flex items-center gap-2 sm:ml-auto">
+            <AdminModulesFilter
+              categoryFilter={ctrl.draftCategory}
+              tenantFilter={ctrl.draftTenant}
+              onCategoryFilterChange={ctrl.setDraftCategory}
+              onTenantFilterChange={ctrl.setDraftTenant}
+              onSearch={ctrl.handleSearch}
+              tenants={tenants}
+            />
+            <Button
+              onClick={ctrl.handleOpenCreate}
+              className="bg-(--color-primary) hover:bg-(--color-primary)/80 text-primary-foreground shrink-0"
+            >
+              <Plus className="size-4" />
+              Nouveau module
+            </Button>
+          </div>
         </div>
-      </div>
 
-      <AdminModulesTable
-        modules={data?.data ?? []}
-        isLoading={isLoading}
-        hasQuery={ctrl.hasQuery}
-        page={ctrl.page}
-        pageSize={ctrl.pageSize}
-        total={data?.total ?? 0}
-        sort={ctrl.sort}
-        onSort={ctrl.handleSort}
-        onPageChange={ctrl.handlePageChange}
-        onPageSizeChange={ctrl.handlePageSizeChange}
-        onEdit={ctrl.handleEdit}
-        onDelete={() => {}}
-        tenantNames={tenantNames}
-      />
+        <AdminModulesTable
+          modules={data?.data ?? []}
+          isLoading={isLoading}
+          hasQuery={ctrl.hasQuery}
+          page={ctrl.page}
+          pageSize={ctrl.pageSize}
+          total={data?.total ?? 0}
+          sort={ctrl.sort}
+          onSort={ctrl.handleSort}
+          onPageChange={ctrl.handlePageChange}
+          onPageSizeChange={ctrl.handlePageSizeChange}
+          onEdit={ctrl.handleEdit}
+          onDelete={() => {}}
+          tenantNames={tenantNames}
+        />
+      </div>
 
       <AdminModuleFormDrawer
         open={ctrl.isDrawerOpen}
