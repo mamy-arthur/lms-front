@@ -1,186 +1,205 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
+
 import {
-  Box,
-  TextField,
-  Button,
-  Alert,
-  CircularProgress,
-  InputAdornment,
-  IconButton,
-  Typography,
-} from "@mui/material";
-import Visibility from "@mui/icons-material/Visibility";
-import VisibilityOff from "@mui/icons-material/VisibilityOff";
+    ArrowRight,
+    BookOpen,
+    Eye,
+    EyeOff,
+    GraduationCap,
+    Loader2,
+    Sparkles,
+    Users,
+} from "lucide-react";
 
 import { loginSchema, type LoginSchema } from "@/shared/schemas/auth.schema";
 import { useAuthStore } from "@/shared/stores/auth.store";
 import { useTenantStore } from "@/shared/stores/tenant.store";
 import {
-  resolveLogin,
-  resolveRedirectPath,
+    resolveLogin,
+    resolveRedirectPath,
 } from "@/modules/auth/utils/loginUtils";
-import { ROUTES } from "@/shared/constants/routes";
 
-const pillInputSx = {
-  "& .MuiOutlinedInput-root": {
-    borderRadius: "50px",
-    bgcolor: "#f0f2f5",
-    "& fieldset": { border: "none" },
-    "&:hover fieldset": { border: "none" },
-    "&.Mui-focused": {
-      bgcolor: "#fff",
-      boxShadow: "0 0 0 2px rgba(26,35,126,0.25)",
-    },
-  },
-} as const;
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export function LoginForm() {
-  const router = useRouter();
-  const setAuth = useAuthStore((s) => s.setAuth);
-  const [serverError, setServerError] = useState<string | null>(null);
-  const [showPassword, setShowPassword] = useState(false);
+    const router = useRouter();
+    const setAuth = useAuthStore((s) => s.setAuth);
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<LoginSchema>({
-    resolver: zodResolver(loginSchema),
-  });
+    const [showPassword, setShowPassword] = useState(false);
+    const [serverError, setServerError] = useState<string | null>(null);
 
-  const onSubmit = async (data: LoginSchema) => {
-    setServerError(null);
-    try {
-      const hasTenant = !!useTenantStore.getState().tenant;
-      const { user } = await resolveLogin(data.email, data.password);
-      setAuth(user);
-      router.replace(resolveRedirectPath(user, hasTenant));
-    } catch {
-      setServerError("Email ou mot de passe incorrect.");
-    }
-  };
+    const {
+        register,
+        handleSubmit,
+        formState: { errors, isSubmitting },
+    } = useForm<LoginSchema>({
+        resolver: zodResolver(loginSchema),
+        defaultValues: {
+            email: "",
+            password: "",
+        },
+    });
 
-  return (
-    <Box
-      component="form"
-      onSubmit={handleSubmit(onSubmit)}
-      noValidate
-      sx={{ display: "flex", flexDirection: "column", gap: 2 }}
-    >
-      {serverError && (
-        <Alert severity="error" sx={{ borderRadius: 3 }}>
-          {serverError}
-        </Alert>
-      )}
+    const onSubmit = async (data: LoginSchema) => {
+        setServerError(null);
 
-      <Box>
-        <Typography
-          variant="body2"
-          sx={{ fontWeight: 500, mb: 0.75, color: "text.secondary" }}
-        >
-          Email :
-        </Typography>
-        <TextField
-          id="email"
-          type="email"
-          autoComplete="email"
-          placeholder="vous@exemple.com"
-          fullWidth
-          {...register("email")}
-          error={!!errors.email}
-          helperText={errors.email?.message}
-          sx={pillInputSx}
-        />
-      </Box>
+        try {
+            const hasTenant = !!useTenantStore.getState().tenant;
 
-      <Box>
-        <Typography
-          variant="body2"
-          sx={{ fontWeight: 500, mb: 0.75, color: "text.secondary" }}
-        >
-          Mot de passe :
-        </Typography>
-        <TextField
-          id="password"
-          type={showPassword ? "text" : "password"}
-          autoComplete="current-password"
-          placeholder="••••••••"
-          fullWidth
-          {...register("password")}
-          error={!!errors.password}
-          helperText={errors.password?.message}
-          sx={pillInputSx}
-          slotProps={{
-            input: {
-              endAdornment: (
-                <InputAdornment position="end">
-                  <IconButton
-                    onClick={() => setShowPassword((v) => !v)}
-                    edge="end"
-                    size="small"
-                    aria-label={
-                      showPassword
-                        ? "Masquer le mot de passe"
-                        : "Afficher le mot de passe"
-                    }
-                  >
-                    {showPassword ? (
-                      <VisibilityOff fontSize="small" />
-                    ) : (
-                      <Visibility fontSize="small" />
+            const { user } = await resolveLogin(data.email, data.password);
+
+            setAuth(user);
+
+            router.replace(resolveRedirectPath(user, hasTenant));
+        } catch {
+            setServerError("Email ou mot de passe incorrect.");
+        }
+    };
+
+    return (
+        <section className="flex items-center justify-center px-6 py-10 sm:px-10">
+            <div className="w-full max-w-md">
+                {/* MOBILE LOGO */}
+                <div className="mb-10 flex items-center gap-3 lg:hidden">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-(--color-primary) text-white">
+                        <GraduationCap className="h-6 w-6" />
+                    </div>
+
+                    <div>
+                        <h2 className="font-bold">LearnHub LMS</h2>
+                        <p className="text-xs text-muted-foreground">
+                            Learning Platform
+                        </p>
+                    </div>
+                </div>
+
+                <div>
+                    <h1 className="text-3xl font-bold">Bon retour 👋</h1>
+
+                    <p className="mt-2 text-muted-foreground text-sm">
+                        Connectez-vous à votre espace d'apprentissage.
+                    </p>
+                </div>
+
+                <form
+                    onSubmit={handleSubmit(onSubmit)}
+                    className="mt-8 space-y-5"
+                >
+                    {serverError && (
+                        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+                            {serverError}
+                        </div>
                     )}
-                  </IconButton>
-                </InputAdornment>
-              ),
-            },
-          }}
-        />
-      </Box>
 
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          mt: 1,
-        }}
-      >
-        <Link
-          href={ROUTES.auth.forgotPassword}
-          style={{ fontSize: 12, color: "#666", textDecoration: "none" }}
-        >
-          Nom d&apos;utilisateur ou mot de passe oublié&nbsp;?
-        </Link>
-        <Button
-          type="submit"
-          variant="contained"
-          disabled={isSubmitting}
-          startIcon={
-            isSubmitting ? <CircularProgress size={16} color="inherit" /> : null
-          }
-          sx={{
-            borderRadius: "50px",
-            px: 4,
-            py: 1.2,
-            bgcolor: "var(--color-primary)",
-            fontWeight: 700,
-            letterSpacing: 1,
-            textTransform: "uppercase",
-            "&:hover": {
-              filter: "brightness(0.85)",
-              bgcolor: "var(--color-primary)",
-            },
-          }}
-        >
-          Connexion
-        </Button>
-      </Box>
-    </Box>
-  );
+                    {/* EMAIL */}
+                    <div className="space-y-2">
+                        <Label htmlFor="email">Adresse email</Label>
+
+                        <Input
+                            id="email"
+                            placeholder="vous@exemple.com"
+                            {...register("email")}
+                        />
+
+                        {errors.email && (
+                            <p className="text-sm text-red-500">
+                                {errors.email.message}
+                            </p>
+                        )}
+                    </div>
+
+                    {/* PASSWORD */}
+                    <div className="space-y-2">
+                        <div className="flex justify-between">
+                            <Label htmlFor="password">Mot de passe</Label>
+
+                            <Link
+                                href="/forgot-password"
+                                className="text-xs text-primary hover:underline"
+                            >
+                                Mot de passe oublié ?
+                            </Link>
+                        </div>
+
+                        <div className="relative">
+                            <Input
+                                id="password"
+                                type={showPassword ? "text" : "password"}
+                                placeholder="••••••••"
+                                {...register("password")}
+                            />
+
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                            >
+                                {showPassword ? (
+                                    <EyeOff size={18} />
+                                ) : (
+                                    <Eye size={18} />
+                                )}
+                            </button>
+                        </div>
+
+                        {errors.password && (
+                            <p className="text-sm text-red-500">
+                                {errors.password.message}
+                            </p>
+                        )}
+                    </div>
+
+                    {/* REMEMBER */}
+                    <div className="flex items-center gap-3">
+                        <Checkbox id="remember" />
+
+                        <Label
+                            htmlFor="remember"
+                            className="cursor-pointer font-normal"
+                        >
+                            Rester connecté
+                        </Label>
+                    </div>
+
+                    {/* SUBMIT */}
+                    <Button
+                        type="submit"
+                        disabled={isSubmitting}
+                        className="h-12 w-full bg-(--color-primary) hover:bg-(--color-primary)/80"
+                    >
+                        {isSubmitting ? (
+                            <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Connexion...
+                            </>
+                        ) : (
+                            <>
+                                Se connecter
+                                <ArrowRight className="ml-2 h-4 w-4" />
+                            </>
+                        )}
+                    </Button>
+                </form>
+
+                <p className="mt-8 text-center text-xs text-muted-foreground">
+                    Pas encore de compte ?{" "}
+                    <Link
+                        href="/register"
+                        className="font-semibold text-primary hover:underline"
+                    >
+                        Demander un accès
+                    </Link>
+                </p>
+            </div>
+        </section>
+    );
 }
