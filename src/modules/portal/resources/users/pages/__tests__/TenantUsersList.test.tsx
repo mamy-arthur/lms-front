@@ -7,7 +7,9 @@ import { MOCK_USERS } from "@modules/shared/components/users/mocks/users.mock";
 import { normalizeTenantUser } from "../../types";
 import type { TenantUser } from "../../types";
 
-const MOCK_TENANT_USERS: TenantUser[] = MOCK_USERS.map((u) => normalizeTenantUser(u));
+const MOCK_TENANT_USERS: TenantUser[] = MOCK_USERS.map((u) =>
+  normalizeTenantUser(u),
+);
 
 jest.mock("next/navigation", () => ({
   useRouter: () => ({ push: jest.fn() }),
@@ -140,37 +142,37 @@ describe("TenantUsersList", () => {
     expect(rows).toHaveLength(7);
   });
 
-  it("[nominal] affiche le bouton 'Nouvel utilisateur'", () => {
+  it("[nominal] affiche le bouton 'Nouveau'", () => {
     renderWithQuery(<TenantUsersList />);
     expect(
-      screen.getByRole("button", { name: /nouvel utilisateur/i }),
+      screen.getByRole("button", { name: /nouveau/i }),
     ).toBeInTheDocument();
   });
 
-  it("[nominal] ouvre le drawer au clic sur 'Nouvel utilisateur'", async () => {
+  it("[nominal] ouvre le drawer au clic sur 'Nouveau'", async () => {
     const user = userEvent.setup();
     renderWithQuery(<TenantUsersList />);
 
     await user.click(
-      screen.getByRole("button", { name: /nouvel utilisateur/i }),
+      screen.getByRole("button", { name: /nouveau/i })
     );
 
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     expect(screen.getByText("Créer un utilisateur")).toBeInTheDocument();
   });
 
-  it("[nominal] le bouton chercher déclenche la mise à jour des params", async () => {
+  it("[nominal] la touche Entrée dans la recherche déclenche la mise à jour des params", async () => {
     const user = userEvent.setup();
     renderWithQuery(<TenantUsersList />);
 
     await user.type(
       screen.getByPlaceholderText(/rechercher par nom ou email/i),
-      "alice",
+      "alice{Enter}",
     );
-    await user.click(screen.getByRole("button", { name: /chercher/i }));
-
-    const rows = screen.getAllByTestId("user-row");
-    expect(rows).toHaveLength(7);
+    // useTenantUsersQuery est rappelé avec les nouveaux params
+    expect(mockUseTenantUsersQuery).toHaveBeenLastCalledWith(
+      expect.objectContaining({ q: "alice" }),
+    );
   });
 
   it("[limite] affiche une table vide quand la liste est vide", () => {
