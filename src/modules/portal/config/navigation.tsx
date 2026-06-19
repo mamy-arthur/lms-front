@@ -2,9 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import {
     LayoutDashboard,
     GraduationCap,
-    Award,
     Users,
-    User,
 } from "lucide-react";
 import { ROUTES } from "@/shared/constants/routes";
 
@@ -44,7 +42,7 @@ export const PORTAL_NAV: PortalNavItem[] = [
         url: ROUTES.portal.users,
         title: "Utilisateurs",
         icon: Users,
-        items: [{ title: "utilisateurs", url: ROUTES.portal.users }],
+        items: [{ title: "Utilisateurs", url: ROUTES.portal.users }],
     },
     // {
     //     url: ROUTES.portal.profile,
