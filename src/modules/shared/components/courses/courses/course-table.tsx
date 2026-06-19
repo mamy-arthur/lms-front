@@ -31,13 +31,13 @@ import { getCategoryPath, useCoursesStore } from "../lib/course-store";
 import type { Course } from "../types/index";
 import { toast } from "sonner";
 import { CourseCard } from "@/modules/shared/components/courses/components/CourseCard";
+import { CourseDrawer } from "./course-drawer";
 
 type Props = {
-    onEdit: (course: Course) => void;
-    onNew: () => void;
+    basePath: string;
 };
 
-export function CourseTable({ onEdit, onNew }: Props) {
+export function CourseTable({ basePath }: Props) {
     const {
         courses,
         categories,
@@ -48,6 +48,13 @@ export function CourseTable({ onEdit, onNew }: Props) {
     const [query, setQuery] = useState("");
     const [categoryFilter, setCategoryFilter] = useState<string>("all");
     const [confirmDelete, setConfirmDelete] = useState<Course | null>(null);
+    const [courseDrawer, setCourseDrawer] = useState<{
+        open: boolean;
+        course: Course | null;
+    }>({
+        open: false,
+        course: null,
+    });
 
     const filtered = useMemo(() => {
         return courses.filter((c) => {
@@ -75,24 +82,35 @@ export function CourseTable({ onEdit, onNew }: Props) {
                         className="pl-9"
                     />
                 </div>
-                <Select
-                    value={categoryFilter}
-                    onValueChange={setCategoryFilter}
-                >
-                    <SelectTrigger className="w-full sm:w-60">
-                        <SelectValue placeholder="Toutes les catégories" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">
-                            Toutes les catégories
-                        </SelectItem>
-                        {categories.map((c) => (
-                            <SelectItem key={c.id} value={c.id}>
-                                {getCategoryPath(categories, c.id)}
+                <div className="flex flex-wrap items-center gap-2">
+                    <Select
+                        value={categoryFilter}
+                        onValueChange={setCategoryFilter}
+                    >
+                        <SelectTrigger className="w-full sm:w-60">
+                            <SelectValue placeholder="Toutes les catégories" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">
+                                Toutes les catégories
                             </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
+                            {categories.map((c) => (
+                                <SelectItem key={c.id} value={c.id}>
+                                    {getCategoryPath(categories, c.id)}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    <Button
+                        onClick={() =>
+                            setCourseDrawer({ open: true, course: null })
+                        }
+                        className="bg-(--color-primary) hover:bg-(--color-primary)/80 text-primary-foreground"
+                    >
+                        <Plus className="mr-1 size-4" />
+                        Nouveau cours
+                    </Button>
+                </div>
             </div>
 
             {loading ? (
@@ -125,10 +143,6 @@ export function CourseTable({ onEdit, onNew }: Props) {
                                 Commencez par créer votre premier cours.
                             </p>
                         </div>
-                        <Button size="sm" onClick={onNew}>
-                            <Plus className="mr-1 size-4" />
-                            Nouveau cours
-                        </Button>
                     </CardContent>
                 </Card>
             ) : (
@@ -139,17 +153,19 @@ export function CourseTable({ onEdit, onNew }: Props) {
                             course={course}
                             categories={categories}
                             getCategoryPath={getCategoryPath}
-                            onEdit={onEdit}
+                            onEdit={(course) =>
+                                setCourseDrawer({ open: true, course })
+                            }
                             onDelete={setConfirmDelete}
                             onToggleVisibility={(course) => {
                                 toggleCourseVisibility(course.id);
-
                                 toast.success(
                                     course.visible
                                         ? "Cours masqué"
                                         : "Cours rendu visible",
                                 );
                             }}
+                            href={() => `${basePath}/${course.id}`}
                         />
                     ))}
                 </div>
@@ -187,6 +203,17 @@ export function CourseTable({ onEdit, onNew }: Props) {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            <CourseDrawer
+                open={courseDrawer.open}
+                onOpenChange={(o) =>
+                    setCourseDrawer((s) => ({
+                        open: o,
+                        course: o ? s.course : null,
+                    }))
+                }
+                course={courseDrawer.course}
+            />
         </div>
     );
 }
