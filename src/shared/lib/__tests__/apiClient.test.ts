@@ -117,13 +117,13 @@ describe("httpClient", () => {
   it("préfixe un chemin relatif par /api/", async () => {
     await httpClient("auth/login");
     const [url] = (global.fetch as jest.Mock).mock.calls[0];
-    expect(url).toBe("/api/auth/login");
+    expect(url).toBe("/api/v1/auth/login");
   });
 
   it("ne double pas le préfixe /api/", async () => {
-    await httpClient("/api/auth/login");
+    await httpClient("/api/v1/auth/login");
     const [url] = (global.fetch as jest.Mock).mock.calls[0];
-    expect(url).toBe("/api/auth/login");
+    expect(url).toBe("/api/v1/auth/login");
   });
 
   it("laisse passer les URL absolues intactes", async () => {
@@ -191,7 +191,7 @@ describe("apiGet", () => {
     mockFetch({});
     await apiGet("resource/1");
     const [url] = (global.fetch as jest.Mock).mock.calls[0];
-    expect(url).toBe("/api/resource/1");
+    expect(url).toBe("/api/v1/resource/1");
   });
 });
 
