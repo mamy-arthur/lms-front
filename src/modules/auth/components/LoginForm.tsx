@@ -94,12 +94,6 @@ export function LoginForm() {
                     onSubmit={handleSubmit(onSubmit)}
                     className="mt-8 space-y-5"
                 >
-                    {serverError && (
-                        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
-                            {serverError}
-                        </div>
-                    )}
-
                     {/* EMAIL */}
                     <div className="space-y-2">
                         <Label htmlFor="email">Adresse email</Label>
@@ -109,12 +103,6 @@ export function LoginForm() {
                             placeholder="vous@exemple.com"
                             {...register("email")}
                         />
-
-                        {errors.email && (
-                            <p className="text-sm text-red-500">
-                                {errors.email.message}
-                            </p>
-                        )}
                     </div>
 
                     {/* PASSWORD */}
@@ -169,6 +157,12 @@ export function LoginForm() {
                             Rester connecté
                         </Label>
                     </div>
+
+                    {serverError && (
+                        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-600">
+                            {serverError}
+                        </div>
+                    )}
 
                     {/* SUBMIT */}
                     <Button
