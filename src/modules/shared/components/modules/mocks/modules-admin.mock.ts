@@ -1,5 +1,3 @@
-import type { Module } from "@/modules/admin/resources/modules/types";
-
 export const MOCK_ADMIN_MODULES: Record<string, unknown>[] = [
   {
     id: "mod-001",

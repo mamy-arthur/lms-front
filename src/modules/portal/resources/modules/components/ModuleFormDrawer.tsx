@@ -3,12 +3,9 @@
 import { memo, useMemo } from "react";
 import { z } from "zod";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { ModuleForm } from "@modules/shared/components/modules/module-form";
-import {
-  extractApiError,
-  genIdentifier,
-} from "@modules/shared/components/modules/module-form-utils";
-import { useModuleFormDrawer } from "@modules/shared/components/modules/use-module-form-drawer";
+import { ModuleForm } from "./module-form";
+import { genIdentifier } from "./module-form-utils";
+import { useModuleFormDrawer } from "./use-module-form-drawer";
 import { useCreateModule } from "../hooks/useCreateModule";
 import { useUpdateModule } from "../hooks/useUpdateModule";
 import type { CreateModulePayload, Module, UpdateModulePayload } from "../types";
@@ -30,7 +27,6 @@ const updateSchema = z.object({
 });
 
 type CreateFormValues = z.infer<typeof createSchema>;
-type UpdateFormValues = z.infer<typeof updateSchema>;
 
 const CREATE_DEFAULTS: CreateFormValues = {
   name: "",
@@ -45,15 +41,20 @@ export interface ModuleFormDrawerProps {
   onClose: () => void;
   onSuccess?: () => void;
   module?: Module;
+  duplicateFrom?: Module;
+  usedCategoryIds?: Set<string>;
 }
 
 function ModuleFormDrawerBase({
   open,
   onClose,
   onSuccess,
-  module: mod,
+  module,
+  duplicateFrom,
+  usedCategoryIds,
 }: ModuleFormDrawerProps) {
-  const isEdit = !!mod;
+  const isEdit = !!module;
+  const isDuplicate = !!duplicateFrom;
 
   const createMutation = useCreateModule();
   const updateMutation = useUpdateModule();
@@ -61,23 +62,34 @@ function ModuleFormDrawerBase({
   const schema = isEdit ? updateSchema : createSchema;
 
   const defaultValues = useMemo(() => {
-    if (mod) {
+    if (module) {
       return {
-        name: mod.name,
-        identifier: mod.identifier,
-        description: mod.description,
-        category: mod.category,
-        courseIds: mod.courseIds,
+        name: module.name,
+        identifier: module.identifier,
+        description: module.description,
+        category: module.category,
+        courseIds: module.courseIds,
+      };
+    }
+    if (duplicateFrom) {
+      return {
+        name: duplicateFrom.name,
+        identifier: duplicateFrom.identifier,
+        description: duplicateFrom.description,
+        category: duplicateFrom.category,
+        courseIds: duplicateFrom.courseIds,
       };
     }
     return CREATE_DEFAULTS;
-  }, [mod]);
+  }, [module, duplicateFrom]);
+
+  const formModule = isDuplicate ? undefined : module;
 
   const formState = useModuleFormDrawer({
     open,
     onClose,
     onSuccess,
-    module: mod,
+    module: formModule,
     createMutation,
     updateMutation,
     schema,
@@ -101,6 +113,8 @@ function ModuleFormDrawerBase({
     }),
   });
 
+  const title = isEdit ? "Modifier le module" : isDuplicate ? "Dupliquer le module" : "Ajouter un module";
+
   return (
     <Sheet open={open} onOpenChange={(nextOpen) => !nextOpen && formState.handleClose()}>
       <SheetContent
@@ -110,7 +124,7 @@ function ModuleFormDrawerBase({
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
         <SheetHeader className="border-b px-4 py-4">
-          <SheetTitle>{isEdit ? "Modifier le module" : "Ajouter un module"}</SheetTitle>
+          <SheetTitle>{title}</SheetTitle>
           <SheetDescription>
             Renseignez les informations pour le module.
           </SheetDescription>
@@ -130,6 +144,7 @@ function ModuleFormDrawerBase({
           coursePopoverOpen={formState.coursePopoverOpen}
           setCoursePopoverOpen={formState.setCoursePopoverOpen}
           genIdentifierFn={genIdentifier}
+          usedCategoryIds={usedCategoryIds}
         />
       </SheetContent>
     </Sheet>

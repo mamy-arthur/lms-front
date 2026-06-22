@@ -10,12 +10,9 @@ import type {
   Quiz,
   UpdateQuizPayload,
 } from "../types";
-import { QuizForm } from "@modules/shared/components/quizzes/quiz-form";
-import {
-  extractApiError,
-  genQuizId,
-} from "@modules/shared/components/quizzes/quiz-form-utils";
-import { useQuizFormDrawer } from "@modules/shared/components/quizzes/use-quiz-form-drawer";
+import { QuizForm } from "./quiz-form";
+import { genQuizId } from "./quiz-form-utils";
+import { useQuizFormDrawer } from "./use-quiz-form-drawer";
 
 const createSchema = z.object({
   title: z.string().min(1, "Titre requis").max(255),

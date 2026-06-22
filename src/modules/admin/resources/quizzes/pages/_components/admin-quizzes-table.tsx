@@ -1,6 +1,5 @@
 "use client";
 
-import { QuizActions } from "@modules/shared/components/quizzes";
 import {
   DataTable,
   type DataTableColumn,
@@ -23,8 +22,6 @@ interface AdminQuizzesTableProps {
   onSort?: (column: string) => void;
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
-  onEdit: (quiz: Quiz) => void;
-  onDelete?: (quiz: Quiz) => void;
   tenantNames: Record<string, string>;
 }
 
@@ -39,8 +36,6 @@ export function AdminQuizzesTable({
   onSort,
   onPageChange,
   onPageSizeChange,
-  onEdit,
-  onDelete,
   tenantNames,
 }: AdminQuizzesTableProps) {
   const columns: DataTableColumn<Quiz>[] = [
@@ -105,20 +100,6 @@ export function AdminQuizzesTable({
         <span className="text-xs text-muted-foreground tabular-nums">
           {quiz.updatedAt ? formatDate(quiz.updatedAt) : "—"}
         </span>
-      ),
-    },
-    {
-      key: "actions",
-      label: "",
-      sortable: false,
-      render: (quiz) => (
-        <div className="text-right" onClick={(e) => e.stopPropagation()}>
-          <QuizActions
-            quizLabel={quiz.title}
-            onEdit={() => onEdit(quiz)}
-            onDelete={onDelete ? () => onDelete(quiz) : undefined}
-          />
-        </div>
       ),
     },
   ];

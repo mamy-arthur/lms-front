@@ -1,6 +1,6 @@
 "use client";
 
-import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { Copy, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -13,12 +13,14 @@ import {
 export interface ModuleActionsProps {
   moduleLabel: string;
   onEdit?: () => void;
+  onDuplicate?: () => void;
   onDelete?: () => void;
 }
 
 export function ModuleActions({
   moduleLabel,
   onEdit,
+  onDuplicate,
   onDelete,
 }: ModuleActionsProps) {
   return (
@@ -37,6 +39,10 @@ export function ModuleActions({
         <DropdownMenuItem onClick={() => onEdit?.()}>
           <Pencil className="mr-2 size-3.5 text-muted-foreground" />
           Modifier
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onDuplicate?.()}>
+          <Copy className="mr-2 size-3.5 text-muted-foreground" />
+          Dupliquer
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem

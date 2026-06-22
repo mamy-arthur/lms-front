@@ -24,7 +24,7 @@ export function QuizList() {
 
   return (
     <div className="bg-background">
-      <header className="mb-6">
+      <header className="mb-8">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Quizzes</h1>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -33,51 +33,53 @@ export function QuizList() {
         </div>
       </header>
 
-      <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center gap-2">
-        <QuizSearch
-          value={ctrl.draftSearch}
-          onChange={ctrl.setDraftSearch}
-          onSearch={ctrl.handleSearch}
-        />
-        <div className="flex items-center gap-2 sm:ml-auto">
-          <div className="space-y-1">
-            <Select value={ctrl.draftCategory} onValueChange={ctrl.setDraftCategory}>
-              <SelectTrigger aria-label="Filtrer par formation" className="w-44">
-                <SelectValue placeholder="Toutes les formations" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Toutes les catégories</SelectItem>
-                {MOCK_COURSES.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.fullName}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+      <div className="space-y-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <QuizSearch
+            value={ctrl.draftSearch}
+            onChange={ctrl.setDraftSearch}
+            onSearch={ctrl.handleSearch}
+          />
+          <div className="flex items-center gap-2 sm:ml-auto">
+            <div className="space-y-1">
+              <Select value={ctrl.draftCategory} onValueChange={ctrl.setDraftCategory}>
+                <SelectTrigger aria-label="Filtrer par formation" className="w-44">
+                  <SelectValue placeholder="Toutes les formations" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Toutes les catégories</SelectItem>
+                  {MOCK_COURSES.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.fullName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button
+              onClick={ctrl.handleOpenCreate}
+              className="bg-(--color-primary) hover:bg-(--color-primary)/80 text-primary-foreground shrink-0"
+            >
+              <Plus className="size-4" />
+              Nouveau quiz
+            </Button>
           </div>
-          <Button
-            onClick={ctrl.handleOpenCreate}
-            className="bg-(--color-primary) hover:bg-(--color-primary)/80 text-primary-foreground shrink-0"
-          >
-            <Plus className="size-4" />
-            Nouveau quiz
-          </Button>
         </div>
-      </div>
 
-      <QuizzesTable
-        quizzes={data?.data ?? []}
-        hasQuery={ctrl.hasQuery}
-        page={ctrl.page}
-        pageSize={ctrl.pageSize}
-        total={data?.total ?? 0}
-        sort={ctrl.sort}
-        onSort={ctrl.handleSort}
-        onPageChange={ctrl.handlePageChange}
-        onPageSizeChange={ctrl.handlePageSizeChange}
-        onEdit={ctrl.handleEdit}
-        onDelete={() => {}}
-      />
+        <QuizzesTable
+          quizzes={data?.data ?? []}
+          hasQuery={ctrl.hasQuery}
+          page={ctrl.page}
+          pageSize={ctrl.pageSize}
+          total={data?.total ?? 0}
+          sort={ctrl.sort}
+          onSort={ctrl.handleSort}
+          onPageChange={ctrl.handlePageChange}
+          onPageSizeChange={ctrl.handlePageSizeChange}
+          onEdit={ctrl.handleEdit}
+          onDelete={() => {}}
+        />
+      </div>
 
       <QuizFormDrawer
         open={ctrl.isDrawerOpen}
