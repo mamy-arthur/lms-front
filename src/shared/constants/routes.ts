@@ -18,6 +18,7 @@ export const ROUTES = {
     trainees: "/admin/trainees",
     tenants: "/admin/tenants",
     reports: "/admin/reports",
+    certificate: "/admin/certificates",
   },
   portal: {
     dashboard: "/dashboard",
@@ -30,5 +31,6 @@ export const ROUTES = {
     users: "/users",
     modules: "/modules",
     quizzes: "/quizzes",
+    certificate: "/certificates"
   },
 } as const;

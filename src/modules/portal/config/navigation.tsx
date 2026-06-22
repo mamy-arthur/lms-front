@@ -30,6 +30,7 @@ export const PORTAL_NAV: PortalNavItem[] = [
             { title: "Catégories", url: ROUTES.portal.category },
             { title: "Modules", url: ROUTES.portal.modules },
             { title: "Quizzes", url: ROUTES.portal.quizzes },
+            { title: "Attestation", url: ROUTES.portal.certificate}
         ],
     },
     // {

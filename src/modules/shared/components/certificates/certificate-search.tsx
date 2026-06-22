@@ -1,0 +1,32 @@
+"use client";
+
+import { Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
+
+export interface CertificateSearchProps {
+  value: string;
+  onChange: (value: string) => void;
+  onSearch: () => void;
+}
+
+export function CertificateSearch({
+  value,
+  onChange,
+  onSearch,
+}: CertificateSearchProps) {
+  return (
+    <div className="relative w-full sm:max-w-sm">
+      <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+      <Input
+        placeholder="Rechercher par nom…"
+        aria-label="Rechercher une attestation"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") onSearch();
+        }}
+        className="pl-9"
+      />
+    </div>
+  );
+}
