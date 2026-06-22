@@ -1,7 +1,6 @@
 "use client";
 
 import { Loader2 } from "lucide-react";
-import type { ReactNode } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,7 +31,6 @@ export interface QuizFormProps {
   handleClose: () => void;
   onSubmit: (values: any) => void;
   genSlugFn: (title: string) => string;
-  extraFields?: ReactNode;
 }
 
 export function QuizForm({
@@ -42,7 +40,6 @@ export function QuizForm({
   handleClose,
   onSubmit,
   genSlugFn,
-  extraFields,
 }: QuizFormProps) {
   return (
     <Field {...form}>
@@ -165,8 +162,6 @@ export function QuizForm({
               </FieldGroup>
             )}
           />
-
-          {extraFields}
 
           <FieldRoot
             control={form.control}

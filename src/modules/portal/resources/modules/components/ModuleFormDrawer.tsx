@@ -3,12 +3,9 @@
 import { memo, useMemo } from "react";
 import { z } from "zod";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { ModuleForm } from "@modules/shared/components/modules/module-form";
-import {
-  extractApiError,
-  genIdentifier,
-} from "@modules/shared/components/modules/module-form-utils";
-import { useModuleFormDrawer } from "@modules/shared/components/modules/use-module-form-drawer";
+import { ModuleForm } from "./module-form";
+import { genIdentifier } from "./module-form-utils";
+import { useModuleFormDrawer } from "./use-module-form-drawer";
 import { useCreateModule } from "../hooks/useCreateModule";
 import { useUpdateModule } from "../hooks/useUpdateModule";
 import type { CreateModulePayload, Module, UpdateModulePayload } from "../types";
@@ -30,7 +27,6 @@ const updateSchema = z.object({
 });
 
 type CreateFormValues = z.infer<typeof createSchema>;
-type UpdateFormValues = z.infer<typeof updateSchema>;
 
 const CREATE_DEFAULTS: CreateFormValues = {
   name: "",

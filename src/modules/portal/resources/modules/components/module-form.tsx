@@ -1,7 +1,6 @@
 "use client";
 
 import { Check, ChevronDown, ChevronsUpDown, Loader2 } from "lucide-react";
-import type { ReactNode } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,7 +33,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { CATEGORY_OPTIONS } from "./constants/modules";
+import { CATEGORY_OPTIONS } from "@modules/shared/components/modules/constants/modules";
 import type { MutationLike } from "@/shared/types/mutation";
 import { extractApiError } from "@/shared/utils/api-error";
 import type { genIdentifier } from "./module-form-utils";
@@ -65,7 +64,6 @@ export interface ModuleFormProps {
   coursePopoverOpen: boolean;
   setCoursePopoverOpen: (open: boolean) => void;
   genIdentifierFn: typeof genIdentifier;
-  extraFields?: ReactNode;
 }
 
 export function ModuleForm({
@@ -83,7 +81,6 @@ export function ModuleForm({
   coursePopoverOpen,
   setCoursePopoverOpen,
   genIdentifierFn,
-  extraFields,
 }: ModuleFormProps) {
   return (
     <Field {...form}>
@@ -187,8 +184,6 @@ export function ModuleForm({
               </FieldGroup>
             )}
           />
-
-          {extraFields}
 
           <FieldRoot
             control={form.control}

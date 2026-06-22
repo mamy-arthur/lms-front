@@ -1,6 +1,5 @@
 "use client";
 
-import { ModuleActions } from "@modules/shared/components/modules";
 import {
   DataTable,
   type DataTableColumn,
@@ -22,8 +21,6 @@ interface AdminModulesTableProps {
   onSort?: (column: string) => void;
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
-  onEdit: (mod: Module) => void;
-  onDelete?: (mod: Module) => void;
   tenantNames: Record<string, string>;
 }
 
@@ -38,8 +35,6 @@ export function AdminModulesTable({
   onSort,
   onPageChange,
   onPageSizeChange,
-  onEdit,
-  onDelete,
   tenantNames,
 }: AdminModulesTableProps) {
   const columns: DataTableColumn<Module>[] = [
@@ -86,20 +81,6 @@ export function AdminModulesTable({
         <span className="text-xs text-muted-foreground tabular-nums">
           {mod.createdAt ? formatDate(mod.createdAt) : "—"}
         </span>
-      ),
-    },
-    {
-      key: "actions",
-      label: "",
-      sortable: false,
-      render: (mod) => (
-        <div className="text-right" onClick={(e) => e.stopPropagation()}>
-          <ModuleActions
-            moduleLabel={mod.name}
-            onEdit={() => onEdit(mod)}
-            onDelete={onDelete ? () => onDelete(mod) : undefined}
-          />
-        </div>
       ),
     },
   ];
