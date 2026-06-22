@@ -45,10 +45,10 @@ export function TeamSwitcher({
                             </div>
                             <div className="grid flex-1 text-left text-sm leading-tight">
                                 <span className="truncate font-medium">
-                                    {tenant?.name}
+                                    {tenant?.name ?? 'LearneO'}
                                 </span>
                                 <span className="truncate text-xs">
-                                    {tenant?.domain}
+                                    {tenant?.domain ?? 'learneo.local'}
                                 </span>
                             </div>
                             <ChevronsUpDown className="ml-auto" />

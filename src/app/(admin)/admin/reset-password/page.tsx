@@ -1,25 +1,18 @@
-import Box from "@mui/material/Box";
-import Paper from "@mui/material/Paper";
-import Typography from "@mui/material/Typography";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AdminResetPasswordForm } from "@/modules/auth/components/AdminResetPasswordForm";
 
 export default function AdminResetPasswordPage() {
-  return (
-    <Box
-      sx={{
-        minHeight: "100vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        bgcolor: "#f5f5f5",
-      }}
-    >
-      <Paper elevation={2} sx={{ p: 4, width: "100%", maxWidth: 420 }}>
-        <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>
-          Réinitialiser le mot de passe
-        </Typography>
-        <AdminResetPasswordForm />
-      </Paper>
-    </Box>
-  );
+    return (
+        <div className="flex min-h-screen items-center justify-center bg-muted/30 p-6">
+            <Card className="w-full max-w-md">
+                <CardHeader>
+                    <CardTitle>Réinitialiser le mot de passe</CardTitle>
+                </CardHeader>
+
+                <CardContent>
+                    <AdminResetPasswordForm />
+                </CardContent>
+            </Card>
+        </div>
+    );
 }

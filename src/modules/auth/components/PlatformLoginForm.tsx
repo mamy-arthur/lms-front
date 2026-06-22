@@ -4,166 +4,119 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import {
-  Box,
-  TextField,
-  Button,
-  Alert,
-  CircularProgress,
-  InputAdornment,
-  IconButton,
-  Typography,
-} from "@mui/material";
-import Visibility from "@mui/icons-material/Visibility";
-import VisibilityOff from "@mui/icons-material/VisibilityOff";
-
+import { ArrowRight, Eye, EyeOff, Loader2 } from "lucide-react";
 import { loginSchema, type LoginSchema } from "@/shared/schemas/auth.schema";
 import { authApi } from "@/shared/api/auth.api";
 import { useAuthStore } from "@/shared/stores/auth.store";
 import { useTenantStore } from "@/shared/stores/tenant.store";
 import { resolveRedirectPath } from "@/modules/auth/utils/loginUtils";
-
-const pillInputSx = {
-  "& .MuiOutlinedInput-root": {
-    borderRadius: "50px",
-    bgcolor: "#f0f2f5",
-    "& fieldset": { border: "none" },
-    "&:hover fieldset": { border: "none" },
-    "&.Mui-focused": {
-      bgcolor: "#fff",
-      boxShadow: "0 0 0 2px rgba(26,35,126,0.25)",
-    },
-  },
-} as const;
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export function PlatformLoginForm() {
-  const router = useRouter();
-  const setAuth = useAuthStore((s) => s.setAuth);
-  const [serverError, setServerError] = useState<string | null>(null);
-  const [showPassword, setShowPassword] = useState(false);
+    const router = useRouter();
+    const setAuth = useAuthStore((s) => s.setAuth);
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<LoginSchema>({
-    resolver: zodResolver(loginSchema),
-  });
+    const [serverError, setServerError] = useState<string | null>(null);
+    const [showPassword, setShowPassword] = useState(false);
 
-  const onSubmit = async (data: LoginSchema) => {
-    setServerError(null);
-    try {
-      const hasTenant = !!useTenantStore.getState().tenant;
-      const { user } = await authApi.platformLogin(data.email, data.password);
-      setAuth(user);
-      router.replace(resolveRedirectPath(user, hasTenant));
-    } catch {
-      setServerError("Email ou mot de passe incorrect.");
-    }
-  };
+    const form = useForm<LoginSchema>({
+        resolver: zodResolver(loginSchema),
+        defaultValues: {
+            email: "",
+            password: "",
+        },
+    });
 
-  return (
-    <Box
-      component="form"
-      onSubmit={handleSubmit(onSubmit)}
-      noValidate
-      sx={{ display: "flex", flexDirection: "column", gap: 2 }}
-    >
-      {serverError && (
-        <Alert severity="error" sx={{ borderRadius: 3 }}>
-          {serverError}
-        </Alert>
-      )}
+    const onSubmit = async (data: LoginSchema) => {
+        setServerError(null);
 
-      <Box>
-        <Typography
-          variant="body2"
-          sx={{ fontWeight: 500, mb: 0.75, color: "text.secondary" }}
-        >
-          Email :
-        </Typography>
-        <TextField
-          id="platform-email"
-          type="email"
-          autoComplete="email"
-          placeholder="vous@learneo.local"
-          fullWidth
-          {...register("email")}
-          error={!!errors.email}
-          helperText={errors.email?.message}
-          sx={pillInputSx}
-        />
-      </Box>
+        try {
+            const hasTenant = !!useTenantStore.getState().tenant;
 
-      <Box>
-        <Typography
-          variant="body2"
-          sx={{ fontWeight: 500, mb: 0.75, color: "text.secondary" }}
-        >
-          Mot de passe :
-        </Typography>
-        <TextField
-          id="platform-password"
-          type={showPassword ? "text" : "password"}
-          autoComplete="current-password"
-          placeholder="••••••••"
-          fullWidth
-          {...register("password")}
-          error={!!errors.password}
-          helperText={errors.password?.message}
-          sx={pillInputSx}
-          slotProps={{
-            input: {
-              endAdornment: (
-                <InputAdornment position="end">
-                  <IconButton
-                    onClick={() => setShowPassword((v) => !v)}
-                    edge="end"
-                    size="small"
-                    aria-label={
-                      showPassword
-                        ? "Masquer le mot de passe"
-                        : "Afficher le mot de passe"
-                    }
-                  >
-                    {showPassword ? (
-                      <VisibilityOff fontSize="small" />
+            const { user } = await authApi.platformLogin(
+                data.email,
+                data.password,
+            );
+
+            setAuth(user);
+
+            router.replace(resolveRedirectPath(user, hasTenant));
+        } catch {
+            setServerError("Email ou mot de passe incorrect.");
+        }
+    };
+
+    return (
+        <form onSubmit={form.handleSubmit(onSubmit)} className="mt-8 space-y-5">
+            <div className="space-y-2">
+                <Label htmlFor="platform-email">Email</Label>
+
+                <Input
+                    id="platform-email"
+                    placeholder="vous@learneo.local"
+                    {...form.register("email")}
+                />
+            </div>
+
+            <div className="space-y-2">
+                <Label htmlFor="platform-password">Mot de passe</Label>
+
+                <div className="relative">
+                    <Input
+                        id="platform-password"
+                        type={showPassword ? "text" : "password"}
+                        autoComplete="current-password"
+                        placeholder="••••••••"
+                        {...form.register("password")}
+                    />
+
+                    <button
+                        type="button"
+                        onClick={() => setShowPassword((v) => !v)}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground"
+                    >
+                        {showPassword ? (
+                            <EyeOff className="h-4 w-4" />
+                        ) : (
+                            <Eye className="h-4 w-4" />
+                        )}
+                    </button>
+                </div>
+
+                {form.formState.errors.password && (
+                    <p className="text-sm text-red-500">
+                        {form.formState.errors.password.message}
+                    </p>
+                )}
+            </div>
+
+            {serverError && (
+                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-600">
+                    {serverError}
+                </div>
+            )}
+
+            <div className="flex w-full">
+                <Button
+                    type="submit"
+                    disabled={form.formState.isSubmitting}
+                    className="h-10 w-full bg-(--color-primary) px-8 hover:bg-(--color-primary)/80"
+                >
+                    {form.formState.isSubmitting ? (
+                        <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Connexion...
+                        </>
                     ) : (
-                      <Visibility fontSize="small" />
+                        <>
+                            Se connecter
+                            <ArrowRight className="ml-2 h-4 w-4" />
+                        </>
                     )}
-                  </IconButton>
-                </InputAdornment>
-              ),
-            },
-          }}
-        />
-      </Box>
-
-      <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 1 }}>
-        <Button
-          type="submit"
-          variant="contained"
-          disabled={isSubmitting}
-          startIcon={
-            isSubmitting ? <CircularProgress size={16} color="inherit" /> : null
-          }
-          sx={{
-            borderRadius: "50px",
-            px: 4,
-            py: 1.2,
-            bgcolor: "var(--color-primary)",
-            fontWeight: 700,
-            letterSpacing: 1,
-            textTransform: "uppercase",
-            "&:hover": {
-              filter: "brightness(0.85)",
-              bgcolor: "var(--color-primary)",
-            },
-          }}
-        >
-          Connexion
-        </Button>
-      </Box>
-    </Box>
-  );
+                </Button>
+            </div>
+        </form>
+    );
 }
