@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { useModuleCategoryStore } from "../../lib/module-store";
+import { ModuleCategoryDrawer } from "../../components/module-category-drawer";
 import type { Module } from "../../types";
 
 interface CategoryCellProps {
@@ -43,6 +44,7 @@ export function CategoryCell({
   const { categories, getLabel } = useModuleCategoryStore();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [catDrawerOpen, setCatDrawerOpen] = useState(false);
   const [pendingCategory, setPendingCategory] = useState<string | null>(null);
 
   const handleSelect = (value: string) => {
@@ -95,7 +97,7 @@ export function CategoryCell({
                     variant="ghost"
                     size="sm"
                     className="shrink-0 h-7 px-1.5 text-xs gap-1 text-muted-foreground mr-1"
-                    onClick={() => {}}
+                    onClick={() => setCatDrawerOpen(true)}
                   >
                     <Plus className="size-3.5" />
                     Créer
@@ -108,19 +110,19 @@ export function CategoryCell({
                 <CommandGroup>
                   {categories.map((cat) => (
                     <CommandItem
-                      key={cat.value}
-                      value={cat.label}
-                      onSelect={() => handleSelect(cat.value)}
+                      key={cat.id}
+                      value={cat.name}
+                      onSelect={() => handleSelect(cat.id)}
                     >
                       <Check
                         className={cn(
                           "mr-2 size-4",
-                          mod.category === cat.value
+                          mod.category === cat.id
                             ? "opacity-100"
                             : "opacity-0",
                         )}
                       />
-                      {cat.label}
+                      {cat.name}
                     </CommandItem>
                   ))}
                 </CommandGroup>
@@ -152,6 +154,11 @@ export function CategoryCell({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <ModuleCategoryDrawer
+        open={catDrawerOpen}
+        onOpenChange={setCatDrawerOpen}
+      />
     </>
   );
 }

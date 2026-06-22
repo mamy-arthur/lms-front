@@ -41,6 +41,7 @@ export interface ModuleFormDrawerProps {
   onClose: () => void;
   onSuccess?: () => void;
   module?: Module;
+  usedCategoryIds?: Set<string>;
 }
 
 function ModuleFormDrawerBase({
@@ -48,6 +49,7 @@ function ModuleFormDrawerBase({
   onClose,
   onSuccess,
   module: mod,
+  usedCategoryIds,
 }: ModuleFormDrawerProps) {
   const isEdit = !!mod;
 
@@ -126,6 +128,7 @@ function ModuleFormDrawerBase({
           coursePopoverOpen={formState.coursePopoverOpen}
           setCoursePopoverOpen={formState.setCoursePopoverOpen}
           genIdentifierFn={genIdentifier}
+          usedCategoryIds={usedCategoryIds}
         />
       </SheetContent>
     </Sheet>

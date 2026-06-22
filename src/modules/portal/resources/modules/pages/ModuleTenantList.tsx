@@ -2,7 +2,7 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -24,6 +24,11 @@ function ModuleTenantListInner() {
   const ctrl = useModuleListController<Module>({ defaultPageSize: 12 });
   const queryClient = useQueryClient();
   const { data: queryResult } = useModulesQuery(ctrl.params);
+
+  const usedCategoryIds = useMemo(
+    () => new Set(queryResult?.data.map((m) => m.category) ?? []),
+    [queryResult],
+  );
 
   const handleCategoryChange = useCallback(
     (moduleId: string, newCategory: string) => {
@@ -107,6 +112,7 @@ function ModuleTenantListInner() {
         onClose={ctrl.handleCloseDrawer}
         onSuccess={ctrl.handleSuccess}
         module={ctrl.editingModule}
+        usedCategoryIds={usedCategoryIds}
       />
       </div>
     </div>
