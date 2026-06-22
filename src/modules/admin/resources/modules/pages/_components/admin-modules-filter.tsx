@@ -5,9 +5,9 @@ import { AdminFilterPopover } from "@/modules/admin/resources/shared/AdminFilter
 import type { Tenant } from "@/shared/types/tenant.types";
 
 interface AdminModulesFilterProps {
-  categoryFilter: string;
+  categoryFilter: string[];
   tenantFilter: string;
-  onCategoryFilterChange: (value: string) => void;
+  onCategoryFilterChange: (value: string[]) => void;
   onTenantFilterChange: (value: string) => void;
   onSearch: () => void;
   tenants: Tenant[];
@@ -21,12 +21,14 @@ export function AdminModulesFilter({
   onSearch,
   tenants,
 }: AdminModulesFilterProps) {
+  const singleValue = categoryFilter.find((c) => c !== "all") ?? "all";
+
   return (
     <AdminFilterPopover
       firstFilterLabel="Catégorie"
       firstFilterOptions={[...CATEGORY_OPTIONS]}
-      firstFilterValue={categoryFilter}
-      onFirstFilterChange={onCategoryFilterChange}
+      firstFilterValue={singleValue}
+      onFirstFilterChange={(value) => onCategoryFilterChange([value])}
       tenants={tenants}
       tenantFilterValue={tenantFilter}
       onTenantFilterChange={onTenantFilterChange}

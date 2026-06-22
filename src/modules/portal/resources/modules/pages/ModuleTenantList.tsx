@@ -1,34 +1,69 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
-import { Plus } from "lucide-react";
-import { useCallback, useMemo } from "react";
+import { Check, ChevronsUpDown, Plus } from "lucide-react";
+import { useCallback, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from "@/components/ui/command";
 import { Label } from "@/components/ui/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { useModuleListController } from "@/modules/shared/hooks/useModuleListController";
-import { ModuleSearch, CATEGORY_OPTIONS } from "@modules/shared/components/modules";
+import { ModuleSearch } from "@modules/shared/components/modules";
 import { ModuleFormDrawer } from "../components/ModuleFormDrawer";
 import { MODULES_QUERY_KEY, useModulesQuery } from "../hooks/useModulesQuery";
-import { ModuleCategoryProvider } from "../lib/module-store";
+import { ModuleCategoryProvider, useModuleCategoryStore } from "../lib/module-store";
 import type { Module } from "../types";
+import { cn } from "@/lib/utils";
 import { ModulesTable } from "./_components/modules-table";
 
 function ModuleTenantListInner() {
   const ctrl = useModuleListController<Module>({ defaultPageSize: 12 });
   const queryClient = useQueryClient();
   const { data: queryResult } = useModulesQuery(ctrl.params);
+  const { categories: filterCategories } = useModuleCategoryStore();
+
+  const [duplicateFrom, setDuplicateFrom] = useState<Module | undefined>();
+  const [catFilterOpen, setCatFilterOpen] = useState(false);
+
+  const selectedCategories = ctrl.draftCategory;
+
+  const toggleCategoryFilter = (categoryId: string) => {
+    const next = selectedCategories.includes(categoryId)
+      ? selectedCategories.filter((c) => c !== categoryId)
+      : [...selectedCategories.filter((c) => c !== "all"), categoryId];
+    ctrl.setDraftCategory(next.length > 0 ? next : ["all"]);
+    ctrl.handleSearch();
+  };
 
   const usedCategoryIds = useMemo(
     () => new Set(queryResult?.data.map((m) => m.category) ?? []),
     [queryResult],
   );
+
+  const handleDuplicate = useCallback((module: Module) => {
+    setDuplicateFrom(module);
+    ctrl.handleOpenCreate();
+  }, [ctrl]);
+
+  const handleClose = useCallback(() => {
+    setDuplicateFrom(undefined);
+    ctrl.handleCloseDrawer();
+  }, [ctrl]);
+
+  const handleSuccess = useCallback(() => {
+    setDuplicateFrom(undefined);
+    ctrl.handleSuccess();
+  }, [ctrl]);
 
   const handleCategoryChange = useCallback(
     (moduleId: string, newCategory: string) => {
@@ -68,19 +103,61 @@ function ModuleTenantListInner() {
         />
         <div className="flex items-center gap-2 sm:ml-auto">
           <div className="space-y-1">
-            <Select value={ctrl.draftCategory} onValueChange={ctrl.setDraftCategory}>
-              <SelectTrigger aria-label="Filtrer par catégorie" className="w-44">
-                <SelectValue placeholder="Toutes les catégories" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Toutes les catégories</SelectItem>
-                {CATEGORY_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Popover open={catFilterOpen} onOpenChange={setCatFilterOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  role="combobox"
+                  aria-label="Filtrer par catégorie"
+                  className="h-9 w-44 justify-between font-normal text-xs"
+                >
+                  {selectedCategories.includes("all") || selectedCategories.length === 0
+                    ? "Toutes les catégories"
+                    : `${selectedCategories.length} catégorie${selectedCategories.length > 1 ? "s" : ""}`}
+                  <ChevronsUpDown className="ml-2 size-4 shrink-0 text-muted-foreground" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-56 p-0">
+                <Command>
+                  <CommandInput placeholder="Rechercher…" />
+                  <CommandEmpty>Aucune catégorie</CommandEmpty>
+                  <CommandGroup>
+                    <CommandItem
+                      value="all"
+                      onSelect={() => {
+                        ctrl.setDraftCategory(["all"]);
+                        ctrl.handleSearch();
+                        setCatFilterOpen(false);
+                      }}
+                    >
+                      <Check
+                        className={cn(
+                          "mr-2 size-4",
+                          selectedCategories.includes("all") ? "opacity-100" : "opacity-0",
+                        )}
+                      />
+                      Toutes les catégories
+                    </CommandItem>
+                    {filterCategories.map((cat) => (
+                      <CommandItem
+                        key={cat.id}
+                        value={cat.name}
+                        onSelect={() => toggleCategoryFilter(cat.id)}
+                      >
+                        <Check
+                          className={cn(
+                            "mr-2 size-4",
+                            selectedCategories.includes(cat.id) ? "opacity-100" : "opacity-0",
+                          )}
+                        />
+                        {cat.name}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
           <Button
             onClick={ctrl.handleOpenCreate}
@@ -103,15 +180,17 @@ function ModuleTenantListInner() {
         onPageChange={ctrl.handlePageChange}
         onPageSizeChange={ctrl.handlePageSizeChange}
         onEdit={ctrl.handleEdit}
+        onDuplicate={handleDuplicate}
         onDelete={() => {}}
         onCategoryChange={handleCategoryChange}
       />
 
       <ModuleFormDrawer
         open={ctrl.isDrawerOpen}
-        onClose={ctrl.handleCloseDrawer}
-        onSuccess={ctrl.handleSuccess}
+        onClose={handleClose}
+        onSuccess={handleSuccess}
         module={ctrl.editingModule}
+        duplicateFrom={duplicateFrom}
         usedCategoryIds={usedCategoryIds}
       />
       </div>

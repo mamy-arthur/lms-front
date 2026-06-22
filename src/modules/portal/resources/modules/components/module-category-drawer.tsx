@@ -24,8 +24,8 @@ export function ModuleCategoryDrawer({ open, onOpenChange, editingId }: Props) {
 
   useEffect(() => {
     if (open && editingId) {
-      const cat = categories.find((c) => c.id === editingId) ?? null;
-      setEditing(cat);
+      const category = categories.find((c) => c.id === editingId) ?? null;
+      setEditing(category);
     } else if (!open) {
       setEditing(null);
     }

@@ -21,8 +21,9 @@ interface ModulesTableProps {
   onSort?: (column: string) => void;
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
-  onEdit: (mod: Module) => void;
-  onDelete?: (mod: Module) => void;
+  onEdit: (module: Module) => void;
+  onDuplicate?: (module: Module) => void;
+  onDelete?: (module: Module) => void;
   onCategoryChange?: (moduleId: string, newCategory: string) => void;
 }
 
@@ -37,6 +38,7 @@ export function ModulesTable({
   onPageChange,
   onPageSizeChange,
   onEdit,
+  onDuplicate,
   onDelete,
   onCategoryChange,
 }: ModulesTableProps) {
@@ -45,13 +47,13 @@ export function ModulesTable({
       key: "name",
       label: "Module",
       sortable: true,
-      render: (mod) => (
+      render: (module) => (
         <div className="flex flex-col">
           <span className="text-xs font-medium text-foreground">
-            {mod.name}
+            {module.name}
           </span>
           <span className="text-xs text-muted-foreground">
-            {mod.identifier}
+            {module.identifier}
           </span>
         </div>
       ),
@@ -60,9 +62,9 @@ export function ModulesTable({
       key: "category",
       label: "Catégorie",
       sortable: true,
-      render: (mod) => (
+      render: (module) => (
         <CategoryCell
-          module={mod}
+          module={module}
           onCategoryChange={(id, cat) => onCategoryChange?.(id, cat)}
         />
       ),
@@ -71,12 +73,13 @@ export function ModulesTable({
       key: "actions",
       label: "",
       sortable: false,
-      render: (mod) => (
+      render: (module) => (
         <div className="text-right" onClick={(e) => e.stopPropagation()}>
           <ModuleActions
-            moduleLabel={mod.name}
-            onEdit={() => onEdit(mod)}
-            onDelete={onDelete ? () => onDelete(mod) : undefined}
+            moduleLabel={module.name}
+            onEdit={() => onEdit(module)}
+            onDuplicate={onDuplicate ? () => onDuplicate(module) : undefined}
+            onDelete={onDelete ? () => onDelete(module) : undefined}
           />
         </div>
       ),
