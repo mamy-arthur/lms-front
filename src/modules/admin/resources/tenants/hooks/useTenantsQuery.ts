@@ -1,23 +1,56 @@
-import { useQuery } from "@tanstack/react-query";
-import { adminTenantsApi } from "../api";
-import { normalizeTenant } from "../types";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { tenantApi } from "../api";
+import { CreateTenantPayload, UpdateTenantPayload } from "@/shared/types/tenants/tenant";
 
-interface Params {
-  page: number;
-  perPage: number;
-  q?: string;
-}
+export const useTenants = () => {
+    return useQuery({
+        queryKey: ["tenants"],
+        queryFn: () => tenantApi.getAll(),
+    });
+};
 
-export function useTenantsQuery({ page, perPage, q }: Params) {
-  return useQuery({
-    queryKey: ["admin", "tenants", { page, perPage, q }],
-    queryFn: async () => {
-      const resp = await adminTenantsApi.list({ page, limit: perPage, q });
-      const raw = resp.items ?? resp.data ?? [];
-      return {
-        data: raw.map((t) => normalizeTenant(t as unknown as Record<string, unknown>)),
-        total: resp.total ?? raw.length,
-      };
-    },
-  });
-}
+export const useCreateTenant = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: tenantApi.create,
+
+        onSuccess: () => {
+            queryClient.invalidateQueries({
+                queryKey: ["tenants"],
+            });
+        },
+    });
+};
+
+export const useUpdateTenant = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({
+            id,
+            payload,
+        }: {
+            id: string;
+            payload: UpdateTenantPayload;
+        }) => tenantApi.update(id, payload),
+        onSuccess: (_, variables) => {
+            queryClient.invalidateQueries({
+                queryKey: ["tenants"],
+            });
+        },
+    });
+};
+
+export const useDeleteTenant = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: tenantApi.remove,
+
+        onSuccess: () => {
+            queryClient.invalidateQueries({
+                queryKey: ["tenants"],
+            });
+        },
+    });
+};

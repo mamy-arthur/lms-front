@@ -96,7 +96,7 @@ export async function apiPut<T, B = unknown>(
   body?: B,
 ): Promise<T> {
   const { json } = await httpClient(`/api/v1/${path.replace(/^\/+/, "")}`, {
-    method: "PUT",
+    method: "PATCH",
     body: JSON.stringify(body),
   });
   return json as T;

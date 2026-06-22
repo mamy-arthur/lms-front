@@ -99,9 +99,6 @@ export function TenantsTable({
               Tenant
             </TableHead>
             <TableHead className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Admin principal
-            </TableHead>
-            <TableHead className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Statut
             </TableHead>
             <TableHead className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -129,14 +126,11 @@ export function TenantsTable({
                 <TableCell>
                   <TenantAvatar tenant={tenant} />
                 </TableCell>
-                <TableCell className="text-xs text-muted-foreground">
-                  {tenant.adminName}
-                </TableCell>
                 <TableCell>
                   <TenantStatusBadge status={tenant.status} />
                 </TableCell>
                 <TableCell className="text-xs text-muted-foreground tabular-nums">
-                  {formatDate(tenant.createdAt)}
+                  {formatDate(tenant.created_at)}
                 </TableCell>
                 <TableCell
                   className="text-right"

@@ -1,27 +1,27 @@
 "use client";
 import { useState } from "react";
-// import { useTenantsQuery } from "../hooks/useTenantsQuery";
 import { TenantsTable } from "./_components/tenant-table";
-import { MOCK_TENANTS } from "@/shared/mocks/tenant/mock-tenants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CreateTenantWizard } from "../components/CreateTenantWizard";
 import { Plus, Search } from "lucide-react";
+import { useTenants } from "../hooks/useTenantsQuery";
+import { Tenant } from "@/shared/types/tenants/tenant";
+import { UpdateTenantWizard } from "../components/updateTenant";
 
 export function TenantList() {
-    const [paginationModel, setPaginationModel] = useState({
-        page: 0,
-        pageSize: 25,
-    });
+    const [selectedTenant, setSelectedTenant] = useState<Tenant | undefined>(
+        undefined,
+    );
     const [search, setSearch] = useState("");
-
     const [wizardOpen, setWizardOpen] = useState(false);
+    const [isUpdateOpen, setIsUpdateOpen] = useState(false);
+    const { data, isLoading } = useTenants();
 
-    // const { data, isLoading } = useTenantsQuery({
-    //   page: paginationModel.page + 1,
-    //   perPage: paginationModel.pageSize,
-    //   q: search || undefined,
-    // });
+    const handleEditTenant = (tenant: Tenant) => {
+        setSelectedTenant(tenant);
+        setIsUpdateOpen(true);
+    };
 
     return (
         <div className="flex flex-col bg-background">
@@ -59,23 +59,27 @@ export function TenantList() {
                     </div>
 
                     {/* Optionnel: filtres futurs */}
-                    <div className="ml-auto text-xs">
-                        {MOCK_TENANTS.length} tenants
-                    </div>
+                    <div className="ml-auto text-xs"></div>
                 </div>
                 {/* TABLE WRAPPER */}
                 <TenantsTable
-                    tenants={MOCK_TENANTS}
+                    tenants={data?.data ?? []}
                     onDelete={() => {}}
                     onView={() => {}}
                     onToggleSuspend={() => {}}
                     onImpersonate={() => {}}
-                    onEdit={() => {}}
+                    onEdit={handleEditTenant}
+                    isLoading={isLoading}
                 />
 
                 <CreateTenantWizard
                     open={wizardOpen}
                     onOpenChange={setWizardOpen}
+                />
+                <UpdateTenantWizard
+                    open={isUpdateOpen}
+                    onOpenChange={setIsUpdateOpen}
+                    tenant={selectedTenant}
                 />
             </div>
         </div>

@@ -1,10 +1,6 @@
 "use client";
 
-import {
-    ChevronsUpDown,
-    LogOut,
-    User,
-} from "lucide-react";
+import { ChevronsUpDown, LogOut, User } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -23,18 +19,7 @@ import {
     useSidebar,
 } from "@/components/ui/sidebar";
 import { useAuthStore } from "@/shared/stores/auth.store";
-import { useTenantStore } from "@/shared/stores/tenant.store";
-
-function getInitials(name?: string) {
-    if (!name) return "";
-
-    return name
-        .split(" ")
-        .filter(Boolean)
-        .map((n) => n[0])
-        .join("")
-        .toUpperCase();
-}
+import { getInitials } from "@/shared/lib/string/getInitials";
 
 export function NavUser({ onLogout }: { onLogout?: () => void }) {
     const { isMobile } = useSidebar();
@@ -95,7 +80,7 @@ export function NavUser({ onLogout }: { onLogout?: () => void }) {
                         <DropdownMenuGroup>
                             <DropdownMenuItem>
                                 <User />
-                             Profile
+                                Profile
                             </DropdownMenuItem>
                         </DropdownMenuGroup>
                         <DropdownMenuSeparator />

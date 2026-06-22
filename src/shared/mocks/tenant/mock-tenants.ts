@@ -1,6 +1,5 @@
 import { Tenant } from "@/shared/types/tenants/tenant";
 
-
 export const MOCK_TENANTS: Tenant[] = [
   {
     id: 1,
@@ -9,10 +8,18 @@ export const MOCK_TENANTS: Tenant[] = [
     adminName: "Sarah Martin",
     plan: "enterprise",
     status: "active",
-    createdAt: "2024-01-15",
-    avatarColor: "#e0e7ff",
-    avatarTextColor: "#4338ca",
+    created_at: "2024-01-15",
     initials: "AC",
+    client_id: "client_1",
+    slug: "acme-corp",
+    domains: [
+      {
+        id: "d1",
+        subdomain: "acme",
+        is_primary: true,
+      },
+    ],
+    is_active: true,
   },
   {
     id: 2,
@@ -21,10 +28,18 @@ export const MOCK_TENANTS: Tenant[] = [
     adminName: "Lucas Durand",
     plan: "pro",
     status: "active",
-    createdAt: "2024-02-28",
-    avatarColor: "#d1fae5",
-    avatarTextColor: "#065f46",
+    created_at: "2024-02-28",
     initials: "BW",
+    client_id: "client_2",
+    slug: "brightwave",
+    domains: [
+      {
+        id: "d2",
+        subdomain: "brightwave",
+        is_primary: true,
+      },
+    ],
+    is_active: true,
   },
   {
     id: 3,
@@ -33,10 +48,18 @@ export const MOCK_TENANTS: Tenant[] = [
     adminName: "Emma Zhang",
     plan: "pro",
     status: "suspended",
-    createdAt: "2023-11-04",
-    avatarColor: "#fce7f3",
-    avatarTextColor: "#9d174d",
+    created_at: "2023-11-04",
     initials: "NS",
+    client_id: "client_3",
+    slug: "novasoft",
+    domains: [
+      {
+        id: "d3",
+        subdomain: "novasoft",
+        is_primary: true,
+      },
+    ],
+    is_active: false,
   },
   {
     id: 4,
@@ -45,10 +68,18 @@ export const MOCK_TENANTS: Tenant[] = [
     adminName: "Marc Petit",
     plan: "starter",
     status: "active",
-    createdAt: "2024-03-10",
-    avatarColor: "#fef3c7",
-    avatarTextColor: "#92400e",
+    created_at: "2024-03-10",
     initials: "CN",
+    client_id: "client_4",
+    slug: "cloudnine",
+    domains: [
+      {
+        id: "d4",
+        subdomain: "cloudnine",
+        is_primary: true,
+      },
+    ],
+    is_active: true,
   },
   {
     id: 5,
@@ -56,11 +87,19 @@ export const MOCK_TENANTS: Tenant[] = [
     subdomain: "techbase",
     adminName: "Aline Rousseau",
     plan: "pro",
-    status: "trial",
-    createdAt: "2024-05-01",
-    avatarColor: "#ede9fe",
-    avatarTextColor: "#5b21b6",
+    status: "inactive",
+    created_at: "2024-05-01",
     initials: "TB",
+    client_id: "client_5",
+    slug: "techbase",
+    domains: [
+      {
+        id: "d5",
+        subdomain: "techbase",
+        is_primary: true,
+      },
+    ],
+    is_active: true,
   },
   {
     id: 6,
@@ -69,10 +108,18 @@ export const MOCK_TENANTS: Tenant[] = [
     adminName: "Yann Bernard",
     plan: "enterprise",
     status: "active",
-    createdAt: "2023-09-22",
-    avatarColor: "#dcfce7",
-    avatarTextColor: "#166534",
+    created_at: "2023-09-22",
     initials: "DP",
+    client_id: "client_6",
+    slug: "datapulse",
+    domains: [
+      {
+        id: "d6",
+        subdomain: "datapulse",
+        is_primary: true,
+      },
+    ],
+    is_active: true,
   },
   {
     id: 7,
@@ -80,11 +127,19 @@ export const MOCK_TENANTS: Tenant[] = [
     subdomain: "flowdesk",
     adminName: "Julie Morin",
     plan: "starter",
-    status: "trial",
-    createdAt: "2024-05-18",
-    avatarColor: "#f0f9ff",
-    avatarTextColor: "#075985",
+    status: "active",
+    created_at: "2024-05-18",
     initials: "FD",
+    client_id: "client_7",
+    slug: "flowdesk",
+    domains: [
+      {
+        id: "d7",
+        subdomain: "flowdesk",
+        is_primary: true,
+      },
+    ],
+    is_active: true,
   },
   {
     id: 8,
@@ -93,9 +148,17 @@ export const MOCK_TENANTS: Tenant[] = [
     adminName: "Carlos Vega",
     plan: "pro",
     status: "active",
-    createdAt: "2024-04-03",
-    avatarColor: "#fff1f2",
-    avatarTextColor: "#9f1239",
+    created_at: "2024-04-03",
     initials: "OL",
+    client_id: "client_8",
+    slug: "orinoco",
+    domains: [
+      {
+        id: "d8",
+        subdomain: "orinoco",
+        is_primary: true,
+      },
+    ],
+    is_active: true,
   },
 ];
