@@ -29,7 +29,7 @@ function EmptyState({ hasQuery }: { hasQuery: boolean }) {
       <p className="text-xs text-muted-foreground max-w-xs">
         {hasQuery
           ? "Modifiez votre recherche ou vos filtres pour trouver ce que vous cherchez."
-          : "Créez votre premier tenant en cliquant sur « Nouveau tenant »."}
+          : "Créez votre premier tenant en cliquant sur « Créer un tenant »."}
       </p>
     </div>
   );

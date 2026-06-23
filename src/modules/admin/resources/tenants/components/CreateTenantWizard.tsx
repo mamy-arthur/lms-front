@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowRight, Loader2 } from "lucide-react";
+import { Loader2, Save } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -150,7 +150,6 @@ export function CreateTenantWizard({ open, onOpenChange }: Props) {
             <SheetContent
                 className="flex w-full flex-col gap-0 p-0 sm:max-w-xl"
                 showCloseButton={true}
-                onInteractOutside={(e) => e.preventDefault()}
                 onEscapeKeyDown={(e) => e.preventDefault()}
             >
                 <SheetHeader className="px-6 pt-6 pb-0 shrink-0">
@@ -236,8 +235,8 @@ export function CreateTenantWizard({ open, onOpenChange }: Props) {
                                         <Loader2 className="size-4 animate-spin" />
                                     ) : (
                                         <>
+                                            <Save className="size-4" />
                                             Créer le tenant
-                                            <ArrowRight className="size-4" />
                                         </>
                                     )}
                                 </Button>

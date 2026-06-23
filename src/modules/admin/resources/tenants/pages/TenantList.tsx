@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { TenantsTable } from "./_components/tenant-table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +18,16 @@ export function TenantList() {
     const [isUpdateOpen, setIsUpdateOpen] = useState(false);
     const { data, isLoading } = useTenants();
 
+    const filteredTenants = useMemo(() => {
+        const tenants = data?.data ?? [];
+
+        if (!search.trim()) return tenants;
+
+        return tenants.filter((tenant) =>
+            tenant.name.toLowerCase().includes(search.toLowerCase()),
+        );
+    }, [data?.data, search]);
+
     const handleEditTenant = (tenant: Tenant) => {
         setSelectedTenant(tenant);
         setIsUpdateOpen(true);
@@ -35,14 +45,6 @@ export function TenantList() {
                         Gérez les organisations de votre plateforme.
                     </p>
                 </div>
-                <Button
-                    onClick={() => setWizardOpen(true)}
-                    size="lg"
-                    className="bg-(--color-primary) hover:bg-(--color-primary)/80 text-primary-foreground"
-                >
-                    <Plus className="size-4" />
-                    Créer un tenant
-                </Button>
             </header>
 
             <div className="space-y-4">
@@ -57,13 +59,21 @@ export function TenantList() {
                             className="pl-9"
                         />
                     </div>
-
-                    {/* Optionnel: filtres futurs */}
-                    <div className="ml-auto text-xs"></div>
+                    <div className="ml-auto">
+                        {" "}
+                        <Button
+                            onClick={() => setWizardOpen(true)}
+                            size="lg"
+                            className="bg-(--color-primary) hover:bg-(--color-primary)/80 text-primary-foreground"
+                        >
+                            <Plus className="size-4" />
+                            Créer un tenant
+                        </Button>
+                    </div>
                 </div>
                 {/* TABLE WRAPPER */}
                 <TenantsTable
-                    tenants={data?.data ?? []}
+                    tenants={filteredTenants}
                     onDelete={() => {}}
                     onView={() => {}}
                     onToggleSuspend={() => {}}

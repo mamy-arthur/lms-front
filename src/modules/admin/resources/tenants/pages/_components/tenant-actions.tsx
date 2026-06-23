@@ -21,11 +21,11 @@ interface TenantActionsProps {
 
 export function TenantActions({
     tenant,
-    onView,
+    // onView,
     onEdit,
-    onImpersonate,
-    onToggleSuspend,
-    onDelete,
+    // onImpersonate,
+    // onToggleSuspend,
+    // onDelete,
 }: TenantActionsProps) {
     return (
         <DropdownMenu>
@@ -43,13 +43,6 @@ export function TenantActions({
                 <DropdownMenuItem onClick={() => onEdit(tenant)}>
                     <Pencil className="mr-2 size-3.5 text-muted-foreground" />
                     Modifier
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                    onClick={() => onDelete(tenant)}
-                    className="text-destructive focus:text-destructive"
-                >
-                    <Trash2 className="mr-2 size-3.5" />
-                    Supprimer
                 </DropdownMenuItem>
             </DropdownMenuContent>
         </DropdownMenu>

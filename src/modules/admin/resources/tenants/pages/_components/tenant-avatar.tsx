@@ -9,7 +9,7 @@ export function TenantAvatar({ tenant }: TenantAvatarProps) {
     return (
         <div className="flex items-center gap-3">
             <div
-                className="size-9 rounded-lg flex items-center justify-center text-xs font-semibold shrink-0 bg-yellow-200"
+                className="size-9 rounded-lg flex items-center justify-center text-xs font-semibold shrink-0 bg-gray-300"
                 aria-hidden="true"
             >
                 {getInitials(tenant.name)}
@@ -18,8 +18,8 @@ export function TenantAvatar({ tenant }: TenantAvatarProps) {
                 <p className="text-xs font-medium text-foreground truncate">
                     {tenant.name}
                 </p>
-                <p className="text-xs text-muted-foreground font-mono truncate">
-                    {tenant.domains[0].subdomain}.app.io
+                <p className="text-xs font-mono truncate text-blue-600 underline">
+                    {tenant.domains[0].subdomain}.learneo.app
                 </p>
             </div>
         </div>
