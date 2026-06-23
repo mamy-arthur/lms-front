@@ -1,27 +1,37 @@
 "use client";
-import { useState } from "react";
-// import { useTenantsQuery } from "../hooks/useTenantsQuery";
+import { useMemo, useState } from "react";
 import { TenantsTable } from "./_components/tenant-table";
-import { MOCK_TENANTS } from "@/shared/mocks/tenant/mock-tenants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CreateTenantWizard } from "../components/CreateTenantWizard";
 import { Plus, Search } from "lucide-react";
+import { useTenants } from "../hooks/useTenantsQuery";
+import { Tenant } from "@/shared/types/tenants/tenant";
+import { UpdateTenantWizard } from "../components/updateTenant";
 
 export function TenantList() {
-    const [paginationModel, setPaginationModel] = useState({
-        page: 0,
-        pageSize: 25,
-    });
+    const [selectedTenant, setSelectedTenant] = useState<Tenant | undefined>(
+        undefined,
+    );
     const [search, setSearch] = useState("");
-
     const [wizardOpen, setWizardOpen] = useState(false);
+    const [isUpdateOpen, setIsUpdateOpen] = useState(false);
+    const { data, isLoading } = useTenants();
 
-    // const { data, isLoading } = useTenantsQuery({
-    //   page: paginationModel.page + 1,
-    //   perPage: paginationModel.pageSize,
-    //   q: search || undefined,
-    // });
+    const filteredTenants = useMemo(() => {
+        const tenants = data?.data ?? [];
+
+        if (!search.trim()) return tenants;
+
+        return tenants.filter((tenant) =>
+            tenant.name.toLowerCase().includes(search.toLowerCase()),
+        );
+    }, [data?.data, search]);
+
+    const handleEditTenant = (tenant: Tenant) => {
+        setSelectedTenant(tenant);
+        setIsUpdateOpen(true);
+    };
 
     return (
         <div className="flex flex-col bg-background">
@@ -35,14 +45,6 @@ export function TenantList() {
                         Gérez les organisations de votre plateforme.
                     </p>
                 </div>
-                <Button
-                    onClick={() => setWizardOpen(true)}
-                    size="lg"
-                    className="bg-(--color-primary) hover:bg-(--color-primary)/80 text-primary-foreground"
-                >
-                    <Plus className="size-4" />
-                    Créer un tenant
-                </Button>
             </header>
 
             <div className="space-y-4">
@@ -57,25 +59,37 @@ export function TenantList() {
                             className="pl-9"
                         />
                     </div>
-
-                    {/* Optionnel: filtres futurs */}
-                    <div className="ml-auto text-xs">
-                        {MOCK_TENANTS.length} tenants
+                    <div className="ml-auto">
+                        {" "}
+                        <Button
+                            onClick={() => setWizardOpen(true)}
+                            size="lg"
+                            className="bg-(--color-primary) hover:bg-(--color-primary)/80 text-primary-foreground"
+                        >
+                            <Plus className="size-4" />
+                            Créer un tenant
+                        </Button>
                     </div>
                 </div>
                 {/* TABLE WRAPPER */}
                 <TenantsTable
-                    tenants={MOCK_TENANTS}
+                    tenants={filteredTenants}
                     onDelete={() => {}}
                     onView={() => {}}
                     onToggleSuspend={() => {}}
                     onImpersonate={() => {}}
-                    onEdit={() => {}}
+                    onEdit={handleEditTenant}
+                    isLoading={isLoading}
                 />
 
                 <CreateTenantWizard
                     open={wizardOpen}
                     onOpenChange={setWizardOpen}
+                />
+                <UpdateTenantWizard
+                    open={isUpdateOpen}
+                    onOpenChange={setIsUpdateOpen}
+                    tenant={selectedTenant}
                 />
             </div>
         </div>
