@@ -18,14 +18,14 @@ export const PORTAL_NAV: PortalNavItem[] = [
         items: [{ title: "Tableau de bord", url: ROUTES.portal.dashboard }],
     },
     {
-        url: ROUTES.portal.courses,
+        url: "#",
         title: "Mes formations",
         icon: GraduationCap,
         items: [
-            { title: "Cours", url: ROUTES.portal.courses },
-            { title: "Catégories", url: ROUTES.portal.category },
-            { title: "Modules", url: ROUTES.portal.modules },
-            { title: "Quizzes", url: ROUTES.portal.quizzes },
+            // { title: "Cours", url: ROUTES.portal.courses },
+            // { title: "Catégories", url: ROUTES.portal.category },
+            // { title: "Modules", url: ROUTES.portal.modules },
+            // { title: "Quizzes", url: ROUTES.portal.quizzes },
         ],
     },
     // {
