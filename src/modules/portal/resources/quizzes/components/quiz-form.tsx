@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { MOCK_COURSES } from "@/shared/mocks/courses.mock";
 import type { MutationLike } from "@/shared/types/mutation";
@@ -90,49 +91,34 @@ export function QuizForm({
               <FieldGroup>
                 <FieldLabel className="text-xs">ID Quiz</FieldLabel>
                 <FieldContent>
-                  <Input
-                    aria-label="ID Quiz"
-                    className="text-xs bg-muted"
-                    readOnly
-                    {...field}
-                  />
+                  <div className="flex gap-2">
+                    <Input
+                      aria-label="ID Quiz"
+                      className="text-xs"
+                      {...field}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="xs"
+                      onClick={() =>
+                        form.setValue(
+                          "slug",
+                          genSlugFn(form.getValues("title")),
+                          { shouldValidate: true },
+                        )
+                      }
+                    >
+                      Auto
+                    </Button>
+                  </div>
                 </FieldContent>
-                <p className="text-xs text-muted-foreground">
-                  Généré automatiquement à partir du titre.
-                </p>
                 <FieldError />
               </FieldGroup>
             )}
           />
 
-          <FieldRoot
-            control={form.control}
-            name="isFinalEvaluation"
-            render={({ field }) => (
-              <FieldGroup>
-                <FieldLabel className="text-xs">Évaluation finale</FieldLabel>
-                <Select
-                  onValueChange={(val) => field.onChange(val === "true")}
-                  value={String(field.value)}
-                >
-                  <FieldContent>
-                    <SelectTrigger
-                      size="default"
-                      aria-label="Évaluation finale"
-                      className="w-full text-xs"
-                    >
-                      <SelectValue placeholder="Choisir…" />
-                    </SelectTrigger>
-                  </FieldContent>
-                  <SelectContent>
-                    <SelectItem value="false">Non</SelectItem>
-                    <SelectItem value="true">Oui</SelectItem>
-                  </SelectContent>
-                </Select>
-                <FieldError />
-              </FieldGroup>
-            )}
-          />
+         
 
           <FieldRoot
             control={form.control}
@@ -180,8 +166,25 @@ export function QuizForm({
               </FieldGroup>
             )}
           />
+          <FieldRoot
+            control={form.control}
+            name="isFinalEvaluation"
+            render={({ field }) => (
+              <FieldGroup>
+                <div className="flex items-center gap-2">
+                  <FieldLabel className="text-xs">Évaluation finale</FieldLabel>
+                  <Switch
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                    className="data-[state=checked]:bg-(--color-primary)"
+                  />
+                </div>
+                <FieldError />
+              </FieldGroup>
+            )}
+          />
         </div>
-
+       
         <div className="flex items-center justify-end gap-3 border-t bg-background px-6 py-4 shrink-0">
           <Button
             type="button"

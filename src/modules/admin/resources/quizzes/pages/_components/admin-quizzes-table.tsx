@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import {
   DataTable,
   type DataTableColumn,
@@ -7,6 +8,7 @@ import {
 } from "@/shared/components/ui/DataTable";
 import { formatDate } from "@/shared/lib/date";
 import { getFormationName } from "@/shared/lib/formations";
+import { ROUTES } from "@/shared/constants/routes";
 import type { Quiz } from "../../types";
 
 export type SortConfig = DataTableSort;
@@ -38,6 +40,7 @@ export function AdminQuizzesTable({
   onPageSizeChange,
   tenantNames,
 }: AdminQuizzesTableProps) {
+  const router = useRouter();
   const columns: DataTableColumn<Quiz>[] = [
     {
       key: "title",
@@ -118,6 +121,7 @@ export function AdminQuizzesTable({
       onPageChange={onPageChange}
       onPageSizeChange={onPageSizeChange}
       rowTestId="admin-quiz-row"
+      onRowClick={(quiz) => router.push(ROUTES.admin.quizQuestions(quiz.id))}
       emptyState={{
         title: "Aucun quiz",
         description: "Aucun quiz pour le moment.",

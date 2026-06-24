@@ -3,14 +3,14 @@
 import { useMemo } from "react";
 import { QuizSearch } from "@modules/shared/components/quizzes";
 import { useAllTenantsQuery } from "@/modules/shared/hooks/useAllTenantsQuery";
-import { useModuleListController } from "@/modules/shared/hooks/useModuleListController";
+import { useQuizListController } from "@/modules/shared/hooks/useQuizListController";
 import { useQuizzesQuery } from "../hooks/useQuizzesQuery";
 import type { Quiz } from "../types";
 import { AdminQuizzesFilter } from "./_components/admin-quizzes-filter";
 import { AdminQuizzesTable } from "./_components/admin-quizzes-table";
 
 export function QuizList() {
-  const ctrl = useModuleListController<Quiz>({
+  const ctrl = useQuizListController<Quiz>({
     includeTenantFilter: true,
     defaultPageSize: 25,
   });
@@ -46,9 +46,9 @@ export function QuizList() {
           />
           <div className="flex items-center gap-2 sm:ml-auto">
             <AdminQuizzesFilter
-              formationFilter={ctrl.draftCategory}
+              formationFilter={ctrl.draftCategory.includes("all") ? "all" : ctrl.draftCategory[0] ?? "all"}
               tenantFilter={ctrl.draftTenant}
-              onFormationFilterChange={ctrl.setDraftCategory}
+              onFormationFilterChange={(value) => ctrl.setDraftCategory([value])}
               onTenantFilterChange={ctrl.setDraftTenant}
               onSearch={ctrl.handleSearch}
               tenants={tenants}

@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useMemo } from "react";
+import { memo, useEffect, useMemo } from "react";
 import { z } from "zod";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useCreateQuiz } from "../hooks/useCreateQuiz";
@@ -104,6 +104,12 @@ function QuizFormDrawerBase({
       } as UpdateQuizPayload,
     }),
   });
+
+  useEffect(() => {
+    if (open) {
+      formState.form.reset(defaultValues);
+    }
+  }, [open, defaultValues, formState.form]);
 
   return (
     <Sheet open={open} onOpenChange={(nextOpen) => !nextOpen && formState.handleClose()}>

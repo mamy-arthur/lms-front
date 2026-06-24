@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { QuizActions } from "../../components/quiz-actions";
 import {
   DataTable,
@@ -8,6 +9,7 @@ import {
 } from "@/shared/components/ui/DataTable";
 import { formatDate } from "@/shared/lib/date";
 import { getFormationName } from "@/shared/lib/formations";
+import { ROUTES } from "@/shared/constants/routes";
 import type { Quiz } from "../../types";
 
 export type SortConfig = DataTableSort;
@@ -39,6 +41,7 @@ export function QuizzesTable({
   onEdit,
   onDelete,
 }: QuizzesTableProps) {
+  const router = useRouter();
   const columns: DataTableColumn<Quiz>[] = [
     {
       key: "title",
@@ -122,6 +125,7 @@ export function QuizzesTable({
       onPageChange={onPageChange}
       onPageSizeChange={onPageSizeChange}
       rowTestId="quiz-row"
+      onRowClick={(quiz) => router.push(ROUTES.portal.quizQuestions(quiz.id))}
       emptyState={{
         title: "Aucun quiz",
         description:

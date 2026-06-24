@@ -18,6 +18,7 @@ export const ROUTES = {
     trainees: "/admin/trainees",
     tenants: "/admin/tenants",
     reports: "/admin/reports",
+    quizQuestions: (quizId: string) => `/admin/quizzes/${quizId}/questions`,
   },
   portal: {
     dashboard: "/dashboard",
@@ -30,5 +31,6 @@ export const ROUTES = {
     users: "/users",
     modules: "/modules",
     quizzes: "/quizzes",
+    quizQuestions: (quizId: string) => `/quizzes/${quizId}/questions`,
   },
 } as const;

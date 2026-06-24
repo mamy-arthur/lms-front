@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useMemo } from "react";
+import { memo, useEffect, useMemo } from "react";
 import { z } from "zod";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { ModuleForm } from "./module-form";
@@ -112,6 +112,12 @@ function ModuleFormDrawerBase({
       } as UpdateModulePayload,
     }),
   });
+
+  useEffect(() => {
+    if (open) {
+      formState.form.reset(defaultValues);
+    }
+  }, [open, defaultValues, formState.form]);
 
   const title = isEdit ? "Modifier le module" : isDuplicate ? "Dupliquer le module" : "Ajouter un module";
 
