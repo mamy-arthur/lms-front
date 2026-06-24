@@ -17,6 +17,15 @@ import {
     ChartTooltipContent,
     type ChartConfig,
 } from "@/components/ui/chart";
+import {
+    Select,
+    SelectContent,
+    SelectGroup,
+    SelectItem,
+    SelectLabel,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 
 export const description = "A line chart with dots";
 
@@ -49,12 +58,31 @@ const chartConfig = {
 export function ChartLineDots() {
     return (
         <Card>
-            <CardHeader>
-                <CardTitle>Line Chart - Dots</CardTitle>
-                <CardDescription>January - June 2024</CardDescription>
+            <CardHeader className="flex justify-between items-center">
+                <div>
+                    <CardTitle className="font-bold uppercase text-xs">
+                        Evoluation chiffre d'affaire
+                    </CardTitle>
+                    <CardDescription>January - Decembre 2024</CardDescription>
+                </div>
+                <Select>
+                    <SelectTrigger className="w-full max-w-28">
+                        <SelectValue placeholder="Select a date" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectGroup>
+                            <SelectLabel>Date</SelectLabel>
+                            <SelectItem value="apple">2026</SelectItem>
+                            <SelectItem value="banana">2025</SelectItem>
+                            <SelectItem value="blueberry">2024</SelectItem>
+                            <SelectItem value="grapes">2023</SelectItem>
+                            <SelectItem value="pineapple">2022</SelectItem>
+                        </SelectGroup>
+                    </SelectContent>
+                </Select>
             </CardHeader>
             <CardContent>
-                <ChartContainer config={chartConfig} className="h-64 w-full">
+                <ChartContainer config={chartConfig} className="h-70 w-full">
                     <LineChart
                         accessibilityLayer
                         data={chartData}

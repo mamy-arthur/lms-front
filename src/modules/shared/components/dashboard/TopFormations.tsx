@@ -81,7 +81,7 @@ export default function TopCoursesCard() {
                     size="sm"
                     className="h-7 gap-1 text-xs text-muted-foreground"
                 >
-                    Voir toutes
+                    Voir tous
                     <ArrowRight className="h-3 w-3" />
                 </Button>
             </CardHeader>
