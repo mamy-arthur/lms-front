@@ -1,8 +1,8 @@
 "use client";
 
 import { Plus, Trash2 } from "lucide-react";
-import React from "react";
-import { type UseFormReturn, useFieldArray } from "react-hook-form";
+import type { UseFormReturn } from "react-hook-form";
+import { useFieldArray } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import {
   FieldContent,
@@ -12,23 +12,25 @@ import {
   FieldRoot,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import type { FormValues } from "./question-form-data";
+
 interface MatchingFieldsProps {
-  form: UseFormReturn<any>;
+  form: UseFormReturn<FormValues>;
 }
 
-export const QuestionFormFieldsMatching = React.memo(
-  function QuestionFormFieldsMatching({ form }: MatchingFieldsProps) {
-    const {
-      fields: pairFields,
-      append: appendPair,
-      remove: removePair,
-    } = useFieldArray({
-      control: form.control,
-      name: "pairs",
-    });
+export function QuestionFormFieldsMatching({ form }: MatchingFieldsProps) {
+  const {
+    fields: pairFields,
+    append: appendPair,
+    remove: removePair,
+  } = useFieldArray({
+    control: form.control,
+    name: "pairs",
+  });
 
-    return (
-      <div className="rounded-lg border p-4">
+  return (
+    <div className="rounded-lg bg-muted/40 min-h-full flex flex-col">
+      <div className="rounded-lg border bg-background p-4">
         <div className="flex items-center justify-between mb-3">
           <h4 className="text-xs font-medium">Paires question/réponse</h4>
           <Button
@@ -109,6 +111,6 @@ export const QuestionFormFieldsMatching = React.memo(
           </p>
         )}
       </div>
-    );
-  },
-);
+    </div>
+  );
+}

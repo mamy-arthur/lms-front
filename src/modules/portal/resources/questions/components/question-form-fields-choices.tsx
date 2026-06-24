@@ -1,8 +1,9 @@
 "use client";
 
-import { Plus, Trash2 } from "lucide-react";
-import React, { useCallback } from "react";
-import { type UseFormReturn, useFieldArray } from "react-hook-form";
+import { Check, Plus, Trash2 } from "lucide-react";
+import { useCallback } from "react";
+import type { UseFormReturn } from "react-hook-form";
+import { useFieldArray, useWatch } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import {
   FieldContent,
@@ -13,47 +14,73 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import type { QuestionType } from "../types";
+import type { FormValues } from "./question-form-data";
 
 interface ChoicesFieldsProps {
-  form: UseFormReturn<any>;
+  form: UseFormReturn<FormValues>;
   selectedType: QuestionType;
 }
 
-export const QuestionFormFieldsChoices = React.memo(
-  function QuestionFormFieldsChoices({
-    form,
-    selectedType,
-  }: ChoicesFieldsProps) {
-    const {
-      fields: optionFields,
-      append: appendOption,
-      remove: removeOption,
-    } = useFieldArray({
-      control: form.control,
-      name: "options",
-    });
+export function QuestionFormFieldsChoices({
+  form,
+  selectedType,
+}: ChoicesFieldsProps) {
+  const {
+    fields: optionFields,
+    append: appendOption,
+    remove: removeOption,
+  } = useFieldArray({
+    control: form.control,
+    name: "options",
+  });
 
-    const handleScoreChange = useCallback(
-      (index: number, value: number) => {
-        const clamped = Math.min(100, Math.max(0, value));
-        form.setValue(`options.${index}.score`, clamped);
-        form.setValue(`options.${index}.isCorrect`, clamped >= 100);
+  const watchedOptions = useWatch({
+    control: form.control,
+    name: "options",
+  });
 
-        if (selectedType === "single_choice" && clamped >= 100) {
-          optionFields.forEach((_, i) => {
-            if (i !== index) {
-              form.setValue(`options.${i}.score`, 0);
-              form.setValue(`options.${i}.isCorrect`, false);
-            }
-          });
+  // Seule source de vérité : score. "Correct" n'est qu'un libellé
+  // d'affichage dérivé, jamais envoyé au backend.
+  const isOptionCorrect = useCallback(
+    (score: number) =>
+      selectedType === "single_choice" ? score >= 100 : score > 0,
+    [selectedType],
+  );
+
+  const totalChoices = watchedOptions?.length ?? optionFields.length;
+  const correctCount =
+    watchedOptions?.filter((o) => isOptionCorrect(o?.score ?? 0)).length ?? 0;
+
+  const optionCount = optionFields.length;
+
+  const handleScoreChange = useCallback(
+    (index: number, value: number) => {
+      const clamped = Math.min(100, Math.max(0, value));
+      form.setValue(`options.${index}.score`, clamped);
+
+      if (selectedType === "single_choice" && clamped >= 100) {
+        for (let i = 0; i < optionCount; i++) {
+          if (i !== index) {
+            form.setValue(`options.${i}.score`, 0);
+          }
         }
-      },
-      [form, selectedType, optionFields],
-    );
+      }
+    },
+    [form, selectedType, optionCount],
+  );
 
-    return (
-      <div className="rounded-lg border p-4">
-        <div className="flex items-center justify-between mb-3">
+  const toggleCorrect = useCallback(
+    (index: number) => {
+      const current = form.getValues(`options.${index}.score`) ?? 0;
+      handleScoreChange(index, isOptionCorrect(current) ? 0 : 100);
+    },
+    [form, handleScoreChange, isOptionCorrect],
+  );
+
+  return (
+    <div className="rounded-lg bg-muted/40 min-h-full max-h-full">
+      <div className="rounded-lg border bg-background p-4">
+        <div className="flex items-center justify-between mb-1">
           <h4 className="text-xs font-medium">Choix</h4>
           <Button
             type="button"
@@ -74,114 +101,139 @@ export const QuestionFormFieldsChoices = React.memo(
           </Button>
         </div>
 
+        {optionFields.length > 0 && (
+          <p className="mb-3 text-xs text-muted-foreground">
+            {totalChoices} choix · {correctCount} bonne
+            {correctCount === 1 ? "" : "s"} réponse
+            {correctCount === 1 ? "" : "s"}
+          </p>
+        )}
+
         {optionFields.length === 0 ? (
           <p className="text-xs text-muted-foreground">
             Aucun choix. Cliquez sur "Ajouter".
           </p>
         ) : (
-          <div className="space-y-3">
-            {optionFields.map((field, index) => (
-              <div key={field.id} className="space-y-2 rounded-md border p-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">
-                    Choix {index + 1}
-                  </span>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="size-6 text-destructive"
-                    onClick={() => removeOption(index)}
-                  >
-                    <Trash2 className="size-3" />
-                  </Button>
-                </div>
+          <div className="space-y-2">
+            {optionFields.map((field, index) => {
+              const score = watchedOptions?.[index]?.score ?? 0;
+              const isCorrect = isOptionCorrect(score);
 
-                <FieldRoot
-                  control={form.control}
-                  name={`options.${index}.label`}
-                  render={({ field: f }) => (
-                    <FieldGroup className="space-y-2">
-                      <FieldLabel className="text-xs">Libellé *</FieldLabel>
-                      <FieldContent>
-                        <Input aria-label={`Libellé ${index + 1}`} {...f} />
-                      </FieldContent>
-                      <FieldError />
-                    </FieldGroup>
-                  )}
-                />
+              return (
+                <div key={field.id} className="space-y-2 rounded-md border p-3">
+                  <div className="flex items-center gap-2">
+                    <span className="w-4 shrink-0 text-xs text-muted-foreground">
+                      {index + 1}
+                    </span>
 
-                {selectedType === "single_choice" ? (
-                  <FieldRoot
-                    control={form.control}
-                    name={`options.${index}.score`}
-                    render={({ field: f }) => (
-                      <FieldGroup className="space-y-2">
-                        <FieldLabel className="text-xs">Note</FieldLabel>
-                        <FieldContent>
-                          <Button
-                            type="button"
-                            variant={f.value >= 100 ? "default" : "outline"}
-                            size="sm"
-                            onClick={() =>
-                              handleScoreChange(
-                                index,
-                                f.value >= 100 ? 0 : 100,
-                              )
-                            }
-                            className="w-full"
-                          >
-                            {f.value >= 100 ? "100" : "0"}
-                          </Button>
-                        </FieldContent>
-                        <FieldError />
-                      </FieldGroup>
+                    <Button
+                      type="button"
+                      variant={isCorrect ? "default" : "outline"}
+                      size="icon"
+                      className={
+                        isCorrect
+                          ? "size-5 shrink-0 text-xs text-white bg-(--color-primary) hover:bg-(--color-primary)/80"
+                          : "size-5"
+                      }
+                      aria-label={
+                        isCorrect
+                          ? `Retirer la bonne réponse pour le choix ${index + 1}`
+                          : `Marquer le choix ${index + 1} comme bonne réponse`
+                      }
+                      onClick={() => toggleCorrect(index)}
+                    >
+                      {isCorrect ? <Check className="size-4" /> : null}
+                    </Button>
+
+                    <FieldRoot
+                      control={form.control}
+                      name={`options.${index}.label`}
+                      render={({ field: f }) => (
+                        <FieldGroup className="flex-1 space-y-1">
+                          <FieldLabel className="sr-only">
+                            Libellé {index + 1}
+                          </FieldLabel>
+                          <FieldContent>
+                            <Input
+                              aria-label={`Libellé ${index + 1}`}
+                              placeholder="Libellé *"
+                              {...f}
+                            />
+                          </FieldContent>
+                          <FieldError />
+                        </FieldGroup>
+                      )}
+                    />
+
+                    {selectedType === "single_choice" ? (
+                      <span className="w-10 shrink-0 text-center text-xs text-muted-foreground">
+                        {score >= 100 ? "100" : "0"}
+                      </span>
+                    ) : (
+                      <FieldRoot
+                        control={form.control}
+                        name={`options.${index}.score`}
+                        render={({ field: f }) => (
+                          <FieldGroup className="w-20 shrink-0 space-y-1">
+                            <FieldLabel className="sr-only">
+                              Note {index + 1}
+                            </FieldLabel>
+                            <FieldContent>
+                              <Input
+                                type="number"
+                                min={0}
+                                max={100}
+                                step={1}
+                                aria-label={`Note ${index + 1}`}
+                                value={f.value}
+                                onChange={(e) =>
+                                  handleScoreChange(
+                                    index,
+                                    Number(e.target.value),
+                                  )
+                                }
+                              />
+                            </FieldContent>
+                            <FieldError />
+                          </FieldGroup>
+                        )}
+                      />
                     )}
-                  />
-                ) : (
+
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="size-8 shrink-0 text-destructive"
+                      aria-label={`Supprimer le choix ${index + 1}`}
+                      onClick={() => removeOption(index)}
+                    >
+                      <Trash2 className="size-3" />
+                    </Button>
+                  </div>
+
                   <FieldRoot
                     control={form.control}
-                    name={`options.${index}.score`}
+                    name={`options.${index}.feedback`}
                     render={({ field: f }) => (
-                      <FieldGroup className="space-y-2">
-                        <FieldLabel className="text-xs">Note</FieldLabel>
+                      <FieldGroup className="space-y-1">
+                        <FieldLabel className="sr-only">
+                          Feedback {index + 1}
+                        </FieldLabel>
                         <FieldContent>
                           <Input
-                            type="number"
-                            min={0}
-                            max={100}
-                            step={1}
-                            aria-label={`Note ${index + 1}`}
-                            value={f.value}
-                            onChange={(e) =>
-                              handleScoreChange(
-                                index,
-                                Number(e.target.value),
-                              )
-                            }
+                            aria-label={`Feedback ${index + 1}`}
+                            placeholder="Feedback (optionnel)"
+                            {...f}
                           />
                         </FieldContent>
                         <FieldError />
                       </FieldGroup>
                     )}
                   />
-                )}
-
-                <FieldRoot
-                  control={form.control}
-                  name={`options.${index}.feedback`}
-                  render={({ field: f }) => (
-                    <FieldGroup className="space-y-2">
-                      <FieldLabel className="text-xs">Feedback</FieldLabel>
-                      <FieldContent>
-                        <Input aria-label={`Feedback ${index + 1}`} {...f} />
-                      </FieldContent>
-                      <FieldError />
-                    </FieldGroup>
-                  )}
-                />
-              </div>
-            ))}
+                </div>
+              );
+            })}
           </div>
         )}
 
@@ -191,6 +243,6 @@ export const QuestionFormFieldsChoices = React.memo(
           </p>
         )}
       </div>
-    );
-  },
-);
+    </div>
+  );
+}

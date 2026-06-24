@@ -2,10 +2,9 @@
 
 import { QUESTION_TYPE_OPTIONS } from "@modules/shared/components/questions";
 import { ArrowLeft, Loader2 } from "lucide-react";
-import type { FieldValues } from "react-hook-form";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import type { FieldValues } from "react-hook-form";
 import { Button } from "@/components/ui/button";
-import { Field } from "@/components/ui/field";
 import {
   Dialog,
   DialogContent,
@@ -13,7 +12,9 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  
 } from "@/components/ui/dialog";
+import { Field } from "@/components/ui/field";
 import { cn } from "@/lib/utils";
 
 import { useFormDrawer } from "@/shared/components/form-drawer/use-form-drawer";
@@ -21,18 +22,13 @@ import { extractApiError } from "@/shared/utils/api-error";
 
 import { useCreateQuestion } from "../hooks/useCreateQuestion";
 import { useUpdateQuestion } from "../hooks/useUpdateQuestion";
-import { type Question } from "../types";
-import {
-  buildQuestionPayload,
-  getCreateDefaults,
-  type FormValues,
-  formSchema,
-} from "./question-form-data";
-import { TYPE_ICONS } from "./question-form-constants";
+import type { Question } from "../types";
 import { QuestionFormFieldsChoices } from "./question-form-fields-choices";
 import { QuestionFormFieldsCommon } from "./question-form-fields-common";
 import { QuestionFormFieldsMatching } from "./question-form-fields-matching";
 import { QuestionFormFieldsTrueFalse } from "./question-form-fields-true-false";
+import { buildQuestionPayload, formSchema, FormValues, getCreateDefaults } from "./question-form-data";
+import { TYPE_ICONS } from "./question-form-constants";
 import { QuestionFormTypeSelect } from "./question-form-type-select";
 
 export interface QuestionFormModalProps {
@@ -52,11 +48,13 @@ function QuestionFormModalBase({
 }: QuestionFormModalProps) {
   const isEdit = !!question;
   const [step, setStep] = useState(isEdit ? 1 : 0);
-  const [selectedType, setSelectedType] = useState(question?.type ?? "");
+  const [selectedType, setSelectedType] = useState<string>(
+    question?.type ?? "",
+  );
 
   const createMutation = useCreateQuestion();
   const updateMutation = useUpdateQuestion();
-  const createDefaults = useMemo(() => getCreateDefaults(), []);
+  const createDefaults = getCreateDefaults();
 
   const defaultValues = useMemo(() => {
     if (question) {
@@ -139,25 +137,25 @@ function QuestionFormModalBase({
     (o) => o.value === selectedType,
   )?.label;
 
-  const title = step === 0
-    ? "Nouvelle question"
-    : (selectedTypeLabel ?? "Question");
+  const title =
+    step === 0 ? "Nouvelle question" : (selectedTypeLabel ?? "Question");
   const description =
     "Configurez votre question, ajoutez les réponses et leurs feedbacks.";
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(nextOpen) => !nextOpen && modal.handleClose()}
-    >
-      <DialogContent
+    <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && modal.handleClose()}>
+    <DialogContent
         className="flex flex-col gap-0 p-0 inset-0 h-dvh max-w-full -translate-x-0 -translate-y-0 rounded-none sm:max-w-full"
         showCloseButton={true}
       >
-        <DialogHeader className={cn(
-          "border-b px-6 py-4 transition-all duration-300",
-          step === 0 ? "border-transparent" : "border-border",
-        )}>
+    {/* --- Carte visuelle animée --- */}
+   
+      <DialogHeader
+          className={cn(
+            "border-b px-6 py-4 transition-all duration-300",
+            step === 0 ? "border-transparent" : "border-border",
+          )}
+        >
           <div className="flex items-center gap-3">
             {step === 1 && (
               <Button
@@ -166,6 +164,12 @@ function QuestionFormModalBase({
                 size="icon-sm"
                 className="-ml-1 shrink-0"
                 onClick={() => {
+                  const opts = modal.form.getValues("options");
+                  if (opts) {
+                    for (let i = 0; i < opts.length; i++) {
+                      modal.form.setValue(`options.${i}.score`, 0);
+                    }
+                  }
                   modal.form.setValue("type", "");
                   setSelectedType("");
                   setStep(0);
@@ -192,8 +196,8 @@ function QuestionFormModalBase({
           </div>
         </DialogHeader>
 
-        <Field {...modal.form}>
-          <form
+      <Field {...modal.form}>
+        <form
             onSubmit={modal.form.handleSubmit(modal.onSubmit)}
             className="flex min-h-0 flex-1 flex-col"
             noValidate
@@ -208,7 +212,7 @@ function QuestionFormModalBase({
                 </div>
               )}
 
-              <div
+                 <div
                 key="step-0"
                 className={cn(
                   "absolute inset-0 transition-all duration-300 ease-in-out",
@@ -300,11 +304,12 @@ function QuestionFormModalBase({
                   </Button>
                 </div>
               </DialogFooter>
-            </div>
+            </div>        
           </form>
-        </Field>
-      </DialogContent>
-    </Dialog>
+      </Field>
+              
+  </DialogContent>
+</Dialog>
   );
 }
 
