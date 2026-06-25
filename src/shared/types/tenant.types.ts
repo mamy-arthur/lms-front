@@ -1,8 +1,8 @@
 export interface TenantBranding {
-  primaryColor: string;
-  secondaryColor: string;
-  logoUrl: string;
-  faviconUrl: string;
+  primary_color: string;
+  secondary_color: string;
+  logo_url: string;
+  favicon_url: string;
   fontFamily: string;
 }
 

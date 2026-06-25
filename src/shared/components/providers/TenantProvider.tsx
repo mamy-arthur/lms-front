@@ -4,7 +4,6 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useTenantStore } from "@/shared/stores/tenant.store";
 import { LoadingSpinner } from "@/shared/components/feedback/LoadingSpinner";
-import { mockFetchTenantBySlug } from "@/shared/mocks/tenant.mock";
 import type { Tenant } from "@/shared/types/tenant.types";
 import { apiGet } from "@/shared/lib/apiClient";
 
@@ -18,8 +17,8 @@ export async function fetchTenantBySlug(): Promise<Tenant> {
 }
 
 const LEARNEO_DEFAULT_BRANDING = {
-    primaryColor: "#2563eb",
-    secondaryColor: "#64748b",
+    primary_color: "#2563eb",
+    secondary_color: "#64748b",
     fontFamily: "inherit",
 } as const;
 
@@ -52,8 +51,8 @@ function applyBrandingToDom(tenant: Tenant): void {
     const branding = tenant.branding ?? LEARNEO_DEFAULT_BRANDING;
 
     // Appliquer les couleurs (avec fallback aux defaults)
-    root.style.setProperty("--color-primary", branding.primaryColor);
-    root.style.setProperty("--color-secondary", branding.secondaryColor);
+    root.style.setProperty("--color-primary", branding.primary_color);
+    root.style.setProperty("--color-secondary", branding.secondary_color);
 
     // Appliquer la font si elle existe
     if (branding.fontFamily) {

@@ -23,7 +23,7 @@ export default function TopCoursesCard() {
                 <Button
                     variant="ghost"
                     size="sm"
-                    className="h-7 gap-1 text-xs text-muted-foreground"
+                    className="h-7 gap-1 text-xs"
                 >
                     Voir tous
                     <ArrowRight className="h-3 w-3" />

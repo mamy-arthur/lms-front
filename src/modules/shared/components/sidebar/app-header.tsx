@@ -12,7 +12,7 @@ import {
 
 export function AppHeader() {
     return (
-        <header className="flex h-16 shrink-0 items-center justify-between gap-2 px-4 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
+        <header className="flex h-15 shrink-0 items-center justify-between gap-2 px-4 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
             {/* LEFT */}
             <div className="flex items-center gap-2">
                 <SidebarTrigger className="-ml-1" />
@@ -20,13 +20,13 @@ export function AppHeader() {
             </div>
 
             {/* RIGHT */}
-            <div className="flex items-center gap-1 rounded-full border border-border/60 bg-background/60 p-1 shadow-sm backdrop-blur-md supports-backdrop-filter:bg-background/40">
+            <div className="flex items-center gap-1">
                 <Popover>
                     <PopoverTrigger asChild>
                         <Button
                             variant="ghost"
                             size="icon"
-                            className="relative h-9 w-9 rounded-full hover:bg-accent"
+                            className="relative h-9 w-9 rounded-full hover:bg-accent bg-gray-100"
                             aria-label="Notifications"
                         >
                             <Bell className="h-5 w-5" />
@@ -68,7 +68,7 @@ export function AppHeader() {
                         <Button
                             variant="ghost"
                             size="icon"
-                            className="relative h-9 w-9 rounded-full hover:bg-accent"
+                            className="relative h-9 w-9 rounded-full hover:bg-accent bg-gray-100"
                             aria-label="Alertes"
                         >
                             <AlertTriangle className="h-4.5 w-4.5" />
@@ -108,7 +108,7 @@ export function AppHeader() {
                         <Button
                             variant="ghost"
                             size="icon"
-                            className="relative h-9 w-9 rounded-full hover:bg-accent"
+                            className="relative h-9 w-9 rounded-full hover:bg-accent bg-gray-100"
                             aria-label="Panier"
                         >
                             <ShoppingCart className="h-4.5 w-4.5" />

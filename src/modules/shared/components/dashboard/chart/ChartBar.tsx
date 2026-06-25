@@ -61,7 +61,7 @@ export function ChartLineDots() {
             <CardHeader className="flex justify-between items-center">
                 <div>
                     <CardTitle className="font-bold uppercase text-xs">
-                        Evoluation chiffre d'affaire
+                        Evolution chiffre d'affaire
                     </CardTitle>
                     <CardDescription>January - Decembre 2024</CardDescription>
                 </div>

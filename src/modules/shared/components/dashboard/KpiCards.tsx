@@ -40,7 +40,7 @@ const kpis = [
 
 export function KpiCards() {
     return (
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-2">
             {kpis.map((kpi) => {
                 const Icon = kpi.icon;
                 const hl = kpi.highlight;
@@ -48,48 +48,69 @@ export function KpiCards() {
                 return (
                     <Card
                         key={kpi.label}
-                        className="overflow-hidden border-0 bg-card/80 backdrop-blur-sm"
+                        className={`overflow-hidden border-0 ${
+                            hl
+                                ? "bg-linear-to-br from-(--color-primary) via-(--color-primary)/90 to-(--color-primary)/60 shadow-xl shadow-(--color-primary)/20 ring-1 ring-white/10"
+                                : ""
+                        }`}
                     >
                         <CardContent className="flex h-36 flex-col">
-                            {/* Header */}
-                            <div className="flex items-center justify-between">
+                            <div className="flex  justify-between">
                                 <div>
-                                    <p className="text-xs font-semibold uppercase tracking-wide text-black">
+                                    <p
+                                        className={`text-xs font-semibold uppercase tracking-wide ${
+                                            hl ? "text-white" : "text-black"
+                                        }`}
+                                    >
                                         {kpi.label}
                                     </p>
                                 </div>
 
-                                <div className="flex h-9 w-9 items-center justify-center rounded-md bg-gray-200/80 shadow-2xl">
-                                    <Icon className="h-4 w-4 text-black" />
+                                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-black/10 shadow-2xl">
+                                    <Icon
+                                        className={`h-4 w-4 ${
+                                            hl ? "text-white" : "text-black"
+                                        }`}
+                                    />
                                 </div>
                             </div>
 
-                            {/* Push value to bottom */}
-                            <div className="mt-auto ml-auto text-end">
-                                <p className="text-2xl font-semibold  tracking-tight text-accent-foreground">
-                                    {kpi.value}
-                                </p>
+                            <div className="mt-auto ml-auto flex w-full items-center justify-between text-end">
                                 <div className="mt-1 flex items-center gap-1">
                                     {kpi.trendUp ? (
-                                        <TrendingUp className="h-3 w-3 text-emerald-500" />
+                                        <TrendingUp className="h-3 w-3 text-emerald-400" />
                                     ) : (
-                                        <TrendingDown className="h-3 w-3 text-red-500" />
+                                        <TrendingDown className="h-3 w-3 text-red-400" />
                                     )}
 
                                     <span
                                         className={`text-xs font-medium ${
                                             kpi.trendUp
-                                                ? "text-emerald-500"
-                                                : "text-red-500"
+                                                ? "text-emerald-400"
+                                                : "text-red-400"
                                         }`}
                                     >
                                         {kpi.trend}
                                     </span>
 
-                                    <span className="text-xs text-black">
+                                    <span
+                                        className={`text-xs ${
+                                            hl ? "text-white/80" : "text-black"
+                                        }`}
+                                    >
                                         {kpi.trendLabel}
                                     </span>
                                 </div>
+
+                                <p
+                                    className={`text-2xl font-semibold tracking-tight ${
+                                        hl
+                                            ? "text-white"
+                                            : "text-accent-foreground"
+                                    }`}
+                                >
+                                    {kpi.value}
+                                </p>
                             </div>
                         </CardContent>
                     </Card>
