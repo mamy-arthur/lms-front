@@ -35,6 +35,7 @@ export interface QuestionFormModalProps {
   onClose: () => void;
   onSuccess?: () => void;
   question?: Question;
+  duplicateFrom?: Question;
   defaultQuizId?: string;
 }
 
@@ -43,12 +44,14 @@ function QuestionFormModalBase({
   onClose,
   onSuccess,
   question,
+  duplicateFrom,
   defaultQuizId = "",
 }: QuestionFormModalProps) {
   const isEdit = !!question;
-  const [step, setStep] = useState(isEdit ? 1 : 0);
+  const isDuplicate = !!duplicateFrom;
+  const [step, setStep] = useState(isEdit || isDuplicate ? 1 : 0);
   const [selectedType, setSelectedType] = useState<string>(
-    question?.type ?? "",
+    (question ?? duplicateFrom)?.type ?? "",
   );
 
   const createMutation = useCreateQuestion();
@@ -56,29 +59,30 @@ function QuestionFormModalBase({
   const createDefaults = getCreateDefaults();
 
   const defaultValues = useMemo(() => {
-    if (question) {
+    const source = question ?? duplicateFrom;
+    if (source) {
       return {
-        type: question.type,
-        name: question.name,
-        text: question.text,
-        generalFeedback: question.generalFeedback,
-        identificationNumber: question.identificationNumber,
-        isActive: question.isActive,
-        hasDuration: !!question.duration,
-        durationValue: question.duration?.value ?? "",
-        durationUnit: question.duration?.unit ?? "minute",
-        moduleId: question.moduleId,
-        correctAnswer: question.correctAnswer,
-        feedbackTrue: question.feedbackTrue,
-        feedbackFalse: question.feedbackFalse,
-        options: question.options.map((o) => ({
+        type: source.type,
+        name: source.name,
+        text: source.text,
+        generalFeedback: source.generalFeedback,
+        identificationNumber: source.identificationNumber,
+        isActive: source.isActive,
+        hasDuration: !!source.duration,
+        durationValue: source.duration?.value ?? "",
+        durationUnit: source.duration?.unit ?? "minute",
+        moduleId: source.moduleId,
+        correctAnswer: source.correctAnswer,
+        feedbackTrue: source.feedbackTrue,
+        feedbackFalse: source.feedbackFalse,
+        options: source.options.map((o) => ({
           id: o.id,
           label: o.label,
           isCorrect: o.isCorrect,
           score: o.score,
           feedback: o.feedback,
         })),
-        pairs: question.pairs.map((p) => ({
+        pairs: source.pairs.map((p) => ({
           id: p.id,
           question: p.question,
           answer: p.answer,
@@ -86,7 +90,7 @@ function QuestionFormModalBase({
       };
     }
     return getCreateDefaults();
-  }, [question]);
+  }, [question, duplicateFrom]);
 
   const buildCreatePayloadFn = useCallback(
     (values: FieldValues) =>
@@ -122,10 +126,11 @@ function QuestionFormModalBase({
   useEffect(() => {
     if (open) {
       modal.form.reset(defaultValues);
-      setStep(isEdit ? 1 : 0);
-      setSelectedType(question?.type ?? "");
+      const source = question ?? duplicateFrom;
+      setStep(isEdit || isDuplicate ? 1 : 0);
+      setSelectedType(source?.type ?? "");
     }
-  }, [open, isEdit, question?.type, defaultValues, modal.form]);
+  }, [open, isEdit, isDuplicate, question, duplicateFrom, defaultValues, modal.form]);
 
   const onSelectType = useCallback((type: string) => {
     setSelectedType(type);
@@ -137,7 +142,9 @@ function QuestionFormModalBase({
   )?.label;
 
   const title =
-    step === 0 ? "Nouvelle question" : (selectedTypeLabel ?? "Question");
+    isDuplicate ? "Dupliquer la question"
+    : step === 0 ? "Nouvelle question"
+    : (selectedTypeLabel ?? "Question");
   const description =
     "Configurez votre question, ajoutez les réponses et leurs feedbacks.";
 
@@ -154,7 +161,7 @@ function QuestionFormModalBase({
           )}
         >
           <div className="flex items-center gap-3">
-            {step === 1 && (
+            {step === 1 && !isEdit && !isDuplicate && (
               <Button
                 type="button"
                 variant="ghost"
@@ -233,18 +240,18 @@ function QuestionFormModalBase({
               <div
                 key="step-1"
                 className={cn(
-                  "absolute inset-0 overflow-y-auto px-6 py-5 transition-all duration-300 ease-in-out",
+                  "absolute inset-0 overflow-hidden px-6 py-5 transition-all duration-300 ease-in-out",
                   step === 1
                     ? "opacity-100 translate-y-0"
                     : "opacity-0 translate-y-6 pointer-events-none",
                 )}
               >
-                <div className="grid w-full grid-cols-1 gap-10 lg:grid-cols-2">
-                  <div className="space-y-5">
+                <div className="grid h-full w-full auto-rows-fr grid-cols-1 gap-10 lg:grid-cols-2">
+                  <div className="max-h-[75vh] overflow-y-auto">
                     <QuestionFormFieldsCommon form={modal.form} />
                   </div>
 
-                  <div className="max-h-[80vh] space-y-5 overflow-y-auto pr-1">
+                  <div className="max-h-[75vh] overflow-y-auto pr-1">
                     {selectedType === "true_false" && (
                       <QuestionFormFieldsTrueFalse form={modal.form} />
                     )}

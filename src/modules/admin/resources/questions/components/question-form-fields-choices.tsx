@@ -78,14 +78,15 @@ export function QuestionFormFieldsChoices({
   );
 
   return (
-    <div className="rounded-lg bg-muted/40 min-h-full max-h-full">
-      <div className="rounded-lg border bg-background p-4">
+    <div className="rounded-lg bg-muted/40 min-h-full max-h-full flex flex-col">
+      <div className="rounded-lg border bg-background p-4 flex-1 min-h-0">
         <div className="flex items-center justify-between mb-1">
           <h4 className="text-xs font-medium">Choix</h4>
           <Button
             type="button"
             variant="outline"
             size="xs"
+            className="bg-(--color-primary) hover:bg-(--color-primary)/80 text-primary-foreground hover:text-primary-foreground"
             onClick={() =>
               appendOption({
                 id: `opt-${Date.now()}-${Math.random()}`,

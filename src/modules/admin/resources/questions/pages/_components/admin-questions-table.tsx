@@ -1,7 +1,14 @@
 "use client";
 
-import { Pencil, Trash2 } from "lucide-react";
+import { Copy, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Switch } from "@/components/ui/switch";
 import {
   DataTable,
@@ -26,6 +33,7 @@ interface AdminQuestionsTableProps {
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
   onEdit?: (question: Question) => void;
+  onDuplicate?: (question: Question) => void;
   onDelete?: (question: Question) => void;
   onToggleActive?: (question: Question) => void;
 }
@@ -42,6 +50,7 @@ export function AdminQuestionsTable({
   onPageChange,
   onPageSizeChange,
   onEdit,
+  onDuplicate,
   onDelete,
   onToggleActive,
 }: AdminQuestionsTableProps) {
@@ -99,25 +108,37 @@ export function AdminQuestionsTable({
       label: "",
       sortable: false,
       render: (question) => (
-        <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-8 text-muted-foreground hover:text-foreground"
-            onClick={() => onEdit?.(question)}
-            aria-label={`Modifier ${question.name}`}
-          >
-            <Pencil className="size-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-8 text-muted-foreground hover:text-destructive"
-            onClick={() => onDelete?.(question)}
-            aria-label={`Supprimer ${question.name}`}
-          >
-            <Trash2 className="size-4" />
-          </Button>
+        <div className="text-right" onClick={(e) => e.stopPropagation()}>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-8 text-muted-foreground hover:text-foreground data-[state=open]:bg-muted"
+                aria-label={`Actions pour ${question.name}`}
+              >
+                <MoreHorizontal className="size-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44">
+              <DropdownMenuItem onClick={() => onEdit?.(question)}>
+                <Pencil className="mr-2 size-3.5 text-muted-foreground" />
+                Modifier
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onDuplicate?.(question)}>
+                <Copy className="mr-2 size-3.5 text-muted-foreground" />
+                Dupliquer
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => onDelete?.(question)}
+                className="text-destructive focus:text-destructive"
+              >
+                <Trash2 className="mr-2 size-3.5" />
+                Supprimer
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       ),
     },

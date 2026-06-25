@@ -28,18 +28,6 @@ export const ADMIN_NAV: AdminNavItem[] = [
         items: [{ title: "Tableau de bord", url: ROUTES.admin.root }],
     },
     {
-        url: ROUTES.admin.courses,
-        title: "Formations",
-        icon: GraduationCap,
-        access: ACCESS.courses,
-        items: [
-            { title: "Cours", url: ROUTES.admin.courses },
-            { title: "Catégories", url: ROUTES.admin.category },
-            { title: "Modules", url: ROUTES.admin.modules },
-            { title: "Quizzes", url: ROUTES.admin.quizzes },
-        ],
-    },
-    {
         url: ROUTES.admin.users,
         title: "Utilisateurs",
         icon: Users,

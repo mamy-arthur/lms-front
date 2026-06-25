@@ -27,7 +27,7 @@ export function QuestionFormFieldsTrueFalse({ form }: TrueFalseFieldsProps) {
 
   return (
     <div className="rounded-lg bg-muted/40 min-h-full flex flex-col">
-      <div className="rounded-lg border bg-background p-4">
+      <div className="rounded-lg border bg-background p-4 flex-1">
         <h4 className="text-xs font-medium mb-3">Configuration Vrai/Faux</h4>
         <div className="space-y-3">
           <FieldRoot

@@ -1,7 +1,5 @@
 "use client";
 
-import { Pencil } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import {
   DataTable,
   type DataTableColumn,
@@ -9,6 +7,8 @@ import {
 } from "@/shared/components/ui/DataTable";
 import { formatDate } from "@/shared/lib/date";
 import type { Module } from "../../types";
+import { CategoryCell } from "./category-cell";
+import { ModuleActions } from "../../components/module-actions";
 
 export type SortConfig = DataTableSort;
 
@@ -23,8 +23,10 @@ interface AdminModulesTableProps {
   onSort?: (column: string) => void;
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
-  tenantNames: Record<string, string>;
   onEdit?: (module: Module) => void;
+  onDuplicate?: (module: Module) => void;
+  onDelete?: (module: Module) => void;
+  onCategoryChange?: (moduleId: string, newCategory: string) => void;
 }
 
 export function AdminModulesTable({
@@ -38,8 +40,10 @@ export function AdminModulesTable({
   onSort,
   onPageChange,
   onPageSizeChange,
-  tenantNames,
   onEdit,
+  onDuplicate,
+  onDelete,
+  onCategoryChange,
 }: AdminModulesTableProps) {
   const columns: DataTableColumn<Module>[] = [
     {
@@ -62,19 +66,10 @@ export function AdminModulesTable({
       label: "Catégorie",
       sortable: true,
       render: (mod) => (
-        <span className="text-xs text-muted-foreground">
-          {mod.category || "—"}
-        </span>
-      ),
-    },
-    {
-      key: "tenantId",
-      label: "Tenant",
-      sortable: true,
-      render: (mod) => (
-        <span className="text-xs text-muted-foreground">
-          {tenantNames[mod.tenantId] || mod.tenantId || "—"}
-        </span>
+        <CategoryCell
+          module={mod}
+          onCategoryChange={(id, cat) => onCategoryChange?.(id, cat)}
+        />
       ),
     },
     {
@@ -93,15 +88,12 @@ export function AdminModulesTable({
       sortable: false,
       render: (mod) => (
         <div className="text-right" onClick={(e) => e.stopPropagation()}>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-8 text-muted-foreground hover:text-foreground"
-            onClick={() => onEdit?.(mod)}
-            aria-label={`Modifier ${mod.name}`}
-          >
-            <Pencil className="size-4" />
-          </Button>
+          <ModuleActions
+            moduleLabel={mod.name}
+            onEdit={() => onEdit?.(mod)}
+            onDuplicate={() => onDuplicate?.(mod)}
+            onDelete={() => onDelete?.(mod)}
+          />
         </div>
       ),
     },

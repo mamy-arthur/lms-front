@@ -1,8 +1,15 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Pencil } from "lucide-react";
+import { Copy, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   DataTable,
   type DataTableColumn,
@@ -26,8 +33,9 @@ interface AdminQuizzesTableProps {
   onSort?: (column: string) => void;
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
-  tenantNames: Record<string, string>;
   onEdit?: (quiz: Quiz) => void;
+  onDuplicate?: (quiz: Quiz) => void;
+  onDelete?: (quiz: Quiz) => void;
 }
 
 export function AdminQuizzesTable({
@@ -41,8 +49,9 @@ export function AdminQuizzesTable({
   onSort,
   onPageChange,
   onPageSizeChange,
-  tenantNames,
   onEdit,
+  onDuplicate,
+  onDelete,
 }: AdminQuizzesTableProps) {
   const router = useRouter();
   const columns: DataTableColumn<Quiz>[] = [
@@ -90,16 +99,6 @@ export function AdminQuizzesTable({
       ),
     },
     {
-      key: "tenantId",
-      label: "Tenant",
-      sortable: true,
-      render: (quiz) => (
-        <span className="text-xs text-muted-foreground">
-          {tenantNames[quiz.tenantId] || quiz.tenantId || "—"}
-        </span>
-      ),
-    },
-    {
       key: "updatedAt",
       label: "Dernière modification",
       sortable: true,
@@ -115,15 +114,36 @@ export function AdminQuizzesTable({
       sortable: false,
       render: (quiz) => (
         <div className="text-right" onClick={(e) => e.stopPropagation()}>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-8 text-muted-foreground hover:text-foreground"
-            onClick={() => onEdit?.(quiz)}
-            aria-label={`Modifier ${quiz.title}`}
-          >
-            <Pencil className="size-4" />
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-8 text-muted-foreground hover:text-foreground data-[state=open]:bg-muted"
+                aria-label={`Actions pour ${quiz.title}`}
+              >
+                <MoreHorizontal className="size-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44">
+              <DropdownMenuItem onClick={() => onEdit?.(quiz)}>
+                <Pencil className="mr-2 size-3.5 text-muted-foreground" />
+                Modifier
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onDuplicate?.(quiz)}>
+                <Copy className="mr-2 size-3.5 text-muted-foreground" />
+                Dupliquer
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => onDelete?.(quiz)}
+                className="text-destructive focus:text-destructive"
+              >
+                <Trash2 className="mr-2 size-3.5" />
+                Supprimer
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       ),
     },

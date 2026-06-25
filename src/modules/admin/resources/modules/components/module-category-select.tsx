@@ -2,7 +2,6 @@
 
 import { Check, ChevronsUpDown, Pencil, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
-import type { UseFormRegisterReturn } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import {
   Command,

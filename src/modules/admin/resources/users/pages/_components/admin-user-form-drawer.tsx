@@ -22,7 +22,6 @@ import {
   useUserFormDrawer,
 } from "@modules/shared/components/users/use-user-form-drawer";
 import { UserForm } from "@modules/shared/components/users/user-form";
-import type { Tenant } from "@/shared/types/tenant.types";
 import { useCreateUser } from "../../hooks/useCreateUser";
 import { useUpdateUser } from "../../hooks/useUpdateUser";
 import type { CreateUserPayload, User } from "../../types";
@@ -34,7 +33,6 @@ const createSchema = z.object({
   email: z.string().email("Email invalide").max(255),
   password: z.string().min(8, "Minimum 8 caractères").max(255),
   role: z.nativeEnum(Role),
-  tenant_id: z.string().min(1, "Tenant requis"),
   city: z.string().max(120).optional().or(z.literal("")),
   country: z.string().max(120).optional().or(z.literal("")),
 });
@@ -51,7 +49,6 @@ const updateSchema = z.object({
     .optional()
     .or(z.literal("")),
   role: z.nativeEnum(Role),
-  tenant_id: z.string().min(1, "Tenant requis"),
   city: z.string().max(120).optional().or(z.literal("")),
   country: z.string().max(120).optional().or(z.literal("")),
 });
@@ -70,7 +67,6 @@ const ROLE_DEFAULTS: z.infer<typeof createSchema> = {
   email: "",
   password: "",
   role: Role.TRAINEE,
-  tenant_id: "",
   city: "",
   country: "",
 };
@@ -80,7 +76,6 @@ export interface AdminUserFormDrawerProps {
   onClose: () => void;
   onSuccess?: () => void;
   user?: User;
-  tenants: Tenant[];
 }
 
 function AdminUserFormDrawerBase({
@@ -88,7 +83,6 @@ function AdminUserFormDrawerBase({
   onClose,
   onSuccess,
   user,
-  tenants,
 }: AdminUserFormDrawerProps) {
   const isEdit = !!user;
 
@@ -106,7 +100,6 @@ function AdminUserFormDrawerBase({
         email: u.email,
         password: "",
         role: u.role,
-        tenant_id: u.tenantId,
         city: u.city,
         country: u.country,
       };
@@ -133,7 +126,6 @@ function AdminUserFormDrawerBase({
         email: values.email,
         password: values.password as string,
         role: values.role,
-        tenant_id: values.tenant_id,
         city: values.city ?? "",
         country: values.country ?? "",
         ...(values.username ? { username: values.username } : {}),
@@ -145,7 +137,6 @@ function AdminUserFormDrawerBase({
         last_name: values.last_name,
         email: values.email,
         role: values.role,
-        tenant_id: values.tenant_id,
         city: values.city ?? "",
         country: values.country ?? "",
         ...(values.username ? { username: values.username } : {}),
@@ -153,40 +144,6 @@ function AdminUserFormDrawerBase({
       } as Partial<CreateUserPayload>,
     }),
   });
-
-  const tenantField = (
-    <FieldRoot
-      control={formState.form.control as any}
-      name="tenant_id"
-      render={({ field }) => (
-        <FieldGroup>
-          <FieldLabel>Tenant</FieldLabel>
-          <Select
-            onValueChange={field.onChange}
-            defaultValue={field.value}
-          >
-            <FieldContent>
-              <SelectTrigger
-                size="default"
-                aria-label="Tenant"
-                className="w-full"
-              >
-                <SelectValue placeholder="Sélectionner un tenant" />
-              </SelectTrigger>
-            </FieldContent>
-            <SelectContent>
-              {tenants.map((t) => (
-                <SelectItem key={t.id} value={t.id}>
-                  {t.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <FieldError />
-        </FieldGroup>
-      )}
-    />
-  );
 
   return (
     <Sheet open={open} onOpenChange={(nextOpen) => !nextOpen && formState.handleClose()}>
@@ -212,7 +169,6 @@ function AdminUserFormDrawerBase({
           togglePasswordVisibility={formState.togglePasswordVisibility}
           roleLabels={ROLE_LABELS}
           lastLogin={user?.lastLogin}
-          extraFields={tenantField}
         />
       </SheetContent>
     </Sheet>

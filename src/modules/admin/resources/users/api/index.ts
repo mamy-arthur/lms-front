@@ -7,7 +7,6 @@ interface UserListParams {
   q?: string;
   sort_by?: string;
   sort_order?: "asc" | "desc";
-  tenant_id?: string;
 }
 
 interface UserListResponse {
@@ -24,7 +23,6 @@ export const adminUsersApi = {
     if (params.q) query.set("q", params.q);
     if (params.sort_by) query.set("sort_by", params.sort_by);
     if (params.sort_order) query.set("sort_order", params.sort_order);
-    if (params.tenant_id) query.set("tenant_id", params.tenant_id);
     return apiGet<UserListResponse>(`users?${query.toString()}`);
   },
 

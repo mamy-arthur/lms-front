@@ -1,8 +1,18 @@
 "use client";
 
 import { Plus } from "lucide-react";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { QuizSearch } from "@modules/shared/components/quizzes";
 import { MOCK_QUIZZES } from "@modules/shared/components/quizzes/mocks/quizzes.mock";
 import { useQuestionListController } from "@/modules/shared/hooks/useQuestionListController";
@@ -20,6 +30,8 @@ export function QuestionList({ quizId }: { quizId: string }) {
   const { data, isLoading } = useQuestionsQuery(ctrl.params);
   const updateMutation = useUpdateQuestion();
   const deleteMutation = useDeleteQuestion();
+  const [duplicateFrom, setDuplicateFrom] = useState<Question | undefined>();
+  const [deleteConfirm, setDeleteConfirm] = useState<Question | undefined>();
 
   const quizName = useMemo(() => {
     const quiz = MOCK_QUIZZES.find((q) => q.id === quizId);
@@ -56,11 +68,9 @@ export function QuestionList({ quizId }: { quizId: string }) {
     [updateMutation],
   );
 
-  const handleDelete = useCallback(
-    (question: Question) => {
-      deleteMutation.mutate(question.id);
-    },
-    [deleteMutation],
+  const handleDeleteConfirm = useCallback(
+    (question: Question) => setDeleteConfirm(question),
+    [],
   );
 
   return (
@@ -104,18 +114,53 @@ export function QuestionList({ quizId }: { quizId: string }) {
           onPageChange={ctrl.handlePageChange}
           onPageSizeChange={ctrl.handlePageSizeChange}
           onEdit={ctrl.handleEdit}
-          onDelete={handleDelete}
+          onDuplicate={setDuplicateFrom}
+          onDelete={handleDeleteConfirm}
           onToggleActive={handleToggleActive}
         />
       </div>
 
       <QuestionFormModal
-        open={ctrl.isDrawerOpen}
-        onClose={ctrl.handleCloseDrawer}
-        onSuccess={ctrl.handleSuccess}
+        open={ctrl.isDrawerOpen || !!duplicateFrom}
+        onClose={() => {
+          ctrl.handleCloseDrawer();
+          setDuplicateFrom(undefined);
+        }}
+        onSuccess={() => {
+          ctrl.handleSuccess();
+          setDuplicateFrom(undefined);
+        }}
         question={ctrl.editingQuestion}
+        duplicateFrom={duplicateFrom}
         defaultQuizId={quizId}
       />
+
+      <AlertDialog
+        open={!!deleteConfirm}
+        onOpenChange={(open) => { if (!open) setDeleteConfirm(undefined); }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer la question</AlertDialogTitle>
+            <AlertDialogDescription>
+              Êtes-vous sûr de vouloir supprimer la question « {deleteConfirm?.name}
+              » ? Cette action est irréversible.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive hover:bg-destructive/80"
+              onClick={() => {
+                if (deleteConfirm) deleteMutation.mutate(deleteConfirm.id);
+                setDeleteConfirm(undefined);
+              }}
+            >
+              Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

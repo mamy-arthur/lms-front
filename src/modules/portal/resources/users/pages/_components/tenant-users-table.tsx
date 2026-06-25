@@ -27,6 +27,10 @@ interface TenantUsersTableProps {
   onSort?: (column: string) => void;
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
+  onView: (user: TenantUser) => void;
+  onEdit: (user: TenantUser) => void;
+  onToggleActive: (user: TenantUser) => void;
+  onDelete: (user: TenantUser) => void;
 }
 
 export function TenantUsersTable({
@@ -40,6 +44,10 @@ export function TenantUsersTable({
   onSort,
   onPageChange,
   onPageSizeChange,
+  onView,
+  onEdit,
+  onToggleActive,
+  onDelete,
 }: TenantUsersTableProps) {
   return (
     <UsersContentTable
@@ -53,10 +61,10 @@ export function TenantUsersTable({
       onSort={onSort}
       onPageChange={onPageChange}
       onPageSizeChange={onPageSizeChange}
-      onView={() => {}}
-      onEdit={() => {}}
-      onToggleActive={() => {}}
-      onDelete={() => {}}
+      onView={onView}
+      onEdit={onEdit}
+      onToggleActive={onToggleActive}
+      onDelete={onDelete}
       isActiveSortable={false}
       showTimeInLastLogin={false}
       rowTestId="user-row"

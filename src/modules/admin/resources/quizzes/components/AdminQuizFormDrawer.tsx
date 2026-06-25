@@ -35,7 +35,6 @@ import { extractApiError } from "@/shared/utils/api-error";
 import { useCreateQuiz } from "../hooks/useCreateQuiz";
 import { useUpdateQuiz } from "../hooks/useUpdateQuiz";
 import type { CreateQuizPayload, Quiz, UpdateQuizPayload } from "../types";
-import type { Tenant } from "@/shared/types/tenant.types";
 
 function genQuizId(title: string) {
   const slug = title
@@ -55,7 +54,6 @@ const createSchema = z.object({
   description: z.string().max(2000).optional().or(z.literal("")),
   isFinalEvaluation: z.boolean(),
   formationId: z.string().min(1, "Formation requise"),
-  tenant_id: z.string().min(1, "Tenant requis"),
 });
 
 const updateSchema = z.object({
@@ -64,7 +62,6 @@ const updateSchema = z.object({
   description: z.string().max(2000).optional().or(z.literal("")),
   isFinalEvaluation: z.boolean(),
   formationId: z.string().min(1, "Formation requise"),
-  tenant_id: z.string().min(1, "Tenant requis"),
 });
 
 type CreateFormValues = z.infer<typeof createSchema>;
@@ -75,7 +72,6 @@ const CREATE_DEFAULTS: CreateFormValues = {
   description: "",
   isFinalEvaluation: false,
   formationId: "",
-  tenant_id: "",
 };
 
 export interface AdminQuizFormDrawerProps {
@@ -83,7 +79,7 @@ export interface AdminQuizFormDrawerProps {
   onClose: () => void;
   onSuccess?: () => void;
   quiz?: Quiz;
-  tenants: Tenant[];
+  duplicateFrom?: Quiz;
 }
 
 function AdminQuizFormDrawerBase({
@@ -91,9 +87,10 @@ function AdminQuizFormDrawerBase({
   onClose,
   onSuccess,
   quiz,
-  tenants,
+  duplicateFrom,
 }: AdminQuizFormDrawerProps) {
   const isEdit = !!quiz;
+  const isDuplicate = !!duplicateFrom;
 
   const createMutation = useCreateQuiz();
   const updateMutation = useUpdateQuiz();
@@ -104,15 +101,23 @@ function AdminQuizFormDrawerBase({
     if (quiz) {
       return {
         title: quiz.title,
-        slug: quiz.slug,
         description: quiz.description,
         isFinalEvaluation: quiz.isFinalEvaluation,
         formationId: quiz.formationId,
-        tenant_id: quiz.tenantId,
+        slug: quiz.slug,
+      };
+    }
+    if (duplicateFrom) {
+      return {
+        title: duplicateFrom.title,
+        description: duplicateFrom.description,
+        isFinalEvaluation: duplicateFrom.isFinalEvaluation,
+        formationId: duplicateFrom.formationId,
+        slug: duplicateFrom.slug,
       };
     }
     return CREATE_DEFAULTS;
-  }, [quiz]);
+  }, [quiz, duplicateFrom]);
 
   const formState = useFormDrawer({
     open,
@@ -131,7 +136,6 @@ function AdminQuizFormDrawerBase({
         description: values.description ?? "",
         is_final_evaluation: values.isFinalEvaluation,
         formation_id: values.formationId,
-        tenant_id: values.tenant_id,
       }) as CreateQuizPayload,
     buildUpdatePayload: (values, id) => ({
       id,
@@ -141,7 +145,6 @@ function AdminQuizFormDrawerBase({
         description: values.description ?? "",
         is_final_evaluation: values.isFinalEvaluation,
         formation_id: values.formationId,
-        tenant_id: values.tenant_id,
       } as UpdateQuizPayload,
     }),
   });
@@ -170,7 +173,7 @@ function AdminQuizFormDrawerBase({
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
         <SheetHeader className="border-b px-4 py-4">
-          <SheetTitle>{isEdit ? "Modifier le quiz" : "Ajouter un quiz"}</SheetTitle>
+          <SheetTitle>{isEdit ? "Modifier le quiz" : isDuplicate ? "Dupliquer le quiz" : "Ajouter un quiz"}</SheetTitle>
           <SheetDescription>
             Renseignez les informations pour le quiz.
           </SheetDescription>
@@ -207,31 +210,6 @@ function AdminQuizFormDrawerBase({
                         {MOCK_COURSES.map((course) => (
                           <SelectItem key={course.id} value={course.id} className="text-xs">
                             {course.fullName}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FieldError />
-                  </FieldGroup>
-                )}
-              />
-
-              <FieldRoot
-                control={formState.form.control as any}
-                name="tenant_id"
-                render={({ field }) => (
-                  <FieldGroup>
-                    <FieldLabel className="text-xs">Tenant</FieldLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FieldContent>
-                        <SelectTrigger aria-label="Tenant" className="w-full text-xs">
-                          <SelectValue placeholder="Sélectionner un tenant" />
-                        </SelectTrigger>
-                      </FieldContent>
-                      <SelectContent>
-                        {tenants.map((t) => (
-                          <SelectItem key={t.id} value={t.id} className="text-xs">
-                            {t.name}
                           </SelectItem>
                         ))}
                       </SelectContent>

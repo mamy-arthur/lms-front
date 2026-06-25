@@ -6,7 +6,6 @@ export interface CreateModulePayload {
   identifier: string;
   description?: string;
   category: string;
-  tenant_id: string;
   course_ids: string[];
 }
 
@@ -15,14 +14,12 @@ export interface UpdateModulePayload {
   identifier: string;
   description?: string;
   category: string;
-  tenant_id: string;
   course_ids: string[];
 }
 
 export interface ModuleSearchParams {
   q?: string;
   category?: string;
-  tenant_id?: string;
   sort_by?: string;
   sort_dir?: "asc" | "desc";
   page?: number;

@@ -31,7 +31,7 @@ export function QuestionFormFieldsCommon({ form }: CommonFieldsProps) {
   const hasDuration = useWatch({ control: form.control, name: "hasDuration" });
 
   return (
-    <div className="rounded-lg border bg-background p-4 space-y-5">
+    <div className="rounded-lg border bg-background p-4 space-y-5 h-full">
       {/* Groupe : contenu pédagogique */}
       <div className="space-y-3">
         <FieldRoot

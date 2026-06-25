@@ -30,13 +30,14 @@ export function QuestionFormFieldsMatching({ form }: MatchingFieldsProps) {
 
   return (
     <div className="rounded-lg bg-muted/40 min-h-full flex flex-col">
-      <div className="rounded-lg border bg-background p-4">
+      <div className="rounded-lg border bg-background p-4 flex-1">
         <div className="flex items-center justify-between mb-3">
           <h4 className="text-xs font-medium">Paires question/réponse</h4>
           <Button
             type="button"
             variant="outline"
             size="xs"
+            className="bg-(--color-primary) hover:bg-(--color-primary)/80 text-primary-foreground hover:text-primary-foreground"
             onClick={() =>
               appendPair({
                 id: `pair-${Date.now()}-${Math.random()}`,

@@ -15,7 +15,6 @@ export function useUpdateQuiz() {
         description: data.description ?? "",
         isFinalEvaluation: data.is_final_evaluation,
         formationId: data.formation_id,
-        tenantId: data.tenant_id,
         updatedAt: new Date().toISOString(),
       };
       return Promise.resolve({ data: mockRaw });

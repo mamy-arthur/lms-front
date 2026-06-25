@@ -8,7 +8,6 @@ interface QuizListParams {
   sort_by?: string;
   sort_order?: "asc" | "desc";
   formation_id?: string;
-  tenant_id?: string;
 }
 
 interface QuizListResponse {
@@ -26,7 +25,6 @@ export const adminQuizzesApi = {
     if (params.sort_by) query.set("sort_by", params.sort_by);
     if (params.sort_order) query.set("sort_order", params.sort_order);
     if (params.formation_id) query.set("formation_id", params.formation_id);
-    if (params.tenant_id) query.set("tenant_id", params.tenant_id);
     return apiGet<QuizListResponse>(`admin/quizzes?${query.toString()}`);
   },
 
