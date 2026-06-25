@@ -1,5 +1,8 @@
 "use client";
 
+import { useRouter } from "next/navigation";
+import { Pencil } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   DataTable,
   type DataTableColumn,
@@ -7,6 +10,7 @@ import {
 } from "@/shared/components/ui/DataTable";
 import { formatDate } from "@/shared/lib/date";
 import { getFormationName } from "@/shared/lib/formations";
+import { ROUTES } from "@/shared/constants/routes";
 import type { Quiz } from "../../types";
 
 export type SortConfig = DataTableSort;
@@ -23,6 +27,7 @@ interface AdminQuizzesTableProps {
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
   tenantNames: Record<string, string>;
+  onEdit?: (quiz: Quiz) => void;
 }
 
 export function AdminQuizzesTable({
@@ -37,7 +42,9 @@ export function AdminQuizzesTable({
   onPageChange,
   onPageSizeChange,
   tenantNames,
+  onEdit,
 }: AdminQuizzesTableProps) {
+  const router = useRouter();
   const columns: DataTableColumn<Quiz>[] = [
     {
       key: "title",
@@ -102,6 +109,24 @@ export function AdminQuizzesTable({
         </span>
       ),
     },
+    {
+      key: "actions",
+      label: "",
+      sortable: false,
+      render: (quiz) => (
+        <div className="text-right" onClick={(e) => e.stopPropagation()}>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-8 text-muted-foreground hover:text-foreground"
+            onClick={() => onEdit?.(quiz)}
+            aria-label={`Modifier ${quiz.title}`}
+          >
+            <Pencil className="size-4" />
+          </Button>
+        </div>
+      ),
+    },
   ];
 
   return (
@@ -118,6 +143,7 @@ export function AdminQuizzesTable({
       onPageChange={onPageChange}
       onPageSizeChange={onPageSizeChange}
       rowTestId="admin-quiz-row"
+      onRowClick={(quiz) => router.push(ROUTES.admin.quizQuestions(quiz.id))}
       emptyState={{
         title: "Aucun quiz",
         description: "Aucun quiz pour le moment.",

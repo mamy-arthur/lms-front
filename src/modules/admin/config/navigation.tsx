@@ -46,7 +46,18 @@ export const ADMIN_NAV: AdminNavItem[] = [
         access: ACCESS.users,
         items: [{ title: "Utilisateurs", url: ROUTES.admin.users }],
     },
-
+    {
+        url: ROUTES.admin.courses,
+        title: "Formations",
+        icon: GraduationCap,
+        access: ACCESS.courses,
+        items: [
+            { title: "Cours", url: ROUTES.admin.courses },
+            { title: "Catégories", url: ROUTES.admin.category },
+            { title: "Modules", url: ROUTES.admin.modules },
+            { title: "Quizzes", url: ROUTES.admin.quizzes },
+        ],
+    },
     {
         url: ROUTES.admin.trainees,
         title: "Stagiaires",

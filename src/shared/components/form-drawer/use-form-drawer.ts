@@ -1,9 +1,8 @@
 "use client";
 
-import { useCallback, useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useCallback } from "react";
+import { useForm, type FieldValues } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import type { FieldValues } from "react-hook-form";
 import type { z } from "zod";
 import type { MutationLike } from "@/shared/types/mutation";
 
@@ -22,7 +21,6 @@ export interface UseFormDrawerOptions {
 }
 
 export function useFormDrawer({
-  open,
   onClose,
   onSuccess,
   entity,
@@ -42,12 +40,6 @@ export function useFormDrawer({
     resolver: zodResolver(schema as any),
     defaultValues,
   });
-
-  useEffect(() => {
-    if (open) {
-      form.reset(defaultValues);
-    }
-  }, [open, defaultValues, form]);
 
   const handleClose = useCallback(() => {
     form.reset(createDefaults);

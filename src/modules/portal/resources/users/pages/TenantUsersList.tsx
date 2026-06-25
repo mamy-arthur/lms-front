@@ -1,9 +1,6 @@
 "use client";
 
-import { Plus } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { UserSearch } from "@modules/shared/components/users";
-import { UserFormDrawer } from "../components/UserFormDrawer";
 import { useTenantUsersQuery } from "../hooks/useTenantUsersQuery";
 import type { TenantUser, TenantUserSearchParams } from "../types";
 import { TenantUsersFilter } from "./_components/tenant-users-filters";
@@ -12,8 +9,6 @@ import { useUsersListController } from "@/modules/shared/hooks/useUsersListContr
 
 export function TenantUsersList() {
   const {
-    isDrawerOpen,
-    editingUser,
     draftSearch,
     setDraftSearch,
     draftRole,
@@ -24,10 +19,6 @@ export function TenantUsersList() {
     sort,
     handleSearch,
     handleSort,
-    handleOpenCreate,
-    handleCloseDrawer,
-    handleSuccess,
-    handleEdit,
     handlePageChange,
     handlePageSizeChange,
     page,
@@ -45,12 +36,11 @@ export function TenantUsersList() {
                   Utilisateurs
               </h1>
               <p className="mt-1 text-sm text-muted-foreground">
-                  Ajoutez, modifiez et gérez vos utilisateurs.
+                  Consultez les utilisateurs de votre organisation.
               </p>
           </div>
       </header>
 
-     
       <div className="space-y-4">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <UserSearch
@@ -66,13 +56,6 @@ export function TenantUsersList() {
               onStatusFilterChange={setDraftStatus}
               onSearch={handleSearch}
             />
-            <Button
-              onClick={handleOpenCreate}
-              className="bg-(--color-primary) hover:bg-(--color-primary)/80 text-primary-foreground shrink-0"
-            >
-              <Plus className="size-4" />
-              Nouveau
-            </Button>
           </div>
         </div>
 
@@ -86,19 +69,8 @@ export function TenantUsersList() {
           onSort={handleSort}
           onPageChange={handlePageChange}
           onPageSizeChange={handlePageSizeChange}
-          onView={() => {}}
-          onEdit={handleEdit}
-          onToggleActive={() => {}}
-          onDelete={() => {}}
         />
       </div>
-
-      <UserFormDrawer
-        open={isDrawerOpen}
-        onClose={handleCloseDrawer}
-        onSuccess={handleSuccess}
-        user={editingUser}
-      />
     </div>
   );
 }
