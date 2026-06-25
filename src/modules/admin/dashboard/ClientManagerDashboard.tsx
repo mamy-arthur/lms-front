@@ -2,8 +2,8 @@
 
 import { ChartLineDots } from "@/modules/shared/components/dashboard/chart/ChartBar";
 import { KpiCards } from "@/modules/shared/components/dashboard/KpiCards";
-import TopClientsCard from "@/modules/shared/components/dashboard/TopClient";
-import TopCoursesCard from "@/modules/shared/components/dashboard/TopFormations";
+import TopClientsCard from "@/modules/shared/components/dashboard/top-client/TopClientsCard";
+import TopCoursesCard from "@/modules/shared/components/dashboard/top-courses/TopCoursesCard";
 
 export function ClientManagerDashboard() {
     return (
@@ -21,17 +21,17 @@ export function ClientManagerDashboard() {
                     </div>
                 </header>
                 <div className="flex flex-col space-y-2">
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
                         <KpiCards />
-                        <div>
-                            <ChartLineDots />
-                        </div>
+                        <ChartLineDots />
                     </div>
-                    <div className="grid grid-cols-3 gap-2 items-stretch">
-                        <div className="col-span-2 h-full">
+
+                    <div className="grid grid-cols-1 gap-2 xl:grid-cols-3">
+                        <div className="xl:col-span-2">
                             <TopCoursesCard />
                         </div>
-                        <div className="col-span-1 h-full">
+
+                        <div className="xl:col-span-1">
                             <TopClientsCard />
                         </div>
                     </div>

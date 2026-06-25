@@ -40,42 +40,23 @@ const kpis = [
 
 export function KpiCards() {
     return (
-        <div className="grid grid-cols-2 gap-2 ">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {kpis.map((kpi) => {
                 const Icon = kpi.icon;
                 const hl = kpi.highlight;
 
                 return (
-                    <Card key={kpi.label} className="overflow-hidden border-0 bg-card/80 backdrop-blur-sm">
+                    <Card
+                        key={kpi.label}
+                        className="overflow-hidden border-0 bg-card/80 backdrop-blur-sm"
+                    >
                         <CardContent className="flex h-36 flex-col">
                             {/* Header */}
-                            <div className="flex items-start justify-between">
+                            <div className="flex items-center justify-between">
                                 <div>
                                     <p className="text-xs font-semibold uppercase tracking-wide text-black">
                                         {kpi.label}
                                     </p>
-
-                                    <div className="mt-2 flex items-center gap-1">
-                                        {kpi.trendUp ? (
-                                            <TrendingUp className="h-3 w-3 text-emerald-500" />
-                                        ) : (
-                                            <TrendingDown className="h-3 w-3 text-red-500" />
-                                        )}
-
-                                        <span
-                                            className={`text-xs font-medium ${
-                                                kpi.trendUp
-                                                    ? "text-emerald-500"
-                                                    : "text-red-500"
-                                            }`}
-                                        >
-                                            {kpi.trend}
-                                        </span>
-
-                                        <span className="text-xs text-black">
-                                            {kpi.trendLabel}
-                                        </span>
-                                    </div>
                                 </div>
 
                                 <div className="flex h-9 w-9 items-center justify-center rounded-md bg-gray-200/80 shadow-2xl">
@@ -84,10 +65,31 @@ export function KpiCards() {
                             </div>
 
                             {/* Push value to bottom */}
-                            <div className="mt-auto ml-auto">
+                            <div className="mt-auto ml-auto text-end">
                                 <p className="text-2xl font-semibold  tracking-tight text-accent-foreground">
                                     {kpi.value}
                                 </p>
+                                <div className="mt-1 flex items-center gap-1">
+                                    {kpi.trendUp ? (
+                                        <TrendingUp className="h-3 w-3 text-emerald-500" />
+                                    ) : (
+                                        <TrendingDown className="h-3 w-3 text-red-500" />
+                                    )}
+
+                                    <span
+                                        className={`text-xs font-medium ${
+                                            kpi.trendUp
+                                                ? "text-emerald-500"
+                                                : "text-red-500"
+                                        }`}
+                                    >
+                                        {kpi.trend}
+                                    </span>
+
+                                    <span className="text-xs text-black">
+                                        {kpi.trendLabel}
+                                    </span>
+                                </div>
                             </div>
                         </CardContent>
                     </Card>

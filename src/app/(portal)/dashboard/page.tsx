@@ -2,8 +2,8 @@
 
 import { ChartLineDots } from "@/modules/shared/components/dashboard/chart/ChartBar";
 import { KpiCards } from "@/modules/shared/components/dashboard/KpiCards";
-import TopClientsCard from "@/modules/shared/components/dashboard/TopClient";
-import TopCoursesCard from "@/modules/shared/components/dashboard/TopFormations";
+import TopClientsCard from "@/modules/shared/components/dashboard/top-client/TopClientsCard";
+import TopCoursesCard from "@/modules/shared/components/dashboard/top-courses/TopCoursesCard";
 
 export default function DashboardPage() {
     return (
