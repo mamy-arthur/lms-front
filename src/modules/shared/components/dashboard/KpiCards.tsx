@@ -75,7 +75,7 @@ export function KpiCards() {
                                 </div>
                             </div>
 
-                            <div className="mt-auto ml-auto flex w-full items-center justify-between text-end">
+                            <div className="mt-auto ml-auto flex flex-col lg:flex-row w-full justify-between  gap-4">
                                 <div className="mt-1 flex items-center gap-1">
                                     {kpi.trendUp ? (
                                         <TrendingUp className="h-3 w-3 text-emerald-400" />
@@ -103,7 +103,7 @@ export function KpiCards() {
                                 </div>
 
                                 <p
-                                    className={`text-2xl font-semibold tracking-tight ${
+                                    className={`text-xl md:text-2xl font-semibold tracking-tight ${
                                         hl
                                             ? "text-white"
                                             : "text-accent-foreground"
