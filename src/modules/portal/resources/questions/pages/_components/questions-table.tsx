@@ -8,7 +8,6 @@ import {
   type DataTableSort,
 } from "@/shared/components/ui/DataTable";
 import { formatDate } from "@/shared/lib/date";
-import { QuestionActions } from "../../components/question-actions";
 import type { Question } from "../../types";
 
 export type SortConfig = DataTableSort;
@@ -23,9 +22,6 @@ interface QuestionsTableProps {
   onSort?: (column: string) => void;
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
-  onEdit: (question: Question) => void;
-  onDelete?: (question: Question) => void;
-  onToggleActive: (question: Question) => void;
 }
 
 export function QuestionsTable({
@@ -38,9 +34,6 @@ export function QuestionsTable({
   onSort,
   onPageChange,
   onPageSizeChange,
-  onEdit,
-  onDelete,
-  onToggleActive,
 }: QuestionsTableProps) {
   const columns: DataTableColumn<Question>[] = [
     {
@@ -75,7 +68,7 @@ export function QuestionsTable({
       render: (question) => (
         <Switch
           checked={question.isActive}
-          onCheckedChange={() => onToggleActive(question)}
+          disabled
           size="sm"
           className="data-[state=checked]:bg-(--color-primary)"
         />
@@ -89,20 +82,6 @@ export function QuestionsTable({
         <span className="text-xs text-muted-foreground tabular-nums">
           {question.updatedAt ? formatDate(question.updatedAt) : "—"}
         </span>
-      ),
-    },
-    {
-      key: "actions",
-      label: "",
-      sortable: false,
-      render: (question) => (
-        <div className="text-right" onClick={(e) => e.stopPropagation()}>
-          <QuestionActions
-            questionLabel={question.name}
-            onEdit={() => onEdit(question)}
-            onDelete={onDelete ? () => onDelete(question) : undefined}
-          />
-        </div>
       ),
     },
   ];
@@ -122,8 +101,7 @@ export function QuestionsTable({
       rowTestId="question-row"
       emptyState={{
         title: "Aucune question",
-        description:
-          "Créez votre première question en cliquant sur « Nouvelle question ».",
+        description: "Aucune question pour le moment.",
       }}
     />
   );

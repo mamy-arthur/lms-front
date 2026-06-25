@@ -1,7 +1,6 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { QuizActions } from "../../components/quiz-actions";
 import {
   DataTable,
   type DataTableColumn,
@@ -24,8 +23,6 @@ interface QuizzesTableProps {
   onSort?: (column: string) => void;
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
-  onEdit: (quiz: Quiz) => void;
-  onDelete?: (quiz: Quiz) => void;
 }
 
 export function QuizzesTable({
@@ -38,8 +35,6 @@ export function QuizzesTable({
   onSort,
   onPageChange,
   onPageSizeChange,
-  onEdit,
-  onDelete,
 }: QuizzesTableProps) {
   const router = useRouter();
   const columns: DataTableColumn<Quiz>[] = [
@@ -96,20 +91,6 @@ export function QuizzesTable({
         </span>
       ),
     },
-    {
-      key: "actions",
-      label: "",
-      sortable: false,
-      render: (quiz) => (
-        <div className="text-right" onClick={(e) => e.stopPropagation()}>
-          <QuizActions
-            quizLabel={quiz.title}
-            onEdit={() => onEdit(quiz)}
-            onDelete={onDelete ? () => onDelete(quiz) : undefined}
-          />
-        </div>
-      ),
-    },
   ];
 
   return (
@@ -128,8 +109,7 @@ export function QuizzesTable({
       onRowClick={(quiz) => router.push(ROUTES.portal.quizQuestions(quiz.id))}
       emptyState={{
         title: "Aucun quiz",
-        description:
-          "Créez votre premier quiz en cliquant sur « Nouveau quiz ».",
+        description: "Aucun quiz pour le moment.",
       }}
     />
   );

@@ -1,15 +1,15 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Question, QuestionPayload } from "../types";
 import { normalizeQuestion } from "../types";
-import { PORTAL_QUESTIONS_QUERY_KEY } from "./useQuestionsQuery";
+import { ADMIN_QUESTIONS_QUERY_KEY } from "./useQuestionsQuery";
 
-export function useUpdateQuestion() {
+export function useCreateQuestion() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: QuestionPayload }) => {
+    mutationFn: (data: QuestionPayload) => {
       const mockRaw: Record<string, unknown> = {
-        id,
+        id: `q-${Date.now()}`,
         quiz_id: data.quizId,
         name: data.name,
         text: data.text,
@@ -39,16 +39,14 @@ export function useUpdateQuestion() {
       return Promise.resolve({ data: mockRaw });
     },
     onSuccess: ({ data: rawQuestion }) => {
-      const updated = normalizeQuestion(
+      const newQuestion = normalizeQuestion(
         rawQuestion as unknown as Record<string, unknown>,
       );
       queryClient.setQueryData<{ data: Question[]; total: number }>(
-        PORTAL_QUESTIONS_QUERY_KEY,
+        ADMIN_QUESTIONS_QUERY_KEY,
         (prev) => ({
-          data: (prev?.data ?? []).map((q) =>
-            q.id === updated.id ? updated : q,
-          ),
-          total: prev?.total ?? 0,
+          data: [newQuestion, ...(prev?.data ?? [])],
+          total: (prev?.total ?? 0) + 1,
         }),
       );
     },

@@ -1,13 +1,11 @@
 "use client";
 
-import { ModuleActions } from "../../components/module-actions";
 import {
   DataTable,
   type DataTableColumn,
   type DataTableSort,
 } from "@/shared/components/ui/DataTable";
 import type { Module } from "../../types";
-import { CategoryCell } from "./category-cell";
 
 export type SortConfig = DataTableSort;
 
@@ -21,10 +19,6 @@ interface ModulesTableProps {
   onSort?: (column: string) => void;
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
-  onEdit: (module: Module) => void;
-  onDuplicate?: (module: Module) => void;
-  onDelete?: (module: Module) => void;
-  onCategoryChange?: (moduleId: string, newCategory: string) => void;
 }
 
 export function ModulesTable({
@@ -37,10 +31,6 @@ export function ModulesTable({
   onSort,
   onPageChange,
   onPageSizeChange,
-  onEdit,
-  onDuplicate,
-  onDelete,
-  onCategoryChange,
 }: ModulesTableProps) {
   const columns: DataTableColumn<Module>[] = [
     {
@@ -63,25 +53,9 @@ export function ModulesTable({
       label: "Catégorie",
       sortable: true,
       render: (module) => (
-        <CategoryCell
-          module={module}
-          onCategoryChange={(id, cat) => onCategoryChange?.(id, cat)}
-        />
-      ),
-    },
-    {
-      key: "actions",
-      label: "",
-      sortable: false,
-      render: (module) => (
-        <div className="text-right" onClick={(e) => e.stopPropagation()}>
-          <ModuleActions
-            moduleLabel={module.name}
-            onEdit={() => onEdit(module)}
-            onDuplicate={onDuplicate ? () => onDuplicate(module) : undefined}
-            onDelete={onDelete ? () => onDelete(module) : undefined}
-          />
-        </div>
+        <span className="text-xs text-muted-foreground">
+          {module.category || "—"}
+        </span>
       ),
     },
   ];
@@ -101,8 +75,7 @@ export function ModulesTable({
       rowTestId="module-row"
       emptyState={{
         title: "Aucun module",
-        description:
-          "Créez votre premier module en cliquant sur « Ajouter un module ».",
+        description: "Aucun module pour le moment.",
       }}
     />
   );

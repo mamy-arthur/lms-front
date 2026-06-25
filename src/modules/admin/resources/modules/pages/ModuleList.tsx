@@ -1,11 +1,14 @@
 "use client";
 
+import { Plus } from "lucide-react";
 import { useMemo } from "react";
+import { Button } from "@/components/ui/button";
 import { ModuleSearch } from "@modules/shared/components/modules";
 import { useAllTenantsQuery } from "@/modules/shared/hooks/useAllTenantsQuery";
 import { useModuleListController } from "@/modules/shared/hooks/useModuleListController";
 import { useModulesQuery } from "../hooks/useModulesQuery";
 import type { Module } from "../types";
+import { AdminModuleFormDrawer } from "../components/AdminModuleFormDrawer";
 import { AdminModulesFilter } from "./_components/admin-modules-filter";
 import { AdminModulesTable } from "./_components/admin-modules-table";
 
@@ -32,7 +35,7 @@ export function ModuleList() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Modules</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Consultez les modules de vos formations.
+            Créez, modifiez et gérez les modules de vos formations.
           </p>
         </div>
       </header>
@@ -53,6 +56,13 @@ export function ModuleList() {
               onSearch={ctrl.handleSearch}
               tenants={tenants}
             />
+            <Button
+              onClick={ctrl.handleOpenCreate}
+              className="bg-(--color-primary) hover:bg-(--color-primary)/80 text-primary-foreground shrink-0"
+            >
+              <Plus className="size-4" />
+              Nouveau
+            </Button>
           </div>
         </div>
 
@@ -68,6 +78,15 @@ export function ModuleList() {
           onPageChange={ctrl.handlePageChange}
           onPageSizeChange={ctrl.handlePageSizeChange}
           tenantNames={tenantNames}
+          onEdit={ctrl.handleEdit}
+        />
+
+        <AdminModuleFormDrawer
+          open={ctrl.isDrawerOpen}
+          onClose={ctrl.handleCloseDrawer}
+          onSuccess={ctrl.handleSuccess}
+          module={ctrl.editingModule}
+          tenants={tenants}
         />
       </div>
     </div>

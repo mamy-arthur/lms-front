@@ -1,11 +1,13 @@
 "use client";
 
+import { Pencil, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import {
   DataTable,
   type DataTableColumn,
   type DataTableSort,
 } from "@/shared/components/ui/DataTable";
-import { Switch } from "@/components/ui/switch";
 import { formatDate } from "@/shared/lib/date";
 import { QUESTION_TYPE_LABELS } from "@modules/shared/components/questions";
 import type { Question } from "../../types";
@@ -23,6 +25,9 @@ interface AdminQuestionsTableProps {
   onSort?: (column: string) => void;
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
+  onEdit?: (question: Question) => void;
+  onDelete?: (question: Question) => void;
+  onToggleActive?: (question: Question) => void;
 }
 
 export function AdminQuestionsTable({
@@ -36,6 +41,9 @@ export function AdminQuestionsTable({
   onSort,
   onPageChange,
   onPageSizeChange,
+  onEdit,
+  onDelete,
+  onToggleActive,
 }: AdminQuestionsTableProps) {
   const columns: DataTableColumn<Question>[] = [
     {
@@ -70,7 +78,7 @@ export function AdminQuestionsTable({
       render: (question) => (
         <Switch
           checked={question.isActive}
-          disabled
+          onCheckedChange={() => onToggleActive?.(question)}
           size="sm"
           className="data-[state=checked]:bg-(--color-primary)"
         />
@@ -84,6 +92,33 @@ export function AdminQuestionsTable({
         <span className="text-xs text-muted-foreground tabular-nums">
           {question.updatedAt ? formatDate(question.updatedAt) : "—"}
         </span>
+      ),
+    },
+    {
+      key: "actions",
+      label: "",
+      sortable: false,
+      render: (question) => (
+        <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-8 text-muted-foreground hover:text-foreground"
+            onClick={() => onEdit?.(question)}
+            aria-label={`Modifier ${question.name}`}
+          >
+            <Pencil className="size-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-8 text-muted-foreground hover:text-destructive"
+            onClick={() => onDelete?.(question)}
+            aria-label={`Supprimer ${question.name}`}
+          >
+            <Trash2 className="size-4" />
+          </Button>
+        </div>
       ),
     },
   ];

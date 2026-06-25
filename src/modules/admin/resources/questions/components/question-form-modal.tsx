@@ -12,7 +12,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  
 } from "@/components/ui/dialog";
 import { Field } from "@/components/ui/field";
 import { cn } from "@/lib/utils";
@@ -89,13 +88,13 @@ function QuestionFormModalBase({
     return getCreateDefaults();
   }, [question]);
 
-  const buildCreatePayload = useCallback(
+  const buildCreatePayloadFn = useCallback(
     (values: FieldValues) =>
       buildQuestionPayload(values as FormValues, defaultQuizId),
     [defaultQuizId],
   );
 
-  const buildUpdatePayload = useCallback(
+  const buildUpdatePayloadFn = useCallback(
     (values: FieldValues, id: string) => ({
       id,
       data: buildQuestionPayload(
@@ -116,8 +115,8 @@ function QuestionFormModalBase({
     schema: formSchema,
     defaultValues,
     createDefaults,
-    buildCreatePayload,
-    buildUpdatePayload,
+    buildCreatePayload: buildCreatePayloadFn,
+    buildUpdatePayload: buildUpdatePayloadFn,
   });
 
   useEffect(() => {
@@ -144,13 +143,11 @@ function QuestionFormModalBase({
 
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && modal.handleClose()}>
-    <DialogContent
+      <DialogContent
         className="flex flex-col gap-0 p-0 inset-0 h-dvh max-w-full -translate-x-0 -translate-y-0 rounded-none sm:max-w-full"
         showCloseButton={true}
       >
-    {/* --- Carte visuelle animée --- */}
-   
-      <DialogHeader
+        <DialogHeader
           className={cn(
             "border-b px-6 py-4 transition-all duration-300",
             step === 0 ? "border-transparent" : "border-border",
@@ -196,8 +193,8 @@ function QuestionFormModalBase({
           </div>
         </DialogHeader>
 
-      <Field {...modal.form}>
-        <form
+        <Field {...modal.form}>
+          <form
             onSubmit={modal.form.handleSubmit(modal.onSubmit)}
             className="flex min-h-0 flex-1 flex-col"
             noValidate
@@ -212,7 +209,7 @@ function QuestionFormModalBase({
                 </div>
               )}
 
-                 <div
+              <div
                 key="step-0"
                 className={cn(
                   "absolute inset-0 transition-all duration-300 ease-in-out",
@@ -304,12 +301,11 @@ function QuestionFormModalBase({
                   </Button>
                 </div>
               </DialogFooter>
-            </div>        
+            </div>
           </form>
-      </Field>
-              
-  </DialogContent>
-</Dialog>
+        </Field>
+      </DialogContent>
+    </Dialog>
   );
 }
 

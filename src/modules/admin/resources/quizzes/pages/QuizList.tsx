@@ -1,11 +1,14 @@
 "use client";
 
+import { Plus } from "lucide-react";
 import { useMemo } from "react";
+import { Button } from "@/components/ui/button";
 import { QuizSearch } from "@modules/shared/components/quizzes";
 import { useAllTenantsQuery } from "@/modules/shared/hooks/useAllTenantsQuery";
 import { useQuizListController } from "@/modules/shared/hooks/useQuizListController";
 import { useQuizzesQuery } from "../hooks/useQuizzesQuery";
 import type { Quiz } from "../types";
+import { AdminQuizFormDrawer } from "../components/AdminQuizFormDrawer";
 import { AdminQuizzesFilter } from "./_components/admin-quizzes-filter";
 import { AdminQuizzesTable } from "./_components/admin-quizzes-table";
 
@@ -32,7 +35,7 @@ export function QuizList() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Quizzes</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Consultez les quizzes de vos formations.
+            Créez, modifiez et gérez les quizzes de vos formations.
           </p>
         </div>
       </header>
@@ -53,6 +56,13 @@ export function QuizList() {
               onSearch={ctrl.handleSearch}
               tenants={tenants}
             />
+            <Button
+              onClick={ctrl.handleOpenCreate}
+              className="bg-(--color-primary) hover:bg-(--color-primary)/80 text-primary-foreground shrink-0"
+            >
+              <Plus className="size-4" />
+              Nouveau quiz
+            </Button>
           </div>
         </div>
 
@@ -68,6 +78,15 @@ export function QuizList() {
           onPageChange={ctrl.handlePageChange}
           onPageSizeChange={ctrl.handlePageSizeChange}
           tenantNames={tenantNames}
+          onEdit={ctrl.handleEdit}
+        />
+
+        <AdminQuizFormDrawer
+          open={ctrl.isDrawerOpen}
+          onClose={ctrl.handleCloseDrawer}
+          onSuccess={ctrl.handleSuccess}
+          quiz={ctrl.editingQuiz}
+          tenants={tenants}
         />
       </div>
     </div>

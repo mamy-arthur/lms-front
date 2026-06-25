@@ -1,18 +1,25 @@
 "use client";
 
-import { useMemo } from "react";
+import { Plus } from "lucide-react";
+import { useCallback, useMemo } from "react";
+import { Button } from "@/components/ui/button";
 import { QuizSearch } from "@modules/shared/components/quizzes";
-import { useQuestionListController } from "@/modules/shared/hooks/useQuestionListController";
 import { MOCK_QUIZZES } from "@modules/shared/components/quizzes/mocks/quizzes.mock";
+import { useQuestionListController } from "@/modules/shared/hooks/useQuestionListController";
 import { useQuestionsQuery } from "../hooks/useQuestionsQuery";
+import { useUpdateQuestion } from "../hooks/useUpdateQuestion";
+import { useDeleteQuestion } from "../hooks/useDeleteQuestion";
 import type { Question } from "../types";
 import { AdminQuestionsTable } from "./_components/admin-questions-table";
+import { QuestionFormModal } from "../components/question-form-modal";
 
 export function QuestionList({ quizId }: { quizId: string }) {
   const ctrl = useQuestionListController<Question>({
     defaultPageSize: 25,
   });
   const { data, isLoading } = useQuestionsQuery(ctrl.params);
+  const updateMutation = useUpdateQuestion();
+  const deleteMutation = useDeleteQuestion();
 
   const quizName = useMemo(() => {
     const quiz = MOCK_QUIZZES.find((q) => q.id === quizId);
@@ -22,6 +29,38 @@ export function QuestionList({ quizId }: { quizId: string }) {
   const filteredQuestions = useMemo(
     () => (data?.data ?? []).filter((q) => q.quizId === quizId),
     [data, quizId],
+  );
+
+  const handleToggleActive = useCallback(
+    (question: Question) => {
+      updateMutation.mutate({
+        id: question.id,
+        data: {
+          quizId: question.quizId,
+          name: question.name,
+          text: question.text,
+          type: question.type,
+          generalFeedback: question.generalFeedback,
+          identificationNumber: question.identificationNumber,
+          isActive: !question.isActive,
+          duration: question.duration as any,
+          moduleId: question.moduleId,
+          correctAnswer: question.correctAnswer,
+          feedbackTrue: question.feedbackTrue,
+          feedbackFalse: question.feedbackFalse,
+          options: question.options,
+          pairs: question.pairs,
+        },
+      });
+    },
+    [updateMutation],
+  );
+
+  const handleDelete = useCallback(
+    (question: Question) => {
+      deleteMutation.mutate(question.id);
+    },
+    [deleteMutation],
   );
 
   return (
@@ -42,6 +81,15 @@ export function QuestionList({ quizId }: { quizId: string }) {
             onChange={ctrl.setDraftSearch}
             onSearch={ctrl.handleSearch}
           />
+          <div className="flex items-center gap-2 sm:ml-auto">
+            <Button
+              onClick={ctrl.handleOpenCreate}
+              className="bg-(--color-primary) hover:bg-(--color-primary)/80 text-primary-foreground shrink-0"
+            >
+              <Plus className="size-4" />
+              Nouvelle question
+            </Button>
+          </div>
         </div>
 
         <AdminQuestionsTable
@@ -55,8 +103,19 @@ export function QuestionList({ quizId }: { quizId: string }) {
           onSort={ctrl.handleSort}
           onPageChange={ctrl.handlePageChange}
           onPageSizeChange={ctrl.handlePageSizeChange}
+          onEdit={ctrl.handleEdit}
+          onDelete={handleDelete}
+          onToggleActive={handleToggleActive}
         />
       </div>
+
+      <QuestionFormModal
+        open={ctrl.isDrawerOpen}
+        onClose={ctrl.handleCloseDrawer}
+        onSuccess={ctrl.handleSuccess}
+        question={ctrl.editingQuestion}
+        defaultQuizId={quizId}
+      />
     </div>
   );
 }

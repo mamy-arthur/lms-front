@@ -1,5 +1,7 @@
 "use client";
 
+import { Pencil } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   DataTable,
   type DataTableColumn,
@@ -22,6 +24,7 @@ interface AdminModulesTableProps {
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
   tenantNames: Record<string, string>;
+  onEdit?: (module: Module) => void;
 }
 
 export function AdminModulesTable({
@@ -36,6 +39,7 @@ export function AdminModulesTable({
   onPageChange,
   onPageSizeChange,
   tenantNames,
+  onEdit,
 }: AdminModulesTableProps) {
   const columns: DataTableColumn<Module>[] = [
     {
@@ -81,6 +85,24 @@ export function AdminModulesTable({
         <span className="text-xs text-muted-foreground tabular-nums">
           {mod.createdAt ? formatDate(mod.createdAt) : "—"}
         </span>
+      ),
+    },
+    {
+      key: "actions",
+      label: "",
+      sortable: false,
+      render: (mod) => (
+        <div className="text-right" onClick={(e) => e.stopPropagation()}>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-8 text-muted-foreground hover:text-foreground"
+            onClick={() => onEdit?.(mod)}
+            aria-label={`Modifier ${mod.name}`}
+          >
+            <Pencil className="size-4" />
+          </Button>
+        </div>
       ),
     },
   ];
