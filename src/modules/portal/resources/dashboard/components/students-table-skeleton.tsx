@@ -20,7 +20,6 @@ export function StudentsTableSkeleton({ rows = 6 }: { rows?: number }) {
             </div>
           </TableCell>
           <TableCell><Skeleton className="h-5 w-16 rounded-full" /></TableCell>
-          <TableCell><Skeleton className="h-4 w-20" /></TableCell>
           <TableCell><Skeleton className="h-8 w-8 rounded-md" /></TableCell>
         </TableRow>
       ))}

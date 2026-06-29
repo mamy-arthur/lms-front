@@ -10,7 +10,6 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Progress } from "@/components/ui/progress";
 import {
     Select,
     SelectContent,
@@ -33,7 +32,7 @@ import {
     type StudentStatus,
 } from "../lib/students-data";
 import { StudentsTableSkeleton } from "./students-table-skeleton";
-import { Badge } from "@/components/ui/badge";
+import { ProgressVariant } from "@/shared/components/ui/progress/Progress";
 
 interface StudentsTableProps {
     students: Student[];
@@ -88,7 +87,7 @@ export function StudentsTable({
                             setPage(1);
                         }}
                         placeholder="Rechercher un étudiant…"
-                        className="h-10 rounded-xl pl-9"
+                        className="h-8  pl-8"
                         aria-label="Rechercher un étudiant"
                     />
                 </div>
@@ -100,7 +99,7 @@ export function StudentsTable({
                     }}
                 >
                     <SelectTrigger
-                        className="h-10 w-full rounded-xl sm:w-44"
+                        className="h-10 w-full sm:w-44"
                         aria-label="Filtrer par statut"
                     >
                         <SelectValue placeholder="Statut" />
@@ -118,7 +117,7 @@ export function StudentsTable({
                 </Select>
             </div>
 
-            <div className="overflow-hidden rounded-2xl border border-border/60 bg-card shadow-sm">
+            <div className="overflow-hidden rounded-2xl border border-border/60 bg-card">
                 <Table>
                     <TableHeader>
                         <TableRow className="hover:bg-transparent">
@@ -193,10 +192,15 @@ export function StudentsTable({
                                     </TableCell>
                                     <TableCell>
                                         <div className="flex items-center gap-3">
-                                            <Progress
+                                            <ProgressVariant
                                                 value={s.progress}
                                                 className="h-1.5 flex-1"
-                                                color="var(--color-primary)"
+                                                style={
+                                                    {
+                                                        "--color-progress":
+                                                            "var(--color-primary)",
+                                                    } as React.CSSProperties
+                                                }
                                             />
                                             <span className="w-9 text-right text-xs font-medium tabular-nums text-muted-foreground">
                                                 {s.progress}%
