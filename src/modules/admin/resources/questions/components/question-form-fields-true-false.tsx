@@ -26,10 +26,19 @@ export function QuestionFormFieldsTrueFalse({ form }: TrueFalseFieldsProps) {
     correctAnswer === false ? "feedbackTrue" : "feedbackFalse";
 
   return (
-    <div className="rounded-lg bg-muted/40 min-h-full flex flex-col">
-      <div className="rounded-lg border bg-background p-4 flex-1">
-        <h4 className="text-xs font-medium mb-3">Configuration Vrai/Faux</h4>
-        <div className="space-y-3">
+    <div className="flex h-full min-h-0 flex-col">
+       <div className="mb-2 border-b border-border/10">
+          <div>
+            <p className="text-xs font-semibold uppercase text-muted-foreground">
+              Réponses et explication
+            </p>
+            <p className="mt-2 text-xs text-foreground/80">
+              Choisissez la bonne réponse et saisissez des explications personnalisés.
+            </p>
+          </div>
+        </div>
+      <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-3xl bg-background/95 p-4 ring-1 ring-border/10">
+        <div className="space-y-4">
           <FieldRoot
             control={form.control}
             name="correctAnswer"
@@ -78,13 +87,13 @@ export function QuestionFormFieldsTrueFalse({ form }: TrueFalseFieldsProps) {
             control={form.control}
             name={correctFieldName}
             render={({ field }) => (
-              <FieldGroup className="space-y-2 rounded-md border border-emerald-200 bg-emerald-50/50 p-3">
+              <FieldGroup className="space-y-2 rounded-3xl border-(--color-primary)/40 py-2">
                 <FieldLabel className="text-xs">
-                  Feedback pour réponse correcte
+                  Commentaire pour réponse correcte
                 </FieldLabel>
                 <FieldContent>
                   <Textarea
-                    aria-label="Feedback pour réponse correcte"
+                    aria-label="Commentaire pour réponse correcte"
                     className="min-h-16 resize-y"
                     {...field}
                   />
@@ -99,13 +108,13 @@ export function QuestionFormFieldsTrueFalse({ form }: TrueFalseFieldsProps) {
             control={form.control}
             name={incorrectFieldName}
             render={({ field }) => (
-              <FieldGroup className="space-y-2 rounded-md border p-3">
+              <FieldGroup className="space-y-2 rounded-3xl bg-muted/10 py-2 ring-1 ring-border/10">
                 <FieldLabel className="text-xs">
-                  Feedback pour réponse incorrecte
+                  Commentaire pour réponse incorrecte
                 </FieldLabel>
                 <FieldContent>
                   <Textarea
-                    aria-label="Feedback pour réponse incorrecte"
+                    aria-label="Commentaire pour réponse incorrecte"
                     className="min-h-16 resize-y"
                     {...field}
                   />

@@ -3,16 +3,7 @@
 import { Plus } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { ConfirmDialog } from "@/shared/components/confirm-dialog/ConfirmDialog";
 import { QuizSearch } from "@modules/shared/components/quizzes";
 import { MOCK_QUIZZES } from "@modules/shared/components/quizzes/mocks/quizzes.mock";
 import { useQuestionListController } from "@/modules/shared/hooks/useQuestionListController";
@@ -53,7 +44,7 @@ export function QuestionList({ quizId }: { quizId: string }) {
           text: question.text,
           type: question.type,
           generalFeedback: question.generalFeedback,
-          identificationNumber: question.identificationNumber,
+          referenceNumber: question.referenceNumber,
           isActive: !question.isActive,
           duration: question.duration as any,
           moduleId: question.moduleId,
@@ -135,32 +126,19 @@ export function QuestionList({ quizId }: { quizId: string }) {
         defaultQuizId={quizId}
       />
 
-      <AlertDialog
+      <ConfirmDialog
         open={!!deleteConfirm}
-        onOpenChange={(open) => { if (!open) setDeleteConfirm(undefined); }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Supprimer la question</AlertDialogTitle>
-            <AlertDialogDescription>
-              Êtes-vous sûr de vouloir supprimer la question « {deleteConfirm?.name}
-              » ? Cette action est irréversible.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive hover:bg-destructive/80"
-              onClick={() => {
-                if (deleteConfirm) deleteMutation.mutate(deleteConfirm.id);
-                setDeleteConfirm(undefined);
-              }}
-            >
-              Supprimer
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        title="Supprimer la question"
+        description={(
+          <>
+            Êtes-vous sûr de vouloir supprimer la question « {deleteConfirm?.name}
+            » ? Cette action est irréversible.
+          </>
+        )}
+        confirmClassName="bg-destructive hover:bg-destructive/80"
+        onClose={() => setDeleteConfirm(undefined)}
+        onConfirm={() => { if (deleteConfirm) deleteMutation.mutate(deleteConfirm.id); }}
+      />
     </div>
   );
 }

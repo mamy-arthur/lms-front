@@ -7,7 +7,7 @@ export interface QuestionPayload {
   text: string;
   type: string;
   generalFeedback: string;
-  identificationNumber: string;
+  referenceNumber: string;
   isActive: boolean;
   duration: { value: number; unit: string } | null;
   moduleId: string;

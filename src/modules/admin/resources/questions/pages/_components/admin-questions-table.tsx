@@ -1,5 +1,6 @@
 "use client";
 
+import React, { memo, useCallback, useMemo } from "react";
 import { Copy, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -38,7 +39,7 @@ interface AdminQuestionsTableProps {
   onToggleActive?: (question: Question) => void;
 }
 
-export function AdminQuestionsTable({
+function AdminQuestionsTableBase({
   questions,
   isLoading = false,
   hasQuery = false,
@@ -54,20 +55,73 @@ export function AdminQuestionsTable({
   onDelete,
   onToggleActive,
 }: AdminQuestionsTableProps) {
-  const columns: DataTableColumn<Question>[] = [
+  const ActionMenu = useCallback(function ActionMenu({ item }: { item: Question }) {
+    return (
+      <div className="text-right" onClick={(e) => e.stopPropagation()}>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-8 text-muted-foreground hover:text-foreground data-[state=open]:bg-muted"
+              aria-label={`Actions pour ${item.name}`}
+            >
+              <MoreHorizontal className="size-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-44">
+            <DropdownMenuItem onClick={() => onEdit?.(item)}>
+              <Pencil className="mr-2 size-3.5 text-muted-foreground" />
+              Modifier
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onDuplicate?.(item)}>
+              <Copy className="mr-2 size-3.5 text-muted-foreground" />
+              Dupliquer
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => onDelete?.(item)}
+              className="text-destructive focus:text-destructive"
+            >
+              <Trash2 className="mr-2 size-3.5" />
+              Supprimer
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    );
+  }, [onEdit, onDuplicate, onDelete]);
+
+  const ToggleActive = useCallback(function ToggleActive({ item }: { item: Question }) {
+    return (
+      <Switch
+        checked={item.isActive}
+        onCheckedChange={() => onToggleActive?.(item)}
+        size="sm"
+        className="data-[state=checked]:bg-(--color-primary)"
+      />
+    );
+  }, [onToggleActive]);
+
+  const columns: DataTableColumn<Question>[] = useMemo(() => [
+    {
+      key: "referenceNumber",
+      label: "Référence",
+      sortable: true,
+      render: (question) => (
+        <span className="text-xs font-medium text-foreground">
+          {question.referenceNumber}
+        </span>
+      ),
+    },
     {
       key: "name",
       label: "Nom",
       sortable: true,
       render: (question) => (
-        <div className="flex flex-col">
-          <span className="text-xs font-medium text-foreground">
-            {question.name}
-          </span>
-          <span className="text-xs text-muted-foreground">
-            {question.identificationNumber}
-          </span>
-        </div>
+        <span className="text-xs text-muted-foreground">
+          {question.name}
+        </span>
       ),
     },
     {
@@ -84,14 +138,7 @@ export function AdminQuestionsTable({
       key: "isActive",
       label: "Actif",
       sortable: true,
-      render: (question) => (
-        <Switch
-          checked={question.isActive}
-          onCheckedChange={() => onToggleActive?.(question)}
-          size="sm"
-          className="data-[state=checked]:bg-(--color-primary)"
-        />
-      ),
+      render: (question) => <ToggleActive item={question} />,
     },
     {
       key: "updatedAt",
@@ -107,42 +154,9 @@ export function AdminQuestionsTable({
       key: "actions",
       label: "",
       sortable: false,
-      render: (question) => (
-        <div className="text-right" onClick={(e) => e.stopPropagation()}>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-8 text-muted-foreground hover:text-foreground data-[state=open]:bg-muted"
-                aria-label={`Actions pour ${question.name}`}
-              >
-                <MoreHorizontal className="size-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-44">
-              <DropdownMenuItem onClick={() => onEdit?.(question)}>
-                <Pencil className="mr-2 size-3.5 text-muted-foreground" />
-                Modifier
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onDuplicate?.(question)}>
-                <Copy className="mr-2 size-3.5 text-muted-foreground" />
-                Dupliquer
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={() => onDelete?.(question)}
-                className="text-destructive focus:text-destructive"
-              >
-                <Trash2 className="mr-2 size-3.5" />
-                Supprimer
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      ),
+      render: (question) => <ActionMenu item={question} />,
     },
-  ];
+  ], [onEdit, onDuplicate, onDelete, onToggleActive]);
 
   return (
     <DataTable
@@ -165,3 +179,5 @@ export function AdminQuestionsTable({
     />
   );
 }
+
+export const AdminQuestionsTable = memo(AdminQuestionsTableBase);

@@ -1,4 +1,4 @@
-import { ArrowRightLeft, CircleCheckBig, CircleDot, SquareCheckBig } from "lucide-react";
+import { GitCompareArrows, CircleCheckBig, CircleDot, SquareCheckBig } from "lucide-react";
 import type { ReactNode } from "react";
 
 export const TYPE_ICONS: Record<string, { icon: ReactNode; color: string }> = {
@@ -15,7 +15,7 @@ export const TYPE_ICONS: Record<string, { icon: ReactNode; color: string }> = {
     color: "text-violet-500",
   },
   matching: {
-    icon: <ArrowRightLeft className="size-8" />,
+    icon: <GitCompareArrows className="size-8" />,
     color: "text-amber-500",
   },
 };

@@ -6,13 +6,12 @@ import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import type { FieldValues } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Field } from "@/components/ui/field";
 import { cn } from "@/lib/utils";
 
@@ -66,7 +65,7 @@ function QuestionFormModalBase({
         name: source.name,
         text: source.text,
         generalFeedback: source.generalFeedback,
-        identificationNumber: source.identificationNumber,
+        referenceNumber: source.referenceNumber,
         isActive: source.isActive,
         hasDuration: !!source.duration,
         durationValue: source.duration?.value ?? "",
@@ -75,17 +74,17 @@ function QuestionFormModalBase({
         correctAnswer: source.correctAnswer,
         feedbackTrue: source.feedbackTrue,
         feedbackFalse: source.feedbackFalse,
-        options: source.options.map((o) => ({
-          id: o.id,
-          label: o.label,
-          isCorrect: o.isCorrect,
-          score: o.score,
-          feedback: o.feedback,
+        options: source.options.map((option) => ({
+          id: option.id,
+          label: option.label,
+          isCorrect: option.isCorrect,
+          score: option.score,
+          feedback: option.feedback,
         })),
-        pairs: source.pairs.map((p) => ({
-          id: p.id,
-          question: p.question,
-          answer: p.answer,
+        pairs: source.pairs.map((pair) => ({
+          id: pair.id,
+          question: pair.question,
+          answer: pair.answer,
         })),
       };
     }
@@ -143,18 +142,22 @@ function QuestionFormModalBase({
 
   const title =
     isDuplicate ? "Dupliquer la question"
-    : step === 0 ? "Nouvelle question"
+    : step === 0 ? ""
     : (selectedTypeLabel ?? "Question");
   const description =
-    "Configurez votre question, ajoutez les réponses et leurs feedbacks.";
+    "Configurez votre question, ajoutez les réponses et leurs explications.";
 
   return (
-    <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && modal.handleClose()}>
-      <DialogContent
-        className="flex flex-col gap-0 p-0 inset-0 h-dvh max-w-full -translate-x-0 -translate-y-0 rounded-none sm:max-w-full"
+    <Sheet open={open} onOpenChange={(nextOpen) => !nextOpen && modal.handleClose()}>
+      <SheetContent
+        className={cn(
+          "flex flex-col gap-0 p-0 transition-all duration-300",
+          step === 0 && "sm:max-w-lg",
+          step === 1 && "!w-2/3 !max-w-[70%] [animation:none] transition-none",
+        )}
         showCloseButton={true}
       >
-        <DialogHeader
+        <SheetHeader
           className={cn(
             "border-b px-6 py-4 transition-all duration-300",
             step === 0 ? "border-transparent" : "border-border",
@@ -183,22 +186,22 @@ function QuestionFormModalBase({
               </Button>
             )}
             <div className="min-w-0">
-              <DialogTitle className="flex items-center gap-2">
+              <SheetTitle className="flex items-center gap-2">
                 {step === 1 && (
                   <span className="[&>svg]:size-4 shrink-0">
                     {TYPE_ICONS[selectedType]?.icon}
                   </span>
                 )}
                 <span className="truncate">{title}</span>
-              </DialogTitle>
+              </SheetTitle>
               {step === 1 && (
-                <DialogDescription className="mt-0.5">
+                <SheetDescription className="mt-0.5">
                   {description}
-                </DialogDescription>
+                </SheetDescription>
               )}
             </div>
           </div>
-        </DialogHeader>
+        </SheetHeader>
 
         <Field {...modal.form}>
           <form
@@ -216,103 +219,87 @@ function QuestionFormModalBase({
                 </div>
               )}
 
-              <div
-                key="step-0"
-                className={cn(
-                  "absolute inset-0 transition-all duration-300 ease-in-out",
-                  step === 0
-                    ? "opacity-100 translate-y-0"
-                    : "opacity-0 translate-y-6 pointer-events-none",
-                )}
-              >
-                <div className="flex h-full items-center justify-center p-6">
-                  <div className="w-full max-w-lg">
-                    <QuestionFormTypeSelect
-                      onSelect={(type) => {
-                        modal.form.setValue("type", type);
-                        onSelectType(type);
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div
-                key="step-1"
-                className={cn(
-                  "absolute inset-0 overflow-hidden px-6 py-5 transition-all duration-300 ease-in-out",
-                  step === 1
-                    ? "opacity-100 translate-y-0"
-                    : "opacity-0 translate-y-6 pointer-events-none",
-                )}
-              >
-                <div className="grid h-full w-full auto-rows-fr grid-cols-1 gap-10 lg:grid-cols-2">
-                  <div className="max-h-[75vh] overflow-y-auto">
-                    <QuestionFormFieldsCommon form={modal.form} />
-                  </div>
-
-                  <div className="max-h-[75vh] overflow-y-auto pr-1">
-                    {selectedType === "true_false" && (
-                      <QuestionFormFieldsTrueFalse form={modal.form} />
-                    )}
-
-                    {(selectedType === "single_choice" ||
-                      selectedType === "multiple_choice") && (
-                      <QuestionFormFieldsChoices
-                        form={modal.form}
-                        selectedType={selectedType}
+              {step === 0 && (
+                <div className="absolute inset-0">
+                  <div className="flex h-full justify-center p-6 pt-10">
+                    <div className="w-full max-w-lg">
+                      <QuestionFormTypeSelect
+                        onSelect={(type) => {
+                          modal.form.setValue("type", type);
+                          onSelectType(type);
+                        }}
                       />
-                    )}
-
-                    {selectedType === "matching" && (
-                      <QuestionFormFieldsMatching form={modal.form} />
-                    )}
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
+
+              {step === 1 && (
+                <div className="absolute inset-0 overflow-hidden px-2 py-2">
+                  <div className="grid h-full w-full gap-4 lg:grid-cols-[0.85fr_1.9fr]">
+                    <section className="flex h-full min-h-0 flex-col overflow-hidden rounded-3xl bg-background/90 p-3 pt-6 ring-1 ring-border/10">
+                      <div className="flex-1 min-h-0 overflow-y-auto pr-1">
+                        <QuestionFormFieldsCommon form={modal.form} />
+                      </div>
+                    </section>
+
+                    <section className="flex h-full min-h-0 flex-col overflow-hidden rounded-3xl bg-background p-6 ring-1 ring-border/10">
+                      <div className="flex-1 min-h-0 overflow-y-auto pr-1">
+                        {selectedType === "true_false" && (
+                          <QuestionFormFieldsTrueFalse form={modal.form} />
+                        )}
+
+                        {(selectedType === "single_choice" ||
+                          selectedType === "multiple_choice") && (
+                          <QuestionFormFieldsChoices
+                            form={modal.form}
+                            selectedType={selectedType}
+                          />
+                        )}
+
+                        {selectedType === "matching" && (
+                          <QuestionFormFieldsMatching form={modal.form} />
+                        )}
+                      </div>
+                    </section>
+                  </div>
+                </div>
+              )}
+
             </div>
 
-            <div
-              className={cn(
-                "transition-all duration-300 ease-in-out",
-                step === 1
-                  ? "opacity-100 translate-y-0 max-h-20"
-                  : "opacity-0 translate-y-4 max-h-0 pointer-events-none overflow-hidden",
-              )}
-            >
-              <DialogFooter className="border-t bg-background px-6 py-4 sm:justify-between">
-                <div className="flex w-full items-center justify-between gap-3">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={modal.handleClose}
-                    disabled={modal.mutation.isPending}
-                  >
-                    Annuler
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={modal.mutation.isPending}
-                    className="bg-(--color-primary) hover:bg-(--color-primary)/80"
-                  >
-                    {modal.mutation.isPending && (
-                      <Loader2 className="size-4 animate-spin mr-1" />
-                    )}
-                    {modal.mutation.isPending
-                      ? isEdit
-                        ? "Enregistrement…"
-                        : "Création…"
-                      : isEdit
-                        ? "Enregistrer"
-                        : "Créer"}
-                  </Button>
-                </div>
-              </DialogFooter>
-            </div>
+            {step === 1 && (
+              <div className="flex w-full items-center justify-between gap-3 border-t bg-background px-6 py-4 sm:justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={modal.handleClose}
+                  disabled={modal.mutation.isPending}
+                >
+                  Annuler
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={modal.mutation.isPending}
+                  className="bg-(--color-primary) hover:bg-(--color-primary)/80"
+                >
+                  {modal.mutation.isPending && (
+                    <Loader2 className="size-4 animate-spin mr-1" />
+                  )}
+                  {modal.mutation.isPending
+                    ? isEdit
+                      ? "Enregistrement…"
+                      : "Création…"
+                    : isEdit
+                      ? "Enregistrer"
+                      : "Créer"}
+                </Button>
+              </div>
+            )}
           </form>
         </Field>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }
 

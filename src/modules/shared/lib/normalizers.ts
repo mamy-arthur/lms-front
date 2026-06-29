@@ -85,7 +85,7 @@ export interface Question {
   text: string;
   type: QuestionType;
   generalFeedback: string;
-  identificationNumber: string;
+  referenceNumber: string;
   isActive: boolean;
   duration: Duration | null;
   moduleId: string;
@@ -108,7 +108,7 @@ export function normalizeQuestion(raw: Record<string, unknown>): Question {
     text: String(raw.text ?? ""),
     type: String(raw.type ?? "single_choice") as QuestionType,
     generalFeedback: String(raw.generalFeedback ?? raw.general_feedback ?? ""),
-    identificationNumber: String(raw.identificationNumber ?? raw.identification_number ?? ""),
+    referenceNumber: String(raw.referenceNumber ?? raw.identification_number ?? ""),
     isActive: Boolean(raw.isActive ?? raw.is_active ?? true),
     duration: rawDuration && typeof rawDuration === "object"
       ? { value: Number((rawDuration as Record<string, unknown>).value ?? 0), unit: String((rawDuration as Record<string, unknown>).unit ?? "minute") as Duration["unit"] }

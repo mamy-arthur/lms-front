@@ -31,91 +31,88 @@ export function QuestionFormFieldsCommon({ form }: CommonFieldsProps) {
   const hasDuration = useWatch({ control: form.control, name: "hasDuration" });
 
   return (
-    <div className="rounded-lg border bg-background p-4 space-y-5 h-full">
-      {/* Groupe : contenu pédagogique */}
-      <div className="space-y-3">
-        <FieldRoot
-          control={form.control}
-          name="name"
-          render={({ field }) => (
-            <FieldGroup className="space-y-2">
-              <FieldLabel className="text-xs">Nom*</FieldLabel>
-              <FieldContent>
-                <Input autoFocus aria-label="Nom" {...field} />
-              </FieldContent>
-              <FieldError />
-            </FieldGroup>
-          )}
-        />
+    <div className="flex h-full min-h-0 flex-col rounded-3xl bg-background/90 ring-1 ring-border/10">
+        <div className="mb-3">
+          <p className="text-xs font-semibold uppercase text-muted-foreground">
+            Informations générales
+          </p>
+          <p className="mt-2 text-xs text-foreground/80">
+            Renseignez les métadonnées et les paramètres de base de la question
+          </p>
+        </div>
+      <div className="flex h-full min-h-0 flex-col overflow-hidden">
+        <section className="rounded-3xl bg-muted/5 ring-1 ring-border/10">
+          <FieldRoot
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <FieldGroup className="space-y-2 pl-3 py-2">
+                <FieldLabel className="text-xs">Nom*</FieldLabel>
+                <FieldContent>
+                  <Input autoFocus aria-label="Nom" {...field} className="text-foreground/70"/>
+                </FieldContent>
+                <FieldError />
+              </FieldGroup>
+            )}
+          />
 
-        <FieldRoot
-          control={form.control}
-          name="text"
-          render={({ field }) => (
-            <FieldGroup className="space-y-2">
-              <FieldLabel className="text-xs">
-                Texte de la question *
-              </FieldLabel>
-              <FieldContent>
-                <Textarea
-                  aria-label="Texte"
-                  className="min-h-16 resize-y"
-                  {...field}
-                />
-              </FieldContent>
-              <FieldError />
-            </FieldGroup>
-          )}
-        />
+          <FieldRoot
+            control={form.control}
+            name="text"
+            render={({ field }) => (
+              <FieldGroup className="space-y-2 pl-3 py-2">
+                <FieldLabel className="text-xs">Texte de la question *</FieldLabel>
+                <FieldContent>
+                  <Textarea
+                    aria-label="Texte"
+                    className="min-h-20 resize-y text-foreground/80"
 
-        <FieldRoot
-          control={form.control}
-          name="generalFeedback"
-          render={({ field }) => (
-            <FieldGroup className="space-y-2">
-              <FieldLabel className="text-xs">Feedback général</FieldLabel>
-              <FieldContent>
-                <Textarea
-                  aria-label="Feedback général"
-                  className="min-h-16 resize-y"
-                  {...field}
-                />
-              </FieldContent>
-              <FieldError />
-            </FieldGroup>
-          )}
-        />
-      </div>
+                    {...field}
+                  />
+                </FieldContent>
+                <FieldError />
+              </FieldGroup>
+            )}
+          />
 
-      {/* Groupe : paramètres */}
-      <div className="space-y-3 border-t pt-4">
-        <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-          Paramètres
-        </p>
+          <FieldRoot
+            control={form.control}
+            name="generalFeedback"
+            render={({ field }) => (
+              <FieldGroup className="space-y-2 pl-3 py-2">
+                <FieldLabel className="text-xs">Commentaire général</FieldLabel>
+                <FieldContent>
+                  <Textarea
+                    aria-label="Commentaire général"
+                    className="min-h-20 resize-y text-foreground/70"
+                    {...field}
+                  />
+                </FieldContent>
+                <FieldError />
+              </FieldGroup>
+            )}
+          />
+        </section>
 
-        <FieldRoot
-          control={form.control}
-          name="identificationNumber"
-          render={({ field }) => (
-            <FieldGroup className="space-y-2">
-              <FieldLabel className="text-xs">
-                Numéro d'identification
-              </FieldLabel>
-              <FieldContent>
-                <Input aria-label="Numéro d'identification" {...field} />
-              </FieldContent>
-              <FieldError />
-            </FieldGroup>
-          )}
-        />
-
+        <section className="rounded-3xl bg-muted/5 pl-3 py-5 ring-1 ring-border/10">
+            <p className="text-xs font-semibold uppercase text-muted-foreground pt-5">
+             Paramètres
+            </p>
+            <p className="mt-2 text-xs text-foreground/80">
+              Activez la question, ajoutez une durée et associez-la à un module
+            </p>
         <FieldRoot
           control={form.control}
           name="isActive"
           render={({ field }) => (
             <FieldGroup>
-              <div className="flex items-center justify-between rounded-md bg-muted/40 px-3 py-2.5">
-                <FieldLabel className="text-xs font-normal">Actif</FieldLabel>
+              <div className="flex items-center justify-between rounded-3xl bg-muted/20 p-3">
+                <div>
+                  <FieldLabel className="text-xs font-medium">Actif</FieldLabel>
+                  <p className="text-[11px] text-muted-foreground">
+                    Activer cette question dans le quiz.
+                  </p>
+                </div>
                 <Switch
                   checked={field.value}
                   onCheckedChange={field.onChange}
@@ -132,8 +129,13 @@ export function QuestionFormFieldsCommon({ form }: CommonFieldsProps) {
           name="hasDuration"
           render={({ field }) => (
             <FieldGroup>
-              <div className="flex items-center justify-between rounded-md bg-muted/40 px-3 py-2.5">
-                <FieldLabel className="text-xs font-normal">Durée</FieldLabel>
+              <div className="flex items-center justify-between rounded-3xl bg-muted/20 p-3">
+                <div>
+                  <FieldLabel className="text-xs font-medium">Durée</FieldLabel>
+                  <p className="text-[11px] text-muted-foreground">
+                    Activer la durée et définir le format.
+                  </p>
+                </div>
                 <Switch
                   checked={field.value}
                   onCheckedChange={(v) => {
@@ -152,61 +154,74 @@ export function QuestionFormFieldsCommon({ form }: CommonFieldsProps) {
         />
 
         {hasDuration && (
-          <div className="ml-3 flex gap-2 border-l-2 border-muted pl-3 animate-in fade-in slide-in-from-top-1 duration-150">
-            <FieldRoot
-              control={form.control}
-              name="durationValue"
-              render={({ field }) => (
-                <FieldGroup className="flex-1 space-y-2">
-                  <FieldLabel className="text-xs">Valeur</FieldLabel>
-                  <FieldContent>
-                    <Input
-                      type="number"
-                      min={1}
-                      aria-label="Valeur"
-                      {...field}
-                    />
-                  </FieldContent>
-                  <FieldError />
-                </FieldGroup>
-              )}
-            />
-            <FieldRoot
-              control={form.control}
-              name="durationUnit"
-              render={({ field }) => (
-                <FieldGroup className="w-32 space-y-2">
-                  <FieldLabel className="text-xs">Unité</FieldLabel>
-                  <FieldContent>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <SelectTrigger aria-label="Unité">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {DURATION_UNIT_OPTIONS.map((u) => (
-                          <SelectItem key={u.value} value={u.value}>
-                            {u.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </FieldContent>
-                  <FieldError />
-                </FieldGroup>
-              )}
-            />
+            <div className="flex gap-3 items-start border-l-2 border-muted/40 pl-3">
+                <FieldRoot
+                  control={form.control}
+                  name="durationValue"
+                  render={({ field }) => (
+                    <FieldGroup className="flex-1 space-y-2">
+                      <FieldLabel className="text-xs">Valeur</FieldLabel>
+                      <FieldContent>
+                        <Input
+                          type="number"
+                          min={1}
+                          aria-label="Valeur"
+                          {...field}
+                        />
+                      </FieldContent>
+                      <FieldError />
+                    </FieldGroup>
+                  )}
+                />
+                <FieldRoot
+                  control={form.control}
+                  name="durationUnit"
+                  render={({ field }) => (
+                    <FieldGroup className="w-[140px] shrink-0 space-y-2">
+                      <FieldLabel className="text-xs">Unité</FieldLabel>
+                      <FieldContent>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <SelectTrigger aria-label="Unité">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {DURATION_UNIT_OPTIONS.map((u) => (
+                              <SelectItem key={u.value} value={u.value}>
+                                {u.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FieldContent>
+                      <FieldError />
+                    </FieldGroup>
+                  )}
+                />
           </div>
         )}
+        <FieldRoot
+            control={form.control}
+            name="referenceNumber"
+            render={({ field }) => (
+              <FieldGroup className="space-y-2 pl-3 py-3">
+                <FieldLabel className="text-xs">Numéro de référence</FieldLabel>
+                <FieldContent>
+                  <Input aria-label="Numéro de référence" {...field} className="text-foreground/70"/>
+                </FieldContent>
+                <FieldError />
+              </FieldGroup>
+            )}
+          />
 
         <FieldRoot
           control={form.control}
           name="moduleId"
           render={({ field }) => (
-            <FieldGroup className="space-y-2">
+            <FieldGroup className="space-y-2 pl-3 py-3">
               <FieldLabel className="text-xs">Module</FieldLabel>
               <FieldContent>
                 <Select onValueChange={field.onChange} value={field.value}>
-                  <SelectTrigger aria-label="Module">
+                  <SelectTrigger className="w-full text-foreground/70" aria-label="Module">
                     <SelectValue placeholder="Sélectionner un module" />
                   </SelectTrigger>
                   <SelectContent>
@@ -222,7 +237,8 @@ export function QuestionFormFieldsCommon({ form }: CommonFieldsProps) {
             </FieldGroup>
           )}
         />
-      </div>
+      </section>
+    </div>
     </div>
   );
 }

@@ -21,7 +21,7 @@ export const formSchema = z
     name: z.string().min(1, "Nom requis").max(255),
     text: z.string().min(1, "Texte requis"),
     generalFeedback: z.string(),
-    identificationNumber: z.string(),
+    referenceNumber: z.string(),
     isActive: z.boolean(),
     hasDuration: z.boolean(),
     durationValue: z.union([z.string(), z.number()]).optional(),
@@ -76,7 +76,7 @@ export function buildQuestionPayload(
     text: values.text,
     type: values.type,
     generalFeedback: values.generalFeedback,
-    identificationNumber: values.identificationNumber,
+    referenceNumber: values.referenceNumber,
     isActive: values.isActive,
     duration: values.hasDuration
       ? {
@@ -99,7 +99,7 @@ export function getCreateDefaults(): FormValues {
     name: "",
     text: "",
     generalFeedback: "",
-    identificationNumber: "",
+    referenceNumber: "",
     isActive: true,
     hasDuration: false,
     durationValue: "",

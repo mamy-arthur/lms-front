@@ -15,7 +15,7 @@ export function useCreateQuestion() {
         text: data.text,
         type: data.type,
         general_feedback: data.generalFeedback,
-        identification_number: data.identificationNumber,
+        identification_number: data.referenceNumber,
         is_active: data.isActive,
         duration: data.duration,
         module_id: data.moduleId,

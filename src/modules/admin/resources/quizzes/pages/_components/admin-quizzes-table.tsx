@@ -1,5 +1,6 @@
 "use client";
 
+import React, { memo, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Copy, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -38,7 +39,7 @@ interface AdminQuizzesTableProps {
   onDelete?: (quiz: Quiz) => void;
 }
 
-export function AdminQuizzesTable({
+function AdminQuizzesTableBase({
   quizzes,
   isLoading = false,
   hasQuery = false,
@@ -54,18 +55,65 @@ export function AdminQuizzesTable({
   onDelete,
 }: AdminQuizzesTableProps) {
   const router = useRouter();
-  const columns: DataTableColumn<Quiz>[] = [
+
+  const handleRowClick = useCallback((quiz: Quiz) => {
+    router.push(ROUTES.admin.quizQuestions(quiz.id));
+  }, [router]);
+
+  const ActionMenu = useCallback(function ActionMenu({ item }: { item: Quiz }) {
+    return (
+      <div className="text-right" onClick={(e) => e.stopPropagation()}>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-8 text-muted-foreground hover:text-foreground data-[state=open]:bg-muted"
+              aria-label={`Actions pour ${item.title}`}
+            >
+              <MoreHorizontal className="size-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-44">
+            <DropdownMenuItem onClick={() => onEdit?.(item)}>
+              <Pencil className="mr-2 size-3.5 text-muted-foreground" />
+              Modifier
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onDuplicate?.(item)}>
+              <Copy className="mr-2 size-3.5 text-muted-foreground" />
+              Dupliquer
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => onDelete?.(item)}
+              className="text-destructive focus:text-destructive"
+            >
+              <Trash2 className="mr-2 size-3.5" />
+              Supprimer
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    );
+  }, [onEdit, onDuplicate, onDelete]);
+
+  const columns: DataTableColumn<Quiz>[] = useMemo(() => [
     {
-      key: "title",
-      label: "Nom",
+      key: "slug",
+      label: "Référence",
       sortable: true,
       render: (quiz) => (
-        <div className="flex flex-col">
-          <span className="text-xs font-medium text-foreground">
-            {quiz.title}
-          </span>
-          <span className="text-xs text-muted-foreground">{quiz.slug}</span>
-        </div>
+        <span className="text-xs font-medium text-foreground">
+          {quiz.slug}
+        </span>
+      ),
+    },
+    {
+      key: "title",
+      label: "Titre",
+      sortable: true,
+      render: (quiz) => (
+        <span className="text-xs text-muted-foreground">{quiz.title}</span>
       ),
     },
     {
@@ -112,42 +160,10 @@ export function AdminQuizzesTable({
       key: "actions",
       label: "",
       sortable: false,
-      render: (quiz) => (
-        <div className="text-right" onClick={(e) => e.stopPropagation()}>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-8 text-muted-foreground hover:text-foreground data-[state=open]:bg-muted"
-                aria-label={`Actions pour ${quiz.title}`}
-              >
-                <MoreHorizontal className="size-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-44">
-              <DropdownMenuItem onClick={() => onEdit?.(quiz)}>
-                <Pencil className="mr-2 size-3.5 text-muted-foreground" />
-                Modifier
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onDuplicate?.(quiz)}>
-                <Copy className="mr-2 size-3.5 text-muted-foreground" />
-                Dupliquer
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={() => onDelete?.(quiz)}
-                className="text-destructive focus:text-destructive"
-              >
-                <Trash2 className="mr-2 size-3.5" />
-                Supprimer
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      ),
+      render: (quiz) => <ActionMenu item={quiz} />,
     },
-  ];
+  
+  ], [onEdit, onDuplicate, onDelete]);
 
   return (
     <DataTable
@@ -163,7 +179,7 @@ export function AdminQuizzesTable({
       onPageChange={onPageChange}
       onPageSizeChange={onPageSizeChange}
       rowTestId="admin-quiz-row"
-      onRowClick={(quiz) => router.push(ROUTES.admin.quizQuestions(quiz.id))}
+      onRowClick={handleRowClick}
       emptyState={{
         title: "Aucun quiz",
         description: "Aucun quiz pour le moment.",
@@ -171,3 +187,5 @@ export function AdminQuizzesTable({
     />
   );
 }
+
+export const AdminQuizzesTable = memo(AdminQuizzesTableBase);
