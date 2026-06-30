@@ -1,20 +1,42 @@
-export function ClientManagerDashboard() {
-  return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">Tableau de bord</h1>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <StatCard label="Stagiaires actifs" value="—" />
-        <StatCard label="Formations en cours" value="—" />
-      </div>
-    </div>
-  );
-}
+"use client";
 
-function StatCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-      <p className="text-sm text-gray-500">{label}</p>
-      <p className="mt-1 text-3xl font-bold text-gray-900">{value}</p>
-    </div>
-  );
+import { ChartLineDots } from "@/modules/shared/components/dashboard/chart/ChartBar";
+import { KpiCards } from "@/modules/shared/components/dashboard/KpiCards";
+import TopClientsCard from "@/modules/shared/components/dashboard/top-client/TopClientsCard";
+import TopCoursesCard from "@/modules/shared/components/dashboard/top-courses/TopCoursesCard";
+
+export function ClientManagerDashboard() {
+    return (
+        <div className="bg-background flex flex-col">
+            <div className="mx-auto w-full">
+                <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <h1 className="text-2xl font-bold tracking-tight">
+                            Tableau de bord
+                        </h1>{" "}
+                        <p className="mt-1 text-sm text-muted-foreground">
+                            Vue d'ensemble des indicateurs clés et des activités
+                            récentes de votre plateforme.
+                        </p>
+                    </div>
+                </header>
+                <div className="flex flex-col space-y-2">
+                    <div className="grid grid-cols-1 md:grid-cols-1 gap-2 lg:grid-cols-2">
+                        <KpiCards />
+                        <ChartLineDots />
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-2 xl:grid-cols-3">
+                        <div className="xl:col-span-2">
+                            <TopCoursesCard />
+                        </div>
+
+                        <div className="xl:col-span-1">
+                            <TopClientsCard />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
 }

@@ -15,7 +15,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { Tenant } from "@/shared/types/tenant.types";
 
 interface FilterOption {
   value: string;
@@ -27,9 +26,6 @@ interface AdminFilterPopoverProps {
   firstFilterOptions: FilterOption[];
   firstFilterValue: string;
   onFirstFilterChange: (value: string) => void;
-  tenants: Tenant[];
-  tenantFilterValue: string;
-  onTenantFilterChange: (value: string) => void;
   onSearch: () => void;
 }
 
@@ -38,9 +34,6 @@ export function AdminFilterPopover({
   firstFilterOptions,
   firstFilterValue,
   onFirstFilterChange,
-  tenants,
-  tenantFilterValue,
-  onTenantFilterChange,
   onSearch,
 }: AdminFilterPopoverProps) {
   return (
@@ -69,26 +62,6 @@ export function AdminFilterPopover({
                 {firstFilterOptions.map((opt) => (
                   <SelectItem key={opt.value} value={opt.value}>
                     {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground">Tenant</Label>
-            <Select
-              value={tenantFilterValue}
-              onValueChange={onTenantFilterChange}
-            >
-              <SelectTrigger aria-label="Filtrer par tenant" className="w-full">
-                <SelectValue placeholder="Tous les tenants" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tous</SelectItem>
-                {tenants.map((t) => (
-                  <SelectItem key={t.id} value={t.id}>
-                    {t.name}
                   </SelectItem>
                 ))}
               </SelectContent>

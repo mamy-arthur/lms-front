@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 import { adminCoursesApi } from "../../../../admin/resources/courses/api";
-import { normalizeCourse } from "../types";
 
 interface Params {
   page: number;
@@ -15,7 +14,7 @@ export function useCoursesQuery({ page, perPage, q }: Params) {
       const resp = await adminCoursesApi.list({ page, limit: perPage, q });
       const raw = resp.items ?? resp.data ?? [];
       return {
-        data: raw.map((c) => normalizeCourse(c as unknown as Record<string, unknown>)),
+        data: raw,
         total: resp.total ?? raw.length,
       };
     },

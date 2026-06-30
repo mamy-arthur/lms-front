@@ -7,7 +7,6 @@ export interface CreateQuizPayload {
   description?: string;
   is_final_evaluation: boolean;
   formation_id: string;
-  tenant_id: string;
 }
 
 export interface UpdateQuizPayload {
@@ -16,13 +15,11 @@ export interface UpdateQuizPayload {
   description?: string;
   is_final_evaluation: boolean;
   formation_id: string;
-  tenant_id: string;
 }
 
 export interface QuizSearchParams {
   q?: string;
   formation_id?: string;
-  tenant_id?: string;
   sort_by?: string;
   sort_dir?: "asc" | "desc";
   page?: number;

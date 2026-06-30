@@ -17,7 +17,6 @@ export function useCreateQuiz() {
         formationId: data.formation_id,
         questionCount: 0,
         activeQuestionCount: 0,
-        tenantId: data.tenant_id,
         updatedAt: new Date().toISOString(),
       };
       return Promise.resolve({ data: mockRaw });

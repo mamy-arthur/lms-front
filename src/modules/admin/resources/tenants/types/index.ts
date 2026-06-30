@@ -10,10 +10,10 @@ export function normalizeTenant(raw: Record<string, unknown>): Tenant {
     status: (raw.status as Tenant["status"]) ?? "active",
     is_active: Boolean(raw.is_active ?? raw.isActive ?? true),
     branding: {
-      primaryColor: String((raw.branding as any)?.primaryColor ?? "#2563eb"),
-      secondaryColor: String((raw.branding as any)?.secondaryColor ?? "#64748b"),
-      logoUrl: String((raw.branding as any)?.logoUrl ?? ""),
-      faviconUrl: String((raw.branding as any)?.faviconUrl ?? ""),
+      primary_color: String((raw.branding as any)?.primaryColor ?? "#2563eb"),
+      secondary_color: String((raw.branding as any)?.secondaryColor ?? "#64748b"),
+      logo_url: String((raw.branding as any)?.logoUrl ?? ""),
+      favicon_url: String((raw.branding as any)?.faviconUrl ?? ""),
       fontFamily: String((raw.branding as any)?.fontFamily ?? "Inter"),
     },
     features: {

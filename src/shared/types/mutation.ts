@@ -1,5 +1,5 @@
 export interface MutationLike {
-  mutate: (...args: any[]) => void;
+  mutate: (variables: any, options?: { onSuccess?: () => void }) => void;
   isPending: boolean;
   isError: boolean;
   error: unknown;

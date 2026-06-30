@@ -1,12 +1,9 @@
 "use client";
 
 import { Plus } from "lucide-react";
-import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { UserSearch } from "@modules/shared/components/users";
-import { useAllTenantsQuery } from "@/modules/shared/hooks/useAllTenantsQuery";
 import { AdminUserFormDrawer } from "./_components/admin-user-form-drawer";
-import { AdminUsersFilter } from "./_components/admin-users-filters";
 import { AdminUsersTable } from "./_components/admin-users-table";
 import { useUsersQuery } from "../hooks/useUsersQuery";
 import type { User, UserSearchParams } from "../types";
@@ -21,8 +18,6 @@ export function UsersList() {
     setDraftRole,
     draftStatus,
     setDraftStatus,
-    draftTenant,
-    setDraftTenant,
     params,
     sort,
     handleSearch,
@@ -36,18 +31,7 @@ export function UsersList() {
     page,
     pageSize,
     hasQuery,
-  } = useUsersListController<User, UserSearchParams>({ includeTenantFilter: true, defaultPageSize: 25 });
-
-  const { data: tenantsData } = useAllTenantsQuery();
-  const tenants = tenantsData?.data ?? [];
-
-  const tenantNames = useMemo(() => {
-    const map: Record<string, string> = {};
-    for (const t of tenants) {
-      map[t.id] = t.name;
-    }
-    return map;
-  }, [tenants]);
+  } = useUsersListController<User, UserSearchParams>({ defaultPageSize: 25 });
 
   const { data, isLoading } = useUsersQuery(params);
 
@@ -73,16 +57,6 @@ export function UsersList() {
             onSearch={handleSearch}
           />
           <div className="flex items-center gap-2 sm:ml-auto">
-            <AdminUsersFilter
-              roleFilter={draftRole}
-              statusFilter={draftStatus}
-              tenantFilter={draftTenant}
-              onRoleFilterChange={setDraftRole}
-              onStatusFilterChange={setDraftStatus}
-              onTenantFilterChange={setDraftTenant}
-              onSearch={handleSearch}
-              tenants={tenants}
-            />
             <Button
               onClick={handleOpenCreate}
               className="bg-(--color-primary) hover:bg-(--color-primary)/80 text-primary-foreground shrink-0"
@@ -108,7 +82,6 @@ export function UsersList() {
           onEdit={handleEdit}
           onToggleActive={() => {}}
           onDelete={() => {}}
-          tenantNames={tenantNames}
         />
       </div>
 
@@ -117,7 +90,6 @@ export function UsersList() {
         onClose={handleCloseDrawer}
         onSuccess={handleSuccess}
         user={editingUser}
-        tenants={tenants}
       />
     </div>
   );
