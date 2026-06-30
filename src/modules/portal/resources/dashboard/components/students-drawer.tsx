@@ -5,6 +5,8 @@ import {
     CheckCircle2,
     PlayCircle,
     ListChecks,
+    MessageSquare,
+    Mail,
 } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -18,11 +20,9 @@ import {
     SheetHeader,
     SheetTitle,
 } from "@/components/ui/sheet";
-import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
-import type { CourseModule, Student } from "../lib/students-data";
-import { ProgressVariant } from "@/shared/components/ui/progress/Progress";
+import type { Student } from "../lib/students-data";
 import { ModuleSteps } from "./ModuleSteps";
+import { Button } from "@/components/ui/button";
 
 interface StudentDrawerProps {
     student: Student | null;
@@ -62,9 +62,9 @@ export function StudentDrawer({
     ).length;
 
     const summary = [
-        { icon: CheckCircle2, label: "Terminés", value: completed },
-        { icon: PlayCircle, label: "En cours", value: inProgress },
-        { icon: ListChecks, label: "Restants", value: remaining },
+        { icon: CheckCircle2, label: "Module Terminés", value: completed },
+        { icon: PlayCircle, label: "Module En cours", value: inProgress },
+        { icon: ListChecks, label: "Module Restants", value: remaining },
         { icon: Layers, label: "Global", value: `${student.progress}%` },
     ];
 
@@ -72,7 +72,7 @@ export function StudentDrawer({
         <Sheet open={open} onOpenChange={onOpenChange}>
             <SheetContent
                 side="right"
-                className="flex w-full flex-col gap-0 border-l p-0 sm:max-w-xl overflow-auto"
+                className="flex w-full data-[side=right]:max-w-200! flex-col gap-0 border-l p-0 overflow-auto"
             >
                 <SheetHeader className="space-y-0 text-left">
                     <SheetTitle className="sr-only">
@@ -82,36 +82,55 @@ export function StudentDrawer({
                         Suivi de progression et activité récente
                     </SheetDescription>
 
-                    <div className="flex items-center gap-4">
-                        <Avatar>
-                            <AvatarImage src={student.avatarUrl} alt="" />
-                            <AvatarFallback className="bg-muted text-sm font-medium">
-                                {student.initials}
-                            </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1">
-                            <div className="flex flex-wrap items-center gap-2">
-                                <h2 className="text-lg font-semibold text-foreground">
-                                    {student.name}
-                                </h2>
+                    <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-4">
+                            <Avatar>
+                                <AvatarImage src={student.avatarUrl} alt="" />
+                                <AvatarFallback className="bg-muted text-sm font-medium">
+                                    {student.initials}
+                                </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1">
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <h2 className="text-lg font-semibold text-foreground">
+                                        {student.name}
+                                    </h2>
+                                </div>
+                                <p className="text-sm text-muted-foreground">
+                                    Stagiaire
+                                </p>
                             </div>
-                            <p className="text-sm text-muted-foreground">
-                                {student.course}
-                            </p>
+                        </div>
+                        <div className="flex flex-col sm:flex-row items-center gap-2">
+                            <Button variant="outline">
+                                <MessageSquare className="mr-2 h-4 w-4" />
+                                Envoyer un message
+                            </Button>
+                            <Button className="bg-(--color-primary) hover:bg-(--color-primary)/80">
+                                <Mail className="mr-2 h-4 w-4" />
+                                Envoyer un e-mail
+                            </Button>
                         </div>
                     </div>
                 </SheetHeader>
                 <Separator />
-                <div className="space-y-8 px-6 pb-10 pt-5">
+                <div className="space-y-5 px-6 pb-10 pt-5">
+                    <p className="text-base font-semibold text-gray-900">
+                        {student.course}
+                    </p>
                     <section className="space-y-3">
-                        <div className="flex justify-between">
-                            <div className="flex items-center gap-2 text-xs">
-                                <CalendarDays className="h-4 w-4" aria-hidden />
-                                <span>Début · {student.startDate}</span>
+                        <div className="flex gap-4 bg-gray-100 p-2 rounded-lg w-fit text-gray-800">
+                            <div className="flex items-center gap-1 text-xs">
+                                <CalendarDays className="h-3 w-4" aria-hidden />
+                                <span className="text-xs">
+                                    Début · {student.startDate}
+                                </span>
                             </div>
-                            <div className="flex items-center gap-2 text-xs">
-                                <Clock className="h-4 w-4" aria-hidden />
-                                <span>Écoulé · {student.elapsed}</span>
+                            <div className="flex items-center gap-1 text-xs">
+                                <Clock className="h-3 w-4" aria-hidden />
+                                <span className="text-xs">
+                                    Écoulé · {student.elapsed}
+                                </span>
                             </div>
                         </div>
                     </section>
@@ -123,16 +142,19 @@ export function StudentDrawer({
                                     key={label}
                                     className="rounded-xl border-border/60 shadow-none"
                                 >
-                                    <CardContent className="space-y-1.5 p-4">
-                                        <Icon
-                                            className="h-4 w-4 text-muted-foreground"
-                                            aria-hidden
-                                        />
+                                    <CardContent className="space-y-1.5">
+                                        <div className="flex justify-between">
+                                            <p className="text-xs text-muted-foreground">
+                                                {label}
+                                            </p>{" "}
+                                            <Icon
+                                                className="h-4 w-4 text-muted-foreground"
+                                                aria-hidden
+                                            />
+                                        </div>
+
                                         <p className="text-xl font-semibold tabular-nums text-foreground">
                                             {value}
-                                        </p>
-                                        <p className="text-xs text-muted-foreground">
-                                            {label}
                                         </p>
                                     </CardContent>
                                 </Card>
@@ -140,8 +162,10 @@ export function StudentDrawer({
                         </div>
                     </section>
                     {/* Parcours */}
-                    <section className="space-y-3">
-                        <SectionTitle>Parcours de formation</SectionTitle>
+                    <section className="flex flex-col space-y-4">
+                        <span className="text-sm text-gray-500">
+                            Modules a faire
+                        </span>
                         <div className="space-y-3">
                             <ModuleSteps student={student} />
                         </div>

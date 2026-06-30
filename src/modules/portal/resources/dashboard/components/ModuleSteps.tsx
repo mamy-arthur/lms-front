@@ -21,7 +21,7 @@ const MODULE_STATUS_LABEL: Record<CourseModule["status"], string> = {
 
 export function ModuleSteps({ student }: { student: Student }) {
     return (
-        <div className="space-y-4">
+        <div className="space-y-2">
             {student.modules.map((m, index) => {
                 const isCompleted = m.status === "completed";
                 const isInProgress = m.status === "in_progress";
@@ -29,17 +29,17 @@ export function ModuleSteps({ student }: { student: Student }) {
                 return (
                     <div key={m.id} className="flex gap-2">
                         {/* Step indicator */}
-                        <div className="flex flex-col items-center">
+                        <div className="flex flex-col items-center mt-2">
                             <div
                             >
                                 {isCompleted && (
-                                    <CheckCircle2 className="h-5 w-5 text-green-600" />
+                                    <CheckCircle2 className="h-4 w-4 text-green-600" />
                                 )}
                                 {isInProgress && (
-                                    <Clock className="h-5 w-5 text-blue-600" />
+                                    <Clock className="h-4 w-4 text-yellow-600" />
                                 )}
                                 {isTodo && (
-                                    <Circle className="h-5 w-5 text-gray-400" />
+                                    <Circle className="h-4 w-4 text-gray-400" />
                                 )}
                             </div>
 
@@ -47,7 +47,7 @@ export function ModuleSteps({ student }: { student: Student }) {
                             {index !== student.modules.length - 1 && (
                                 <div
                                     className={cn(
-                                        "mt-2 h-12 w-1",
+                                        "mt-2 h-8 w-1",
                                         isCompleted
                                             ? "bg-green-200"
                                             : "bg-gray-200",
@@ -57,22 +57,22 @@ export function ModuleSteps({ student }: { student: Student }) {
                         </div>
 
                         {/* Step content */}
-                        <div className="flex-1 pb-4">
+                        <div className="flex-1 pb-4 pt-4 bg-gray-100 px-4 rounded-md">
                             <div className="flex items-start justify-between gap-3">
                                 <div className="space-y-0.5">
-                                    <p className="text-sm font-bold text-foreground">
+                                    <p className="text-sm font-semibold text-foreground">
                                         {m.name}
                                     </p>
                                     {m.duration && (
                                         <p className="text-xs text-muted-foreground">
-                                            Durée passe · {m.duration}
+                                            Durée ecoule · {m.duration}:20m
                                         </p>
                                     )}
                                 </div>
                                 <Badge
                                     variant="outline"
                                     className={cn(
-                                        "rounded-full px-2.5 py-0.5 text-xs font-medium",
+                                        "rounded-full px-2.5 py-0.5 text-xs",
                                         MODULE_STATUS_CLASS[m.status],
                                     )}
                                 >
