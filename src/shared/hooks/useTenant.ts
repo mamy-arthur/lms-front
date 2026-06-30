@@ -9,7 +9,7 @@ export function useTenant() {
     branding: tenant?.branding,
     features: tenant?.features,
     tenantName: tenant?.name ?? "Learneo",
-    logoUrl: tenant?.branding?.logoUrl ?? "/logo-default.svg",
+    logoUrl: tenant?.branding?.logo_url ?? "/logo-default.svg",
     // true si on est sur le domaine central (aucun sous-domaine)
     isCentralMode: resolutionStatus === "resolved" && tenant === null,
     isResolved: resolutionStatus === "resolved",
