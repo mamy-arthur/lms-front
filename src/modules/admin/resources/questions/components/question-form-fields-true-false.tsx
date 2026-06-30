@@ -49,13 +49,13 @@ export function QuestionFormFieldsTrueFalse({ form }: TrueFalseFieldsProps) {
                   <div className="grid grid-cols-2 gap-2">
                     <Button
                       type="button"
-                      variant={field.value === true ? "default" : "outline"}
+                      variant="outline"
                       size="sm"
                       onClick={() => form.setValue("correctAnswer", true)}
                       className={
                         field.value === true
-                          ? "gap-1.5 text-white bg-(--color-primary) hover:bg-(--color-primary)/80"
-                          : "gap-1.5"
+                          ? "gap-1.5 text-muted-foreground border-(--color-primary) hover:border-(--color-primary)/80"
+                          : "gap-1.5 text-muted-foreground"
                       }
                     >
                       {field.value === true && <Check className="size-3.5" />}
@@ -63,13 +63,13 @@ export function QuestionFormFieldsTrueFalse({ form }: TrueFalseFieldsProps) {
                     </Button>
                     <Button
                       type="button"
-                      variant={field.value === false ? "default" : "outline"}
+                      variant="outline"
                       size="sm"
                       onClick={() => form.setValue("correctAnswer", false)}
                       className={
                         field.value === false
-                          ? "gap-1.5 text-white bg-(--color-primary) hover:bg-(--color-primary)/80"
-                          : "gap-1.5"
+                          ? "gap-1.5 text-muted-foreground border-(--color-primary) hover:border-(--color-primary)/80"
+                          : "gap-1.5 text-muted-foreground"
                       }
                     >
                       {field.value === false && <Check className="size-3.5" />}
