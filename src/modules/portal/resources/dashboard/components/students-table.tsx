@@ -1,23 +1,9 @@
 import { useMemo, useState } from "react";
-import {
-    ChevronLeft,
-    ChevronRight,
-    ChevronRight as ChevronRightIcon,
-    Inbox,
-    Search,
-} from "lucide-react";
+import { ChevronRight as ChevronRightIcon, Inbox, Search } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Progress } from "@/components/ui/progress";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
 import {
     Table,
     TableBody,
@@ -27,13 +13,17 @@ import {
     TableRow,
 } from "@/components/ui/table";
 
-import {
-    STATUS_LABEL,
-    type Student,
-    type StudentStatus,
-} from "../lib/students-data";
+import { type Student, type StudentStatus } from "../lib/students-data";
 import { StudentsTableSkeleton } from "./students-table-skeleton";
-import { Badge } from "@/components/ui/badge";
+import { ProgressVariant } from "@/shared/components/ui/progress/Progress";
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from "@/components/ui/card";
+import { DatePickerWithRange } from "@/shared/components/ui/date/DatePickerRange";
 
 interface StudentsTableProps {
     students: Student[];
@@ -74,194 +64,158 @@ export function StudentsTable({
     );
 
     return (
-        <div className="space-y-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="relative w-full sm:max-w-xs">
-                    <Search
-                        className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-                        aria-hidden
-                    />
-                    <Input
-                        value={query}
-                        onChange={(e) => {
-                            setQuery(e.target.value);
-                            setPage(1);
-                        }}
-                        placeholder="Rechercher un étudiant…"
-                        className="h-10 rounded-xl pl-9"
-                        aria-label="Rechercher un étudiant"
-                    />
+        <Card className="flex flex-col">
+            <CardHeader className="items-center pb-0 flex justify-between">
+                <div>
+                    <CardTitle>
+                        Suivi de la progression des étudiants par formation
+                    </CardTitle>
+                    <CardDescription>January - June 2024</CardDescription>
                 </div>
-                <Select
-                    value={statusFilter}
-                    onValueChange={(v) => {
-                        setStatusFilter(v as StudentStatus | "all");
-                        setPage(1);
-                    }}
-                >
-                    <SelectTrigger
-                        className="h-10 w-full rounded-xl sm:w-44"
-                        aria-label="Filtrer par statut"
-                    >
-                        <SelectValue placeholder="Statut" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">Tous les statuts</SelectItem>
-                        {(Object.keys(STATUS_LABEL) as StudentStatus[]).map(
-                            (s) => (
-                                <SelectItem key={s} value={s}>
-                                    {STATUS_LABEL[s]}
-                                </SelectItem>
-                            ),
-                        )}
-                    </SelectContent>
-                </Select>
-            </div>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="relative w-full sm:max-w-xs">
+                        <Search
+                            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                            aria-hidden
+                        />
+                        <Input
+                            value={query}
+                            onChange={(e) => {
+                                setQuery(e.target.value);
+                                setPage(1);
+                            }}
+                            placeholder="Rechercher un étudiant…"
+                            className="h-8  pl-8"
+                            aria-label="Rechercher un étudiant"
+                        />
+                    </div>
+                    <DatePickerWithRange />
+                </div>
+            </CardHeader>
 
-            <div className="overflow-hidden rounded-2xl border border-border/60 bg-card shadow-sm">
-                <Table>
-                    <TableHeader>
-                        <TableRow className="hover:bg-transparent">
-                            <TableHead className="w-[28%]">Étudiant</TableHead>
-                            <TableHead>Parcours</TableHead>
-                            <TableHead className="w-[20%]">
-                                Progression
-                            </TableHead>
-                            <TableHead className="text-right"></TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {loading ? (
-                            <StudentsTableSkeleton rows={PAGE_SIZE} />
-                        ) : paginated.length === 0 ? (
-                            <TableRow className="hover:bg-transparent">
-                                <TableCell colSpan={6} className="py-16">
-                                    <div className="flex flex-col items-center justify-center gap-3 text-center">
-                                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-                                            <Inbox
-                                                className="h-5 w-5 text-muted-foreground"
-                                                aria-hidden
-                                            />
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-medium text-foreground">
-                                                Aucun étudiant trouvé
-                                            </p>
-                                            <p className="mt-1 text-sm text-muted-foreground">
-                                                Ajustez votre recherche ou vos
-                                                filtres pour voir des résultats.
-                                            </p>
-                                        </div>
-                                    </div>
-                                </TableCell>
-                            </TableRow>
-                        ) : (
-                            paginated.map((s) => (
-                                <TableRow
-                                    key={s.id}
-                                    className="cursor-pointer transition-colors"
-                                    onClick={() => onSelect(s)}
-                                    tabIndex={0}
-                                    onKeyDown={(e) => {
-                                        if (
-                                            e.key === "Enter" ||
-                                            e.key === " "
-                                        ) {
-                                            e.preventDefault();
-                                            onSelect(s);
-                                        }
-                                    }}
-                                >
-                                    <TableCell>
-                                        <div className="flex items-center gap-3">
-                                            <Avatar className="h-9 w-9">
-                                                <AvatarImage
-                                                    src={s.avatarUrl}
-                                                    alt=""
-                                                />
-                                                <AvatarFallback className="bg-muted text-xs font-medium">
-                                                    {s.initials}
-                                                </AvatarFallback>
-                                            </Avatar>
-                                            <span className="font-medium text-foreground">
-                                                {s.name}
-                                            </span>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell className="text-muted-foreground">
-                                        {s.course}
-                                    </TableCell>
-                                    <TableCell>
-                                        <div className="flex items-center gap-3">
-                                            <Progress
-                                                value={s.progress}
-                                                className="h-1.5 flex-1"
-                                                color="var(--color-primary)"
-                                            />
-                                            <span className="w-9 text-right text-xs font-medium tabular-nums text-muted-foreground">
-                                                {s.progress}%
-                                            </span>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-8 w-8 rounded-lg"
-                                            aria-label={`Voir le détail de ${s.name}`}
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                onSelect(s);
+            <CardContent className="flex-1 pb-0">
+                <div className="space-y-4">
+                    <div className="overflow-hidden rounded-2xl border border-border/60 bg-card">
+                        <Table>
+                            <TableHeader>
+                                <TableRow className="hover:bg-transparent">
+                                    <TableHead className="w-[28%]">
+                                        Étudiant
+                                    </TableHead>
+                                    <TableHead>Parcours</TableHead>
+                                    <TableHead className="w-[20%]">
+                                        Progression
+                                    </TableHead>
+                                    <TableHead className="text-right"></TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {loading ? (
+                                    <StudentsTableSkeleton rows={PAGE_SIZE} />
+                                ) : filtered.length === 0 ? (
+                                    <TableRow className="hover:bg-transparent">
+                                        <TableCell
+                                            colSpan={6}
+                                            className="py-16"
+                                        >
+                                            <div className="flex flex-col items-center justify-center gap-3 text-center">
+                                                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+                                                    <Inbox
+                                                        className="h-5 w-5 text-muted-foreground"
+                                                        aria-hidden
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-medium text-foreground">
+                                                        Aucun étudiant trouvé
+                                                    </p>
+                                                    <p className="mt-1 text-sm text-muted-foreground">
+                                                        Ajustez votre recherche
+                                                        ou vos filtres pour voir
+                                                        des résultats.
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                ) : (
+                                    filtered.map((s) => (
+                                        <TableRow
+                                            key={s.id}
+                                            className="cursor-pointer transition-colors"
+                                            onClick={() => onSelect(s)}
+                                            tabIndex={0}
+                                            onKeyDown={(e) => {
+                                                if (
+                                                    e.key === "Enter" ||
+                                                    e.key === " "
+                                                ) {
+                                                    e.preventDefault();
+                                                    onSelect(s);
+                                                }
                                             }}
                                         >
-                                            <ChevronRightIcon
-                                                className="h-4 w-4"
-                                                aria-hidden
-                                            />
-                                        </Button>
-                                    </TableCell>
-                                </TableRow>
-                            ))
-                        )}
-                    </TableBody>
-                </Table>
-            </div>
-
-            {!loading && filtered.length > 0 && (
-                <div className="flex flex-col items-center justify-between gap-3 px-1 sm:flex-row">
-                    <p className="text-xs text-muted-foreground">
-                        {filtered.length} étudiant
-                        {filtered.length > 1 ? "s" : ""} · page {currentPage}{" "}
-                        sur {totalPages}
-                    </p>
-                    <div className="flex items-center gap-2">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-8 rounded-lg"
-                            disabled={currentPage <= 1}
-                            onClick={() => setPage((p) => Math.max(1, p - 1))}
-                            aria-label="Page précédente"
-                        >
-                            <ChevronLeft className="h-4 w-4" aria-hidden />
-                            Précédent
-                        </Button>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-8 rounded-lg"
-                            disabled={currentPage >= totalPages}
-                            onClick={() =>
-                                setPage((p) => Math.min(totalPages, p + 1))
-                            }
-                            aria-label="Page suivante"
-                        >
-                            Suivant
-                            <ChevronRight className="h-4 w-4" aria-hidden />
-                        </Button>
+                                            <TableCell>
+                                                <div className="flex items-center gap-3">
+                                                    <Avatar className="h-9 w-9">
+                                                        <AvatarImage
+                                                            src={s.avatarUrl}
+                                                            alt=""
+                                                        />
+                                                        <AvatarFallback className="bg-muted text-xs font-medium">
+                                                            {s.initials}
+                                                        </AvatarFallback>
+                                                    </Avatar>
+                                                    <span className="font-medium text-foreground">
+                                                        {s.name}
+                                                    </span>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="text-muted-foreground">
+                                                {s.course}
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="flex items-center gap-3">
+                                                    <ProgressVariant
+                                                        value={s.progress}
+                                                        className="h-1.5 flex-1"
+                                                        style={
+                                                            {
+                                                                "--color-progress":
+                                                                    "var(--color-primary)",
+                                                            } as React.CSSProperties
+                                                        }
+                                                    />
+                                                    <span className="w-9 text-right text-xs font-medium tabular-nums text-muted-foreground">
+                                                        {s.progress}%
+                                                    </span>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-8 w-8 rounded-lg"
+                                                    aria-label={`Voir le détail de ${s.name}`}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        onSelect(s);
+                                                    }}
+                                                >
+                                                    <ChevronRightIcon
+                                                        className="h-4 w-4"
+                                                        aria-hidden
+                                                    />
+                                                </Button>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                )}
+                            </TableBody>
+                        </Table>
                     </div>
                 </div>
-            )}
-        </div>
+            </CardContent>
+        </Card>
     );
 }

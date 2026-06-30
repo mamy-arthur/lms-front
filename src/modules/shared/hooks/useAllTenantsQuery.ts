@@ -7,13 +7,13 @@ const MOCK_TENANTS: Tenant[] = RAW_MOCK_TENANTS.map((t) => ({
   slug: t.subdomain,
   name: t.name,
   domain: `${t.subdomain}.learneo.io`,
-  status: t.status === "inactive" ? "suspended" : t.status,
+  status: 'active',
   is_active: t.status === "active",
   branding: {
-    primaryColor: "#6366f1",
-    secondaryColor: "#64748b",
-    logoUrl: "",
-    faviconUrl: "",
+    primary_color: "#64748b",
+    secondary_color: "#64748b",
+    logo_url: "",
+    favicon_url: "",
     fontFamily: "Inter",
   },
   features: {

@@ -3,6 +3,8 @@ import { KpiCards } from "./components/KpiCards";
 import { StudentDrawer } from "./components/students-drawer";
 import { StudentsTable } from "./components/students-table";
 import { Student, STUDENTS } from "./lib/students-data";
+import { ProgressCard } from "./components/chart/chart-radial-text";
+import { OnlineStudentsCard } from "./components/ActiveStudents";
 
 export default function ClientDashboard() {
     const [loading, setLoading] = useState(true);
@@ -28,18 +30,24 @@ export default function ClientDashboard() {
                         </p>
                     </div>
                 </header>
-                <div className="flex flex-col space-y-5">
+                <div className="flex flex-col space-y-3">
                     <KpiCards />
-                    <section className="space-y-5" aria-label="Étudiants">
-                        <StudentsTable
-                            students={STUDENTS}
-                            loading={loading}
-                            onSelect={(s) => {
-                                setSelected(s);
-                                setDrawerOpen(true);
-                            }}
-                        />
-                    </section>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div className="sm:col-span-2">
+                            <StudentsTable
+                                students={STUDENTS}
+                                loading={loading}
+                                onSelect={(s) => {
+                                    setSelected(s);
+                                    setDrawerOpen(true);
+                                }}
+                            />
+                        </div>
+                        <div className="flex flex-col self-start gap-2">
+                            <ProgressCard />
+                            <OnlineStudentsCard />
+                        </div>
+                    </div>
                 </div>
             </div>
             <StudentDrawer
