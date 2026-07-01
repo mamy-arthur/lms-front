@@ -68,7 +68,7 @@ export function CategoryCell({
       <div className="flex items-center gap-1 group/cell">
         <Badge
           variant="outline"
-          className="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full border bg-amber-50 text-amber-700 border-amber-200"
+          className="inline-flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-full border bg-amber-50 text-amber-500 border-amber-200"
         >
           {getLabel(mod.category || "")}
         </Badge>
