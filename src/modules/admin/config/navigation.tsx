@@ -40,6 +40,7 @@ export const ADMIN_NAV: AdminNavItem[] = [
         icon: GraduationCap,
         access: ACCESS.courses,
         items: [
+            { title: "Parcours", url: ROUTES.admin.programs },
             { title: "Cours", url: ROUTES.admin.courses },
             { title: "Catégories", url: ROUTES.admin.category },
             { title: "Modules", url: ROUTES.admin.modules },

@@ -18,6 +18,7 @@ export const ROUTES = {
     trainees: "/admin/trainees",
     tenants: "/admin/tenants",
     reports: "/admin/reports",
+    programs: "/admin/programs",
     quizQuestions: (quizId: string) => `/admin/quizzes/${quizId}/questions`,
   },
   portal: {
