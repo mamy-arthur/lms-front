@@ -20,7 +20,7 @@ export function ProgramDrawer({ open, onOpenChange }: ProgramDrawerProps) {
         <Sheet open={open} onOpenChange={onOpenChange}>
             <SheetContent
                 side="right"
-                className="flex flex-col max-w-[65%]! "
+                className="flex flex-col max-w-[60%]! "
             >
         <SheetHeader className="border-b px-4 py-4">
                     <SheetTitle>Nouvelle formation</SheetTitle>

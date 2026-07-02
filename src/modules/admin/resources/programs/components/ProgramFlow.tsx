@@ -312,8 +312,9 @@ export default function ProgramFlow() {
     } | null>(null);
 
     // ── Business rule flags ──
-    const { hasFinalEval, hasAttestation } = useMemo(
+    const { hasFinalEval, hasAttestation, hasModule } = useMemo(
         () => ({
+            hasModule: nodes.some((n) => n.data.stepType === "module"),
             hasFinalEval: nodes.some(
                 (n) => n.data.stepType === "evaluation-final",
             ),
@@ -513,7 +514,6 @@ export default function ProgramFlow() {
                 {/* ── Toolbar ── */}
                 <div className="flex flex-wrap items-center gap-2 px-4 py-3">
                     <Button
-                        size="sm"
                         variant="outline"
                         disabled={hasFinalEval || hasAttestation}
                         onClick={() => addStep("module")}
@@ -524,20 +524,18 @@ export default function ProgramFlow() {
                     </Button>
 
                     <Button
-                        size="sm"
                         variant="outline"
-                        disabled={hasFinalEval || hasAttestation}
+                        disabled={!hasModule || hasFinalEval || hasAttestation}
                         onClick={() => addStep("evaluation-intermediate")}
-                        className="gap-1.5"
+                        className="gap-1.5 border-yellow-200 text-yellow-700 hover:bg-yellow-50 hover:text-yellow-700"
                     >
                         <ClipboardCheck className="size-3.5" />
                         Éval. intermédiaire
                     </Button>
 
                     <Button
-                        size="sm"
                         variant="outline"
-                        disabled={hasFinalEval || hasAttestation}
+                        disabled={!hasModule || hasFinalEval || hasAttestation}
                         onClick={() => addStep("evaluation-final")}
                         className="gap-1.5 border-red-200 text-red-700 hover:bg-red-50 hover:text-red-700"
                     >
@@ -546,9 +544,8 @@ export default function ProgramFlow() {
                     </Button>
 
                     <Button
-                        size="sm"
                         variant="outline"
-                        disabled={!hasFinalEval || hasAttestation}
+                        disabled={!hasModule || !hasFinalEval || hasAttestation}
                         onClick={() => addStep("attestation")}
                         className="gap-1.5 border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-700"
                     >
