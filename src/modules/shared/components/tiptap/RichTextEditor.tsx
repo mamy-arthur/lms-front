@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   useEditor,
   useEditorState,
@@ -9,6 +9,13 @@ import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
 import Image from "@tiptap/extension-image";
 import Placeholder from "@tiptap/extension-placeholder";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const ALIGN_STYLES: Record<string, string> = {
   left: "float: left; margin: 0 1em 0.5em 0;",
@@ -56,6 +63,8 @@ import {
   Undo,
   Redo,
   Minus,
+  Maximize2,
+  Minimize2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -73,6 +82,7 @@ type Props = {
   onChange: (markdown: string) => void;
   placeholder?: string;
   className?: string;
+  expandable?: boolean;
   /** Boutons optionnels ajoutés à la fin de la toolbar. Reçoit l'instance editor. */
   toolbarExtras?: (editor: Editor) => ReactNode;
 };
@@ -113,9 +123,13 @@ function Separator() {
 function Toolbar({
   editor,
   extras,
+  onExpand,
+  onMinimize,
 }: {
   editor: Editor;
   extras?: (editor: Editor) => ReactNode;
+  onExpand?: () => void;
+  onMinimize?: () => void;
 }) {
   const setLink = () => {
     const previousUrl = editor.getAttributes("link").href as string | undefined;
@@ -277,6 +291,24 @@ function Toolbar({
           {extras(editor)}
         </>
       )}
+
+      {onExpand && (
+        <>
+          <Separator />
+          <ToolbarButton label="Agrandir" onClick={onExpand}>
+            <Maximize2 className="size-4" />
+          </ToolbarButton>
+        </>
+      )}
+
+      {onMinimize && (
+        <>
+          <Separator />
+          <ToolbarButton label="Réduire" onClick={onMinimize}>
+            <Minimize2 className="size-4" />
+          </ToolbarButton>
+        </>
+      )}
     </div>
   );
 }
@@ -286,8 +318,12 @@ export function RichTextEditor({
   onChange,
   placeholder,
   className,
+  expandable = true,
   toolbarExtras,
 }: Props) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [expandedContent, setExpandedContent] = useState("");
+
   const editor = useEditor({
     extensions: [
       StarterKit,
@@ -332,10 +368,73 @@ export function RichTextEditor({
 
   if (!editor) return null;
 
+  const handleExpand = () => {
+    setExpandedContent(editor.storage.markdown.getMarkdown());
+    setIsExpanded(true);
+  };
+
+  const handleApply = () => {
+    onChange(expandedContent);
+    editor.commands.setContent(expandedContent);
+    setIsExpanded(false);
+  };
+
+  const handleCancel = () => {
+    setIsExpanded(false);
+  };
+
   return (
-    <div className={cn("flex flex-col", className)}>
-      <Toolbar editor={editor} extras={toolbarExtras} />
-      <EditorContent editor={editor} />
-    </div>
+    <>
+      <div className={cn("flex flex-col", className)}>
+        <Toolbar
+          editor={editor}
+          extras={toolbarExtras}
+          onExpand={expandable ? handleExpand : undefined}
+        />
+        <EditorContent editor={editor} />
+      </div>
+
+      <Dialog
+        open={isExpanded}
+        onOpenChange={(open) => !open && handleCancel()}
+      >
+        <DialogContent
+          className="flex flex-col gap-0 p-0 w-full max-w-[calc(100%-2rem)] sm:max-w-2xl md:max-w-4xl lg:max-w-6xl h-[90vh] sm:h-[85vh]"
+          onInteractOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
+        >
+          <DialogHeader className="border-b px-4 py-3 shrink-0">
+            <DialogTitle className="text-sm font-medium">
+              Édition
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto p-4">
+            <RichTextEditor
+              value={expandedContent}
+              onChange={setExpandedContent}
+              placeholder={placeholder}
+              expandable={false}
+              toolbarExtras={toolbarExtras}
+              className="h-full [&_.tiptap]:min-h-[55vh]"
+            />
+          </div>
+
+          <DialogFooter className="border-t px-4 py-3 shrink-0">
+            <Button type="button" variant="outline" onClick={handleCancel}>
+              <Minimize2 className="mr-2 size-4" />
+              Annuler
+            </Button>
+            <Button
+              type="button"
+              onClick={handleApply}
+              className="bg-(--color-primary) hover:bg-primary/80 text-primary-foreground"
+            >
+              Appliquer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

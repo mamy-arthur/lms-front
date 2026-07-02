@@ -20,6 +20,7 @@ export const ROUTES = {
     reports: "/admin/reports",
     quizQuestions: (quizId: string) => `/admin/quizzes/${quizId}/questions`,
     certificate: "/admin/certificates",
+    mailTemplates: "/admin/mail-templates",
   },
   portal: {
     dashboard: "/dashboard",
@@ -28,13 +29,14 @@ export const ROUTES = {
     // course: (slug: string) => `/courses/${slug}`,
     lesson: (slug: string, lessonId: string) => `/courses/${slug}/${lessonId}`,
     profile: "/profile",
-    certificates: "/certificates",
+    // certificates: "/certificates",
     users: "/users",
     // modules: "/modules",
     // quizzes: "/quizzes",
     //modules: "/modules",
     //quizzes: "/quizzes",
     quizQuestions: (quizId: string) => `/quizzes/${quizId}/questions`,
-    certificate: "/certificates"
+    certificate: "/certificates",
+    mailTemplates: "/mail-templates",
   },
 } as const;
