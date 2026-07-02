@@ -7,7 +7,6 @@ export interface User {
   username: string;
   email: string;
   role: Role;
-  tenantId: string;
   isActive: boolean;
   city: string;
   country: string;
@@ -22,7 +21,6 @@ export interface CreateUserPayload {
   email: string;
   password: string;
   role: Role;
-  tenant_id?: string | null;
   editor_id?: string | null;
   is_active?: boolean;
   city?: string;
@@ -33,7 +31,6 @@ export interface UserSearchParams {
   q?: string;
   role?: string;
   status?: "active" | "inactive";
-  tenant_id?: string;
   sort_by?: string;
   sort_dir?: "asc" | "desc";
   page?: number;
@@ -56,7 +53,6 @@ export function normalizeUser(raw: Record<string, unknown>): User {
     username: username || "—",
     email: String(raw.email ?? ""),
     role: (raw.role ?? raw.roleAlias ?? Role.TRAINEE) as Role,
-    tenantId: String(raw.tenantId ?? raw.tenant_id ?? ""),
     isActive: Boolean(raw.isActive ?? raw.is_active ?? raw.active),
     city: String(raw.city ?? ""),
     country: String(raw.country ?? ""),

@@ -33,7 +33,7 @@ export function useModuleListController<TModule>(
   const [editingModule, setEditingModule] = useState<TModule | undefined>();
 
   const [draftSearch, setDraftSearch] = useState("");
-  const [draftCategory, setDraftCategory] = useState("all");
+  const [draftCategory, setDraftCategory] = useState<string[]>(["all"]);
   const [draftTenant, setDraftTenant] = useState("all");
 
   const [params, setParams] = useState<ModuleSearchParams>({
@@ -44,10 +44,11 @@ export function useModuleListController<TModule>(
   });
 
   const handleSearch = useCallback(() => {
+    const selected = draftCategory.filter((c) => c !== "all");
     setParams((prev) => ({
       ...prev,
       q: draftSearch || undefined,
-      category: draftCategory !== "all" ? draftCategory : undefined,
+      category: selected.length > 0 ? selected.join(",") : undefined,
       ...(includeTenantFilter
         ? { tenant_id: draftTenant !== "all" ? draftTenant : undefined }
         : {}),
@@ -80,8 +81,8 @@ export function useModuleListController<TModule>(
     setEditingModule(undefined);
   }, []);
 
-  const handleEdit = useCallback((mod: TModule) => {
-    setEditingModule(mod);
+  const handleEdit = useCallback((module: TModule) => {
+    setEditingModule(module);
     setIsDrawerOpen(true);
   }, []);
 
@@ -102,7 +103,7 @@ export function useModuleListController<TModule>(
   };
   const hasQuery = !!(
     draftSearch ||
-    draftCategory !== "all" ||
+    draftCategory.some((c) => c !== "all") ||
     (includeTenantFilter && draftTenant !== "all")
   );
 

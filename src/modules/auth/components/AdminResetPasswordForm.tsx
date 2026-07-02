@@ -1,88 +1,155 @@
 "use client";
+
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useSearchParams, useRouter } from "next/navigation";
-import Box from "@mui/material/Box";
-import TextField from "@mui/material/TextField";
-import Button from "@mui/material/Button";
-import Alert from "@mui/material/Alert";
-import CircularProgress from "@mui/material/CircularProgress";
-import Typography from "@mui/material/Typography";
-import { resetPasswordSchema, type ResetPasswordSchema } from "@/shared/schemas/auth.schema";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
+
+import {
+    resetPasswordSchema,
+    type ResetPasswordSchema,
+} from "@/shared/schemas/auth.schema";
 import { authApi } from "@/shared/api/auth.api";
 import { ROUTES } from "@/shared/constants/routes";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export function AdminResetPasswordForm() {
-  const searchParams = useSearchParams();
-  const router = useRouter();
+    const searchParams = useSearchParams();
+    const router = useRouter();
 
-  const token = searchParams?.get("token") ?? "";
-  const email = searchParams?.get("email") ?? "";
+    const token = searchParams?.get("token") ?? "";
+    const email = searchParams?.get("email") ?? "";
 
-  const [serverError, setServerError] = useState<string | null>(null);
+    const [serverError, setServerError] = useState<string | null>(null);
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmation, setShowConfirmation] = useState(false);
 
-  const { register, handleSubmit, formState: { errors, isSubmitting } } =
-    useForm<ResetPasswordSchema>({
-      resolver: zodResolver(resetPasswordSchema),
-      defaultValues: { email, token },
+    const form = useForm<ResetPasswordSchema>({
+        resolver: zodResolver(resetPasswordSchema),
+        defaultValues: {
+            email,
+            token,
+            password: "",
+            password_confirmation: "",
+        },
     });
 
-  if (!token || !email) {
-    return (
-      <Alert severity="error">
-        Lien invalide ou expiré. Veuillez redemander un lien de réinitialisation.
-      </Alert>
-    );
-  }
-
-  const onSubmit = async (data: ResetPasswordSchema) => {
-    setServerError(null);
-    try {
-      await authApi.platformResetPassword(data);
-      router.push(`${ROUTES.platform.login}?reset=1`);
-    } catch {
-      setServerError("Une erreur est survenue. Veuillez réessayer.");
+    if (!token || !email) {
+        return (
+            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+                Lien invalide ou expiré. Veuillez redemander un lien de
+                réinitialisation.
+            </div>
+        );
     }
-  };
 
-  return (
-    <Box
-      component="form"
-      onSubmit={handleSubmit(onSubmit)}
-      noValidate
-      sx={{ display: "flex", flexDirection: "column", gap: 2 }}
-    >
-      {serverError && <Alert severity="error">{serverError}</Alert>}
+    const onSubmit = async (data: ResetPasswordSchema) => {
+        setServerError(null);
 
-      <TextField
-        label="Nouveau mot de passe"
-        type="password"
-        fullWidth
-        {...register("password")}
-        error={!!errors.password}
-        helperText={errors.password?.message}
-      />
+        try {
+            await authApi.platformResetPassword(data);
 
-      <TextField
-        label="Confirmer le mot de passe"
-        type="password"
-        fullWidth
-        {...register("password_confirmation")}
-        error={!!errors.password_confirmation}
-        helperText={errors.password_confirmation?.message}
-      />
+            router.push(`${ROUTES.platform.login}?reset=1`);
+        } catch {
+            setServerError("Une erreur est survenue. Veuillez réessayer.");
+        }
+    };
 
-      <input type="hidden" {...register("token")} />
-      <input type="hidden" {...register("email")} />
+    return (
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+            {serverError && (
+                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+                    {serverError}
+                </div>
+            )}
 
-      <Button type="submit" variant="contained" fullWidth disabled={isSubmitting}>
-        {isSubmitting ? <CircularProgress size={20} /> : "Réinitialiser"}
-      </Button>
+            <div className="space-y-2">
+                <Label htmlFor="password">Nouveau mot de passe</Label>
 
-      <Typography variant="body2" sx={{ textAlign: "center", color: "text.secondary" }}>
-        Token : {token.slice(0, 8)}…
-      </Typography>
-    </Box>
-  );
+                <div className="relative">
+                    <Input
+                        id="password"
+                        type={showPassword ? "text" : "password"}
+                        placeholder="••••••••"
+                        {...form.register("password")}
+                        className="h-12 pr-12"
+                    />
+
+                    <button
+                        type="button"
+                        onClick={() => setShowPassword((v) => !v)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                    >
+                        {showPassword ? (
+                            <EyeOff className="h-4 w-4" />
+                        ) : (
+                            <Eye className="h-4 w-4" />
+                        )}
+                    </button>
+                </div>
+
+                {form.formState.errors.password && (
+                    <p className="text-sm text-red-500">
+                        {form.formState.errors.password.message}
+                    </p>
+                )}
+            </div>
+
+            <div className="space-y-2">
+                <Label htmlFor="password_confirmation">
+                    Confirmer le mot de passe
+                </Label>
+
+                <div className="relative">
+                    <Input
+                        id="password_confirmation"
+                        type={showConfirmation ? "text" : "password"}
+                        placeholder="••••••••"
+                        {...form.register("password_confirmation")}
+                        className="h-12 pr-12"
+                    />
+
+                    <button
+                        type="button"
+                        onClick={() => setShowConfirmation((v) => !v)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                    >
+                        {showConfirmation ? (
+                            <EyeOff className="h-4 w-4" />
+                        ) : (
+                            <Eye className="h-4 w-4" />
+                        )}
+                    </button>
+                </div>
+
+                {form.formState.errors.password_confirmation && (
+                    <p className="text-sm text-red-500">
+                        {form.formState.errors.password_confirmation.message}
+                    </p>
+                )}
+            </div>
+
+            <input type="hidden" {...form.register("token")} />
+
+            <input type="hidden" {...form.register("email")} />
+
+            <Button
+                type="submit"
+                className="h-12 w-full"
+                disabled={form.formState.isSubmitting}
+            >
+                {form.formState.isSubmitting ? (
+                    <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Réinitialisation...
+                    </>
+                ) : (
+                    "Réinitialiser"
+                )}
+            </Button>
+        </form>
+    );
 }

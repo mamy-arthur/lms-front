@@ -1,25 +1,24 @@
-import { apiGet, apiPost, apiPut, apiDelete } from "@/shared/lib/apiClient";
-import { platformApi, CreateTenantPayload } from "@/shared/api/platform.api";
-import { Tenant } from "../types";
+import {
+    apiDelete,
+    apiGet,
+    apiPatch,
+    apiPost
+} from "@/shared/lib/apiClient";
+import {
+    BackendTenant,
+    CreateTenantPayload,
+    Tenant,
+    UpdateTenantPayload,
+} from "@/shared/types/tenants/tenant";
 
-interface TenantListResponse {
-  items?: Tenant[];
-  data?: Tenant[];
-  total?: number;
-}
+export const tenantApi = {
+    getAll: () => apiGet<{ data: Tenant[] }>("platform/tenants"),
 
-export const adminTenantsApi = {
-  list: (params: { page?: number; limit?: number; q?: string }) =>
-    apiGet<TenantListResponse>(
-      `platform/tenants?page=${params.page ?? 1}&limit=${params.limit ?? 25}${params.q ? `&q=${params.q}` : ""}`
-    ),
+    create: (payload: CreateTenantPayload) =>
+        apiPost<{ data: BackendTenant }>("platform/tenants", payload),
 
-  getById: (id: string) => apiGet<Tenant>(`platform/tenants/${id}`),
+    update: (id: string, payload: UpdateTenantPayload) =>
+        apiPatch<{ data: BackendTenant }>(`platform/tenants/${id}`, payload),
 
-  create: (data: CreateTenantPayload) => platformApi.createTenant(data),
-
-  update: (id: string, data: Partial<Tenant>) =>
-    apiPut<{ data: Tenant }>(`platform/tenants/${id}`, data),
-
-  remove: (id: string) => apiDelete(`platform/tenants/${id}`),
+    remove: (id: string) => apiDelete(`platform/tenants/${id}`),
 };

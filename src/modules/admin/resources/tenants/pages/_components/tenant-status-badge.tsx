@@ -20,8 +20,13 @@ const STATUS_CONFIG: Record<
     className: "bg-red-50 text-red-700 border-red-200 hover:bg-red-50",
     dotColor: "bg-red-500",
   },
-  trial: {
+  inactive: {
     label: "Essai",
+    className: "bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-50",
+    dotColor: "bg-indigo-500",
+  },
+  pending: {
+    label: "En Attente",
     className: "bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-50",
     dotColor: "bg-indigo-500",
   },

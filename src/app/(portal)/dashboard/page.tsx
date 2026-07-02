@@ -1,10 +1,8 @@
-'use client'
+"use client";
 
+import ClientDashboard from "@/modules/portal/resources/dashboard/ClientDashboard";
 export default function DashboardPage() {
-  return (
-    <div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Tableau de bord</h1>
-      <p className="text-gray-500">Bienvenue sur votre espace stagiaire.</p>
-    </div>
-  );
+    return (
+        <ClientDashboard />
+    );
 }

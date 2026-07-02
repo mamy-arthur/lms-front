@@ -8,7 +8,6 @@ interface ModuleListParams {
   sort_by?: string;
   sort_order?: "asc" | "desc";
   category?: string;
-  tenant_id?: string;
 }
 
 interface ModuleListResponse {
@@ -26,7 +25,6 @@ export const adminModulesApi = {
     if (params.sort_by) query.set("sort_by", params.sort_by);
     if (params.sort_order) query.set("sort_order", params.sort_order);
     if (params.category) query.set("category", params.category);
-    if (params.tenant_id) query.set("tenant_id", params.tenant_id);
     return apiGet<ModuleListResponse>(`admin/modules?${query.toString()}`);
   },
 

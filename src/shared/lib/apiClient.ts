@@ -102,6 +102,17 @@ export async function apiPut<T, B = unknown>(
   return json as T;
 }
 
+export async function apiPatch<T, B = unknown>(
+  path: string,
+  body?: B,
+): Promise<T> {
+  const { json } = await httpClient(`/api/v1/${path.replace(/^\/+/, "")}`, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
+  return json as T;
+}
+
 export async function apiDelete(path: string): Promise<void> {
   await httpClient(`/api/v1/${path.replace(/^\/+/, "")}`, { method: "DELETE" });
 }

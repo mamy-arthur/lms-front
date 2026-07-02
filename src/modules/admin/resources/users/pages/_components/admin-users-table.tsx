@@ -10,7 +10,6 @@ export type SortColumn =
   | "username"
   | "email"
   | "role"
-  | "tenantId"
   | "isActive"
   | "city"
   | "country"
@@ -33,7 +32,6 @@ interface AdminUsersTableProps {
   onEdit: (user: User) => void;
   onToggleActive: (user: User) => void;
   onDelete: (user: User) => void;
-  tenantNames: Record<string, string>;
 }
 
 export function AdminUsersTable({
@@ -51,7 +49,6 @@ export function AdminUsersTable({
   onEdit,
   onToggleActive,
   onDelete,
-  tenantNames,
 }: AdminUsersTableProps) {
   return (
     <UsersContentTable
@@ -69,7 +66,6 @@ export function AdminUsersTable({
       onEdit={onEdit}
       onToggleActive={onToggleActive}
       onDelete={onDelete}
-      tenantNames={tenantNames}
       isActiveSortable={true}
       showTimeInLastLogin={true}
     />

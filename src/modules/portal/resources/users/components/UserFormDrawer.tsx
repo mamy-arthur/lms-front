@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useCallback, useMemo } from "react";
+import { memo, useCallback, useEffect, useMemo } from "react";
 import { z } from "zod";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import {
@@ -134,6 +134,12 @@ function UserFormDrawerBase({
       } as UpdateTenantUserPayload,
     }),
   });
+
+  useEffect(() => {
+    if (open) {
+      formState.form.reset(defaultValues);
+    }
+  }, [open, defaultValues, formState.form]);
 
   return (
     <Sheet open={open} onOpenChange={(nextOpen) => !nextOpen && formState.handleClose()}>
