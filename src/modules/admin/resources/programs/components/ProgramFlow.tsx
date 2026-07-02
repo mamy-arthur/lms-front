@@ -10,18 +10,22 @@ import {
 } from "react";
 import {
     Background,
+    BaseEdge,
     Controls,
+    EdgeLabelRenderer,
     Handle,
     Position,
     ReactFlow,
     addEdge,
     applyEdgeChanges,
     applyNodeChanges,
+    getSmoothStepPath,
 } from "@xyflow/react";
 import type {
     Connection,
     Edge,
     EdgeChange,
+    EdgeProps,
     Node,
     NodeChange,
     NodeProps,
@@ -33,11 +37,18 @@ import {
     BadgeCheck,
     BookOpen,
     ClipboardCheck,
+    Settings2,
     Trash2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/shared/lib/cn";
+import { AccessRulesDialog, type AccessRules } from "./AccessRulesDialog";
+import {
+    AttestationRulesDialog,
+    type AttestationRules,
+    type NodeOption,
+} from "./AttestationRulesDialog";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -53,6 +64,12 @@ type StepNodeData = {
 };
 
 type StepNode = Node<StepNodeData, "programStep">;
+
+type EdgeRuleData = {
+    kind?: "retake";
+    accessRules?: AccessRules;
+    attestationRules?: AttestationRules;
+};
 
 // ─── Step config ──────────────────────────────────────────────────────────────
 
@@ -109,7 +126,8 @@ const STEP_CONFIG: Record<StepType, StepConfig> = {
 
 const FlowActionsContext = createContext<{
     onDeleteNode: (id: string) => void;
-}>({ onDeleteNode: () => {} });
+    onConfigureEdge: (edgeId: string) => void;
+}>({ onDeleteNode: () => {}, onConfigureEdge: () => {} });
 
 // ─── Custom Node ──────────────────────────────────────────────────────────────
 
@@ -121,7 +139,7 @@ function ProgramStepNode({ id, data, isConnectable }: NodeProps<StepNode>) {
     return (
         <div
             className={cn(
-                "min-w-55 rounded-xl border-2 px-4 py-3 shadow-sm",
+                "min-w-55 rounded-md border px-4 py-3 shadow-sm",
                 cfg.border,
                 cfg.bg,
             )}
@@ -139,14 +157,14 @@ function ProgramStepNode({ id, data, isConnectable }: NodeProps<StepNode>) {
                         {data.label}
                     </span>
                 </div>
-                <button
+                <Button
                     onPointerDown={(e) => e.stopPropagation()}
                     onClick={() => onDeleteNode(id)}
-                    className="flex size-5 shrink-0 items-center justify-center rounded-full text-muted-foreground/50 transition-colors hover:bg-black/10 hover:text-red-500"
+                    className="flex size-5 shrink-0 bg-gray-50 items-center justify-center rounded-full text-muted-foreground/50 transition-colors hover:bg-black/10 hover:text-red-500"
                     aria-label="Supprimer ce nœud"
                 >
                     <Trash2 className="size-3" />
-                </button>
+                </Button>
             </div>
 
             <div className="mt-2">
@@ -157,7 +175,6 @@ function ProgramStepNode({ id, data, isConnectable }: NodeProps<StepNode>) {
                     {cfg.badgeLabel}
                 </Badge>
             </div>
-
             <Handle
                 type="source"
                 position={Position.Bottom}
@@ -170,6 +187,94 @@ function ProgramStepNode({ id, data, isConnectable }: NodeProps<StepNode>) {
 // nodeTypes must be stable (defined outside component)
 const nodeTypes = { programStep: ProgramStepNode };
 
+// ─── Custom Edge ──────────────────────────────────────────────────────────────
+
+function ConfigurableEdge({
+    id,
+    sourceX,
+    sourceY,
+    targetX,
+    targetY,
+    sourcePosition,
+    targetPosition,
+    markerEnd,
+    style,
+    data,
+}: EdgeProps) {
+    const { onConfigureEdge } = useContext(FlowActionsContext);
+    const ruleData = data as EdgeRuleData | undefined;
+    const isRetake = ruleData?.kind === "retake";
+
+    const hasRules =
+        (ruleData?.accessRules &&
+            (ruleData.accessRules.prevModuleCompleted ||
+                ruleData.accessRules.allModulesCompleted ||
+                ruleData.accessRules.prevModuleMinScore)) ||
+        (ruleData?.attestationRules &&
+            (ruleData.attestationRules.avgScore ||
+                ruleData.attestationRules.finalScore ||
+                ruleData.attestationRules.noRule ||
+                ruleData.attestationRules.retake));
+
+    const [edgePath, labelX, labelY] = getSmoothStepPath({
+        sourceX,
+        sourceY,
+        sourcePosition,
+        targetX,
+        targetY,
+        targetPosition,
+    });
+
+    const edgeStyle = isRetake
+        ? { stroke: "#ef4444", strokeDasharray: "6 3", ...style }
+        : hasRules
+          ? { stroke: "#6366f1", strokeWidth: 2, ...style }
+          : style;
+
+    return (
+        <>
+            <BaseEdge
+                id={id}
+                path={edgePath}
+                markerEnd={markerEnd}
+                style={edgeStyle}
+            />
+            {!isRetake && (
+                <EdgeLabelRenderer>
+                    <button
+                        style={{
+                            position: "absolute",
+                            transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
+                            pointerEvents: "all",
+                        }}
+                        className={
+                            hasRules
+                                ? "nodrag nopan flex size-5 items-center justify-center rounded-full border-2 border-indigo-400 bg-indigo-50 shadow-sm transition-colors hover:bg-indigo-100"
+                                : "nodrag nopan flex size-5 items-center justify-center rounded-full border border-border bg-background shadow-sm transition-colors hover:bg-muted"
+                        }
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onConfigureEdge(id);
+                        }}
+                        title="Configurer les règles d'accès"
+                    >
+                        <Settings2
+                            className={
+                                hasRules
+                                    ? "size-3 text-indigo-500"
+                                    : "size-3 text-muted-foreground"
+                            }
+                        />
+                    </button>
+                </EdgeLabelRenderer>
+            )}
+        </>
+    );
+}
+
+// edgeTypes must be stable (defined outside component)
+const edgeTypes = { configurableEdge: ConfigurableEdge };
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const CANVAS_X = 300;
@@ -181,14 +286,30 @@ const genId = () => `step-${++_counter}`;
 
 export default function ProgramFlow() {
     const [nodes, setNodes] = useState<StepNode[]>([]);
-    const [edges, setEdges] = useState<Edge[]>([]);
+    const [edges, setEdges] = useState<Edge<EdgeRuleData>[]>([]);
     const [nodeOrder, setNodeOrder] = useState<string[]>([]);
 
     // Always-fresh refs — avoids stale closures in stable callbacks
     const nodesRef = useRef(nodes);
     nodesRef.current = nodes;
+    const edgesRef = useRef(edges);
+    edgesRef.current = edges;
     const nodeOrderRef = useRef(nodeOrder);
     nodeOrderRef.current = nodeOrder;
+
+    // ── Dialog state ──
+    const [accessDialog, setAccessDialog] = useState<{
+        edgeId: string;
+        sourceNodeId: string;
+        initialRules?: AccessRules;
+    } | null>(null);
+
+    const [attestationDialog, setAttestationDialog] = useState<{
+        edgeId: string;
+        attestationNodeId: string;
+        incomingSourceNodeId: string;
+        initialRules?: AttestationRules;
+    } | null>(null);
 
     // ── Business rule flags ──
     const { hasFinalEval, hasAttestation } = useMemo(
@@ -201,6 +322,96 @@ export default function ProgramFlow() {
             ),
         }),
         [nodes],
+    );
+
+    // ── Retake target options (all non-attestation nodes) ──
+    const retakeNodeOptions: NodeOption[] = useMemo(
+        () =>
+            nodes
+                .filter((n) => n.data.stepType !== "attestation")
+                .map((n) => ({ id: n.id, label: n.data.label })),
+        [nodes],
+    );
+
+    // ── Open the right dialog when an edge settings button is clicked ──
+    const onConfigureEdge = useCallback((edgeId: string) => {
+        const edge = edgesRef.current.find((e) => e.id === edgeId);
+        if (!edge) return;
+
+        const targetNode = nodesRef.current.find((n) => n.id === edge.target);
+
+        if (targetNode?.data.stepType === "attestation") {
+            setAttestationDialog({
+                edgeId,
+                attestationNodeId: edge.target,
+                incomingSourceNodeId: edge.source,
+                initialRules: edge.data?.attestationRules,
+            });
+        } else {
+            setAccessDialog({
+                edgeId,
+                sourceNodeId: edge.source,
+                initialRules: edge.data?.accessRules,
+            });
+        }
+    }, []);
+
+    // ── Save access rules ──
+    const handleAccessSave = useCallback(
+        (rules: AccessRules) => {
+            if (!accessDialog) return;
+            setEdges((eds) =>
+                eds.map((e) =>
+                    e.id === accessDialog.edgeId
+                        ? { ...e, data: { ...e.data, accessRules: rules } }
+                        : e,
+                ),
+            );
+            setAccessDialog(null);
+        },
+        [accessDialog],
+    );
+
+    // ── Save attestation rules (also handles retake edge) ──
+    const handleAttestationSave = useCallback(
+        (rules: AttestationRules) => {
+            if (!attestationDialog) return;
+            const { edgeId, attestationNodeId, incomingSourceNodeId } =
+                attestationDialog;
+            const retakePrefix = `retake-${attestationNodeId}-`;
+
+            setEdges((eds) => {
+                const withRules = eds.map((e) =>
+                    e.id === edgeId
+                        ? {
+                              ...e,
+                              data: { ...e.data, attestationRules: rules },
+                          }
+                        : e,
+                );
+                const withoutOldRetake = withRules.filter(
+                    (e) => !e.id.startsWith(retakePrefix),
+                );
+
+                if (rules.retake && rules.retakeTargetNodeId) {
+                    return [
+                        ...withoutOldRetake,
+                        {
+                            id: `${retakePrefix}${rules.retakeTargetNodeId}`,
+                            source: incomingSourceNodeId,
+                            target: rules.retakeTargetNodeId,
+                            type: "configurableEdge",
+                            animated: false,
+                            data: { kind: "retake" as const },
+                        },
+                    ];
+                }
+                return withoutOldRetake;
+            });
+
+            setAttestationDialog(null);
+        },
+        [attestationDialog],
     );
 
     // ── Delete a node and reconnect its neighbours ──
@@ -223,7 +434,7 @@ export default function ProgramFlow() {
                         id: `e-${prev}-${next}`,
                         source: prev,
                         target: next,
-                        type: "smoothstep",
+                        type: "configurableEdge",
                         animated: true,
                     },
                 ];
@@ -266,7 +477,7 @@ export default function ProgramFlow() {
                     id: `e-${lastId}-${id}`,
                     source: lastId,
                     target: id,
-                    type: "smoothstep",
+                    type: "configurableEdge",
                     animated: true,
                 },
             ]);
@@ -291,17 +502,16 @@ export default function ProgramFlow() {
         [],
     );
 
-    const flowActions = useMemo(() => ({ onDeleteNode }), [onDeleteNode]);
+    const flowActions = useMemo(
+        () => ({ onDeleteNode, onConfigureEdge }),
+        [onDeleteNode, onConfigureEdge],
+    );
 
     return (
         <FlowActionsContext.Provider value={flowActions}>
-            <div className="flex h-175 flex-col overflow-hidden rounded-xl border bg-card">
+            <div className="flex h-175 flex-col overflow-hidden">
                 {/* ── Toolbar ── */}
-                <div className="flex flex-wrap items-center gap-2 border-b bg-muted/20 px-4 py-3">
-                    <span className="mr-1 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                        Ajouter
-                    </span>
-
+                <div className="flex flex-wrap items-center gap-2 px-4 py-3">
                     <Button
                         size="sm"
                         variant="outline"
@@ -352,7 +562,7 @@ export default function ProgramFlow() {
                 </div>
 
                 {/* ── Canvas ── */}
-                <div className="relative flex-1">
+                <div className="relative flex-1 mt-5">
                     {nodes.length === 0 && (
                         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-1 text-center">
                             <BookOpen className="mb-2 size-8 text-muted-foreground/30" />
@@ -372,8 +582,9 @@ export default function ProgramFlow() {
                         onEdgesChange={onEdgesChange}
                         onConnect={onConnect}
                         nodeTypes={nodeTypes}
+                        edgeTypes={edgeTypes}
                         fitView
-                        fitViewOptions={{ padding: 0.4 }}
+                        fitViewOptions={{ padding: 0.8, maxZoom: 0.9 }}
                         proOptions={{ hideAttribution: true }}
                     >
                         <Background />
@@ -381,6 +592,27 @@ export default function ProgramFlow() {
                     </ReactFlow>
                 </div>
             </div>
+
+            {/* ── Access rules dialog (modules & evaluations) ── */}
+            <AccessRulesDialog
+                open={accessDialog !== null}
+                onOpenChange={(open) => {
+                    if (!open) setAccessDialog(null);
+                }}
+                initialRules={accessDialog?.initialRules}
+                onSave={handleAccessSave}
+            />
+
+            {/* ── Attestation rules dialog ── */}
+            <AttestationRulesDialog
+                open={attestationDialog !== null}
+                onOpenChange={(open) => {
+                    if (!open) setAttestationDialog(null);
+                }}
+                initialRules={attestationDialog?.initialRules}
+                nodeOptions={retakeNodeOptions}
+                onSave={handleAttestationSave}
+            />
         </FlowActionsContext.Provider>
     );
 }
