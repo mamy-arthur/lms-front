@@ -49,6 +49,12 @@ import {
     type AttestationRules,
     type NodeOption,
 } from "./AttestationRulesDialog";
+import { SelectModuleDialog, type ModuleItem } from "./SelectModuleDialog";
+import {
+    AddEvaluationDialog,
+    type EvaluationConfig,
+} from "./AddEvaluationDialog";
+import { SelectAttestationDialog } from "./SelectAttestationDialog";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -61,6 +67,9 @@ type StepType =
 type StepNodeData = {
     stepType: StepType;
     label: string;
+    moduleId?: string;
+    attestationId?: string;
+    evaluationConfig?: Omit<EvaluationConfig, "stepType">;
 };
 
 type StepNode = Node<StepNodeData, "programStep">;
@@ -297,7 +306,12 @@ export default function ProgramFlow() {
     const nodeOrderRef = useRef(nodeOrder);
     nodeOrderRef.current = nodeOrder;
 
-    // ── Dialog state ──
+    // ── Add-node dialog states ──
+    const [moduleDialogOpen, setModuleDialogOpen] = useState(false);
+    const [evalDialogOpen, setEvalDialogOpen] = useState(false);
+    const [attestationDialogOpen, setAttestationDialogOpen] = useState(false);
+
+    // ── Rule configuration dialog states ──
     const [accessDialog, setAccessDialog] = useState<{
         edgeId: string;
         sourceNodeId: string;
@@ -322,6 +336,12 @@ export default function ProgramFlow() {
                 (n) => n.data.stepType === "attestation",
             ),
         }),
+        [nodes],
+    );
+
+    // ── IDs of modules already present in the flow ──
+    const usedModuleIds = useMemo(
+        () => nodes.filter((n) => n.data.moduleId).map((n) => n.data.moduleId!),
         [nodes],
     );
 
@@ -447,45 +467,93 @@ export default function ProgramFlow() {
     }, []);
 
     // ── Append a new step to the end of the chain ──
-    const addStep = useCallback((stepType: StepType) => {
-        const id = genId();
-        const order = nodeOrderRef.current;
-        const currentNodes = nodesRef.current;
-        const lastId = order.at(-1) ?? null;
-        const lastNode = lastId
-            ? currentNodes.find((n) => n.id === lastId)
-            : null;
-        const y = lastNode ? lastNode.position.y + NODE_GAP : 0;
-        const count =
-            currentNodes.filter((n) => n.data.stepType === stepType).length + 1;
-
-        const newNode: StepNode = {
-            id,
-            type: "programStep",
-            position: { x: CANVAS_X, y },
-            data: {
-                stepType,
-                label: `${STEP_CONFIG[stepType].label} ${count}`,
+    const addStep = useCallback(
+        (
+            stepType: StepType,
+            opts?: {
+                label?: string;
+                moduleId?: string;
+                attestationId?: string;
+                evaluationConfig?: Omit<EvaluationConfig, "stepType">;
             },
-        };
+        ) => {
+            const id = genId();
+            const order = nodeOrderRef.current;
+            const currentNodes = nodesRef.current;
+            const lastId = order.at(-1) ?? null;
+            const lastNode = lastId
+                ? currentNodes.find((n) => n.id === lastId)
+                : null;
+            const y = lastNode ? lastNode.position.y + NODE_GAP : 0;
+            const count =
+                currentNodes.filter((n) => n.data.stepType === stepType)
+                    .length + 1;
 
-        setNodes((nds) => [...nds, newNode]);
-
-        if (lastId) {
-            setEdges((eds) => [
-                ...eds,
-                {
-                    id: `e-${lastId}-${id}`,
-                    source: lastId,
-                    target: id,
-                    type: "configurableEdge",
-                    animated: true,
+            const newNode: StepNode = {
+                id,
+                type: "programStep",
+                position: { x: CANVAS_X, y },
+                data: {
+                    stepType,
+                    label:
+                        opts?.label ??
+                        `${STEP_CONFIG[stepType].label} ${count}`,
+                    moduleId: opts?.moduleId,
+                    attestationId: opts?.attestationId,
+                    evaluationConfig: opts?.evaluationConfig,
                 },
-            ]);
-        }
+            };
 
-        setNodeOrder((o) => [...o, id]);
-    }, []);
+            setNodes((nds) => [...nds, newNode]);
+
+            if (lastId) {
+                setEdges((eds) => [
+                    ...eds,
+                    {
+                        id: `e-${lastId}-${id}`,
+                        source: lastId,
+                        target: id,
+                        type: "configurableEdge",
+                        animated: true,
+                    },
+                ]);
+            }
+
+            setNodeOrder((o) => [...o, id]);
+        },
+        [],
+    );
+
+    // ── Handle module selection ──
+    const handleModuleSelect = useCallback(
+        (mod: ModuleItem) => {
+            addStep("module", { label: mod.name, moduleId: mod.id });
+        },
+        [addStep],
+    );
+
+    // ── Handle evaluation configuration ──
+    const handleEvalConfirm = useCallback(
+        (cfg: EvaluationConfig) => {
+            const { stepType, ...rest } = cfg;
+            addStep(stepType, {
+                label: cfg.questionBankName ?? undefined,
+                evaluationConfig: rest,
+            });
+        },
+        [addStep],
+    );
+
+    // ── Handle attestation selection ──
+    const handleAttestationSelect = useCallback(
+        (att: { id: string; name: string }) => {
+            addStep("attestation", {
+                label: att.name,
+                attestationId: att.id,
+            });
+        },
+        [addStep],
+    );
 
     // ── ReactFlow handlers ──
     const onNodesChange = useCallback(
@@ -516,7 +584,7 @@ export default function ProgramFlow() {
                     <Button
                         variant="outline"
                         disabled={hasFinalEval || hasAttestation}
-                        onClick={() => addStep("module")}
+                        onClick={() => setModuleDialogOpen(true)}
                         className="gap-1.5"
                     >
                         <BookOpen className="size-3.5" />
@@ -526,27 +594,17 @@ export default function ProgramFlow() {
                     <Button
                         variant="outline"
                         disabled={!hasModule || hasFinalEval || hasAttestation}
-                        onClick={() => addStep("evaluation-intermediate")}
-                        className="gap-1.5 border-yellow-200 text-yellow-700 hover:bg-yellow-50 hover:text-yellow-700"
+                        onClick={() => setEvalDialogOpen(true)}
+                        className="gap-1.5 border-orange-200 text-orange-700 hover:bg-orange-50 hover:text-orange-700"
                     >
                         <ClipboardCheck className="size-3.5" />
-                        Éval. intermédiaire
-                    </Button>
-
-                    <Button
-                        variant="outline"
-                        disabled={!hasModule || hasFinalEval || hasAttestation}
-                        onClick={() => addStep("evaluation-final")}
-                        className="gap-1.5 border-red-200 text-red-700 hover:bg-red-50 hover:text-red-700"
-                    >
-                        <Award className="size-3.5" />
-                        Éval. finale
+                        Évaluation
                     </Button>
 
                     <Button
                         variant="outline"
                         disabled={!hasModule || !hasFinalEval || hasAttestation}
-                        onClick={() => addStep("attestation")}
+                        onClick={() => setAttestationDialogOpen(true)}
                         className="gap-1.5 border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-700"
                     >
                         <BadgeCheck className="size-3.5" />
@@ -589,6 +647,25 @@ export default function ProgramFlow() {
                     </ReactFlow>
                 </div>
             </div>
+
+            {/* ── Add-node dialogs ── */}
+            <SelectModuleDialog
+                open={moduleDialogOpen}
+                onOpenChange={setModuleDialogOpen}
+                usedModuleIds={usedModuleIds}
+                onSelect={handleModuleSelect}
+            />
+            <AddEvaluationDialog
+                open={evalDialogOpen}
+                onOpenChange={setEvalDialogOpen}
+                hasFinalEval={hasFinalEval}
+                onConfirm={handleEvalConfirm}
+            />
+            <SelectAttestationDialog
+                open={attestationDialogOpen}
+                onOpenChange={setAttestationDialogOpen}
+                onSelect={handleAttestationSelect}
+            />
 
             {/* ── Access rules dialog (modules & evaluations) ── */}
             <AccessRulesDialog
