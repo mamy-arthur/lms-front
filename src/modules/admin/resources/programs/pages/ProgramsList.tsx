@@ -1,6 +1,12 @@
+"use client";
+
+import { useState } from "react";
+import { ProgramDrawer } from "../components/ProgramDrawer";
 import { ProgramsTable } from "../components/programs-table";
 
 export function ProgramsList() {
+    const [drawerOpen, setDrawerOpen] = useState(false);
+
     return (
         <div className="bg-background">
             <div className="mx-auto w-full">
@@ -15,7 +21,11 @@ export function ProgramsList() {
                         </p>
                     </div>
                 </header>
-                <ProgramsTable />
+                <ProgramsTable onNew={() => setDrawerOpen(true)} />
+                <ProgramDrawer
+                    open={drawerOpen}
+                    onOpenChange={setDrawerOpen}
+                />
             </div>
         </div>
     );

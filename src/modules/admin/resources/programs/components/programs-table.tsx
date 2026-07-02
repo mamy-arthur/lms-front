@@ -45,7 +45,7 @@ const formations: Formation[] = [
     { id: 4, name: "Next.js", category: "Développement", status: "Publié" },
 ];
 
-function ProgramsTableBase() {
+function ProgramsTableBase({ onNew }: { onNew?: () => void }) {
     const [search, setSearch] = useState("");
 
     const filtered = useMemo(() => {
@@ -142,13 +142,13 @@ function ProgramsTableBase() {
                     />
                 </div>
                 <div className="flex items-center gap-2 sm:ml-auto">
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline">
                         <Filter className="size-4" />
                         Filtrer
                     </Button>
                     <Button
-                        size="sm"
-                        className="bg-(--color-primary) hover:bg-primary/80 text-primary-foreground"
+                        className="bg-(--color-primary) hover:bg-(--color-primary)/80 text-primary-foreground"
+                        onClick={onNew}
                     >
                         <Plus className="size-4" />
                         Nouvelle formation
@@ -178,4 +178,4 @@ function ProgramsTableBase() {
     );
 }
 
-export const ProgramsTable = memo(ProgramsTableBase);
+export const ProgramsTable = memo(ProgramsTableBase) as typeof ProgramsTableBase;
