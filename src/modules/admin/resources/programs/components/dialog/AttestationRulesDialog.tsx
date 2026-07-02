@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import {
     Dialog,
     DialogContent,
+    DialogDescription,
     DialogFooter,
     DialogHeader,
     DialogTitle,
@@ -12,13 +13,10 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Check } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { cn } from "@/shared/lib/cn";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -35,6 +33,7 @@ export type AttestationRules = {
 export type NodeOption = {
     id: string;
     label: string;
+    stepType: "module" | "evaluation-intermediate" | "evaluation-final";
 };
 
 const DEFAULT_RULES: AttestationRules = {
@@ -77,19 +76,37 @@ export function AttestationRulesDialog({
         val: AttestationRules[K],
     ) => setRules((r) => ({ ...r, [key]: val }));
 
+    // Only one obtention rule can be active at a time
+    const selectRule = (rule: "avgScore" | "finalScore" | "noRule") =>
+        setRules((r) => ({
+            ...r,
+            avgScore: rule === "avgScore",
+            finalScore: rule === "finalScore",
+            noRule: rule === "noRule",
+            // clear retake when noRule selected
+            retake: rule === "noRule" ? false : r.retake,
+            retakeTargetNodeId: rule === "noRule" ? null : r.retakeTargetNodeId,
+        }));
+
+    const canRetake = rules.avgScore || rules.finalScore;
+
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-md">
+            <DialogContent className="sm:max-w-xl">
                 <DialogHeader>
                     <DialogTitle>
                         Règles d'obtention de l'attestation
                     </DialogTitle>
+                    <DialogDescription>
+                        Définissez les conditions requises pour obtenir
+                        l'attestation.
+                    </DialogDescription>
                 </DialogHeader>
-
+                <Separator />
                 <div className="space-y-5">
                     {/* ── Obtention rules ── */}
                     <section className="space-y-3">
-                        <p className="text-xs font-semibold text-foreground">
+                        <p className="font-semibold text-foreground">
                             Règles d'obtention
                         </p>
 
@@ -99,15 +116,15 @@ export function AttestationRulesDialog({
                                 <Checkbox
                                     id="att-avg"
                                     checked={rules.avgScore}
-                                    onCheckedChange={(v) =>
-                                        set("avgScore", !!v)
+                                    onCheckedChange={() =>
+                                        selectRule("avgScore")
                                     }
-                                    className="mt-0.5"
+                                    className="mt-0.5 data-[state=checked]:bg-(--color-primary) data-[state=checked]:border-(--color-primary)"
                                 />
-                                <Label htmlFor="att-avg">
+                                <span>
                                     Moyenne des évaluations supérieure ou égale
                                     à une valeur définie
-                                </Label>
+                                </span>
                             </div>
                             {rules.avgScore && (
                                 <div className="ml-6 flex items-center gap-2">
@@ -140,15 +157,15 @@ export function AttestationRulesDialog({
                                 <Checkbox
                                     id="att-final"
                                     checked={rules.finalScore}
-                                    onCheckedChange={(v) =>
-                                        set("finalScore", !!v)
+                                    onCheckedChange={() =>
+                                        selectRule("finalScore")
                                     }
-                                    className="mt-0.5"
+                                    className="mt-0.5 data-[state=checked]:bg-(--color-primary) data-[state=checked]:border-(--color-primary)"
                                 />
-                                <Label htmlFor="att-final">
+                                <span>
                                     Note de l'évaluation finale supérieure ou
                                     égale à une valeur définie
-                                </Label>
+                                </span>
                             </div>
                             {rules.finalScore && (
                                 <div className="ml-6 flex items-center gap-2">
@@ -180,12 +197,12 @@ export function AttestationRulesDialog({
                             <Checkbox
                                 id="att-norule"
                                 checked={rules.noRule}
-                                onCheckedChange={(v) => set("noRule", !!v)}
-                                className="mt-0.5"
+                                onCheckedChange={() => selectRule("noRule")}
+                                className="mt-0.5 data-[state=checked]:bg-(--color-primary) data-[state=checked]:border-(--color-primary)"
                             />
-                            <Label htmlFor="att-norule">
+                            <span>
                                 Aucune règle (attestation toujours obtenue)
-                            </Label>
+                            </span>
                         </div>
                     </section>
 
@@ -199,40 +216,97 @@ export function AttestationRulesDialog({
                             <Checkbox
                                 id="att-retake"
                                 checked={rules.retake}
+                                disabled={!canRetake}
                                 onCheckedChange={(v) => {
                                     set("retake", !!v);
                                     if (!v) set("retakeTargetNodeId", null);
                                 }}
-                                className="mt-0.5"
+                                className="mt-0.5 data-[state=checked]:bg-(--color-primary) data-[state=checked]:border-(--color-primary)"
                             />
-                            <Label htmlFor="att-retake">Faire repasser</Label>
+                            <span
+                                className={
+                                    !canRetake ? "text-muted-foreground" : ""
+                                }
+                            >
+                                Faire repasser
+                            </span>
                         </div>
 
                         {rules.retake && (
-                            <div className="ml-6 space-y-1.5">
-                                <Label className="text-muted-foreground">
-                                    Rediriger vers
-                                </Label>
-                                <Select
-                                    value={rules.retakeTargetNodeId ?? ""}
-                                    onValueChange={(v) =>
-                                        set("retakeTargetNodeId", v || null)
-                                    }
-                                >
-                                    <SelectTrigger className="w-full">
-                                        <SelectValue placeholder="Choisir un module ou une évaluation…" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {nodeOptions.map((opt) => (
-                                            <SelectItem
+                            <div className="space-y-2">
+                                <div className="max-h-44 grid grid-cols-2 gap-1.5 overflow-y-auto pr-1">
+                                    {nodeOptions.map((opt) => {
+                                        const isSelected =
+                                            rules.retakeTargetNodeId === opt.id;
+                                        const badge =
+                                            opt.stepType === "module"
+                                                ? {
+                                                      label: "Module",
+                                                      badgeCls:
+                                                          "border-blue-200 bg-blue-100 text-blue-700",
+                                                      cardCls:
+                                                          "border-blue-200 bg-blue-50/60 hover:bg-blue-50",
+                                                      selectedCls:
+                                                          "border-blue-400 bg-blue-100",
+                                                  }
+                                                : opt.stepType ===
+                                                    "evaluation-intermediate"
+                                                  ? {
+                                                        label: "Intermédiaire",
+                                                        badgeCls:
+                                                            "border-amber-200 bg-amber-100 text-amber-700",
+                                                        cardCls:
+                                                            "border-amber-200 bg-amber-50/60 hover:bg-amber-50",
+                                                        selectedCls:
+                                                            "border-amber-400 bg-amber-100",
+                                                    }
+                                                  : {
+                                                        label: "Finale",
+                                                        badgeCls:
+                                                            "border-red-200 bg-red-100 text-red-700",
+                                                        cardCls:
+                                                            "border-red-200 bg-red-50/60 hover:bg-red-50",
+                                                        selectedCls:
+                                                            "border-red-400 bg-red-100",
+                                                    };
+                                        return (
+                                            <button
                                                 key={opt.id}
-                                                value={opt.id}
+                                                type="button"
+                                                onClick={() =>
+                                                    set(
+                                                        "retakeTargetNodeId",
+                                                        opt.id,
+                                                    )
+                                                }
+                                                className={cn(
+                                                    "flex items-center justify-between rounded-lg border p-2.5 text-left transition-colors",
+                                                    isSelected
+                                                        ? badge.selectedCls
+                                                        : badge.cardCls,
+                                                )}
                                             >
-                                                {opt.label}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                                <span className="text-xs font-medium">
+                                                    {opt.label}
+                                                </span>
+                                                <Badge
+                                                    variant="outline"
+                                                    className={cn(
+                                                        "text-[10px]",
+                                                        badge.badgeCls,
+                                                    )}
+                                                >
+                                                    {badge.label}
+                                                </Badge>
+                                            </button>
+                                        );
+                                    })}
+                                    {nodeOptions.length === 0 && (
+                                        <p className="py-3 text-center text-xs text-muted-foreground">
+                                            Aucun nœud disponible.
+                                        </p>
+                                    )}
+                                </div>
                             </div>
                         )}
                     </section>
@@ -247,7 +321,9 @@ export function AttestationRulesDialog({
                             onSave(rules);
                             onOpenChange(false);
                         }}
+                        className="bg-(--color-primary) hover:bg-(--color-primary)/50"
                     >
+                        <Check />
                         Appliquer
                     </Button>
                 </DialogFooter>

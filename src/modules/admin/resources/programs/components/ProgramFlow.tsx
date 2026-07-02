@@ -43,18 +43,18 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/shared/lib/cn";
-import { AccessRulesDialog, type AccessRules } from "./AccessRulesDialog";
+import { AccessRulesDialog, type AccessRules } from "./dialog/AccessRulesDialog";
 import {
     AttestationRulesDialog,
     type AttestationRules,
     type NodeOption,
-} from "./AttestationRulesDialog";
-import { SelectModuleDialog, type ModuleItem } from "./SelectModuleDialog";
+} from "./dialog/AttestationRulesDialog";
+import { SelectModuleDialog, type ModuleItem } from "./dialog/SelectModuleDialog";
 import {
     AddEvaluationDialog,
     type EvaluationConfig,
-} from "./AddEvaluationDialog";
-import { SelectAttestationDialog } from "./SelectAttestationDialog";
+} from "./dialog/AddEvaluationDialog";
+import { SelectAttestationDialog } from "./dialog/SelectAttestationDialog";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -350,7 +350,11 @@ export default function ProgramFlow() {
         () =>
             nodes
                 .filter((n) => n.data.stepType !== "attestation")
-                .map((n) => ({ id: n.id, label: n.data.label })),
+                .map((n) => ({
+                    id: n.id,
+                    label: n.data.label,
+                    stepType: n.data.stepType as NodeOption["stepType"],
+                })),
         [nodes],
     );
 
@@ -617,7 +621,7 @@ export default function ProgramFlow() {
                 </div>
 
                 {/* ── Canvas ── */}
-                <div className="relative flex-1 mt-5">
+                <div className="relative flex-1">
                     {nodes.length === 0 && (
                         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-1 text-center">
                             <BookOpen className="mb-2 size-8 text-muted-foreground/30" />

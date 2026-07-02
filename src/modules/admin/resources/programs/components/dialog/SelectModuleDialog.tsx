@@ -1,16 +1,20 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { BookOpen, Search } from "lucide-react";
+import { BookOpen, Plus, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
     Dialog,
     DialogContent,
+    DialogDescription,
+    DialogFooter,
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/shared/lib/cn";
+import { Separator } from "@/components/ui/separator";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -103,11 +107,10 @@ export function SelectModuleDialog({
 }: Props) {
     const [search, setSearch] = useState("");
     const [activeCategory, setActiveCategory] = useState("Tous");
+    const [selected, setSelected] = useState<ModuleItem | null>(null);
 
     const categories = useMemo(() => {
-        const cats = Array.from(
-            new Set(MOCK_MODULES.map((m) => m.category)),
-        );
+        const cats = Array.from(new Set(MOCK_MODULES.map((m) => m.category)));
         return ["Tous", ...cats];
     }, []);
 
@@ -129,9 +132,12 @@ export function SelectModuleDialog({
             <DialogContent className="sm:max-w-2xl">
                 <DialogHeader>
                     <DialogTitle>Ajouter un module</DialogTitle>
+                    <DialogDescription>
+                        Choisissez le module à ajouter à votre parcours
+                    </DialogDescription>
                 </DialogHeader>
-
-                <div className="flex flex-col gap-3">
+                <Separator />
+                <div className="flex flex-col gap-4">
                     {/* Search */}
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -144,7 +150,7 @@ export function SelectModuleDialog({
                     </div>
 
                     {/* Category filter */}
-                    <div className="flex flex-wrap gap-1.5">
+                    <div className="flex flex-wrap gap-2 mb-2">
                         {categories.map((cat) => (
                             <button
                                 key={cat}
@@ -153,7 +159,7 @@ export function SelectModuleDialog({
                                 className={cn(
                                     "rounded-full px-3 py-1 text-xs font-medium transition-colors",
                                     activeCategory === cat
-                                        ? "bg-primary text-primary-foreground"
+                                        ? "bg-(--color-primary) text-(--color-primary-foreground)"
                                         : "bg-muted text-muted-foreground hover:bg-muted/80",
                                 )}
                             >
@@ -171,20 +177,19 @@ export function SelectModuleDialog({
                                     key={mod.id}
                                     type="button"
                                     disabled={isAdded}
-                                    onClick={() => {
-                                        onSelect(mod);
-                                        onOpenChange(false);
-                                    }}
+                                    onClick={() => !isAdded && setSelected(mod)}
                                     className={cn(
                                         "flex flex-col gap-2 rounded-lg border p-3 text-left transition-colors",
                                         isAdded
                                             ? "cursor-not-allowed border-border bg-muted/40 opacity-60"
-                                            : "border-border bg-card hover:border-blue-300 hover:bg-blue-50/50",
+                                            : selected?.id === mod.id
+                                              ? "border-(--color-primary) bg-(--color-primary)/5 ring-1 ring-(--color-primary)/30 cursor-pointer"
+                                              : "border-border bg-card hover:border-(--color-primary)/50 cursor-pointer",
                                     )}
                                 >
                                     <div className="flex items-start justify-between gap-2">
                                         <div className="flex items-center gap-1.5 min-w-0">
-                                            <BookOpen className="size-3.5 shrink-0 text-blue-500" />
+                                            <BookOpen className="size-3.5 shrink-0 text-(--color-primary)" />
                                             <span className="truncate text-xs font-semibold">
                                                 {mod.name}
                                             </span>
@@ -219,6 +224,31 @@ export function SelectModuleDialog({
                         )}
                     </div>
                 </div>
+
+                <DialogFooter>
+                    <Button
+                        variant="ghost"
+                        onClick={() => {
+                            setSelected(null);
+                            onOpenChange(false);
+                        }}
+                    >
+                        Annuler
+                    </Button>
+                    <Button
+                        disabled={!selected}
+                        onClick={() => {
+                            if (!selected) return;
+                            onSelect(selected);
+                            setSelected(null);
+                            onOpenChange(false);
+                        }}
+                        className="bg-(--color-primary) hover:bg-(--color-primary)/80"
+                    >
+                        <Plus />
+                        Ajouter le module
+                    </Button>
+                </DialogFooter>
             </DialogContent>
         </Dialog>
     );

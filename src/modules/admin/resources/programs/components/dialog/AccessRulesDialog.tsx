@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import {
     Dialog,
     DialogContent,
+    DialogDescription,
     DialogFooter,
     DialogHeader,
     DialogTitle,
@@ -12,6 +13,8 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { Check } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -55,17 +58,33 @@ export function AccessRulesDialog({
     const set = <K extends keyof AccessRules>(key: K, val: AccessRules[K]) =>
         setRules((r) => ({ ...r, [key]: val }));
 
+    // Only one rule can be active at a time
+    const selectRule = (
+        rule:
+            | "prevModuleCompleted"
+            | "allModulesCompleted"
+            | "prevModuleMinScore",
+    ) =>
+        setRules((r) => ({
+            ...r,
+            prevModuleCompleted: rule === "prevModuleCompleted",
+            allModulesCompleted: rule === "allModulesCompleted",
+            prevModuleMinScore: rule === "prevModuleMinScore",
+        }));
+
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-md">
+            <DialogContent className="sm:max-w-xl">
                 <DialogHeader>
                     <DialogTitle>Règles d'accès</DialogTitle>
+                    <DialogDescription>
+                        {" "}
+                        Définissez les conditions requises pour accéder à
+                        l'étape suivante.
+                    </DialogDescription>
                 </DialogHeader>
 
-                <p className="text-xs text-muted-foreground">
-                    Définissez les conditions requises pour accéder à l'étape
-                    suivante.
-                </p>
+                <Separator />
 
                 <div className="space-y-3 py-1">
                     {/* Rule 1 */}
@@ -73,14 +92,12 @@ export function AccessRulesDialog({
                         <Checkbox
                             id="r-prev"
                             checked={rules.prevModuleCompleted}
-                            onCheckedChange={(v) =>
-                                set("prevModuleCompleted", !!v)
+                            onCheckedChange={() =>
+                                selectRule("prevModuleCompleted")
                             }
-                            className="mt-0.5"
+                            className="mt-0.5 data-[state=checked]:bg-(--color-primary) data-[state=checked]:border-(--color-primary)"
                         />
-                        <Label htmlFor="r-prev">
-                            Le module précédent est terminé
-                        </Label>
+                        <span>Le module précédent est terminé</span>
                     </div>
 
                     {/* Rule 2 */}
@@ -88,14 +105,12 @@ export function AccessRulesDialog({
                         <Checkbox
                             id="r-all"
                             checked={rules.allModulesCompleted}
-                            onCheckedChange={(v) =>
-                                set("allModulesCompleted", !!v)
+                            onCheckedChange={() =>
+                                selectRule("allModulesCompleted")
                             }
-                            className="mt-0.5"
+                            className="mt-0.5 data-[state=checked]:bg-(--color-primary) data-[state=checked]:border-(--color-primary)"
                         />
-                        <Label htmlFor="r-all">
-                            Tous les autres modules ont été terminés
-                        </Label>
+                        <span>Tous les autres modules ont été terminés</span>
                     </div>
 
                     {/* Rule 3 */}
@@ -104,15 +119,15 @@ export function AccessRulesDialog({
                             <Checkbox
                                 id="r-score"
                                 checked={rules.prevModuleMinScore}
-                                onCheckedChange={(v) =>
-                                    set("prevModuleMinScore", !!v)
+                                onCheckedChange={() =>
+                                    selectRule("prevModuleMinScore")
                                 }
-                                className="mt-0.5"
+                                className="mt-0.5 data-[state=checked]:bg-(--color-primary) data-[state=checked]:border-(--color-primary)"
                             />
-                            <Label htmlFor="r-score">
+                            <span>
                                 Le module précédent a obtenu au moins un certain
                                 nombre de points
-                            </Label>
+                            </span>
                         </div>
                         {rules.prevModuleMinScore && (
                             <div className="ml-6 flex items-center gap-2">
@@ -152,7 +167,9 @@ export function AccessRulesDialog({
                             onSave(rules);
                             onOpenChange(false);
                         }}
+                        className="bg-(--color-primary) hover:bg-(--color-primary)/50"
                     >
+                        <Check />
                         Appliquer
                     </Button>
                 </DialogFooter>

@@ -1,14 +1,18 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { BadgeCheck, Search } from "lucide-react";
+import { BadgeCheck, Plus, Search } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
     Dialog,
     DialogContent,
+    DialogDescription,
+    DialogFooter,
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/shared/lib/cn";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -34,7 +38,8 @@ const MOCK_ATTESTATIONS: AttestationItem[] = [
     {
         id: "at3",
         name: "Chef de Projet Digital",
-        description: "Gestion de projets numériques et animation d'équipes agiles",
+        description:
+            "Gestion de projets numériques et animation d'équipes agiles",
     },
     {
         id: "at4",
@@ -49,7 +54,8 @@ const MOCK_ATTESTATIONS: AttestationItem[] = [
     {
         id: "at6",
         name: "Cybersécurité Web",
-        description: "Protection des applications web selon les standards OWASP",
+        description:
+            "Protection des applications web selon les standards OWASP",
     },
 ];
 
@@ -67,6 +73,7 @@ export function SelectAttestationDialog({
     onSelect,
 }: Props) {
     const [search, setSearch] = useState("");
+    const [selected, setSelected] = useState<AttestationItem | null>(null);
 
     const filtered = useMemo(
         () =>
@@ -81,6 +88,9 @@ export function SelectAttestationDialog({
             <DialogContent className="sm:max-w-lg">
                 <DialogHeader>
                     <DialogTitle>Sélectionner une attestation</DialogTitle>
+                    <DialogDescription>
+                        Choisissez une attestation dans la liste ci-dessous.
+                    </DialogDescription>
                 </DialogHeader>
 
                 <div className="flex flex-col gap-3">
@@ -99,11 +109,13 @@ export function SelectAttestationDialog({
                             <button
                                 key={att.id}
                                 type="button"
-                                onClick={() => {
-                                    onSelect(att);
-                                    onOpenChange(false);
-                                }}
-                                className="flex items-start gap-3 rounded-lg border border-border bg-card p-3 text-left transition-colors hover:border-emerald-400/60 hover:bg-emerald-50/50"
+                                onClick={() => setSelected(att)}
+                                className={cn(
+                                    "flex items-start gap-3 rounded-lg border bg-card p-3 text-left transition-colors",
+                                    selected?.id === att.id
+                                        ? "border-emerald-400 bg-emerald-50/60 ring-1 ring-emerald-300"
+                                        : "border-border hover:border-emerald-400/60 hover:bg-emerald-50/50",
+                                )}
                             >
                                 <BadgeCheck className="mt-0.5 size-4 shrink-0 text-emerald-500" />
                                 <div>
@@ -126,6 +138,31 @@ export function SelectAttestationDialog({
                         )}
                     </div>
                 </div>
+
+                <DialogFooter>
+                    <Button
+                        variant="ghost"
+                        onClick={() => {
+                            setSelected(null);
+                            onOpenChange(false);
+                        }}
+                    >
+                        Annuler
+                    </Button>
+                    <Button
+                        disabled={!selected}
+                        onClick={() => {
+                            if (!selected) return;
+                            onSelect(selected);
+                            setSelected(null);
+                            onOpenChange(false);
+                        }}
+                        className="bg-(--color-primary) hover:bg-(--color-primary)/80"
+                    >
+                        <Plus />
+                        Ajouter l'attestation
+                    </Button>
+                </DialogFooter>
             </DialogContent>
         </Dialog>
     );

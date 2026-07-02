@@ -1,12 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Award, ClipboardCheck, Search } from "lucide-react";
+import { Award, ClipboardCheck, Plus, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
     Dialog,
     DialogContent,
+    DialogDescription,
     DialogFooter,
     DialogHeader,
     DialogTitle,
@@ -15,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/shared/lib/cn";
+import { Separator } from "@/components/ui/separator";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -128,11 +130,15 @@ export function AddEvaluationDialog({
             <DialogContent className="sm:max-w-xl">
                 <DialogHeader>
                     <DialogTitle>Configurer l'évaluation</DialogTitle>
+                    <DialogDescription>
+                        Définissez les paramètres de l'évaluation à ajouter au
+                        parcours
+                    </DialogDescription>
                 </DialogHeader>
-
+                <Separator />
                 <div className="space-y-5">
                     {/* ── Type ── */}
-                    <div className="space-y-2">
+                    <div className="flex flex-col space-y-2">
                         <Label>Type d'évaluation</Label>
                         <div className="flex gap-2">
                             <button
@@ -202,6 +208,7 @@ export function AddEvaluationDialog({
                                 onCheckedChange={(v) =>
                                     set("durationEnabled", v)
                                 }
+                                className="data-[state=checked]:bg-(--color-primary)"
                             />
                         </div>
                         {config.durationEnabled && (
@@ -248,10 +255,8 @@ export function AddEvaluationDialog({
 
                     {/* ── Params ── */}
                     <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1.5">
-                            <Label htmlFor="q-count">
-                                Nombre de questions
-                            </Label>
+                        <div className="flex flex-col space-y-2">
+                            <Label htmlFor="q-count">Nombre de questions</Label>
                             <Input
                                 id="q-count"
                                 type="number"
@@ -262,7 +267,7 @@ export function AddEvaluationDialog({
                                 }
                             />
                         </div>
-                        <div className="space-y-1.5">
+                        <div className="flex flex-col space-y-2">
                             <Label htmlFor="a-count">
                                 Nombre de tentatives
                             </Label>
@@ -279,7 +284,7 @@ export function AddEvaluationDialog({
                     </div>
 
                     {/* ── Question bank ── */}
-                    <div className="space-y-2">
+                    <div className="flex flex-col space-y-2">
                         <Label>
                             Banque de questions{" "}
                             <span className="text-destructive">*</span>
@@ -303,16 +308,13 @@ export function AddEvaluationDialog({
                                         type="button"
                                         onClick={() => {
                                             set("questionBankId", bank.id);
-                                            set(
-                                                "questionBankName",
-                                                bank.name,
-                                            );
+                                            set("questionBankName", bank.name);
                                         }}
                                         className={cn(
-                                            "flex items-start justify-between rounded-lg border p-3 text-left transition-colors",
+                                            "flex items-start justify-between rounded-lg border  p-3 text-left transition-colors",
                                             isSelected
                                                 ? "border-primary/60 bg-primary/5 ring-1 ring-primary/30"
-                                                : "border-border bg-card hover:bg-muted/50",
+                                                : "border-border bg-card hover:border-(--color-primary)",
                                         )}
                                     >
                                         <div>
@@ -345,10 +347,7 @@ export function AddEvaluationDialog({
                 </div>
 
                 <DialogFooter>
-                    <Button
-                        variant="ghost"
-                        onClick={() => onOpenChange(false)}
-                    >
+                    <Button variant="ghost" onClick={() => onOpenChange(false)}>
                         Annuler
                     </Button>
                     <Button
@@ -359,8 +358,10 @@ export function AddEvaluationDialog({
                             setConfig(DEFAULT_CONFIG);
                             setBankSearch("");
                         }}
+                        className="bg-(--color-primary) hover:bg-(--color-primary)/80"
                     >
-                        Ajouter au parcours
+                        <Plus />
+                        Ajouter l'évaluation
                     </Button>
                 </DialogFooter>
             </DialogContent>
