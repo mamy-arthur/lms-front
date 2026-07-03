@@ -6,12 +6,9 @@ import {
     Eye,
     EyeOff,
     FolderTree,
-    GraduationCap,
     Hash,
     MoreVertical,
-    NotebookPen,
     Pencil,
-    PencilRuler,
     Trash2,
 } from "lucide-react";
 
@@ -63,21 +60,6 @@ export function CourseCard({
             className="group relative flex flex-col overflow-hidden transition-shadow hover:shadow-md cursor-pointer"
             onClick={() => router.push(href(course.id))}
         >
-            <NotebookPen
-                className="absolute top-3 right-12 size-14 text-gray-500/10 rotate-12"
-                aria-hidden
-            />
-
-            <PencilRuler
-                className="absolute bottom-4 right-4 size-10 text-gray-500/10 -rotate-12"
-                aria-hidden
-            />
-
-            <GraduationCap
-                className="absolute -left-2 bottom-8 size-12 text-gray-500/10"
-                aria-hidden
-            />
-
             <CardHeader className="relative z-10 flex flex-row items-start justify-between gap-2 space-y-0">
                 <div className="space-y-1.5">
                     <CardTitle className="text-sm font-semibold leading-tight">

@@ -91,20 +91,20 @@ export function CourseTable({ basePath }: Props) {
                         <Button
                             variant="ghost"
                             size="icon"
-                            className={`size-8 ${view === "card" ? "bg-background shadow-sm" : "hover:bg-transparent"}`}
+                            className={`size-6 ${view === "card" ? "bg-background shadow-sm" : "hover:bg-transparent"}`}
                             onClick={() => setView("card")}
                             aria-label="Vue cartes"
                         >
-                            <LayoutGrid className="size-4" />
+                            <LayoutGrid className="size-3" />
                         </Button>
                         <Button
                             variant="ghost"
                             size="icon"
-                            className={`size-8 ${view === "table" ? "bg-background shadow-sm" : "hover:bg-transparent"}`}
+                            className={`size-6 ${view === "table" ? "bg-background shadow-sm" : "hover:bg-transparent"}`}
                             onClick={() => setView("table")}
                             aria-label="Vue tableau"
                         >
-                            <List className="size-4" />
+                            <List className="size-3" />
                         </Button>
                     </div>
                     <Select

@@ -1,29 +1,29 @@
 "use client";
 
-import { memo, useCallback, useMemo, useState } from "react";
 import {
-    Search,
-    Filter,
-    Plus,
-    MoreHorizontal,
     Eye,
+    MoreHorizontal,
     Pencil,
+    Plus,
+    Search,
+    Settings2,
     Trash2,
 } from "lucide-react";
-
-import { Input } from "@/components/ui/input";
+import { memo, useCallback, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
-    DropdownMenuTrigger,
     DropdownMenuSeparator,
+    DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
 import {
     DataTable,
     type DataTableColumn,
 } from "@/shared/components/ui/DataTable";
+import { formatDate } from "@/shared/lib/date";
 import { StatusBadge } from "./StatusBadge";
 
 export type Formation = {
@@ -31,6 +31,9 @@ export type Formation = {
     name: string;
     category: string;
     status: "Publié" | "Brouillon" | "Archivé";
+    deadline?: string;
+    cost?: number;
+    currency?: string;
 };
 
 const formations: Formation[] = [
@@ -39,10 +42,36 @@ const formations: Formation[] = [
         name: "React Avancé",
         category: "Développement",
         status: "Publié",
+        deadline: "2026-09-30",
+        cost: 299,
+        currency: "EUR",
     },
-    { id: 2, name: "Docker", category: "DevOps", status: "Brouillon" },
-    { id: 3, name: "Scrum", category: "Management", status: "Archivé" },
-    { id: 4, name: "Next.js", category: "Développement", status: "Publié" },
+    {
+        id: 2,
+        name: "Docker",
+        category: "DevOps",
+        status: "Brouillon",
+        deadline: "2026-08-15",
+        cost: 0,
+        currency: "EUR",
+    },
+    {
+        id: 3,
+        name: "Scrum",
+        category: "Management",
+        status: "Archivé",
+        cost: 149,
+        currency: "EUR",
+    },
+    {
+        id: 4,
+        name: "Next.js",
+        category: "Développement",
+        status: "Publié",
+        deadline: "2026-12-01",
+        cost: 199,
+        currency: "USD",
+    },
 ];
 
 function ProgramsTableBase({ onNew }: { onNew?: () => void }) {
@@ -120,6 +149,41 @@ function ProgramsTableBase({ onNew }: { onNew?: () => void }) {
                 render: (row) => <StatusBadge status={row.status} />,
             },
             {
+                key: "deadline",
+                label: "Date d'échéance",
+                sortable: true,
+                render: (row) => (
+                    <span className="text-xs text-muted-foreground tabular-nums">
+                        {row.deadline ? formatDate(row.deadline) : "—"}
+                    </span>
+                ),
+            },
+            {
+                key: "cost",
+                label: "Tarification",
+                sortable: true,
+                render: (row) => {
+                    if (row.cost === undefined)
+                        return (
+                            <span className="text-xs text-muted-foreground">
+                                —
+                            </span>
+                        );
+                    if (row.cost === 0)
+                        return (
+                            <span className="text-xs font-medium text-emerald-600">
+                                Gratuit
+                            </span>
+                        );
+                    return (
+                        <span className="text-xs font-medium tabular-nums">
+                            {row.cost.toLocaleString("fr-FR")}{" "}
+                            {row.currency ?? "EUR"}
+                        </span>
+                    );
+                },
+            },
+            {
                 key: "actions",
                 label: "",
                 sortable: false,
@@ -143,7 +207,7 @@ function ProgramsTableBase({ onNew }: { onNew?: () => void }) {
                 </div>
                 <div className="flex items-center gap-2 sm:ml-auto">
                     <Button variant="outline">
-                        <Filter className="size-4" />
+                        <Settings2 className="size-4" />
                         Filtrer
                     </Button>
                     <Button
@@ -178,4 +242,6 @@ function ProgramsTableBase({ onNew }: { onNew?: () => void }) {
     );
 }
 
-export const ProgramsTable = memo(ProgramsTableBase) as typeof ProgramsTableBase;
+export const ProgramsTable = memo(
+    ProgramsTableBase,
+) as typeof ProgramsTableBase;
