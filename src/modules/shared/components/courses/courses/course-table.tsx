@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 
-import { Search, BookOpen, Plus } from "lucide-react";
+import { Search, BookOpen, Plus, LayoutGrid, List } from "lucide-react";
 import {
     Card,
     CardHeader,
@@ -32,6 +32,9 @@ import type { Course } from "../types/index";
 import { toast } from "sonner";
 import { CourseCard } from "@/modules/shared/components/courses/components/CourseCard";
 import { CourseDrawer } from "./course-drawer";
+import { CourseDataTable } from "./CourseDataTable";
+
+type View = "card" | "table";
 
 type Props = {
     basePath: string;
@@ -48,6 +51,7 @@ export function CourseTable({ basePath }: Props) {
     const [query, setQuery] = useState("");
     const [categoryFilter, setCategoryFilter] = useState<string>("all");
     const [confirmDelete, setConfirmDelete] = useState<Course | null>(null);
+    const [view, setView] = useState<View>("table");
     const [courseDrawer, setCourseDrawer] = useState<{
         open: boolean;
         course: Course | null;
@@ -83,6 +87,26 @@ export function CourseTable({ basePath }: Props) {
                     />
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex items-center rounded-md border bg-muted/40 p-0.5">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className={`size-8 ${view === "card" ? "bg-background shadow-sm" : "hover:bg-transparent"}`}
+                            onClick={() => setView("card")}
+                            aria-label="Vue cartes"
+                        >
+                            <LayoutGrid className="size-4" />
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className={`size-8 ${view === "table" ? "bg-background shadow-sm" : "hover:bg-transparent"}`}
+                            onClick={() => setView("table")}
+                            aria-label="Vue tableau"
+                        >
+                            <List className="size-4" />
+                        </Button>
+                    </div>
                     <Select
                         value={categoryFilter}
                         onValueChange={setCategoryFilter}
@@ -105,7 +129,7 @@ export function CourseTable({ basePath }: Props) {
                         onClick={() =>
                             setCourseDrawer({ open: true, course: null })
                         }
-                        className="bg-(--color-primary) hover:bg-(--color-primary)/80 text-primary-foreground"
+                        className="bg-(--color-primary) hover:bg-primary/80 text-primary-foreground"
                     >
                         <Plus className="mr-1 size-4" />
                         Nouveau cours
@@ -113,7 +137,25 @@ export function CourseTable({ basePath }: Props) {
                 </div>
             </div>
 
-            {loading ? (
+            {view === "table" ? (
+                <CourseDataTable
+                    courses={filtered}
+                    categories={categories}
+                    isLoading={loading}
+                    hasQuery={!!query.trim() || categoryFilter !== "all"}
+                    basePath={basePath}
+                    onEdit={(course) => setCourseDrawer({ open: true, course })}
+                    onDelete={setConfirmDelete}
+                    onToggleVisibility={(course) => {
+                        toggleCourseVisibility(course.id);
+                        toast.success(
+                            course.visible
+                                ? "Cours masqué"
+                                : "Cours rendu visible",
+                        );
+                    }}
+                />
+            ) : loading ? (
                 <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                     {Array.from({ length: 6 }).map((_, i) => (
                         <Card key={i}>

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
     ArrowRight,
     BookOpen,
@@ -56,8 +57,12 @@ export function CourseCard({
     getCategoryPath,
     href,
 }: CourseCardProps) {
+    const router = useRouter();
     return (
-        <Card className="group relative flex flex-col overflow-hidden transition-shadow hover:shadow-md cursor-pointer">
+        <Card
+            className="group relative flex flex-col overflow-hidden transition-shadow hover:shadow-md cursor-pointer"
+            onClick={() => router.push(href(course.id))}
+        >
             <NotebookPen
                 className="absolute top-3 right-12 size-14 text-gray-500/10 rotate-12"
                 aria-hidden
@@ -92,6 +97,7 @@ export function CourseCard({
                             variant="ghost"
                             size="icon"
                             className="size-5 cursor-pointer"
+                            onClick={(e) => e.stopPropagation()}
                         >
                             <MoreVertical className="size-3" />
                         </Button>
@@ -176,6 +182,7 @@ export function CourseCard({
                     <Button
                         asChild
                         className="bg-(--color-primary) hover:bg-(--color-primary)/80"
+                        onClick={(e) => e.stopPropagation()}
                     >
                         <Link href={href(course.id)}>
                             <ArrowRight />
