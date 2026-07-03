@@ -1,16 +1,16 @@
-"use client";
+'use client';
 
-import { Plus } from "lucide-react";
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { ConfirmDialog } from "@/shared/components/confirm-dialog/ConfirmDialog";
-import { QuizSearch } from "@modules/shared/components/quizzes";
-import { useQuizListController } from "@/modules/shared/hooks/useQuizListController";
-import { useQuizzesQuery } from "../hooks/useQuizzesQuery";
-import { useDeleteQuiz } from "../hooks/useDeleteQuiz";
-import type { Quiz } from "../types";
-import { AdminQuizFormDrawer } from "../components/AdminQuizFormDrawer";
-import { AdminQuizzesTable } from "./_components/admin-quizzes-table";
+import { Plus } from 'lucide-react';
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/shared/components/confirm-dialog/ConfirmDialog';
+import { QuizSearch } from '@modules/shared/components/quizzes';
+import { useQuizListController } from '@/modules/shared/hooks/useQuizListController';
+import { useQuizzesQuery } from '../hooks/useQuizzesQuery';
+import { useDeleteQuiz } from '../hooks/useDeleteQuiz';
+import type { Quiz } from '../types';
+import { AdminQuizFormDrawer } from '../components/AdminQuizFormDrawer';
+import { AdminQuizzesTable } from './_components/admin-quizzes-table';
 
 export function QuizList() {
   const ctrl = useQuizListController<Quiz>({
@@ -83,15 +83,17 @@ export function QuizList() {
         <ConfirmDialog
           open={!!deleteConfirm}
           title="Supprimer le quiz"
-          description={(
+          description={
             <>
-              Êtes-vous sûr de vouloir supprimer le quiz « {deleteConfirm?.title}
-              » ? Cette action est irréversible.
+              Êtes-vous sûr de vouloir supprimer le quiz « {deleteConfirm?.title}» ? Cette action
+              est irréversible.
             </>
-          )}
+          }
           confirmClassName="bg-destructive hover:bg-destructive/80"
           onClose={() => setDeleteConfirm(undefined)}
-          onConfirm={() => { if (deleteConfirm) deleteMutation.mutate(deleteConfirm.id); }}
+          onConfirm={() => {
+            if (deleteConfirm) deleteMutation.mutate(deleteConfirm.id);
+          }}
         />
       </div>
     </div>

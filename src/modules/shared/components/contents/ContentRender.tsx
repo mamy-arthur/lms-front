@@ -1,86 +1,73 @@
-import { CourseContent } from "@/modules/shared/components/courses/types";
-import { FileContentView } from "./components/FileView";
-import { PageContentView } from "./components/PageView";
-import { UrlContentView } from "./components/UrlView";
-import { TextContentView } from "./components/TextView";
-import { FolderContentView } from "./components/FolderView";
-import { SurveyContentView } from "./components/SurveyView";
-import { ScormContentView } from "./components/ScormView";
+import { CourseContent } from '@/modules/shared/components/courses/types';
+import { FileContentView } from './components/FileView';
+import { PageContentView } from './components/PageView';
+import { UrlContentView } from './components/UrlView';
+import { TextContentView } from './components/TextView';
+import { FolderContentView } from './components/FolderView';
+import { SurveyContentView } from './components/SurveyView';
+import { ScormContentView } from './components/ScormView';
 
 interface ContentRendererProps {
-    content: CourseContent;
+  content: CourseContent;
 }
 
 export function ContentRenderer({ content }: ContentRendererProps) {
-    switch (content.type) {
-        case "file":
-            return (
-                <FileContentView
-                    title={content.title}
-                    description={content.data?.description as string}
-                    fileName={content.data?.fileName as string}
-                />
-            );
+  switch (content.type) {
+    case 'file':
+      return (
+        <FileContentView
+          title={content.title}
+          description={content.data?.description as string}
+          fileName={content.data?.fileName as string}
+        />
+      );
 
-        case "page":
-            return (
-                <PageContentView
-                    title={content.title}
-                    description={content.data?.description as string}
-                    contenu={content.data?.content as string}
-                />
-            );
+    case 'page':
+      return (
+        <PageContentView
+          title={content.title}
+          description={content.data?.description as string}
+          contenu={content.data?.content as string}
+        />
+      );
 
-        case "url":
-            return (
-                <UrlContentView
-                    title={content.title}
-                    description={content.data?.description as string}
-                    url={content.data?.url as string}
-                />
-            );
-        case "text-media":
-            return (
-                <TextContentView
-                    title={content.title}
-                    text={content.data?.text as string}
-                />
-            );
-        case "folder":
-            return (
-                <FolderContentView
-                    title={content.title}
-                    description={content.data?.description as string}
-                    fileCount={content.data?.fileCount as number}
-                    filesNames={content.data?.filesNames as string[]}
-                />
-            );
-        case "survey":
-            return (
-                <SurveyContentView
-                    title={content.title}
-                    surveyType={
-                        (content.data?.surveyType as string) ?? undefined
-                    }
-                    description={
-                        (content.data?.description as string) ?? undefined
-                    }
-                />
-            );
-        case "scorm":
-            return (
-                <ScormContentView
-                    title={content.title}
-                    description={
-                        (content.data?.description as string) ?? undefined
-                    }
-                    packageFile={
-                        (content.data?.packageFile as string) ?? undefined
-                    }
-                />
-            );
+    case 'url':
+      return (
+        <UrlContentView
+          title={content.title}
+          description={content.data?.description as string}
+          url={content.data?.url as string}
+        />
+      );
+    case 'text-media':
+      return <TextContentView title={content.title} text={content.data?.text as string} />;
+    case 'folder':
+      return (
+        <FolderContentView
+          title={content.title}
+          description={content.data?.description as string}
+          fileCount={content.data?.fileCount as number}
+          filesNames={content.data?.filesNames as string[]}
+        />
+      );
+    case 'survey':
+      return (
+        <SurveyContentView
+          title={content.title}
+          surveyType={(content.data?.surveyType as string) ?? undefined}
+          description={(content.data?.description as string) ?? undefined}
+        />
+      );
+    case 'scorm':
+      return (
+        <ScormContentView
+          title={content.title}
+          description={(content.data?.description as string) ?? undefined}
+          packageFile={(content.data?.packageFile as string) ?? undefined}
+        />
+      );
 
-        default:
-            return null;
-    }
+    default:
+      return null;
+  }
 }

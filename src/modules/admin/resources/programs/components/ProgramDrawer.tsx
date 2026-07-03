@@ -1,30 +1,25 @@
-"use client";
+'use client';
 
-import { Save } from "lucide-react";
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import ProgramFlow from "./ProgramFlow";
-import { ProgramFormPanel, type ProgramFormValues } from "./ProgramFormPanel";
+import { Save } from 'lucide-react';
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import ProgramFlow from './ProgramFlow';
+import { ProgramFormPanel, type ProgramFormValues } from './ProgramFormPanel';
 
 // ─── Default form values ──────────────────────────────────────────────────────
 
 const DEFAULT_FORM_VALUES: ProgramFormValues = {
-  name: "",
-  description: "",
+  name: '',
+  description: '',
   visible: false,
   deadline: undefined,
-  category: "",
+  category: '',
   image: null,
   publishedAt: undefined,
-  author: "",
-  cost: "",
-  currency: "EUR",
+  author: '',
+  cost: '',
+  currency: 'EUR',
 };
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -35,8 +30,7 @@ type ProgramDrawerProps = {
 };
 
 export function ProgramDrawer({ open, onOpenChange }: ProgramDrawerProps) {
-  const [formValues, setFormValues] =
-    useState<ProgramFormValues>(DEFAULT_FORM_VALUES);
+  const [formValues, setFormValues] = useState<ProgramFormValues>(DEFAULT_FORM_VALUES);
 
   const handleSave = () => {
     // TODO: submit formValues + ProgramFlow data
@@ -53,16 +47,11 @@ export function ProgramDrawer({ open, onOpenChange }: ProgramDrawerProps) {
             <div>
               <SheetTitle className="text-base">Nouvelle formation</SheetTitle>
               <p className="mt-0.5 text-xs text-muted-foreground">
-                Définissez les informations et construisez le parcours
-                pédagogique.
+                Définissez les informations et construisez le parcours pédagogique.
               </p>
             </div>
             <div className="flex items-center gap-2 pr-6">
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => onOpenChange(false)}
-              >
+              <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
                 Annuler
               </Button>
               <Button

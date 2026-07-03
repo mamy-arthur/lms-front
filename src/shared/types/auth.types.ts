@@ -1,4 +1,4 @@
-import { Role } from "@/shared/constants/roles";
+import { Role } from '@/shared/constants/roles';
 
 export interface AuthUser {
   id: string;

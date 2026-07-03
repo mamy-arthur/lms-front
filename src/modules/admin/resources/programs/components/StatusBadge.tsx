@@ -1,19 +1,11 @@
-import { Badge } from "@/components/ui/badge";
-import { Formation } from "./programs-table";
+import { Badge } from '@/components/ui/badge';
+import { Formation } from './programs-table';
 
-import {
-  CheckCircle2,
-  FileText,
-  Archive,
-} from "lucide-react";
+import { CheckCircle2, FileText, Archive } from 'lucide-react';
 
-export function StatusBadge({
-  status,
-}: {
-  status: Formation["status"];
-}) {
+export function StatusBadge({ status }: { status: Formation['status'] }) {
   switch (status) {
-    case "Publié":
+    case 'Publié':
       return (
         <Badge
           variant="outline"
@@ -24,7 +16,7 @@ export function StatusBadge({
         </Badge>
       );
 
-    case "Brouillon":
+    case 'Brouillon':
       return (
         <Badge
           variant="outline"
@@ -35,7 +27,7 @@ export function StatusBadge({
         </Badge>
       );
 
-    case "Archivé":
+    case 'Archivé':
       return (
         <Badge
           variant="outline"

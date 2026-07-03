@@ -1,7 +1,7 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import type { Question, QuestionPayload } from "../types";
-import { normalizeQuestion } from "../types";
-import { ADMIN_QUESTIONS_QUERY_KEY } from "./useQuestionsQuery";
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import type { Question, QuestionPayload } from '../types';
+import { normalizeQuestion } from '../types';
+import { ADMIN_QUESTIONS_QUERY_KEY } from './useQuestionsQuery';
 
 export function useCreateQuestion() {
   const queryClient = useQueryClient();
@@ -39,9 +39,7 @@ export function useCreateQuestion() {
       return Promise.resolve({ data: mockRaw });
     },
     onSuccess: ({ data: rawQuestion }) => {
-      const newQuestion = normalizeQuestion(
-        rawQuestion as unknown as Record<string, unknown>,
-      );
+      const newQuestion = normalizeQuestion(rawQuestion as unknown as Record<string, unknown>);
       queryClient.setQueryData<{ data: Question[]; total: number }>(
         ADMIN_QUESTIONS_QUERY_KEY,
         (prev) => ({

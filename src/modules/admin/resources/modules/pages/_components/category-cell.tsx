@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { Check, Pencil, Plus } from "lucide-react";
-import { useState } from "react";
+import { Check, Pencil, Plus } from 'lucide-react';
+import { useState } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -11,9 +11,9 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+} from '@/components/ui/alert-dialog';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   Command,
   CommandEmpty,
@@ -21,29 +21,22 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
-import { useModuleCategoryStore } from "../../lib/module-store";
-import { ModuleCategoryDrawer } from "../../components/module-category-drawer";
-import type { Module } from "../../types";
+} from '@/components/ui/command';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
+import { useModuleCategoryStore } from '../../lib/module-store';
+import { ModuleCategoryDrawer } from '../../components/module-category-drawer';
+import type { Module } from '../../types';
 
 interface CategoryCellProps {
   module: Module;
   onCategoryChange: (moduleId: string, newCategory: string) => void;
 }
 
-export function CategoryCell({
-  module: mod,
-  onCategoryChange,
-}: CategoryCellProps) {
+export function CategoryCell({ module: mod, onCategoryChange }: CategoryCellProps) {
   const { categories, getLabel } = useModuleCategoryStore();
   const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState('');
   const [catDrawerOpen, setCatDrawerOpen] = useState(false);
   const [pendingCategory, setPendingCategory] = useState<string | null>(null);
 
@@ -70,7 +63,7 @@ export function CategoryCell({
           variant="outline"
           className="inline-flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-full border bg-amber-50 text-amber-500 border-amber-200"
         >
-          {getLabel(mod.category || "")}
+          {getLabel(mod.category || '')}
         </Badge>
         <Popover open={open} onOpenChange={setOpen}>
           <PopoverTrigger asChild>
@@ -86,27 +79,21 @@ export function CategoryCell({
             <Command>
               <div className="flex items-center gap-1 border-b px-1">
                 <div className="flex-1 min-w-0">
-                  <CommandInput
-                    placeholder="Rechercher…"
-                    value={query}
-                    onValueChange={setQuery}
-                  />
+                  <CommandInput placeholder="Rechercher…" value={query} onValueChange={setQuery} />
                 </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="shrink-0 h-7 px-1.5 text-xs gap-1 text-muted-foreground mr-1"
-                    onClick={() => setCatDrawerOpen(true)}
-                  >
-                    <Plus className="size-3.5" />
-                    Créer
-                  </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="shrink-0 h-7 px-1.5 text-xs gap-1 text-muted-foreground mr-1"
+                  onClick={() => setCatDrawerOpen(true)}
+                >
+                  <Plus className="size-3.5" />
+                  Créer
+                </Button>
               </div>
               <CommandList>
-                <CommandEmpty>
-                  Aucune catégorie trouvée.
-                </CommandEmpty>
+                <CommandEmpty>Aucune catégorie trouvée.</CommandEmpty>
                 <CommandGroup>
                   {categories.map((cat) => (
                     <CommandItem
@@ -116,10 +103,8 @@ export function CategoryCell({
                     >
                       <Check
                         className={cn(
-                          "mr-2 size-4",
-                          mod.category === cat.id
-                            ? "opacity-100"
-                            : "opacity-0",
+                          'mr-2 size-4',
+                          mod.category === cat.id ? 'opacity-100' : 'opacity-0',
                         )}
                       />
                       {cat.name}
@@ -142,23 +127,18 @@ export function CategoryCell({
           <AlertDialogHeader>
             <AlertDialogTitle>Changer la catégorie</AlertDialogTitle>
             <AlertDialogDescription>
-              Êtes-vous sûr de vouloir modifier la catégorie du module «{" "}
-              {mod.name} » en « {pendingCategory ? getLabel(pendingCategory) : ""} » ?
+              Êtes-vous sûr de vouloir modifier la catégorie du module « {mod.name} » en «{' '}
+              {pendingCategory ? getLabel(pendingCategory) : ''} » ?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmChange}>
-              Confirmer
-            </AlertDialogAction>
+            <AlertDialogAction onClick={confirmChange}>Confirmer</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      <ModuleCategoryDrawer
-        open={catDrawerOpen}
-        onOpenChange={setCatDrawerOpen}
-      />
+      <ModuleCategoryDrawer open={catDrawerOpen} onOpenChange={setCatDrawerOpen} />
     </>
   );
 }

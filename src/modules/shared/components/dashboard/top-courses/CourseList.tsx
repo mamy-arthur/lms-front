@@ -1,19 +1,16 @@
-import { Course } from "./types";
-import { CourseItem } from "./CourseItem";
+import { Course } from './types';
+import { CourseItem } from './CourseItem';
 
 type Props = {
-    courses: Course[];
+  courses: Course[];
 };
 
 export function CourseList({ courses }: Props) {
-    return (
-        <>
-            {courses.map((course) => (
-                <CourseItem
-                    key={course.id}
-                    course={course}
-                />
-            ))}
-        </>
-    );
+  return (
+    <>
+      {courses.map((course) => (
+        <CourseItem key={course.id} course={course} />
+      ))}
+    </>
+  );
 }

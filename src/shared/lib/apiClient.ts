@@ -1,12 +1,12 @@
-import { useAuthStore } from "@/shared/stores/auth.store";
-import { useTenantStore } from "@/shared/stores/tenant.store";
+import { useAuthStore } from '@/shared/stores/auth.store';
+import { useTenantStore } from '@/shared/stores/tenant.store';
 
 /**
  * Retourne le chemin de login adapté au contexte courant.
  * Exporté pour être testé indépendamment.
  */
 export function resolveLoginPath(pathname: string): string {
-  return pathname.startsWith("/admin") ? "/admin/login" : "/login";
+  return pathname.startsWith('/admin') ? '/admin/login' : '/login';
 }
 
 export interface HttpOptions extends RequestInit {
@@ -31,21 +31,21 @@ export const httpClient = async (
   json: unknown;
 }> => {
   let finalUrl = url;
-  if (!url.startsWith("/api") && !url.startsWith("http")) {
-    finalUrl = `/api/v1/${url.replace(/^\/+/, "")}`;
+  if (!url.startsWith('/api') && !url.startsWith('http')) {
+    finalUrl = `/api/v1/${url.replace(/^\/+/, '')}`;
   }
 
   const headers = new Headers(options.headers as HeadersInit | undefined);
   const tenant = useTenantStore.getState().tenant;
 
-  headers.set("Accept", "application/json");
-  if (tenant) headers.set("X-Tenant-ID", tenant.id);
-  if (options.body) headers.set("Content-Type", "application/json");
+  headers.set('Accept', 'application/json');
+  if (tenant) headers.set('X-Tenant-ID', tenant.id);
+  if (options.body) headers.set('Content-Type', 'application/json');
 
   const res = await fetch(finalUrl, {
     ...options,
     headers,
-    credentials: "include",
+    credentials: 'include',
   });
 
   const body = await res.text();
@@ -59,7 +59,7 @@ export const httpClient = async (
   if (!res.ok) {
     if (res.status === 401) {
       useAuthStore.getState().clearAuth();
-      if (typeof window !== "undefined") {
+      if (typeof window !== 'undefined') {
         window.location.replace(resolveLoginPath(window.location.pathname));
       }
     }
@@ -76,43 +76,34 @@ export const httpClient = async (
 };
 
 export async function apiGet<T>(path: string): Promise<T> {
-  const { json } = await httpClient(`/api/v1/${path.replace(/^\/+/, "")}`);
+  const { json } = await httpClient(`/api/v1/${path.replace(/^\/+/, '')}`);
   return json as T;
 }
 
-export async function apiPost<T, B = unknown>(
-  path: string,
-  body?: B,
-): Promise<T> {
-  const { json } = await httpClient(`/api/v1/${path.replace(/^\/+/, "")}`, {
-    method: "POST",
+export async function apiPost<T, B = unknown>(path: string, body?: B): Promise<T> {
+  const { json } = await httpClient(`/api/v1/${path.replace(/^\/+/, '')}`, {
+    method: 'POST',
     body: JSON.stringify(body),
   });
   return json as T;
 }
 
-export async function apiPut<T, B = unknown>(
-  path: string,
-  body?: B,
-): Promise<T> {
-  const { json } = await httpClient(`/api/v1/${path.replace(/^\/+/, "")}`, {
-    method: "PUT",
+export async function apiPut<T, B = unknown>(path: string, body?: B): Promise<T> {
+  const { json } = await httpClient(`/api/v1/${path.replace(/^\/+/, '')}`, {
+    method: 'PUT',
     body: JSON.stringify(body),
   });
   return json as T;
 }
 
-export async function apiPatch<T, B = unknown>(
-  path: string,
-  body?: B,
-): Promise<T> {
-  const { json } = await httpClient(`/api/v1/${path.replace(/^\/+/, "")}`, {
-    method: "PATCH",
+export async function apiPatch<T, B = unknown>(path: string, body?: B): Promise<T> {
+  const { json } = await httpClient(`/api/v1/${path.replace(/^\/+/, '')}`, {
+    method: 'PATCH',
     body: JSON.stringify(body),
   });
   return json as T;
 }
 
 export async function apiDelete(path: string): Promise<void> {
-  await httpClient(`/api/v1/${path.replace(/^\/+/, "")}`, { method: "DELETE" });
+  await httpClient(`/api/v1/${path.replace(/^\/+/, '')}`, { method: 'DELETE' });
 }

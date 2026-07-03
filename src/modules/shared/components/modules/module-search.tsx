@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { Search } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { Search } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 
 export interface ModuleSearchProps {
   value: string;
@@ -18,7 +18,9 @@ export function ModuleSearch({ value, onChange, onSearch }: ModuleSearchProps) {
         aria-label="Rechercher"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        onKeyDown={(e) => { if (e.key === "Enter") onSearch(); }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') onSearch();
+        }}
         className="pl-9"
       />
     </div>

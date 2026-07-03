@@ -1,17 +1,11 @@
-"use client";
+'use client';
 
-import { Eye, EyeOff } from "lucide-react";
-import React from "react";
-import type { UseFormReturn } from "react-hook-form";
-import {
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import type { WizardFormData } from "../CreateTenantWizard";
+import { Eye, EyeOff } from 'lucide-react';
+import React from 'react';
+import type { UseFormReturn } from 'react-hook-form';
+import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import type { WizardFormData } from '../CreateTenantWizard';
 
 interface Props {
   form: UseFormReturn<WizardFormData>;
@@ -34,11 +28,7 @@ export const AdminInfoStep = React.memo(function AdminInfoStep({
             <FormItem>
               <FormLabel className="text-xs">Prénom</FormLabel>
               <FormControl>
-                <Input
-                  placeholder="Jean"
-                  className="text-xs"
-                  {...field}
-                />
+                <Input placeholder="Jean" className="text-xs" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -52,11 +42,7 @@ export const AdminInfoStep = React.memo(function AdminInfoStep({
             <FormItem>
               <FormLabel className="text-xs">Nom</FormLabel>
               <FormControl>
-                <Input
-                  placeholder="Dupont"
-                  className="text-xs"
-                  {...field}
-                />
+                <Input placeholder="Dupont" className="text-xs" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -71,11 +57,7 @@ export const AdminInfoStep = React.memo(function AdminInfoStep({
           <FormItem>
             <FormLabel className="text-xs">Nom d'utilisateur</FormLabel>
             <FormControl>
-              <Input
-                placeholder="jean.dupont"
-                className="text-xs"
-                {...field}
-              />
+              <Input placeholder="jean.dupont" className="text-xs" {...field} />
             </FormControl>
             <FormMessage />
           </FormItem>
@@ -110,7 +92,7 @@ export const AdminInfoStep = React.memo(function AdminInfoStep({
             <FormControl>
               <div className="relative">
                 <Input
-                  type={showPassword ? "text" : "password"}
+                  type={showPassword ? 'text' : 'password'}
                   placeholder="Minimum 8 caractères"
                   className="h-10 px-3 pr-11 text-sm"
                   {...field}
@@ -121,11 +103,7 @@ export const AdminInfoStep = React.memo(function AdminInfoStep({
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                   tabIndex={-1}
                 >
-                  {showPassword ? (
-                    <EyeOff className="size-4" />
-                  ) : (
-                    <Eye className="size-4" />
-                  )}
+                  {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                 </button>
               </div>
             </FormControl>
@@ -142,11 +120,7 @@ export const AdminInfoStep = React.memo(function AdminInfoStep({
             <FormItem>
               <FormLabel className="text-xs">Ville</FormLabel>
               <FormControl>
-                <Input
-                  placeholder="Paris"
-                  className="text-xs"
-                  {...field}
-                />
+                <Input placeholder="Paris" className="text-xs" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -160,11 +134,7 @@ export const AdminInfoStep = React.memo(function AdminInfoStep({
             <FormItem>
               <FormLabel className="text-xs">Pays</FormLabel>
               <FormControl>
-                <Input
-                  placeholder="France"
-                  className="text-xs"
-                  {...field}
-                />
+                <Input placeholder="France" className="text-xs" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>

@@ -1,18 +1,18 @@
-"use client";
+'use client';
 
-import { Plus } from "lucide-react";
-import { useCallback, useMemo, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { ConfirmDialog } from "@/shared/components/confirm-dialog/ConfirmDialog";
-import { QuizSearch } from "@modules/shared/components/quizzes";
-import { MOCK_QUIZZES } from "@modules/shared/components/quizzes/mocks/quizzes.mock";
-import { useQuestionListController } from "@/modules/shared/hooks/useQuestionListController";
-import { useQuestionsQuery } from "../hooks/useQuestionsQuery";
-import { useUpdateQuestion } from "../hooks/useUpdateQuestion";
-import { useDeleteQuestion } from "../hooks/useDeleteQuestion";
-import type { Question } from "../types";
-import { AdminQuestionsTable } from "./_components/admin-questions-table";
-import { QuestionFormModal } from "../components/question-form-modal";
+import { Plus } from 'lucide-react';
+import { useCallback, useMemo, useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/shared/components/confirm-dialog/ConfirmDialog';
+import { QuizSearch } from '@modules/shared/components/quizzes';
+import { MOCK_QUIZZES } from '@modules/shared/components/quizzes/mocks/quizzes.mock';
+import { useQuestionListController } from '@/modules/shared/hooks/useQuestionListController';
+import { useQuestionsQuery } from '../hooks/useQuestionsQuery';
+import { useUpdateQuestion } from '../hooks/useUpdateQuestion';
+import { useDeleteQuestion } from '../hooks/useDeleteQuestion';
+import type { Question } from '../types';
+import { AdminQuestionsTable } from './_components/admin-questions-table';
+import { QuestionFormModal } from '../components/question-form-modal';
 
 export function QuestionList({ quizId }: { quizId: string }) {
   const ctrl = useQuestionListController<Question>({
@@ -26,7 +26,7 @@ export function QuestionList({ quizId }: { quizId: string }) {
 
   const quizName = useMemo(() => {
     const quiz = MOCK_QUIZZES.find((q) => q.id === quizId);
-    return String(quiz?.title ?? quizId ?? "");
+    return String(quiz?.title ?? quizId ?? '');
   }, [quizId]);
 
   const filteredQuestions = useMemo(
@@ -59,10 +59,7 @@ export function QuestionList({ quizId }: { quizId: string }) {
     [updateMutation],
   );
 
-  const handleDeleteConfirm = useCallback(
-    (question: Question) => setDeleteConfirm(question),
-    [],
-  );
+  const handleDeleteConfirm = useCallback((question: Question) => setDeleteConfirm(question), []);
 
   return (
     <div className="bg-background">
@@ -129,15 +126,17 @@ export function QuestionList({ quizId }: { quizId: string }) {
       <ConfirmDialog
         open={!!deleteConfirm}
         title="Supprimer la question"
-        description={(
+        description={
           <>
-            Êtes-vous sûr de vouloir supprimer la question « {deleteConfirm?.name}
-            » ? Cette action est irréversible.
+            Êtes-vous sûr de vouloir supprimer la question « {deleteConfirm?.name}» ? Cette action
+            est irréversible.
           </>
-        )}
+        }
         confirmClassName="bg-destructive hover:bg-destructive/80"
         onClose={() => setDeleteConfirm(undefined)}
-        onConfirm={() => { if (deleteConfirm) deleteMutation.mutate(deleteConfirm.id); }}
+        onConfirm={() => {
+          if (deleteConfirm) deleteMutation.mutate(deleteConfirm.id);
+        }}
       />
     </div>
   );

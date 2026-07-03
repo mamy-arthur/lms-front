@@ -1,5 +1,5 @@
-export type { Module } from "@/modules/shared/lib/normalizers";
-export { normalizeModule } from "@/modules/shared/lib/normalizers";
+export type { Module } from '@/modules/shared/lib/normalizers';
+export { normalizeModule } from '@/modules/shared/lib/normalizers';
 
 export interface CreateModulePayload {
   name: string;
@@ -21,7 +21,7 @@ export interface ModuleSearchParams {
   q?: string;
   category?: string;
   sort_by?: string;
-  sort_dir?: "asc" | "desc";
+  sort_dir?: 'asc' | 'desc';
   page?: number;
   page_size?: number;
 }

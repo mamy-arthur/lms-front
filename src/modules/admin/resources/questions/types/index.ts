@@ -1,5 +1,11 @@
-export type { Question, QuestionType, QuestionOption, MatchingPair, Duration } from "@/modules/shared/lib/normalizers";
-export { normalizeQuestion } from "@/modules/shared/lib/normalizers";
+export type {
+  Question,
+  QuestionType,
+  QuestionOption,
+  MatchingPair,
+  Duration,
+} from '@/modules/shared/lib/normalizers';
+export { normalizeQuestion } from '@/modules/shared/lib/normalizers';
 
 export interface QuestionPayload {
   quizId: string;
@@ -32,7 +38,7 @@ export interface QuestionSearchParams {
   type?: string;
   is_active?: boolean;
   sort_by?: string;
-  sort_dir?: "asc" | "desc";
+  sort_dir?: 'asc' | 'desc';
   page?: number;
   page_size?: number;
 }

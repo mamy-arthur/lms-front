@@ -1,39 +1,54 @@
-"use client";
+'use client';
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from 'react';
 
 export type UseUsersListControllerOptions = {
   includeTenantFilter?: boolean;
   defaultSortBy?: string;
-  defaultSortDir?: "asc" | "desc";
+  defaultSortDir?: 'asc' | 'desc';
   defaultPageSize?: number;
 };
 
 export function useUsersListController<TUser, TParams = Record<string, unknown>>(
   opts?: UseUsersListControllerOptions,
 ) {
-  const { includeTenantFilter = false, defaultSortBy = "username", defaultSortDir = "asc", defaultPageSize = 12 } = opts ?? {};
+  const {
+    includeTenantFilter = false,
+    defaultSortBy = 'username',
+    defaultSortDir = 'asc',
+    defaultPageSize = 12,
+  } = opts ?? {};
 
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<TUser | undefined>(undefined);
 
-  const [draftSearch, setDraftSearch] = useState("");
-  const [draftRole, setDraftRole] = useState("all");
-  const [draftStatus, setDraftStatus] = useState("all");
-  const [draftTenant, setDraftTenant] = useState("all");
+  const [draftSearch, setDraftSearch] = useState('');
+  const [draftRole, setDraftRole] = useState('all');
+  const [draftStatus, setDraftStatus] = useState('all');
+  const [draftTenant, setDraftTenant] = useState('all');
 
   type ParamsState = TParams & Record<string, unknown>;
-  const [params, setParams] = useState<ParamsState>(() => ({ sort_by: defaultSortBy, sort_dir: defaultSortDir } as unknown as ParamsState));
+  const [params, setParams] = useState<ParamsState>(
+    () => ({ sort_by: defaultSortBy, sort_dir: defaultSortDir }) as unknown as ParamsState,
+  );
 
-  const sort = useMemo(() => ({ column: (params.sort_by as string) ?? defaultSortBy, direction: (params.sort_dir as "asc" | "desc") ?? defaultSortDir }), [params.sort_by, params.sort_dir, defaultSortBy, defaultSortDir]);
+  const sort = useMemo(
+    () => ({
+      column: (params.sort_by as string) ?? defaultSortBy,
+      direction: (params.sort_dir as 'asc' | 'desc') ?? defaultSortDir,
+    }),
+    [params.sort_by, params.sort_dir, defaultSortBy, defaultSortDir],
+  );
 
   const handleSearch = useCallback(() => {
     setParams((prev) => ({
       ...prev,
       q: draftSearch || undefined,
-      role: draftRole !== "all" ? draftRole : undefined,
-      status: draftStatus !== "all" ? (draftStatus as "active" | "inactive") : undefined,
-      ...(includeTenantFilter ? { tenant_id: draftTenant !== "all" ? draftTenant : undefined } : {}),
+      role: draftRole !== 'all' ? draftRole : undefined,
+      status: draftStatus !== 'all' ? (draftStatus as 'active' | 'inactive') : undefined,
+      ...(includeTenantFilter
+        ? { tenant_id: draftTenant !== 'all' ? draftTenant : undefined }
+        : {}),
       page: 0,
     }));
   }, [draftSearch, draftRole, draftStatus, draftTenant, includeTenantFilter]);
@@ -42,7 +57,7 @@ export function useUsersListController<TUser, TParams = Record<string, unknown>>
     setParams((prev) => ({
       ...prev,
       sort_by: column,
-      sort_dir: prev.sort_by === column && prev.sort_dir === "asc" ? "desc" : "asc",
+      sort_dir: prev.sort_by === column && prev.sort_dir === 'asc' ? 'desc' : 'asc',
       page: 0,
     }));
   }, []);
@@ -74,7 +89,10 @@ export function useUsersListController<TUser, TParams = Record<string, unknown>>
   const page = (params.page as number) ?? 0;
   const pageSize = (params.page_size as number) ?? defaultPageSize;
   const hasQuery = !!(
-    draftSearch || draftRole !== "all" || draftStatus !== "all" || (includeTenantFilter && draftTenant !== "all")
+    draftSearch ||
+    draftRole !== 'all' ||
+    draftStatus !== 'all' ||
+    (includeTenantFilter && draftTenant !== 'all')
   );
 
   return {

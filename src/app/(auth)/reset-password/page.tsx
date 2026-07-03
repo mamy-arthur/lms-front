@@ -1,6 +1,6 @@
-import Link from "next/link";
-import { ResetPasswordForm } from "@/modules/auth/components/ResetPasswordForm";
-import { ROUTES } from "@/shared/constants/routes";
+import Link from 'next/link';
+import { ResetPasswordForm } from '@/modules/auth/components/ResetPasswordForm';
+import { ROUTES } from '@/shared/constants/routes';
 
 interface Props {
   searchParams: Promise<{ token?: string; email?: string }>;
@@ -28,9 +28,7 @@ export default async function ResetPasswordPage({ searchParams }: Props) {
 
   return (
     <div className="w-full max-w-md mx-auto rounded-3xl bg-white px-10 py-12 shadow-[0_24px_80px_rgba(0,0,0,0.45)]">
-      <h1 className="text-2xl font-bold text-gray-900 mb-1">
-        Nouveau mot de passe
-      </h1>
+      <h1 className="text-2xl font-bold text-gray-900 mb-1">Nouveau mot de passe</h1>
       <p className="text-sm text-gray-500 mb-8">
         Choisissez un mot de passe d'au moins 8 caractères.
       </p>

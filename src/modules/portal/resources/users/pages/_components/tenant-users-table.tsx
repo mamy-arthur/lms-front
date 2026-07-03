@@ -1,19 +1,10 @@
-"use client";
+'use client';
 
-import {
-  UsersContentTable,
-  type UsersTableSort,
-} from "@modules/shared/components/users";
-import type { TenantUser } from "../../types";
+import { UsersContentTable, type UsersTableSort } from '@modules/shared/components/users';
+import type { TenantUser } from '../../types';
 
 export type SortColumn =
-  | "username"
-  | "email"
-  | "role"
-  | "city"
-  | "country"
-  | "lastLogin"
-  | "createdAt";
+  'username' | 'email' | 'role' | 'city' | 'country' | 'lastLogin' | 'createdAt';
 export type SortConfig = UsersTableSort;
 
 interface TenantUsersTableProps {

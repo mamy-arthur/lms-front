@@ -1,19 +1,17 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from 'next/server';
 
 const PUBLIC_PATHS = [
-  "/login",
-  "/admin/login",
-  "/forgot-password",
-  "/reset-password",
-  "/tenant-not-found",
-  "/tenant-inactive",
+  '/login',
+  '/admin/login',
+  '/forgot-password',
+  '/reset-password',
+  '/tenant-not-found',
+  '/tenant-inactive',
 ];
-const STATIC_PATHS = ["/_next", "/favicon.ico", "/public"];
+const STATIC_PATHS = ['/_next', '/favicon.ico', '/public'];
 
 // e.g. "learneo.local" in dev, "learneo.dev-test2.nacre-solutions.com" in staging
-const BASE_DOMAIN = (process.env.NEXT_PUBLIC_BASE_DOMAIN ?? "localhost").split(
-  ":",
-)[0];
+const BASE_DOMAIN = (process.env.NEXT_PUBLIC_BASE_DOMAIN ?? 'localhost').split(':')[0];
 
 /**
  * Returns the tenant slug from the host, or null when on the central domain.
@@ -22,7 +20,7 @@ const BASE_DOMAIN = (process.env.NEXT_PUBLIC_BASE_DOMAIN ?? "localhost").split(
  * localhost           → null  (central domain)
  */
 function extractTenantSlug(host: string): string | null {
-  const clean = host.split(":")[0];
+  const clean = host.split(':')[0];
 
   if (clean === BASE_DOMAIN) return null;
 
@@ -36,7 +34,7 @@ function extractTenantSlug(host: string): string | null {
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
-  const host = req.headers.get("host") ?? "";
+  const host = req.headers.get('host') ?? '';
 
   if (STATIC_PATHS.some((p) => pathname.startsWith(p))) {
     return NextResponse.next();
@@ -46,19 +44,19 @@ export function middleware(req: NextRequest) {
   const headers = new Headers(req.headers);
 
   if (slug) {
-    headers.set("x-tenant-slug", slug);
+    headers.set('x-tenant-slug', slug);
   } else {
-    headers.delete("x-tenant-slug");
+    headers.delete('x-tenant-slug');
   }
 
-  const token = req.cookies.get("auth_token")?.value;
+  const token = req.cookies.get('auth_token')?.value;
   const isPublic = PUBLIC_PATHS.some((p) => pathname.startsWith(p));
 
   if (!isPublic && !token) {
-    const isAdminPath = pathname.startsWith("/admin");
-    const loginPath = isAdminPath ? "/admin/login" : "/login";
+    const isAdminPath = pathname.startsWith('/admin');
+    const loginPath = isAdminPath ? '/admin/login' : '/login';
     const loginUrl = new URL(loginPath, req.url);
-    loginUrl.searchParams.set("from", pathname);
+    loginUrl.searchParams.set('from', pathname);
     return NextResponse.redirect(loginUrl);
   }
 
@@ -66,5 +64,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
 };

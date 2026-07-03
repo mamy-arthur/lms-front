@@ -1,7 +1,7 @@
-import { create } from "zustand";
-import { persist } from "zustand/middleware";
-import type { AuthUser } from "@/shared/types/auth.types";
-import { Role } from "@/shared/constants/roles";
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+import type { AuthUser } from '@/shared/types/auth.types';
+import { Role } from '@/shared/constants/roles';
 
 /**
  * État d'authentification côté client.
@@ -25,6 +25,6 @@ export const useAuthStore = create<AuthState>()(
       setAuth: (user) => set({ user, role: user.role }),
       clearAuth: () => set({ user: null, role: null }),
     }),
-    { name: "auth-store" },
+    { name: 'auth-store' },
   ),
 );
