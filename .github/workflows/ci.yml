@@ -11,7 +11,7 @@ on:
       - main
 
 jobs:
-  type-check:
+  ci:
     runs-on: ubuntu-latest
 
     steps:
@@ -29,3 +29,9 @@ jobs:
 
       - name: Type check
         run: npm run type-check
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build application
+        run: npm run build
