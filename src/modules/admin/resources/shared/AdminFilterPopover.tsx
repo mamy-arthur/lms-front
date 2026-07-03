@@ -1,20 +1,16 @@
-"use client";
+'use client';
 
-import { Filter, Search } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Filter, Search } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from '@/components/ui/select';
 
 interface FilterOption {
   value: string;
@@ -47,13 +43,8 @@ export function AdminFilterPopover({
       <PopoverContent className="w-72" align="end">
         <div className="space-y-3">
           <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground">
-              {firstFilterLabel}
-            </Label>
-            <Select
-              value={firstFilterValue}
-              onValueChange={onFirstFilterChange}
-            >
+            <Label className="text-xs text-muted-foreground">{firstFilterLabel}</Label>
+            <Select value={firstFilterValue} onValueChange={onFirstFilterChange}>
               <SelectTrigger aria-label={firstFilterLabel} className="w-full">
                 <SelectValue placeholder={`Toutes les ${firstFilterLabel.toLowerCase()}`} />
               </SelectTrigger>

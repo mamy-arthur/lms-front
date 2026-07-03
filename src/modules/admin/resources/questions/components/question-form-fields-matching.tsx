@@ -1,18 +1,12 @@
-"use client";
+'use client';
 
-import { Plus, Trash2 } from "lucide-react";
-import type { UseFormReturn } from "react-hook-form";
-import { useFieldArray } from "react-hook-form";
-import { Button } from "@/components/ui/button";
-import {
-  FieldContent,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-  FieldRoot,
-} from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
-import type { FormValues } from "./question-form-data";
+import { Plus, Trash2 } from 'lucide-react';
+import type { UseFormReturn } from 'react-hook-form';
+import { useFieldArray } from 'react-hook-form';
+import { Button } from '@/components/ui/button';
+import { FieldContent, FieldError, FieldGroup, FieldLabel, FieldRoot } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
+import type { FormValues } from './question-form-data';
 
 interface MatchingFieldsProps {
   form: UseFormReturn<FormValues>;
@@ -25,7 +19,7 @@ export function QuestionFormFieldsMatching({ form }: MatchingFieldsProps) {
     remove: removePair,
   } = useFieldArray({
     control: form.control,
-    name: "pairs",
+    name: 'pairs',
   });
 
   return (
@@ -36,7 +30,7 @@ export function QuestionFormFieldsMatching({ form }: MatchingFieldsProps) {
             Réponses et explications
           </p>
           <p className="mt-2 text-xs text-foreground/80">
-              Ajoutez des paires et associez vos réponses rapidement.
+            Ajoutez des paires et associez vos réponses rapidement.
           </p>
         </div>
         <Button
@@ -47,8 +41,8 @@ export function QuestionFormFieldsMatching({ form }: MatchingFieldsProps) {
           onClick={() =>
             appendPair({
               id: `pair-${Date.now()}-${Math.random()}`,
-              question: "",
-              answer: "",
+              question: '',
+              answer: '',
             })
           }
         >
@@ -65,7 +59,10 @@ export function QuestionFormFieldsMatching({ form }: MatchingFieldsProps) {
           ) : (
             <div className="space-y-2 overflow-hidden">
               {pairFields.map((field, index) => (
-                <div key={field.id} className="space-y-3 rounded-3xl bg-background/95 p-4 ring-1 ring-border/10">
+                <div
+                  key={field.id}
+                  className="space-y-3 rounded-3xl bg-background/95 p-4 ring-1 ring-border/10"
+                >
                   <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
                     <span>Pair {index + 1}</span>
                     <Button
@@ -86,7 +83,11 @@ export function QuestionFormFieldsMatching({ form }: MatchingFieldsProps) {
                       <FieldGroup className="space-y-2">
                         <FieldLabel className="text-xs">Question *</FieldLabel>
                         <FieldContent>
-                          <Input aria-label={`Question ${index + 1}`} {...f} className="text-foreground/70"/>
+                          <Input
+                            aria-label={`Question ${index + 1}`}
+                            {...f}
+                            className="text-foreground/70"
+                          />
                         </FieldContent>
                         <FieldError />
                       </FieldGroup>
@@ -100,7 +101,11 @@ export function QuestionFormFieldsMatching({ form }: MatchingFieldsProps) {
                       <FieldGroup className="space-y-2">
                         <FieldLabel className="text-xs">Réponse *</FieldLabel>
                         <FieldContent>
-                          <Input aria-label={`Réponse ${index + 1}`} {...f} className="text-foreground/70"/>
+                          <Input
+                            aria-label={`Réponse ${index + 1}`}
+                            {...f}
+                            className="text-foreground/70"
+                          />
                         </FieldContent>
                         <FieldError />
                       </FieldGroup>
@@ -113,7 +118,7 @@ export function QuestionFormFieldsMatching({ form }: MatchingFieldsProps) {
 
           {form.formState.errors.pairs && (
             <p className="mt-2 text-xs text-destructive" role="alert">
-              {String(form.formState.errors.pairs.message ?? "")}
+              {String(form.formState.errors.pairs.message ?? '')}
             </p>
           )}
         </div>

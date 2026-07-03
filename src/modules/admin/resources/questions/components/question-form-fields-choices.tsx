@@ -1,70 +1,59 @@
-"use client";
+'use client';
 
-import { Check, Plus, Trash2 } from "lucide-react";
-import { useCallback } from "react";
-import type { UseFormReturn } from "react-hook-form";
-import { useFieldArray, useWatch } from "react-hook-form";
-import { Button } from "@/components/ui/button";
-import {
-  FieldContent,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-  FieldRoot,
-} from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
-import type { QuestionType } from "../types";
-import type { FormValues } from "./question-form-data";
+import { Check, Plus, Trash2 } from 'lucide-react';
+import { useCallback } from 'react';
+import type { UseFormReturn } from 'react-hook-form';
+import { useFieldArray, useWatch } from 'react-hook-form';
+import { Button } from '@/components/ui/button';
+import { FieldContent, FieldError, FieldGroup, FieldLabel, FieldRoot } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
+import type { QuestionType } from '../types';
+import type { FormValues } from './question-form-data';
 
 interface ChoicesFieldsProps {
   form: UseFormReturn<FormValues>;
   selectedType: QuestionType;
 }
 
-export function QuestionFormFieldsChoices({
-  form,
-  selectedType,
-}: ChoicesFieldsProps) {
+export function QuestionFormFieldsChoices({ form, selectedType }: ChoicesFieldsProps) {
   const {
     fields: optionFields,
     append: appendOption,
     remove: removeOption,
   } = useFieldArray({
     control: form.control,
-    name: "options",
+    name: 'options',
   });
 
   const watchedOptions = useWatch({
     control: form.control,
-    name: "options",
+    name: 'options',
   });
 
   // Seule source de vérité : score. "Correct" n'est qu'un libellé
   // d'affichage dérivé, jamais envoyé au backend.
   const isOptionCorrect = useCallback(
-    (score: number) =>
-      selectedType === "single_choice" ? score >= 100 : score > 0,
+    (score: number) => (selectedType === 'single_choice' ? score >= 100 : score > 0),
     [selectedType],
   );
 
   const totalChoices = watchedOptions?.length ?? optionFields.length;
-  const correctCount =
-    watchedOptions?.filter((o) => isOptionCorrect(o?.score ?? 0)).length ?? 0;
+  const correctCount = watchedOptions?.filter((o) => isOptionCorrect(o?.score ?? 0)).length ?? 0;
 
   const optionCount = optionFields.length;
 
   const helperText =
-    selectedType === "single_choice"
-      ? "Cliquez sur le bouton pour indiquer la bonne réponse."
-      : "Cliquez sur les boutons pour indiquer une ou plusieurs bonnes réponses.";
+    selectedType === 'single_choice'
+      ? 'Cliquez sur le bouton pour indiquer la bonne réponse.'
+      : 'Cliquez sur les boutons pour indiquer une ou plusieurs bonnes réponses.';
 
   const handleScoreChange = useCallback(
     (index: number, value: number) => {
       const clamped = Math.min(100, Math.max(0, value));
       form.setValue(`options.${index}.score`, clamped);
 
-      if (selectedType === "single_choice" && clamped >= 100) {
+      if (selectedType === 'single_choice' && clamped >= 100) {
         for (let i = 0; i < optionCount; i++) {
           if (i !== index) {
             form.setValue(`options.${i}.score`, 0);
@@ -96,19 +85,15 @@ export function QuestionFormFieldsChoices({
           {optionFields.length > 0 && (
             <>
               <div className="flex items-center gap-2">
-                <p className="text-xs text-muted-foreground">
-                  {totalChoices} choix
-                </p>
+                <p className="text-xs text-muted-foreground">{totalChoices} choix</p>
                 <span
                   className={cn(
-                    "px-2 py-0.5 text-xs font-medium",
-                    correctCount === 0
-                      ? "text-muted-foreground"
-                      : "text-(--color-primary)",
+                    'px-2 py-0.5 text-xs font-medium',
+                    correctCount === 0 ? 'text-muted-foreground' : 'text-(--color-primary)',
                   )}
                 >
-                  {correctCount} bonne{correctCount === 1 ? "" : "s"} réponse
-                  {correctCount === 1 ? "" : "s"}
+                  {correctCount} bonne{correctCount === 1 ? '' : 's'} réponse
+                  {correctCount === 1 ? '' : 's'}
                 </span>
               </div>
             </>
@@ -122,10 +107,10 @@ export function QuestionFormFieldsChoices({
           onClick={() =>
             appendOption({
               id: `opt-${Date.now()}-${Math.random()}`,
-              label: "",
+              label: '',
               isCorrect: false,
               score: 0,
-              feedback: "",
+              feedback: '',
             })
           }
         >
@@ -150,10 +135,10 @@ export function QuestionFormFieldsChoices({
                     <div
                       key={field.id}
                       className={cn(
-                        "space-y-3 rounded-3xl border p-3 transition-colors",
+                        'space-y-3 rounded-3xl border p-3 transition-colors',
                         isCorrect
-                          ? "border-(--color-primary)/40 bg-(--color-primary)/5"
-                          : "border-border/10 bg-background/95",
+                          ? 'border-(--color-primary)/40 bg-(--color-primary)/5'
+                          : 'border-border/10 bg-background/95',
                       )}
                     >
                       <div className="grid gap-3 md:grid-cols-[auto_1fr_auto_auto] md:items-start">
@@ -168,9 +153,7 @@ export function QuestionFormFieldsChoices({
                           name={`options.${index}.label`}
                           render={({ field: f }) => (
                             <FieldGroup className="space-y-2">
-                              <FieldLabel className="sr-only">
-                                Libellé {index + 1}
-                              </FieldLabel>
+                              <FieldLabel className="sr-only">Libellé {index + 1}</FieldLabel>
                               <FieldContent>
                                 <Input
                                   aria-label={`Libellé ${index + 1}`}
@@ -184,7 +167,7 @@ export function QuestionFormFieldsChoices({
                           )}
                         />
 
-                        {selectedType === "single_choice" ? (
+                        {selectedType === 'single_choice' ? (
                           <Input
                             type="number"
                             readOnly
@@ -199,9 +182,7 @@ export function QuestionFormFieldsChoices({
                             name={`options.${index}.score`}
                             render={({ field: f }) => (
                               <FieldGroup className="w-[80px] space-y-2">
-                                <FieldLabel className="sr-only">
-                                  Note {index + 1}
-                                </FieldLabel>
+                                <FieldLabel className="sr-only">Note {index + 1}</FieldLabel>
                                 <FieldContent>
                                   <Input
                                     type="number"
@@ -212,10 +193,7 @@ export function QuestionFormFieldsChoices({
                                     className="text-foreground/70"
                                     value={f.value}
                                     onChange={(e) =>
-                                      handleScoreChange(
-                                        index,
-                                        Number(e.target.value),
-                                      )
+                                      handleScoreChange(index, Number(e.target.value))
                                     }
                                   />
                                 </FieldContent>
@@ -238,12 +216,12 @@ export function QuestionFormFieldsChoices({
 
                         <Button
                           type="button"
-                          variant={isCorrect ? "default" : "outline"}
+                          variant={isCorrect ? 'default' : 'outline'}
                           size="icon"
                           className={
                             isCorrect
-                              ? "size-5 shrink-0 text-white bg-(--color-primary) hover:bg-(--color-primary)/80"
-                              : "size-5"
+                              ? 'size-5 shrink-0 text-white bg-(--color-primary) hover:bg-(--color-primary)/80'
+                              : 'size-5'
                           }
                           onClick={() => toggleCorrect(index)}
                         >
@@ -255,9 +233,7 @@ export function QuestionFormFieldsChoices({
                           name={`options.${index}.feedback`}
                           render={({ field: f }) => (
                             <FieldGroup className="space-y-2 md:col-span-3">
-                              <FieldLabel className="sr-only">
-                                Explication {index + 1}
-                              </FieldLabel>
+                              <FieldLabel className="sr-only">Explication {index + 1}</FieldLabel>
                               <FieldContent>
                                 <Input
                                   aria-label={`Explication ${index + 1}`}
@@ -281,7 +257,7 @@ export function QuestionFormFieldsChoices({
 
         {form.formState.errors.options && (
           <p className="mt-2 text-xs text-destructive" role="alert">
-            {String(form.formState.errors.options.message ?? "")}
+            {String(form.formState.errors.options.message ?? '')}
           </p>
         )}
       </div>

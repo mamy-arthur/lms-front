@@ -10,11 +10,11 @@
  *   expect(element).toHaveValue("...")
  *   expect(element).toBeDisabled()
  */
-import "@testing-library/jest-dom";
+import '@testing-library/jest-dom';
 
 // ResizeObserver utilisé par Radix UI
 global.ResizeObserver = jest.fn().mockImplementation(() => ({
-    observe: jest.fn(),
-    unobserve: jest.fn(),
-    disconnect: jest.fn(),
+  observe: jest.fn(),
+  unobserve: jest.fn(),
+  disconnect: jest.fn(),
 }));

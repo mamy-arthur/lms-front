@@ -1,2 +1,2 @@
-export { TenantList } from "./pages/TenantList";
-export type { Tenant } from "./types";
+export { TenantList } from './pages/TenantList';
+export type { Tenant } from './types';

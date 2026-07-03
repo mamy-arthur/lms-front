@@ -1,215 +1,186 @@
-"use client";
+'use client';
 
-import { useState } from "react";
+import { useState } from 'react';
 import {
-    MoreVertical,
-    Plus,
-    Pencil,
-    Trash2,
-    FileText,
-    File as FileIcon,
-    Folder,
-    Package,
-    Link as LinkIcon,
-    BarChart3,
-    Type as TypeIcon,
-    ChevronRight,
-} from "lucide-react";
+  MoreVertical,
+  Plus,
+  Pencil,
+  Trash2,
+  FileText,
+  File as FileIcon,
+  Folder,
+  Package,
+  Link as LinkIcon,
+  BarChart3,
+  Type as TypeIcon,
+  ChevronRight,
+} from 'lucide-react';
 
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
 import {
-    DropdownMenu,
-    DropdownMenuTrigger,
-    DropdownMenuContent,
-    DropdownMenuItem,
-} from "@/components/ui/dropdown-menu";
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/components/ui/dropdown-menu';
 import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogFooter,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { AddContentModal } from "./AddContentModal";
-import {
-    Collapsible,
-    CollapsibleContent,
-    CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { AddContentModal } from './AddContentModal';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
-import { ContentType, CourseSection, CourseContent } from "../types";
-import { useCourseStore } from "../hooks/useCouseContentStore";
+import { ContentType, CourseSection, CourseContent } from '../types';
+import { useCourseStore } from '../hooks/useCouseContentStore';
 
 const ICONS: Record<ContentType, typeof FileText> = {
-    page: FileText,
-    file: FileIcon,
-    folder: Folder,
-    scorm: Package,
-    url: LinkIcon,
-    survey: BarChart3,
-    "text-media": TypeIcon,
+  page: FileText,
+  file: FileIcon,
+  folder: Folder,
+  scorm: Package,
+  url: LinkIcon,
+  survey: BarChart3,
+  'text-media': TypeIcon,
 };
 
 interface Props {
-    section: CourseSection;
-    selectedContentId?: string;
-    onSelectContent: (content: CourseContent) => void;
+  section: CourseSection;
+  selectedContentId?: string;
+  onSelectContent: (content: CourseContent) => void;
 }
 
-export function SectionCard({
-    section,
-    selectedContentId,
-    onSelectContent,
-}: Props) {
-    const [addOpen, setAddOpen] = useState(false);
-    const [editOpen, setEditOpen] = useState(false);
-    const [isOpen, setIsOpen] = useState(true);
+export function SectionCard({ section, selectedContentId, onSelectContent }: Props) {
+  const [addOpen, setAddOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(true);
 
-    const [title, setTitle] = useState(section.title);
-    const [description, setDescription] = useState(section.description ?? "");
+  const [title, setTitle] = useState(section.title);
+  const [description, setDescription] = useState(section.description ?? '');
 
-    const updateSection = useCourseStore((s) => s.updateSection);
-    const removeSection = useCourseStore((s) => s.removeSection);
+  const updateSection = useCourseStore((s) => s.updateSection);
+  const removeSection = useCourseStore((s) => s.removeSection);
 
-    const [type, setType] = useState<ContentType | null>(null);
+  const [type, setType] = useState<ContentType | null>(null);
 
-    const save = () => {
-        updateSection(section.id, {
-            title: title.trim() || "Section",
-            description,
-        });
+  const save = () => {
+    updateSection(section.id, {
+      title: title.trim() || 'Section',
+      description,
+    });
 
-        setEditOpen(false);
-    };
+    setEditOpen(false);
+  };
 
-    return (
-        <Collapsible
-            open={isOpen}
-            onOpenChange={setIsOpen}
-            className="rounded-xl border bg-card"
-        >
-            <div className="flex items-center justify-between p-3">
-                <CollapsibleTrigger asChild>
-                    <button className="flex min-w-0 flex-1 items-center gap-2 text-left">
-                        <ChevronRight
-                            className={`size-4 transition-transform ${
-                                isOpen ? "rotate-90" : ""
-                            }`}
-                        />
+  return (
+    <Collapsible open={isOpen} onOpenChange={setIsOpen} className="rounded-xl border bg-card">
+      <div className="flex items-center justify-between p-3">
+        <CollapsibleTrigger asChild>
+          <button className="flex min-w-0 flex-1 items-center gap-2 text-left">
+            <ChevronRight className={`size-4 transition-transform ${isOpen ? 'rotate-90' : ''}`} />
 
-                        <span className="truncate text-xs font-semibold">
-                            {section.title}
-                        </span>
-                    </button>
-                </CollapsibleTrigger>
+            <span className="truncate text-xs font-semibold">{section.title}</span>
+          </button>
+        </CollapsibleTrigger>
 
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                            <MoreVertical className="size-4" />
-                        </Button>
-                    </DropdownMenuTrigger>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon">
+              <MoreVertical className="size-4" />
+            </Button>
+          </DropdownMenuTrigger>
 
-                    <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => setEditOpen(true)}>
-                            <Pencil className="mr-2 size-4" />
-                            Modifier
-                        </DropdownMenuItem>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => setEditOpen(true)}>
+              <Pencil className="mr-2 size-4" />
+              Modifier
+            </DropdownMenuItem>
 
-                        <DropdownMenuItem
-                            onClick={() => removeSection(section.id)}
-                            className="text-destructive"
-                        >
-                            <Trash2 className="mr-2 size-4" />
-                            Supprimer
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
+            <DropdownMenuItem
+              onClick={() => removeSection(section.id)}
+              className="text-destructive"
+            >
+              <Trash2 className="mr-2 size-4" />
+              Supprimer
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      <CollapsibleContent>
+        <div className="space-y-1 px-2 pb-2">
+          {section.contents.map((content) => {
+            const Icon = ICONS[content.type];
+
+            return (
+              <button
+                key={content.id}
+                onClick={() => onSelectContent(content)}
+                className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors
+                                ${
+                                  selectedContentId === content.id
+                                    ? 'bg-(--color-primary)/90 text-white'
+                                    : 'hover:bg-muted'
+                                }`}
+              >
+                <Icon className="size-4 shrink-0" />
+
+                <span className="truncate text-xs">{content.title || 'Nouveau contenu'}</span>
+              </button>
+            );
+          })}
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setAddOpen(true)}
+            className="mt-2 w-full justify-start"
+          >
+            <Plus className="mr-2 size-4" />
+            Ajouter un contenu
+          </Button>
+        </div>
+
+        <AddContentModal
+          open={addOpen}
+          onOpenChange={setAddOpen}
+          sectionId={section.id}
+          setType={setType}
+        />
+      </CollapsibleContent>
+
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Modifier la section</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <div>
+              <Label>Nom</Label>
+              <Input value={title} onChange={(e) => setTitle(e.target.value)} />
             </div>
 
-            <CollapsibleContent>
-                <div className="space-y-1 px-2 pb-2">
-                    {section.contents.map((content) => {
-                        const Icon = ICONS[content.type];
+            <div>
+              <Label>Description</Label>
+              <Textarea value={description} onChange={(e) => setDescription(e.target.value)} />
+            </div>
+          </div>
 
-                        return (
-                            <button
-                                key={content.id}
-                                onClick={() => onSelectContent(content)}
-                                className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors
-                                ${
-                                    selectedContentId === content.id
-                                        ? "bg-(--color-primary)/90 text-white"
-                                        : "hover:bg-muted"
-                                }`}
-                            >
-                                <Icon className="size-4 shrink-0" />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditOpen(false)}>
+              Annuler
+            </Button>
 
-                                <span className="truncate text-xs">
-                                    {content.title || "Nouveau contenu"}
-                                </span>
-                            </button>
-                        );
-                    })}
-
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setAddOpen(true)}
-                        className="mt-2 w-full justify-start"
-                    >
-                        <Plus className="mr-2 size-4" />
-                        Ajouter un contenu
-                    </Button>
-                </div>
-
-                <AddContentModal
-                    open={addOpen}
-                    onOpenChange={setAddOpen}
-                    sectionId={section.id}
-                    setType={setType}
-                />
-            </CollapsibleContent>
-
-            <Dialog open={editOpen} onOpenChange={setEditOpen}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Modifier la section</DialogTitle>
-                    </DialogHeader>
-
-                    <div className="space-y-3">
-                        <div>
-                            <Label>Nom</Label>
-                            <Input
-                                value={title}
-                                onChange={(e) => setTitle(e.target.value)}
-                            />
-                        </div>
-
-                        <div>
-                            <Label>Description</Label>
-                            <Textarea
-                                value={description}
-                                onChange={(e) => setDescription(e.target.value)}
-                            />
-                        </div>
-                    </div>
-
-                    <DialogFooter>
-                        <Button
-                            variant="outline"
-                            onClick={() => setEditOpen(false)}
-                        >
-                            Annuler
-                        </Button>
-
-                        <Button onClick={save}>Enregistrer</Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-        </Collapsible>
-    );
+            <Button onClick={save}>Enregistrer</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </Collapsible>
+  );
 }

@@ -1,8 +1,8 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { tenantUsersApi } from "../api";
-import type { CreateTenantUserPayload, TenantUser } from "../types";
-import { normalizeTenantUser } from "../types";
-import { TENANT_USERS_QUERY_KEY } from "./useTenantUsersQuery";
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { tenantUsersApi } from '../api';
+import type { CreateTenantUserPayload, TenantUser } from '../types';
+import { normalizeTenantUser } from '../types';
+import { TENANT_USERS_QUERY_KEY } from './useTenantUsersQuery';
 
 /**
  * Mutation de création d'un utilisateur via POST /v1/users.
@@ -16,13 +16,11 @@ export function useCreateTenantUser() {
   return useMutation({
     mutationFn: (data: CreateTenantUserPayload) => tenantUsersApi.create(data),
     onSuccess: ({ data: rawUser }) => {
-      const newUser = normalizeTenantUser(
-        rawUser as unknown as Record<string, unknown>,
-      );
-      queryClient.setQueryData<TenantUser[]>(
-        TENANT_USERS_QUERY_KEY,
-        (prev = []) => [newUser, ...prev],
-      );
+      const newUser = normalizeTenantUser(rawUser as unknown as Record<string, unknown>);
+      queryClient.setQueryData<TenantUser[]>(TENANT_USERS_QUERY_KEY, (prev = []) => [
+        newUser,
+        ...prev,
+      ]);
     },
   });
 }

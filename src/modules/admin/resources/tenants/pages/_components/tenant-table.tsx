@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import {
   Table,
@@ -7,13 +7,13 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Building2 } from "lucide-react";
-import { Tenant } from "@/shared/types/tenants/tenant";
-import { TenantAvatar } from "../_components/tenant-avatar";
-import { TenantStatusBadge } from "../_components/tenant-status-badge";
-import { TenantActions } from "../_components/tenant-actions";
+} from '@/components/ui/table';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Building2 } from 'lucide-react';
+import { Tenant } from '@/shared/types/tenants/tenant';
+import { TenantAvatar } from '../_components/tenant-avatar';
+import { TenantStatusBadge } from '../_components/tenant-status-badge';
+import { TenantActions } from '../_components/tenant-actions';
 
 // ─── Empty State ────────────────────────────────────────────────────────────
 
@@ -24,12 +24,12 @@ function EmptyState({ hasQuery }: { hasQuery: boolean }) {
         <Building2 className="size-8 text-muted-foreground" />
       </div>
       <p className="text-sm font-medium text-foreground mb-1">
-        {hasQuery ? "Aucun résultat" : "Aucun tenant"}
+        {hasQuery ? 'Aucun résultat' : 'Aucun tenant'}
       </p>
       <p className="text-xs text-muted-foreground max-w-xs">
         {hasQuery
-          ? "Modifiez votre recherche ou vos filtres pour trouver ce que vous cherchez."
-          : "Créez votre premier tenant en cliquant sur « Créer un tenant »."}
+          ? 'Modifiez votre recherche ou vos filtres pour trouver ce que vous cherchez.'
+          : 'Créez votre premier tenant en cliquant sur « Créer un tenant ».'}
       </p>
     </div>
   );
@@ -49,10 +49,18 @@ function SkeletonRow() {
           </div>
         </div>
       </TableCell>
-      <TableCell><Skeleton className="h-3 w-24" /></TableCell>
-      <TableCell><Skeleton className="h-5 w-16 rounded-md" /></TableCell>
-      <TableCell><Skeleton className="h-5 w-16 rounded-full" /></TableCell>
-      <TableCell><Skeleton className="h-3 w-20" /></TableCell>
+      <TableCell>
+        <Skeleton className="h-3 w-24" />
+      </TableCell>
+      <TableCell>
+        <Skeleton className="h-5 w-16 rounded-md" />
+      </TableCell>
+      <TableCell>
+        <Skeleton className="h-5 w-16 rounded-full" />
+      </TableCell>
+      <TableCell>
+        <Skeleton className="h-3 w-20" />
+      </TableCell>
       <TableCell />
     </TableRow>
   );
@@ -84,10 +92,10 @@ export function TenantsTable({
   onDelete,
 }: TenantsTableProps) {
   const formatDate = (dateStr: string) =>
-    new Date(dateStr).toLocaleDateString("fr-FR", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
+    new Date(dateStr).toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
     });
 
   return (
@@ -132,10 +140,7 @@ export function TenantsTable({
                 <TableCell className="text-xs text-muted-foreground tabular-nums">
                   {formatDate(tenant.created_at)}
                 </TableCell>
-                <TableCell
-                  className="text-right"
-                  onClick={(e) => e.stopPropagation()}
-                >
+                <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                   <TenantActions
                     tenant={tenant}
                     onView={onView}

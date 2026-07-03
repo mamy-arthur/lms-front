@@ -1,16 +1,17 @@
-"use client";
+'use client';
 
-import { Plus } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { UserSearch } from "@modules/shared/components/users";
-import { AdminUserFormDrawer } from "./_components/admin-user-form-drawer";
-import { AdminUsersTable } from "./_components/admin-users-table";
-import { useUsersQuery } from "../hooks/useUsersQuery";
-import type { User, UserSearchParams } from "../types";
-import { useUsersListController } from "@/modules/shared/hooks/useUsersListController";
+import { Plus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { UserSearch } from '@modules/shared/components/users';
+import { AdminUserFormDrawer } from './_components/admin-user-form-drawer';
+import { AdminUsersTable } from './_components/admin-users-table';
+import { useUsersQuery } from '../hooks/useUsersQuery';
+import type { User, UserSearchParams } from '../types';
+import { useUsersListController } from '@/modules/shared/hooks/useUsersListController';
 
 export function UsersList() {
-  const { isDrawerOpen,
+  const {
+    isDrawerOpen,
     editingUser,
     draftSearch,
     setDraftSearch,
@@ -36,26 +37,19 @@ export function UsersList() {
   const { data, isLoading } = useUsersQuery(params);
 
   return (
-    
     <div className="bg-background">
       <header className="mb-8">
-          <div>
-              <h1 className="text-2xl font-bold tracking-tight">
-                  Utilisateurs
-              </h1>
-              <p className="mt-1 text-sm text-muted-foreground">
-                  Ajoutez, modifiez et gérez les utilisateurs.
-              </p>
-          </div>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Utilisateurs</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Ajoutez, modifiez et gérez les utilisateurs.
+          </p>
+        </div>
       </header>
 
       <div className="space-y-4">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <UserSearch
-            value={draftSearch}
-            onChange={setDraftSearch}
-            onSearch={handleSearch}
-          />
+          <UserSearch value={draftSearch} onChange={setDraftSearch} onSearch={handleSearch} />
           <div className="flex items-center gap-2 sm:ml-auto">
             <Button
               onClick={handleOpenCreate}

@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { Check, ChevronsUpDown, Plus } from "lucide-react";
-import { useCallback, useMemo, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Check, ChevronsUpDown, Plus } from 'lucide-react';
+import { useCallback, useMemo, useState } from 'react';
+import { Button } from '@/components/ui/button';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -12,30 +12,26 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+} from '@/components/ui/alert-dialog';
 import {
   Command,
   CommandEmpty,
   CommandGroup,
   CommandInput,
   CommandItem,
-} from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
-import { ModuleSearch } from "@modules/shared/components/modules";
-import { useModuleListController } from "@/modules/shared/hooks/useModuleListController";
-import { useModulesQuery } from "../hooks/useModulesQuery";
-import { useDeleteModule } from "../hooks/useDeleteModule";
-import type { Module } from "../types";
-import { AdminModuleFormDrawer } from "../components/AdminModuleFormDrawer";
-import { AdminModulesTable } from "./_components/admin-modules-table";
-import { ModuleCategoryProvider, useModuleCategoryStore } from "../lib/module-store";
-import { useQueryClient } from "@tanstack/react-query";
-import { ADMIN_MODULES_QUERY_KEY } from "../hooks/useModulesQuery";
+} from '@/components/ui/command';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
+import { ModuleSearch } from '@modules/shared/components/modules';
+import { useModuleListController } from '@/modules/shared/hooks/useModuleListController';
+import { useModulesQuery } from '../hooks/useModulesQuery';
+import { useDeleteModule } from '../hooks/useDeleteModule';
+import type { Module } from '../types';
+import { AdminModuleFormDrawer } from '../components/AdminModuleFormDrawer';
+import { AdminModulesTable } from './_components/admin-modules-table';
+import { ModuleCategoryProvider, useModuleCategoryStore } from '../lib/module-store';
+import { useQueryClient } from '@tanstack/react-query';
+import { ADMIN_MODULES_QUERY_KEY } from '../hooks/useModulesQuery';
 
 function ModuleListInner() {
   const ctrl = useModuleListController<Module>({
@@ -54,15 +50,12 @@ function ModuleListInner() {
   const toggleCategoryFilter = (categoryId: string) => {
     const next = selectedCategories.includes(categoryId)
       ? selectedCategories.filter((c) => c !== categoryId)
-      : [...selectedCategories.filter((c) => c !== "all"), categoryId];
-    ctrl.setDraftCategory(next.length > 0 ? next : ["all"]);
+      : [...selectedCategories.filter((c) => c !== 'all'), categoryId];
+    ctrl.setDraftCategory(next.length > 0 ? next : ['all']);
     ctrl.handleSearch();
   };
 
-  const usedCategoryIds = useMemo(
-    () => new Set(data?.data.map((m) => m.category) ?? []),
-    [data],
-  );
+  const usedCategoryIds = useMemo(() => new Set(data?.data.map((m) => m.category) ?? []), [data]);
 
   const handleCategoryChange = useCallback(
     (moduleId: string, newCategory: string) => {
@@ -72,9 +65,7 @@ function ModuleListInner() {
           if (!prev) return prev;
           return {
             ...prev,
-            data: prev.data.map((m) =>
-              m.id === moduleId ? { ...m, category: newCategory } : m,
-            ),
+            data: prev.data.map((m) => (m.id === moduleId ? { ...m, category: newCategory } : m)),
           };
         },
       );
@@ -110,9 +101,9 @@ function ModuleListInner() {
                   aria-label="Filtrer par catégorie"
                   className="h-9 w-44 justify-between font-normal text-xs"
                 >
-                  {selectedCategories.includes("all") || selectedCategories.length === 0
-                    ? "Toutes les catégories"
-                    : `${selectedCategories.length} catégorie${selectedCategories.length > 1 ? "s" : ""}`}
+                  {selectedCategories.includes('all') || selectedCategories.length === 0
+                    ? 'Toutes les catégories'
+                    : `${selectedCategories.length} catégorie${selectedCategories.length > 1 ? 's' : ''}`}
                   <ChevronsUpDown className="ml-2 size-4 shrink-0 text-muted-foreground" />
                 </Button>
               </PopoverTrigger>
@@ -124,15 +115,15 @@ function ModuleListInner() {
                     <CommandItem
                       value="all"
                       onSelect={() => {
-                        ctrl.setDraftCategory(["all"]);
+                        ctrl.setDraftCategory(['all']);
                         ctrl.handleSearch();
                         setCatFilterOpen(false);
                       }}
                     >
                       <Check
                         className={cn(
-                          "mr-2 size-4",
-                          selectedCategories.includes("all") ? "opacity-100" : "opacity-0",
+                          'mr-2 size-4',
+                          selectedCategories.includes('all') ? 'opacity-100' : 'opacity-0',
                         )}
                       />
                       Toutes les catégories
@@ -145,8 +136,8 @@ function ModuleListInner() {
                       >
                         <Check
                           className={cn(
-                            "mr-2 size-4",
-                            selectedCategories.includes(cat.id) ? "opacity-100" : "opacity-0",
+                            'mr-2 size-4',
+                            selectedCategories.includes(cat.id) ? 'opacity-100' : 'opacity-0',
                           )}
                         />
                         {cat.name}
@@ -200,14 +191,16 @@ function ModuleListInner() {
 
         <AlertDialog
           open={!!deleteConfirm}
-          onOpenChange={(open) => { if (!open) setDeleteConfirm(undefined); }}
+          onOpenChange={(open) => {
+            if (!open) setDeleteConfirm(undefined);
+          }}
         >
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Supprimer le module</AlertDialogTitle>
               <AlertDialogDescription>
-                Êtes-vous sûr de vouloir supprimer le module « {deleteConfirm?.name}
-                » ? Cette action est irréversible.
+                Êtes-vous sûr de vouloir supprimer le module « {deleteConfirm?.name}» ? Cette action
+                est irréversible.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

@@ -1,62 +1,57 @@
-"use client";
+'use client';
 
-import { memo, useCallback, useEffect, useMemo } from "react";
-import { z } from "zod";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { memo, useCallback, useEffect, useMemo } from 'react';
+import { z } from 'zod';
 import {
-  useUserFormDrawer,
-} from "@modules/shared/components/users/use-user-form-drawer";
-import { UserForm } from "@modules/shared/components/users/user-form";
-import { useTenantStore } from "@/shared/stores/tenant.store";
-import { useCreateTenantUser } from "../hooks/useCreateTenantUser";
-import { useUpdateTenantUser } from "../hooks/useUpdateTenantUser";
-import type {
-  CreateTenantUserPayload,
-  TenantUser,
-  UpdateTenantUserPayload,
-} from "../types";
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
+import { useUserFormDrawer } from '@modules/shared/components/users/use-user-form-drawer';
+import { UserForm } from '@modules/shared/components/users/user-form';
+import { useTenantStore } from '@/shared/stores/tenant.store';
+import { useCreateTenantUser } from '../hooks/useCreateTenantUser';
+import { useUpdateTenantUser } from '../hooks/useUpdateTenantUser';
+import type { CreateTenantUserPayload, TenantUser, UpdateTenantUserPayload } from '../types';
 
 const createSchema = z.object({
-  first_name: z.string().min(1, "Prénom requis").max(120),
-  last_name: z.string().min(1, "Nom requis").max(120),
-  username: z.string().max(120).optional().or(z.literal("")),
-  email: z.string().email("Email invalide").max(255),
-  password: z.string().min(8, "Minimum 8 caractères").max(255),
-  role: z.enum(["CLIENT_MANAGER", "TRAINEE"]),
-  city: z.string().max(120).optional().or(z.literal("")),
-  country: z.string().max(120).optional().or(z.literal("")),
+  first_name: z.string().min(1, 'Prénom requis').max(120),
+  last_name: z.string().min(1, 'Nom requis').max(120),
+  username: z.string().max(120).optional().or(z.literal('')),
+  email: z.string().email('Email invalide').max(255),
+  password: z.string().min(8, 'Minimum 8 caractères').max(255),
+  role: z.enum(['CLIENT_MANAGER', 'TRAINEE']),
+  city: z.string().max(120).optional().or(z.literal('')),
+  country: z.string().max(120).optional().or(z.literal('')),
 });
 
 const updateSchema = z.object({
-  first_name: z.string().min(1, "Prénom requis").max(120),
-  last_name: z.string().min(1, "Nom requis").max(120),
-  username: z.string().max(120).optional().or(z.literal("")),
-  email: z.string().email("Email invalide").max(255),
-  password: z
-    .string()
-    .min(8, "Minimum 8 caractères")
-    .max(255)
-    .optional()
-    .or(z.literal("")),
-  role: z.enum(["CLIENT_MANAGER", "TRAINEE"]),
-  city: z.string().max(120).optional().or(z.literal("")),
-  country: z.string().max(120).optional().or(z.literal("")),
+  first_name: z.string().min(1, 'Prénom requis').max(120),
+  last_name: z.string().min(1, 'Nom requis').max(120),
+  username: z.string().max(120).optional().or(z.literal('')),
+  email: z.string().email('Email invalide').max(255),
+  password: z.string().min(8, 'Minimum 8 caractères').max(255).optional().or(z.literal('')),
+  role: z.enum(['CLIENT_MANAGER', 'TRAINEE']),
+  city: z.string().max(120).optional().or(z.literal('')),
+  country: z.string().max(120).optional().or(z.literal('')),
 });
 
 const ROLE_LABELS: Record<string, string> = {
-  CLIENT_MANAGER: "Responsable",
-  TRAINEE: "Stagiaire",
+  CLIENT_MANAGER: 'Responsable',
+  TRAINEE: 'Stagiaire',
 };
 
 const CREATE_DEFAULTS: z.infer<typeof createSchema> = {
-  first_name: "",
-  last_name: "",
-  username: "",
-  email: "",
-  password: "",
-  role: "TRAINEE",
-  city: "",
-  country: "",
+  first_name: '',
+  last_name: '',
+  username: '',
+  email: '',
+  password: '',
+  role: 'TRAINEE',
+  city: '',
+  country: '',
 };
 
 export interface UserFormDrawerProps {
@@ -66,12 +61,7 @@ export interface UserFormDrawerProps {
   user?: TenantUser;
 }
 
-function UserFormDrawerBase({
-  open,
-  onClose,
-  onSuccess,
-  user,
-}: UserFormDrawerProps) {
+function UserFormDrawerBase({ open, onClose, onSuccess, user }: UserFormDrawerProps) {
   const isEdit = !!user;
 
   const createMutation = useCreateTenantUser();
@@ -87,8 +77,8 @@ function UserFormDrawerBase({
         last_name: u.last_name,
         username: u.username,
         email: u.email,
-        password: "",
-        role: u.role as "CLIENT_MANAGER" | "TRAINEE",
+        password: '',
+        role: u.role as 'CLIENT_MANAGER' | 'TRAINEE',
         city: u.city,
         country: u.country,
       };
@@ -114,9 +104,9 @@ function UserFormDrawerBase({
         last_name: values.last_name,
         email: values.email,
         password: values.password as string,
-        role: values.role as CreateTenantUserPayload["role"],
-        city: values.city ?? "",
-        country: values.country ?? "",
+        role: values.role as CreateTenantUserPayload['role'],
+        city: values.city ?? '',
+        country: values.country ?? '',
         tenant_id: tenantId,
         ...(values.username ? { username: values.username } : {}),
       }) as CreateTenantUserPayload,
@@ -126,9 +116,9 @@ function UserFormDrawerBase({
         first_name: values.first_name,
         last_name: values.last_name,
         email: values.email,
-        role: values.role as UpdateTenantUserPayload["role"],
-        city: values.city ?? "",
-        country: values.country ?? "",
+        role: values.role as UpdateTenantUserPayload['role'],
+        city: values.city ?? '',
+        country: values.country ?? '',
         ...(values.username ? { username: values.username } : {}),
         ...(values.password ? { password: values.password } : {}),
       } as UpdateTenantUserPayload,
@@ -150,10 +140,8 @@ function UserFormDrawerBase({
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
         <SheetHeader className="border-b px-4 py-4">
-          <SheetTitle>{isEdit ? "Modifier l'utilisateur" : "Créer un utilisateur"}</SheetTitle>
-          <SheetDescription>
-            Renseignez les informations de l'utilisateur.
-          </SheetDescription>
+          <SheetTitle>{isEdit ? "Modifier l'utilisateur" : 'Créer un utilisateur'}</SheetTitle>
+          <SheetDescription>Renseignez les informations de l'utilisateur.</SheetDescription>
         </SheetHeader>
         <UserForm
           form={formState.form}

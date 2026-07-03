@@ -1,6 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
-import { adminTraineesApi } from "../api";
-import { normalizeTrainee } from "../types";
+import { useQuery } from '@tanstack/react-query';
+import { adminTraineesApi } from '../api';
+import { normalizeTrainee } from '../types';
 
 interface Params {
   page: number;
@@ -10,7 +10,7 @@ interface Params {
 
 export function useTraineesQuery({ page, perPage, q }: Params) {
   return useQuery({
-    queryKey: ["admin", "trainees", { page, perPage, q }],
+    queryKey: ['admin', 'trainees', { page, perPage, q }],
     queryFn: async () => {
       const resp = await adminTraineesApi.list({ page, limit: perPage, q });
       const raw = resp.items ?? resp.data ?? [];

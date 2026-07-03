@@ -1,25 +1,21 @@
-"use client";
+'use client';
 
-import { Filter, Search } from "lucide-react";
-import type { ReactNode } from "react";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Filter, Search } from 'lucide-react';
+import type { ReactNode } from 'react';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from '@/components/ui/select';
 
 const STATUS_OPTIONS = [
-  { value: "active", label: "Actif" },
-  { value: "inactive", label: "Inactif" },
+  { value: 'active', label: 'Actif' },
+  { value: 'inactive', label: 'Inactif' },
 ] as const;
 
 export interface UsersFilterProps {

@@ -1,11 +1,7 @@
-import { AdminAuthGuard } from "@/modules/admin/guards/AdminAuthGuard";
-import { AdminLayout } from "@/modules/admin/layout/AdminLayout";
+import { AdminAuthGuard } from '@/modules/admin/guards/AdminAuthGuard';
+import { AdminLayout } from '@/modules/admin/layout/AdminLayout';
 
-export default function ProtectedAdminLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function ProtectedAdminLayout({ children }: { children: React.ReactNode }) {
   return (
     <AdminAuthGuard>
       <AdminLayout>{children}</AdminLayout>

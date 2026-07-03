@@ -1,35 +1,29 @@
-"use client";
+'use client';
 
-import { useCallback, useState } from "react";
+import { useCallback, useState } from 'react';
 
 export interface QuestionSearchParams {
   q?: string;
   quiz_id?: string;
   sort_by?: string;
-  sort_dir?: "asc" | "desc";
+  sort_dir?: 'asc' | 'desc';
   page?: number;
   page_size?: number;
 }
 
 export type UseQuestionListControllerOptions = {
   defaultSortBy?: string;
-  defaultSortDir?: "asc" | "desc";
+  defaultSortDir?: 'asc' | 'desc';
   defaultPageSize?: number;
 };
 
-export function useQuestionListController<TQuestion>(
-  opts?: UseQuestionListControllerOptions,
-) {
-  const {
-    defaultSortBy = "name",
-    defaultSortDir = "asc",
-    defaultPageSize = 12,
-  } = opts ?? {};
+export function useQuestionListController<TQuestion>(opts?: UseQuestionListControllerOptions) {
+  const { defaultSortBy = 'name', defaultSortDir = 'asc', defaultPageSize = 12 } = opts ?? {};
 
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<TQuestion | undefined>();
 
-  const [draftSearch, setDraftSearch] = useState("");
+  const [draftSearch, setDraftSearch] = useState('');
 
   const [params, setParams] = useState<QuestionSearchParams>({
     sort_by: defaultSortBy,
@@ -50,8 +44,7 @@ export function useQuestionListController<TQuestion>(
     setParams((prev) => ({
       ...prev,
       sort_by: column,
-      sort_dir:
-        prev.sort_by === column && prev.sort_dir === "asc" ? "desc" : "asc",
+      sort_dir: prev.sort_by === column && prev.sort_dir === 'asc' ? 'desc' : 'asc',
       page: 0,
     }));
   }, []);
@@ -89,7 +82,7 @@ export function useQuestionListController<TQuestion>(
   const pageSize = params.page_size ?? defaultPageSize;
   const sort = {
     column: params.sort_by ?? defaultSortBy,
-    direction: (params.sort_dir as "asc" | "desc") ?? defaultSortDir,
+    direction: (params.sort_dir as 'asc' | 'desc') ?? defaultSortDir,
   };
   const hasQuery = !!draftSearch;
 

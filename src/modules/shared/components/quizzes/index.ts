@@ -1,2 +1,2 @@
-export { QuizSearch } from "./quiz-search";
-export type { QuizSearchProps } from "./quiz-search";
+export { QuizSearch } from './quiz-search';
+export type { QuizSearchProps } from './quiz-search';

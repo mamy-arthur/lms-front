@@ -1,8 +1,6 @@
-"use client";
+'use client';
 
-import ClientDashboard from "@/modules/portal/resources/dashboard/ClientDashboard";
+import ClientDashboard from '@/modules/portal/resources/dashboard/ClientDashboard';
 export default function DashboardPage() {
-    return (
-        <ClientDashboard />
-    );
+  return <ClientDashboard />;
 }

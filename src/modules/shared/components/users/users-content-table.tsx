@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import {
   UserActions,
@@ -8,9 +8,9 @@ import {
   UsersTable,
   type UsersTableColumn,
   type UsersTableSort,
-} from "./";
-import { formatDate, formatDateWithTime } from "@/shared/lib/date";
-import type { Role } from "@/shared/constants/roles";
+} from './';
+import { formatDate, formatDateWithTime } from '@/shared/lib/date';
+import type { Role } from '@/shared/constants/roles';
 
 interface UsersContentRow {
   id: string;
@@ -70,15 +70,11 @@ export function UsersContentTable<T extends UsersContentRow = UsersContentRow>({
 }: UsersContentTableProps<T>) {
   const columns: UsersTableColumn<T>[] = [
     {
-      key: "username",
-      label: "Utilisateur",
+      key: 'username',
+      label: 'Utilisateur',
       sortable: true,
       render: (user) => (
-        <UserAvatar
-          name={user.username}
-          first_name={user.first_name}
-          last_name={user.last_name}
-        />
+        <UserAvatar name={user.username} first_name={user.first_name} last_name={user.last_name} />
       ),
       skeleton: (
         <div className="flex items-center gap-3">
@@ -88,74 +84,64 @@ export function UsersContentTable<T extends UsersContentRow = UsersContentRow>({
       ),
     },
     {
-      key: "email",
-      label: "Email",
+      key: 'email',
+      label: 'Email',
       sortable: true,
-      render: (user) => (
-        <span className="text-xs text-muted-foreground">{user.email}</span>
-      ),
+      render: (user) => <span className="text-xs text-muted-foreground">{user.email}</span>,
     },
     {
-      key: "role",
-      label: "Rôle",
+      key: 'role',
+      label: 'Rôle',
       sortable: true,
       render: (user) => <UserRoleBadge role={user.role} />,
     },
     ...(tenantNames
       ? [
           {
-            key: "tenantId" as const,
-            label: "Tenant" as const,
+            key: 'tenantId' as const,
+            label: 'Tenant' as const,
             sortable: true,
             render: (user: T) => (
               <span className="text-xs text-muted-foreground">
-                {tenantNames[user.tenantId ?? ""] || user.tenantId || "—"}
+                {tenantNames[user.tenantId ?? ''] || user.tenantId || '—'}
               </span>
             ),
           },
         ]
       : []),
     {
-      key: "city",
-      label: "Ville",
+      key: 'city',
+      label: 'Ville',
+      sortable: true,
+      render: (user) => <span className="text-xs text-muted-foreground">{user.city || '—'}</span>,
+    },
+    {
+      key: 'country',
+      label: 'Pays',
       sortable: true,
       render: (user) => (
-        <span className="text-xs text-muted-foreground">
-          {user.city || "—"}
-        </span>
+        <span className="text-xs text-muted-foreground">{user.country || '—'}</span>
       ),
     },
     {
-      key: "country",
-      label: "Pays",
-      sortable: true,
-      render: (user) => (
-        <span className="text-xs text-muted-foreground">
-          {user.country || "—"}
-        </span>
-      ),
-    },
-    {
-      key: "lastLogin",
-      label: "Dernière connexion",
+      key: 'lastLogin',
+      label: 'Dernière connexion',
       sortable: true,
       render: (user) => (
         <span className="text-xs text-muted-foreground tabular-nums">
-          {showTimeInLastLogin
-            ? formatDateWithTime(user.lastLogin)
-            : formatDate(user.lastLogin)}
+          {showTimeInLastLogin ? formatDateWithTime(user.lastLogin) : formatDate(user.lastLogin)}
         </span>
       ),
     },
     {
-      key: "isActive",
-      label: "Statut",
+      key: 'isActive',
+      label: 'Statut',
       sortable: isActiveSortable,
       render: (user) => <UserActiveBadge isActive={user.isActive} />,
     },
     {
-      key: "createdAt",
-      label: "Création",
+      key: 'createdAt',
+      label: 'Création',
       sortable: true,
       render: (user) => (
         <span className="text-xs text-muted-foreground tabular-nums">
@@ -164,8 +150,8 @@ export function UsersContentTable<T extends UsersContentRow = UsersContentRow>({
       ),
     },
     {
-      key: "actions",
-      label: "",
+      key: 'actions',
+      label: '',
       sortable: false,
       render: (user) => (
         <div className="text-right" onClick={(e) => e.stopPropagation()}>

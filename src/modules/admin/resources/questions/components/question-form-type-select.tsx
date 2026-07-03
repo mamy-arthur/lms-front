@@ -1,14 +1,12 @@
-"use client";
+'use client';
 
-import { QUESTION_TYPE_OPTIONS } from "@modules/shared/components/questions";
-import { TYPE_ICONS } from "./question-form-constants";
+import { QUESTION_TYPE_OPTIONS } from '@modules/shared/components/questions';
+import { TYPE_ICONS } from './question-form-constants';
 interface QuestionFormTypeSelectProps {
   onSelect: (type: string) => void;
 }
 
-export function QuestionFormTypeSelect({
-  onSelect,
-}: QuestionFormTypeSelectProps) {
+export function QuestionFormTypeSelect({ onSelect }: QuestionFormTypeSelectProps) {
   return (
     <div className="space-y-6 px-2 py-2">
       <div className="flex flex-col items-center gap-4 text-center">
@@ -32,14 +30,12 @@ export function QuestionFormTypeSelect({
           >
             <div
               className={`flex h-11 w-11 items-center justify-center rounded-xl bg-current/10 text-xl transition-all duration-200 group-hover:scale-110 group-hover:bg-current/15 ${
-                TYPE_ICONS[opt.value]?.color ?? "text-primary"
+                TYPE_ICONS[opt.value]?.color ?? 'text-primary'
               }`}
             >
               {TYPE_ICONS[opt.value]?.icon}
             </div>
-            <span className="text-sm font-medium leading-tight text-foreground">
-              {opt.label}
-            </span>
+            <span className="text-sm font-medium leading-tight text-foreground">{opt.label}</span>
           </button>
         ))}
       </div>

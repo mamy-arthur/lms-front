@@ -1,5 +1,5 @@
-import { CategoryList } from "@/modules/admin/resources/courses";
+import { CategoryList } from '@/modules/admin/resources/courses';
 
-export default function CategoryPage(){
-    return <CategoryList />
+export default function CategoryPage() {
+  return <CategoryList />;
 }

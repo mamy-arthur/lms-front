@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import { UsersFilter } from "@modules/shared/components/users";
+import { UsersFilter } from '@modules/shared/components/users';
 
 const ROLE_OPTIONS = [
-  { value: "CLIENT_MANAGER", label: "Responsable" },
-  { value: "TRAINEE", label: "Stagiaire" },
+  { value: 'CLIENT_MANAGER', label: 'Responsable' },
+  { value: 'TRAINEE', label: 'Stagiaire' },
 ] as const;
 
 export { ROLE_OPTIONS as TENANT_ROLE_OPTIONS };

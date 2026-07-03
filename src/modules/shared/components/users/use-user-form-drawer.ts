@@ -1,8 +1,8 @@
-import { useCallback, useState } from "react";
-import type { FieldValues } from "react-hook-form";
-import type { z } from "zod";
-import type { MutationLike } from "@/shared/types/mutation";
-import { useFormDrawer as _useFormDrawer } from "@/shared/components/form-drawer/use-form-drawer";
+import { useCallback, useState } from 'react';
+import type { FieldValues } from 'react-hook-form';
+import type { z } from 'zod';
+import type { MutationLike } from '@/shared/types/mutation';
+import { useFormDrawer as _useFormDrawer } from '@/shared/components/form-drawer/use-form-drawer';
 
 export type { MutationLike };
 
@@ -47,10 +47,7 @@ export function useUserFormDrawer({
     buildUpdatePayload,
   });
 
-  const togglePasswordVisibility = useCallback(
-    () => setShowPassword((v) => !v),
-    [],
-  );
+  const togglePasswordVisibility = useCallback(() => setShowPassword((v) => !v), []);
 
   return {
     ...base,

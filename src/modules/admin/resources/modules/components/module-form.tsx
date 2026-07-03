@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { Check, ChevronDown, ChevronsUpDown, GripVertical, Loader2 } from "lucide-react";
-import { useCallback, useMemo, useState } from "react";
-import type { UseFormReturn } from "react-hook-form";
+import { Check, ChevronDown, ChevronsUpDown, GripVertical, Loader2 } from 'lucide-react';
+import { useCallback, useMemo, useState } from 'react';
+import type { UseFormReturn } from 'react-hook-form';
 import {
   closestCenter,
   DndContext,
@@ -11,15 +11,15 @@ import {
   useSensors,
   useSensor,
   type DragEndEvent,
-} from "@dnd-kit/core";
+} from '@dnd-kit/core';
 import {
   arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
   useSortable,
   verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,15 +29,15 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
+} from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
 import {
   Command,
   CommandEmpty,
   CommandGroup,
   CommandInput,
   CommandItem,
-} from "@/components/ui/command";
+} from '@/components/ui/command';
 import {
   Field,
   FieldContent,
@@ -45,21 +45,17 @@ import {
   FieldGroup,
   FieldLabel,
   FieldRoot,
-} from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Textarea } from "@/components/ui/textarea";
-import { cn } from "@/lib/utils";
-import type { MutationLike } from "@/shared/types/mutation";
-import { extractApiError } from "@/shared/utils/api-error";
-import type { genIdentifier } from "./module-form-utils";
-import { useModuleCategoryStore } from "../lib/module-store";
-import { ModuleCategoryDrawer } from "./module-category-drawer";
-import { CategorySelect } from "./module-category-select";
+} from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Textarea } from '@/components/ui/textarea';
+import { cn } from '@/lib/utils';
+import type { MutationLike } from '@/shared/types/mutation';
+import { extractApiError } from '@/shared/utils/api-error';
+import type { genIdentifier } from './module-form-utils';
+import { useModuleCategoryStore } from '../lib/module-store';
+import { ModuleCategoryDrawer } from './module-category-drawer';
+import { CategorySelect } from './module-category-select';
 
 interface Course {
   id: string;
@@ -101,14 +97,9 @@ function SortableCourseItem({
   categoryName?: string;
   index: number;
 }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: courseId });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: courseId,
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -120,8 +111,8 @@ function SortableCourseItem({
       ref={setNodeRef}
       style={style}
       className={cn(
-        "flex items-center gap-1.5 rounded-md border bg-muted/30 px-2 py-1.5 text-xs",
-        isDragging && "z-10 opacity-50 shadow-md",
+        'flex items-center gap-1.5 rounded-md border bg-muted/30 px-2 py-1.5 text-xs',
+        isDragging && 'z-10 opacity-50 shadow-md',
       )}
     >
       <button
@@ -136,9 +127,7 @@ function SortableCourseItem({
         {index + 1}
       </span>
       <span className="flex-1 truncate">{fullName}</span>
-      {categoryName && (
-        <span className="shrink-0 text-muted-foreground">{categoryName}</span>
-      )}
+      {categoryName && <span className="shrink-0 text-muted-foreground">{categoryName}</span>}
     </div>
   );
 }
@@ -166,13 +155,13 @@ export function ModuleForm({
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [usedDeleteAttempt, setUsedDeleteAttempt] = useState<string | null>(null);
 
-  const currentCategory = form.watch("category");
+  const currentCategory = form.watch('category');
 
   const handleDeleteCategory = () => {
     if (deleteConfirm) {
       deleteCategory(deleteConfirm);
       if (currentCategory === deleteConfirm) {
-        form.setValue("category", "", { shouldValidate: true });
+        form.setValue('category', '', { shouldValidate: true });
       }
       setDeleteConfirm(null);
     }
@@ -200,18 +189,16 @@ export function ModuleForm({
       const oldIndex = selectedCourseIds.indexOf(String(active.id));
       const newIndex = selectedCourseIds.indexOf(String(over.id));
       if (oldIndex === -1 || newIndex === -1) return;
-      form.setValue("courseIds", arrayMove(selectedCourseIds, oldIndex, newIndex), { shouldValidate: true });
+      form.setValue('courseIds', arrayMove(selectedCourseIds, oldIndex, newIndex), {
+        shouldValidate: true,
+      });
     },
     [selectedCourseIds, form],
   );
 
   return (
     <Field {...form}>
-      <form
-        onSubmit={form.handleSubmit(onSubmit)}
-        className="flex flex-1 flex-col"
-        noValidate
-      >
+      <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-1 flex-col" noValidate>
         <div className="flex-1 space-y-5 overflow-y-auto px-6 py-4">
           {mutation.isError && (
             <div
@@ -255,12 +242,7 @@ export function ModuleForm({
               <FieldGroup>
                 <FieldLabel className="text-xs">Nom</FieldLabel>
                 <FieldContent>
-                  <Input
-                    autoFocus
-                    aria-label="Nom"
-                    className="text-xs"
-                    {...field}
-                  />
+                  <Input autoFocus aria-label="Nom" className="text-xs" {...field} />
                 </FieldContent>
                 <FieldError />
               </FieldGroup>
@@ -275,21 +257,13 @@ export function ModuleForm({
                 <FieldLabel className="text-xs">Identifiant</FieldLabel>
                 <FieldContent>
                   <div className="flex gap-2">
-                    <Input
-                      aria-label="Identifiant"
-                      className="text-xs"
-                      {...field}
-                    />
+                    <Input aria-label="Identifiant" className="text-xs" {...field} />
                     <Button
                       type="button"
                       variant="outline"
                       size="xs"
                       onClick={() =>
-                        form.setValue(
-                          "identifier",
-                          genIdentifierFn(name),
-                          { shouldValidate: true },
-                        )
+                        form.setValue('identifier', genIdentifierFn(name), { shouldValidate: true })
                       }
                     >
                       Auto
@@ -325,10 +299,7 @@ export function ModuleForm({
             render={({ field }) => (
               <FieldGroup>
                 <FieldLabel className="text-xs">Cours liés</FieldLabel>
-                <Popover
-                  open={coursePopoverOpen}
-                  onOpenChange={setCoursePopoverOpen}
-                >
+                <Popover open={coursePopoverOpen} onOpenChange={setCoursePopoverOpen}>
                   <PopoverTrigger asChild>
                     <FieldContent>
                       <Button
@@ -340,9 +311,9 @@ export function ModuleForm({
                       >
                         {selectedCourseIds.length > 0
                           ? `${selectedCourseIds.length} cours sélectionné${
-                              selectedCourseIds.length > 1 ? "s" : ""
+                              selectedCourseIds.length > 1 ? 's' : ''
                             }`
-                          : "Sélectionner des cours…"}
+                          : 'Sélectionner des cours…'}
 
                         <ChevronsUpDown className="ml-2 size-4 shrink-0 text-muted-foreground" />
                       </Button>
@@ -356,9 +327,7 @@ export function ModuleForm({
                     <Command className="overflow-hidden">
                       <CommandInput placeholder="Rechercher un cours..." />
 
-                      <CommandEmpty>
-                        Aucun cours trouvé.
-                      </CommandEmpty>
+                      <CommandEmpty>Aucun cours trouvé.</CommandEmpty>
 
                       <div className="max-h-[400px] overflow-y-auto overscroll-contain">
                         {coursesByCategory.map(({ name, courses }) => {
@@ -373,8 +342,8 @@ export function ModuleForm({
                               >
                                 <ChevronDown
                                   className={cn(
-                                    "size-3 transition-transform",
-                                    !isOpen && "-rotate-90",
+                                    'size-3 transition-transform',
+                                    !isOpen && '-rotate-90',
                                   )}
                                 />
                                 {name}
@@ -389,10 +358,10 @@ export function ModuleForm({
                                   >
                                     <Check
                                       className={cn(
-                                        "mr-2 size-4",
+                                        'mr-2 size-4',
                                         selectedCourseIds.includes(course.id)
-                                          ? "opacity-100"
-                                          : "opacity-0",
+                                          ? 'opacity-100'
+                                          : 'opacity-0',
                                       )}
                                     />
                                     {course.fullName}
@@ -450,22 +419,20 @@ export function ModuleForm({
           >
             Annuler
           </Button>
-          <Button 
-            type="submit" 
-            disabled={mutation.isPending} 
+          <Button
+            type="submit"
+            disabled={mutation.isPending}
             size="lg"
             className="bg-(--color-primary) hover:bg-(--color-primary)/80"
-            >
-            {mutation.isPending && (
-              <Loader2 className="size-4 animate-spin" />
-            )}
+          >
+            {mutation.isPending && <Loader2 className="size-4 animate-spin" />}
             {mutation.isPending
               ? isEdit
-                ? "Enregistrement…"
-                : "Création…"
+                ? 'Enregistrement…'
+                : 'Création…'
               : isEdit
-                ? "Enregistrer"
-                : "Créer"}
+                ? 'Enregistrer'
+                : 'Créer'}
           </Button>
         </div>
       </form>
@@ -489,9 +456,8 @@ export function ModuleForm({
           <AlertDialogHeader>
             <AlertDialogTitle>Supprimer la catégorie</AlertDialogTitle>
             <AlertDialogDescription>
-              Êtes-vous sûr de vouloir supprimer cette catégorie ? Les modules
-              utilisant cette catégorie ne seront pas supprimés mais leur
-              catégorie sera réinitialisée.
+              Êtes-vous sûr de vouloir supprimer cette catégorie ? Les modules utilisant cette
+              catégorie ne seront pas supprimés mais leur catégorie sera réinitialisée.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -516,9 +482,8 @@ export function ModuleForm({
           <AlertDialogHeader>
             <AlertDialogTitle>Suppression impossible</AlertDialogTitle>
             <AlertDialogDescription>
-              Cette catégorie de module ne peut pas être supprimée car elle
-              contient des modules liés. Veuillez déplacer ou supprimer les
-              modules avant de supprimer la catégorie.
+              Cette catégorie de module ne peut pas être supprimée car elle contient des modules
+              liés. Veuillez déplacer ou supprimer les modules avant de supprimer la catégorie.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

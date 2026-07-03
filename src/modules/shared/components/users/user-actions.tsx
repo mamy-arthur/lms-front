@@ -1,21 +1,14 @@
-"use client";
+'use client';
 
-import {
-  Ban,
-  CheckCircle,
-  Eye,
-  MoreHorizontal,
-  Pencil,
-  Trash2,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Ban, CheckCircle, Eye, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from '@/components/ui/dropdown-menu';
 
 export interface UserActionsProps {
   isActive: boolean;
@@ -62,13 +55,13 @@ export function UserActions({
         {onView && onEdit && <DropdownMenuSeparator />}
         {onToggleActive && (
           <>
-            {(!onView && !onEdit) ? null : <DropdownMenuSeparator />}
+            {!onView && !onEdit ? null : <DropdownMenuSeparator />}
             <DropdownMenuItem
               onClick={onToggleActive}
               className={
                 isActive
-                  ? "text-amber-600 focus:text-amber-600"
-                  : "text-emerald-600 focus:text-emerald-600"
+                  ? 'text-amber-600 focus:text-amber-600'
+                  : 'text-emerald-600 focus:text-emerald-600'
               }
             >
               {isActive ? (
@@ -76,15 +69,12 @@ export function UserActions({
               ) : (
                 <CheckCircle className="mr-2 size-3.5" />
               )}
-              {isActive ? "Désactiver" : "Activer"}
+              {isActive ? 'Désactiver' : 'Activer'}
             </DropdownMenuItem>
           </>
         )}
         {onDelete && (
-          <DropdownMenuItem
-            onClick={onDelete}
-            className="text-destructive focus:text-destructive"
-          >
+          <DropdownMenuItem onClick={onDelete} className="text-destructive focus:text-destructive">
             <Trash2 className="mr-2 size-3.5" />
             Supprimer
           </DropdownMenuItem>

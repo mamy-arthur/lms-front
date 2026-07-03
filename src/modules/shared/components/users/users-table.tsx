@@ -1,11 +1,11 @@
-"use client";
+'use client';
 
-import { Users } from "lucide-react";
+import { Users } from 'lucide-react';
 import {
   DataTable,
   type DataTableColumn,
   type DataTableSort,
-} from "@/shared/components/ui/DataTable";
+} from '@/shared/components/ui/DataTable';
 
 export interface UsersTableColumn<T> extends DataTableColumn<T> {}
 export interface UsersTableSort extends DataTableSort {}
@@ -60,10 +60,10 @@ export function UsersTable<T extends { id: string | number }>({
       rowTestId={rowTestId}
       emptyState={{
         icon: <Users className="size-8 text-muted-foreground" />,
-        title: "Aucun utilisateur",
+        title: 'Aucun utilisateur',
         description:
           emptyMessages?.default ??
-          "Créez votre premier utilisateur en cliquant sur « Nouvel utilisateur ».",
+          'Créez votre premier utilisateur en cliquant sur « Nouvel utilisateur ».',
         filteredDescription: emptyMessages?.filtered,
       }}
     />

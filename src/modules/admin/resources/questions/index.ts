@@ -1,1 +1,1 @@
-export { QuestionList } from "./pages/QuestionList";
+export { QuestionList } from './pages/QuestionList';

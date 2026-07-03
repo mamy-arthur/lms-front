@@ -1,24 +1,19 @@
+import { apiDelete, apiGet, apiPatch, apiPost } from '@/shared/lib/apiClient';
 import {
-    apiDelete,
-    apiGet,
-    apiPatch,
-    apiPost
-} from "@/shared/lib/apiClient";
-import {
-    BackendTenant,
-    CreateTenantPayload,
-    Tenant,
-    UpdateTenantPayload,
-} from "@/shared/types/tenants/tenant";
+  BackendTenant,
+  CreateTenantPayload,
+  Tenant,
+  UpdateTenantPayload,
+} from '@/shared/types/tenants/tenant';
 
 export const tenantApi = {
-    getAll: () => apiGet<{ data: Tenant[] }>("platform/tenants"),
+  getAll: () => apiGet<{ data: Tenant[] }>('platform/tenants'),
 
-    create: (payload: CreateTenantPayload) =>
-        apiPost<{ data: BackendTenant }>("platform/tenants", payload),
+  create: (payload: CreateTenantPayload) =>
+    apiPost<{ data: BackendTenant }>('platform/tenants', payload),
 
-    update: (id: string, payload: UpdateTenantPayload) =>
-        apiPatch<{ data: BackendTenant }>(`platform/tenants/${id}`, payload),
+  update: (id: string, payload: UpdateTenantPayload) =>
+    apiPatch<{ data: BackendTenant }>(`platform/tenants/${id}`, payload),
 
-    remove: (id: string) => apiDelete(`platform/tenants/${id}`),
+  remove: (id: string) => apiDelete(`platform/tenants/${id}`),
 };

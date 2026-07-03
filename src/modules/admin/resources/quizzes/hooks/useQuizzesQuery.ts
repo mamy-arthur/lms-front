@@ -1,9 +1,9 @@
-import { useQuery } from "@tanstack/react-query";
-import { MOCK_QUIZZES } from "@modules/shared/components/quizzes/mocks/quizzes.mock";
-import type { Quiz, QuizSearchParams } from "../types";
-import { normalizeQuiz } from "../types";
+import { useQuery } from '@tanstack/react-query';
+import { MOCK_QUIZZES } from '@modules/shared/components/quizzes/mocks/quizzes.mock';
+import type { Quiz, QuizSearchParams } from '../types';
+import { normalizeQuiz } from '../types';
 
-export const ADMIN_QUIZZES_QUERY_KEY = ["admin", "quizzes"] as const;
+export const ADMIN_QUIZZES_QUERY_KEY = ['admin', 'quizzes'] as const;
 
 export function useQuizzesQuery(params?: QuizSearchParams) {
   return useQuery({

@@ -1,5 +1,5 @@
-import { ProgramsList } from "@/modules/admin/resources/programs/pages/ProgramsList";
+import { ProgramsList } from '@/modules/admin/resources/programs/pages/ProgramsList';
 
 export default function ProgramsPage() {
-    return <ProgramsList />;
+  return <ProgramsList />;
 }

@@ -1,74 +1,67 @@
-"use client";
+'use client';
 
-import { memo, useCallback, useMemo } from "react";
-import { z } from "zod";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { memo, useCallback, useMemo } from 'react';
+import { z } from 'zod';
 import {
-  FieldContent,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-  FieldRoot,
-} from "@/components/ui/field";
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
+import { FieldContent, FieldError, FieldGroup, FieldLabel, FieldRoot } from '@/components/ui/field';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Role } from "@/shared/constants/roles";
-import {
-  useUserFormDrawer,
-} from "@modules/shared/components/users/use-user-form-drawer";
-import { UserForm } from "@modules/shared/components/users/user-form";
-import { useCreateUser } from "../../hooks/useCreateUser";
-import { useUpdateUser } from "../../hooks/useUpdateUser";
-import type { CreateUserPayload, User } from "../../types";
+} from '@/components/ui/select';
+import { Role } from '@/shared/constants/roles';
+import { useUserFormDrawer } from '@modules/shared/components/users/use-user-form-drawer';
+import { UserForm } from '@modules/shared/components/users/user-form';
+import { useCreateUser } from '../../hooks/useCreateUser';
+import { useUpdateUser } from '../../hooks/useUpdateUser';
+import type { CreateUserPayload, User } from '../../types';
 
 const createSchema = z.object({
-  first_name: z.string().min(1, "Prénom requis").max(120),
-  last_name: z.string().min(1, "Nom requis").max(120),
-  username: z.string().max(120).optional().or(z.literal("")),
-  email: z.string().email("Email invalide").max(255),
-  password: z.string().min(8, "Minimum 8 caractères").max(255),
+  first_name: z.string().min(1, 'Prénom requis').max(120),
+  last_name: z.string().min(1, 'Nom requis').max(120),
+  username: z.string().max(120).optional().or(z.literal('')),
+  email: z.string().email('Email invalide').max(255),
+  password: z.string().min(8, 'Minimum 8 caractères').max(255),
   role: z.nativeEnum(Role),
-  city: z.string().max(120).optional().or(z.literal("")),
-  country: z.string().max(120).optional().or(z.literal("")),
+  city: z.string().max(120).optional().or(z.literal('')),
+  country: z.string().max(120).optional().or(z.literal('')),
 });
 
 const updateSchema = z.object({
-  first_name: z.string().min(1, "Prénom requis").max(120),
-  last_name: z.string().min(1, "Nom requis").max(120),
-  username: z.string().max(120).optional().or(z.literal("")),
-  email: z.string().email("Email invalide").max(255),
-  password: z
-    .string()
-    .min(8, "Minimum 8 caractères")
-    .max(255)
-    .optional()
-    .or(z.literal("")),
+  first_name: z.string().min(1, 'Prénom requis').max(120),
+  last_name: z.string().min(1, 'Nom requis').max(120),
+  username: z.string().max(120).optional().or(z.literal('')),
+  email: z.string().email('Email invalide').max(255),
+  password: z.string().min(8, 'Minimum 8 caractères').max(255).optional().or(z.literal('')),
   role: z.nativeEnum(Role),
-  city: z.string().max(120).optional().or(z.literal("")),
-  country: z.string().max(120).optional().or(z.literal("")),
+  city: z.string().max(120).optional().or(z.literal('')),
+  country: z.string().max(120).optional().or(z.literal('')),
 });
 
 const ROLE_LABELS: Record<string, string> = {
-  [Role.SUPER_ADMIN]: "Super admin",
-  [Role.EDITOR]: "Éditeur",
-  [Role.CLIENT_MANAGER]: "Responsable",
-  [Role.TRAINEE]: "Stagiaire",
+  [Role.SUPER_ADMIN]: 'Super admin',
+  [Role.EDITOR]: 'Éditeur',
+  [Role.CLIENT_MANAGER]: 'Responsable',
+  [Role.TRAINEE]: 'Stagiaire',
 };
 
 const ROLE_DEFAULTS: z.infer<typeof createSchema> = {
-  first_name: "",
-  last_name: "",
-  username: "",
-  email: "",
-  password: "",
+  first_name: '',
+  last_name: '',
+  username: '',
+  email: '',
+  password: '',
   role: Role.TRAINEE,
-  city: "",
-  country: "",
+  city: '',
+  country: '',
 };
 
 export interface AdminUserFormDrawerProps {
@@ -78,12 +71,7 @@ export interface AdminUserFormDrawerProps {
   user?: User;
 }
 
-function AdminUserFormDrawerBase({
-  open,
-  onClose,
-  onSuccess,
-  user,
-}: AdminUserFormDrawerProps) {
+function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFormDrawerProps) {
   const isEdit = !!user;
 
   const createMutation = useCreateUser();
@@ -98,7 +86,7 @@ function AdminUserFormDrawerBase({
         last_name: u.last_name,
         username: u.username,
         email: u.email,
-        password: "",
+        password: '',
         role: u.role,
         city: u.city,
         country: u.country,
@@ -126,8 +114,8 @@ function AdminUserFormDrawerBase({
         email: values.email,
         password: values.password as string,
         role: values.role,
-        city: values.city ?? "",
-        country: values.country ?? "",
+        city: values.city ?? '',
+        country: values.country ?? '',
         ...(values.username ? { username: values.username } : {}),
       }) as CreateUserPayload,
     buildUpdatePayload: (values, id) => ({
@@ -137,8 +125,8 @@ function AdminUserFormDrawerBase({
         last_name: values.last_name,
         email: values.email,
         role: values.role,
-        city: values.city ?? "",
-        country: values.country ?? "",
+        city: values.city ?? '',
+        country: values.country ?? '',
         ...(values.username ? { username: values.username } : {}),
         ...(values.password ? { password: values.password } : {}),
       } as Partial<CreateUserPayload>,
@@ -154,10 +142,8 @@ function AdminUserFormDrawerBase({
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
         <SheetHeader className="border-b px-4 py-4">
-          <SheetTitle>{isEdit ? "Modifier l'utilisateur" : "Créer un utilisateur"}</SheetTitle>
-          <SheetDescription>
-            Renseignez les informations de l'utilisateur.
-          </SheetDescription>
+          <SheetTitle>{isEdit ? "Modifier l'utilisateur" : 'Créer un utilisateur'}</SheetTitle>
+          <SheetDescription>Renseignez les informations de l'utilisateur.</SheetDescription>
         </SheetHeader>
         <UserForm
           form={formState.form}

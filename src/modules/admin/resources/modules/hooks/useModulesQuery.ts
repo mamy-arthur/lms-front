@@ -1,9 +1,9 @@
-import { useQuery } from "@tanstack/react-query";
-import { MOCK_ADMIN_MODULES } from "@modules/shared/components/modules/mocks/modules-admin.mock";
-import type { ModuleSearchParams } from "../types";
-import { normalizeModule } from "../types";
+import { useQuery } from '@tanstack/react-query';
+import { MOCK_ADMIN_MODULES } from '@modules/shared/components/modules/mocks/modules-admin.mock';
+import type { ModuleSearchParams } from '../types';
+import { normalizeModule } from '../types';
 
-export const ADMIN_MODULES_QUERY_KEY = ["admin", "modules"] as const;
+export const ADMIN_MODULES_QUERY_KEY = ['admin', 'modules'] as const;
 
 export function useModulesQuery(params?: ModuleSearchParams) {
   return useQuery({
