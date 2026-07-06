@@ -13,7 +13,6 @@ import {
 import { Input } from '@/components/ui/input';
 import { DataTable, type DataTableColumn } from '@/shared/components/ui/DataTable';
 import { formatDate } from '@/shared/lib/date';
-import { StatusBadge } from './StatusBadge';
 import type { StoredProgram } from '../types';
 
 // ─── Category labels ──────────────────────────────────────────────────────────
@@ -97,10 +96,19 @@ function ProgramsTableBase({ programs, onNew, onEdit, onDelete }: Props) {
         ),
       },
       {
-        key: 'status',
-        label: 'Statut',
+        key: 'visibility',
+        label: 'Visibilité',
         sortable: true,
-        render: (row) => <StatusBadge status={row.status} />,
+        render: (row) =>
+          row.formValues.visible ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
+              Visible
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-500 ring-1 ring-inset ring-gray-400/20">
+              Masqué
+            </span>
+          ),
       },
       {
         key: 'deadline',
