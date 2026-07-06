@@ -1,10 +1,10 @@
 'use client';
 
 import { Save } from 'lucide-react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import ProgramFlow from './ProgramFlow';
+import ProgramFlow, { type ProgramFlowHandle } from './ProgramFlow';
 import { ProgramFormPanel, type ProgramFormValues } from './ProgramFormPanel';
 
 // ─── Default form values ──────────────────────────────────────────────────────
@@ -31,9 +31,13 @@ type ProgramDrawerProps = {
 
 export function ProgramDrawer({ open, onOpenChange }: ProgramDrawerProps) {
   const [formValues, setFormValues] = useState<ProgramFormValues>(DEFAULT_FORM_VALUES);
+  const flowRef = useRef<ProgramFlowHandle>(null);
 
   const handleSave = () => {
-    // TODO: submit formValues + ProgramFlow data
+    const flowPayload = flowRef.current?.getPayload();
+    // TODO: submit formValues + flowPayload to API
+    console.log('formValues', formValues);
+    console.log('flowPayload', flowPayload);
     onOpenChange(false);
   };
 
@@ -69,7 +73,7 @@ export function ProgramDrawer({ open, onOpenChange }: ProgramDrawerProps) {
         {/* ── Body: 70 / 30 split ── */}
         <div className="flex min-h-0 flex-1 overflow-hidden">
           <div className="flex-6 overflow-hidden">
-            <ProgramFlow />
+            <ProgramFlow ref={flowRef} />
           </div>
           <div className="flex-4 overflow-hidden">
             <ProgramFormPanel values={formValues} onChange={setFormValues} />

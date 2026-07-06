@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
+import { createContext, forwardRef, useCallback, useContext, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import {
   Background,
   BaseEdge,
@@ -63,6 +63,94 @@ type EdgeRuleData = {
   kind?: 'retake';
   accessRules?: AccessRules;
   attestationRules?: AttestationRules;
+};
+
+// ─── Payload Types ────────────────────────────────────────────────────────────
+
+type StepPosition = { x: number; y: number };
+
+export type EmailStepPayload = {
+  id: string;
+  type: 'email';
+  position: StepPosition;
+  emailTemplateId: string | undefined;
+  emailTemplateName: string | undefined;
+};
+
+export type ModuleStepPayload = {
+  id: string;
+  type: 'module';
+  position: StepPosition;
+  label: string;
+  moduleId: string | undefined;
+};
+
+export type EvaluationStepPayload = {
+  id: string;
+  type: 'evaluation-intermediate' | 'evaluation-final';
+  position: StepPosition;
+  label: string;
+  questionBankId: string | null;
+  questionBankName: string | null;
+  questionCount: number;
+  attemptCount: number;
+  durationEnabled: boolean;
+  durationHours: number;
+  durationMinutes: number;
+};
+
+export type AttestationStepPayload = {
+  id: string;
+  type: 'attestation';
+  position: StepPosition;
+  label: string;
+  attestationId: string | undefined;
+};
+
+export type FlowStepPayload =
+  | EmailStepPayload
+  | ModuleStepPayload
+  | EvaluationStepPayload
+  | AttestationStepPayload;
+
+export type AccessRulesPayload = {
+  modulePrecedentTermine: boolean;
+  tousLesAutresModulesTermines: boolean;
+  modulePrecedentScoreMinimumAtteint: boolean;
+  /** Valeur du score minimum — non null uniquement si `modulePrecedentScoreMinimumAtteint` est vrai */
+  scoreMinimum: number | null;
+};
+
+export type AttestationRulesPayload = {
+  scoreMoyenRequis: boolean;
+  /** Non null uniquement si `scoreMoyenRequis` est vrai */
+  scoreMoyenMinimum: number | null;
+  scoreFinalRequis: boolean;
+  /** Non null uniquement si `scoreFinalRequis` est vrai */
+  scoreFinalMinimum: number | null;
+  aucuneRegle: boolean;
+  reprise: boolean;
+  /** Non null uniquement si `reprise` est vrai */
+  repriseVersNoeudId: string | null;
+};
+
+export type FlowConnectionPayload = {
+  sourceId: string;
+  targetId: string;
+  estReprise: boolean;
+  reglesAcces?: AccessRulesPayload;
+  reglesAttestation?: AttestationRulesPayload;
+};
+
+export type ProgramFlowPayload = {
+  /** Étapes ordonnées du parcours (email de démarrage inclus) */
+  etapes: FlowStepPayload[];
+  /** Connexions entre les étapes avec leurs règles */
+  connexions: FlowConnectionPayload[];
+};
+
+export type ProgramFlowHandle = {
+  getPayload: () => ProgramFlowPayload;
 };
 
 // ─── Step config ──────────────────────────────────────────────────────────────
@@ -282,7 +370,7 @@ const initialEmailNode: StepNode = {
 
 // ─── ProgramFlow ──────────────────────────────────────────────────────────────
 
-export default function ProgramFlow() {
+const ProgramFlow = forwardRef<ProgramFlowHandle>(function ProgramFlow(_, ref) {
   const [nodes, setNodes] = useState<StepNode[]>([initialEmailNode]);
   const [edges, setEdges] = useState<Edge<EdgeRuleData>[]>([]);
   const [nodeOrder, setNodeOrder] = useState<string[]>([EMAIL_NODE_ID]);
@@ -680,6 +768,85 @@ export default function ProgramFlow() {
     [usedModuleIds, editModuleDialog?.moduleId],
   );
 
+  // ── Build the serializable payload ──
+  const buildPayload = useCallback((): ProgramFlowPayload => {
+    const etapes: FlowStepPayload[] = nodeOrderRef.current.map((nodeId) => {
+      const node = nodesRef.current.find((n) => n.id === nodeId)!;
+      const d = node.data;
+
+      switch (d.stepType) {
+        case 'email':
+          return { id: nodeId, type: 'email', position: node.position, emailTemplateId: d.emailTemplateId, emailTemplateName: d.emailTemplateName };
+        case 'module':
+          return { id: nodeId, type: 'module', position: node.position, label: d.label, moduleId: d.moduleId };
+        case 'evaluation-intermediate':
+        case 'evaluation-final':
+          return {
+            id: nodeId,
+            type: d.stepType,
+            position: node.position,
+            label: d.label,
+            questionBankId: d.evaluationConfig?.questionBankId ?? null,
+            questionBankName: d.evaluationConfig?.questionBankName ?? null,
+            questionCount: d.evaluationConfig?.questionCount ?? 0,
+            attemptCount: d.evaluationConfig?.attemptCount ?? 0,
+            durationEnabled: d.evaluationConfig?.durationEnabled ?? false,
+            durationHours: d.evaluationConfig?.durationHours ?? 0,
+            durationMinutes: d.evaluationConfig?.durationMinutes ?? 0,
+          };
+        case 'attestation':
+          return { id: nodeId, type: 'attestation', position: node.position, label: d.label, attestationId: d.attestationId };
+      }
+    });
+
+    const connexions: FlowConnectionPayload[] = edgesRef.current.map((edge) => {
+      const ruleData = edge.data as EdgeRuleData | undefined;
+      const isRetake = ruleData?.kind === 'retake';
+
+      let reglesAcces: AccessRulesPayload | undefined;
+      if (!isRetake && ruleData?.accessRules) {
+        const r = ruleData.accessRules;
+        if (r.prevModuleCompleted || r.allModulesCompleted || r.prevModuleMinScore) {
+          reglesAcces = {
+            modulePrecedentTermine: r.prevModuleCompleted,
+            tousLesAutresModulesTermines: r.allModulesCompleted,
+            modulePrecedentScoreMinimumAtteint: r.prevModuleMinScore,
+            scoreMinimum: r.prevModuleMinScore ? r.prevModuleMinScoreValue : null,
+          };
+        }
+      }
+
+      let reglesAttestation: AttestationRulesPayload | undefined;
+      if (!isRetake && ruleData?.attestationRules) {
+        const r = ruleData.attestationRules;
+        if (r.avgScore || r.finalScore || r.noRule || r.retake) {
+          reglesAttestation = {
+            scoreMoyenRequis: r.avgScore,
+            scoreMoyenMinimum: r.avgScore ? r.avgScoreMin : null,
+            scoreFinalRequis: r.finalScore,
+            scoreFinalMinimum: r.finalScore ? r.finalScoreMin : null,
+            aucuneRegle: r.noRule,
+            reprise: r.retake,
+            repriseVersNoeudId: r.retake ? r.retakeTargetNodeId : null,
+          };
+        }
+      }
+
+      const conn: FlowConnectionPayload = {
+        sourceId: edge.source,
+        targetId: edge.target,
+        estReprise: isRetake,
+      };
+      if (reglesAcces) conn.reglesAcces = reglesAcces;
+      if (reglesAttestation) conn.reglesAttestation = reglesAttestation;
+      return conn;
+    });
+
+    return { etapes, connexions };
+  }, []);
+
+  useImperativeHandle(ref, () => ({ getPayload: buildPayload }), [buildPayload]);
+
   // ── ReactFlow handlers ──
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => setNodes((nds) => applyNodeChanges(changes, nds) as StepNode[]),
@@ -849,4 +1016,6 @@ export default function ProgramFlow() {
       />
     </FlowActionsContext.Provider>
   );
-}
+});
+
+export default ProgramFlow;
