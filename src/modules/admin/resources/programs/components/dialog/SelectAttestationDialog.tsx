@@ -62,12 +62,17 @@ const MOCK_ATTESTATIONS: AttestationItem[] = [
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  initialAttestationId?: string;
   onSelect: (attestation: AttestationItem) => void;
 };
 
-export function SelectAttestationDialog({ open, onOpenChange, onSelect }: Props) {
+export function SelectAttestationDialog({ open, onOpenChange, initialAttestationId, onSelect }: Props) {
   const [search, setSearch] = useState('');
-  const [selected, setSelected] = useState<AttestationItem | null>(null);
+  const [selected, setSelected] = useState<AttestationItem | null>(
+    initialAttestationId
+      ? (MOCK_ATTESTATIONS.find((a) => a.id === initialAttestationId) ?? null)
+      : null,
+  );
 
   const filtered = useMemo(
     () => MOCK_ATTESTATIONS.filter((a) => a.name.toLowerCase().includes(search.toLowerCase())),
@@ -146,7 +151,7 @@ export function SelectAttestationDialog({ open, onOpenChange, onSelect }: Props)
             className="bg-(--color-primary) hover:bg-(--color-primary)/80"
           >
             <Plus />
-            Ajouter l'attestation
+            {initialAttestationId ? "Modifier l'attestation" : "Ajouter l'attestation"}
           </Button>
         </DialogFooter>
       </DialogContent>

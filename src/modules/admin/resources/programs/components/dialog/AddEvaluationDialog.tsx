@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Award, ClipboardCheck, Plus, Search } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -98,12 +98,21 @@ type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   hasFinalEval: boolean;
+  initialConfig?: EvaluationConfig;
   onConfirm: (config: EvaluationConfig) => void;
 };
 
-export function AddEvaluationDialog({ open, onOpenChange, hasFinalEval, onConfirm }: Props) {
-  const [config, setConfig] = useState<EvaluationConfig>(DEFAULT_CONFIG);
+export function AddEvaluationDialog({ open, onOpenChange, hasFinalEval, initialConfig, onConfirm }: Props) {
+  const [config, setConfig] = useState<EvaluationConfig>(initialConfig ?? DEFAULT_CONFIG);
   const [bankSearch, setBankSearch] = useState('');
+
+  useEffect(() => {
+    if (open) {
+      setConfig(initialConfig ?? DEFAULT_CONFIG);
+      setBankSearch('');
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   const set = <K extends keyof EvaluationConfig>(key: K, val: EvaluationConfig[K]) =>
     setConfig((c) => ({ ...c, [key]: val }));
@@ -300,13 +309,11 @@ export function AddEvaluationDialog({ open, onOpenChange, hasFinalEval, onConfir
             onClick={() => {
               onConfirm(config);
               onOpenChange(false);
-              setConfig(DEFAULT_CONFIG);
-              setBankSearch('');
             }}
             className="bg-(--color-primary) hover:bg-(--color-primary)/80"
           >
             <Plus />
-            Ajouter l'évaluation
+            {initialConfig ? "Modifier l'évaluation" : "Ajouter l'évaluation"}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -25,7 +25,7 @@ import type {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
-import { Award, BadgeCheck, BookOpen, ClipboardCheck, Settings2, Trash2 } from 'lucide-react';
+import { Award, BadgeCheck, BookOpen, ClipboardCheck, Mail, Settings2, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/shared/lib/cn';
@@ -37,17 +37,23 @@ import {
 } from './dialog/AttestationRulesDialog';
 import { SelectModuleDialog, type ModuleItem } from './dialog/SelectModuleDialog';
 import { AddEvaluationDialog, type EvaluationConfig } from './dialog/AddEvaluationDialog';
-import { SelectAttestationDialog } from './dialog/SelectAttestationDialog';
+import { SelectAttestationDialog, type AttestationItem } from './dialog/SelectAttestationDialog';
+import {
+  SelectEmailTemplateDialog,
+  type EmailTemplate,
+} from './dialog/SelectEmailTemplateDialog';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type StepType = 'module' | 'evaluation-intermediate' | 'evaluation-final' | 'attestation';
+type StepType = 'email' | 'module' | 'evaluation-intermediate' | 'evaluation-final' | 'attestation';
 
 type StepNodeData = {
   stepType: StepType;
   label: string;
   moduleId?: string;
   attestationId?: string;
+  emailTemplateId?: string;
+  emailTemplateName?: string;
   evaluationConfig?: Omit<EvaluationConfig, 'stepType'>;
 };
 
@@ -72,6 +78,15 @@ type StepConfig = {
 };
 
 const STEP_CONFIG: Record<StepType, StepConfig> = {
+  email: {
+    label: 'Email de démarrage',
+    Icon: Mail,
+    border: 'border-violet-300',
+    bg: 'bg-violet-50',
+    iconColor: 'text-violet-500',
+    badgeClass: 'border-violet-200 bg-violet-100 text-violet-700',
+    badgeLabel: 'Email',
+  },
   module: {
     label: 'Module',
     Icon: BookOpen,
@@ -115,17 +130,26 @@ const STEP_CONFIG: Record<StepType, StepConfig> = {
 const FlowActionsContext = createContext<{
   onDeleteNode: (id: string) => void;
   onConfigureEdge: (edgeId: string) => void;
-}>({ onDeleteNode: () => {}, onConfigureEdge: () => {} });
+  onEditNode: (id: string) => void;
+}>({ onDeleteNode: () => {}, onConfigureEdge: () => {}, onEditNode: () => {} });
 
 // ─── Custom Node ──────────────────────────────────────────────────────────────
 
 function ProgramStepNode({ id, data, isConnectable }: NodeProps<StepNode>) {
-  const { onDeleteNode } = useContext(FlowActionsContext);
+  const { onDeleteNode, onEditNode } = useContext(FlowActionsContext);
   const cfg = STEP_CONFIG[data.stepType];
   const { Icon } = cfg;
+  const isEmail = data.stepType === 'email';
 
   return (
-    <div className={cn('min-w-55 rounded-md border px-4 py-3 shadow-sm', cfg.border, cfg.bg)}>
+    <div
+      className={cn(
+        'min-w-55 cursor-pointer rounded-md border px-4 py-3 shadow-sm',
+        cfg.border,
+        cfg.bg,
+      )}
+      onClick={() => onEditNode(id)}
+    >
       <Handle type="target" position={Position.Top} isConnectable={isConnectable} />
 
       <div className="flex items-center justify-between gap-2">
@@ -133,14 +157,19 @@ function ProgramStepNode({ id, data, isConnectable }: NodeProps<StepNode>) {
           <Icon className={cn('size-4 shrink-0', cfg.iconColor)} />
           <span className="truncate text-sm font-semibold text-foreground">{data.label}</span>
         </div>
-        <Button
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={() => onDeleteNode(id)}
-          className="flex size-5 shrink-0 bg-gray-50 items-center justify-center rounded-full text-muted-foreground/50 transition-colors hover:bg-black/10 hover:text-red-500"
-          aria-label="Supprimer ce nœud"
-        >
-          <Trash2 className="size-3" />
-        </Button>
+        {!isEmail && (
+          <Button
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              onDeleteNode(id);
+            }}
+            className="flex size-5 shrink-0 bg-gray-50 items-center justify-center rounded-full text-muted-foreground/50 transition-colors hover:bg-black/10 hover:text-red-500"
+            aria-label="Supprimer ce nœud"
+          >
+            <Trash2 className="size-3" />
+          </Button>
+        )}
       </div>
 
       <div className="mt-2">
@@ -242,12 +271,21 @@ const NODE_GAP = 150;
 let _counter = 0;
 const genId = () => `step-${++_counter}`;
 
+const EMAIL_NODE_ID = 'email-start';
+
+const initialEmailNode: StepNode = {
+  id: EMAIL_NODE_ID,
+  type: 'programStep',
+  position: { x: CANVAS_X, y: 0 },
+  data: { stepType: 'email', label: 'Email de démarrage' },
+};
+
 // ─── ProgramFlow ──────────────────────────────────────────────────────────────
 
 export default function ProgramFlow() {
-  const [nodes, setNodes] = useState<StepNode[]>([]);
+  const [nodes, setNodes] = useState<StepNode[]>([initialEmailNode]);
   const [edges, setEdges] = useState<Edge<EdgeRuleData>[]>([]);
-  const [nodeOrder, setNodeOrder] = useState<string[]>([]);
+  const [nodeOrder, setNodeOrder] = useState<string[]>([EMAIL_NODE_ID]);
 
   // Always-fresh refs — avoids stale closures in stable callbacks
   const nodesRef = useRef(nodes);
@@ -274,6 +312,28 @@ export default function ProgramFlow() {
     attestationNodeId: string;
     incomingSourceNodeId: string;
     initialRules?: AttestationRules;
+  } | null>(null);
+
+  // ── Edit-node dialog states ──
+  const [editModuleDialog, setEditModuleDialog] = useState<{
+    nodeId: string;
+    moduleId?: string;
+  } | null>(null);
+
+  const [editEvalDialog, setEditEvalDialog] = useState<{
+    nodeId: string;
+    config: EvaluationConfig;
+    hasFinalEval: boolean;
+  } | null>(null);
+
+  const [editAttestationDialog, setEditAttestationDialog] = useState<{
+    nodeId: string;
+    attestationId?: string;
+  } | null>(null);
+
+  const [editEmailDialog, setEditEmailDialog] = useState<{
+    nodeId: string;
+    emailTemplateId?: string;
   } | null>(null);
 
   // ── Business rule flags ──
@@ -383,6 +443,9 @@ export default function ProgramFlow() {
 
   // ── Delete a node and reconnect its neighbours ──
   const onDeleteNode = useCallback((nodeId: string) => {
+    // The email start node is mandatory and cannot be removed
+    if (nodeId === EMAIL_NODE_ID) return;
+
     const order = nodeOrderRef.current;
     const idx = order.indexOf(nodeId);
     const prev = order[idx - 1] ?? null;
@@ -408,6 +471,46 @@ export default function ProgramFlow() {
     });
 
     setNodeOrder((o) => o.filter((id) => id !== nodeId));
+  }, []);
+
+  // ── Open the right edit dialog when a node is clicked ──
+  const onEditNode = useCallback((nodeId: string) => {
+    const node = nodesRef.current.find((n) => n.id === nodeId);
+    if (!node) return;
+
+    switch (node.data.stepType) {
+      case 'email':
+        setEditEmailDialog({
+          nodeId,
+          emailTemplateId: node.data.emailTemplateId,
+        });
+        break;
+      case 'module':
+        setEditModuleDialog({ nodeId, moduleId: node.data.moduleId });
+        break;
+      case 'evaluation-intermediate':
+      case 'evaluation-final':
+        setEditEvalDialog({
+          nodeId,
+          config: {
+            stepType: node.data.stepType,
+            durationEnabled: node.data.evaluationConfig?.durationEnabled ?? false,
+            durationHours: node.data.evaluationConfig?.durationHours ?? 0,
+            durationMinutes: node.data.evaluationConfig?.durationMinutes ?? 30,
+            questionCount: node.data.evaluationConfig?.questionCount ?? 20,
+            attemptCount: node.data.evaluationConfig?.attemptCount ?? 1,
+            questionBankId: node.data.evaluationConfig?.questionBankId ?? null,
+            questionBankName: node.data.evaluationConfig?.questionBankName ?? null,
+          },
+          hasFinalEval: nodesRef.current.some(
+            (n) => n.data.stepType === 'evaluation-final' && n.id !== nodeId,
+          ),
+        });
+        break;
+      case 'attestation':
+        setEditAttestationDialog({ nodeId, attestationId: node.data.attestationId });
+        break;
+    }
   }, []);
 
   // ── Append a new step to the end of the chain ──
@@ -484,13 +587,97 @@ export default function ProgramFlow() {
 
   // ── Handle attestation selection ──
   const handleAttestationSelect = useCallback(
-    (att: { id: string; name: string }) => {
+    (att: AttestationItem) => {
       addStep('attestation', {
         label: att.name,
         attestationId: att.id,
       });
     },
     [addStep],
+  );
+
+  // ── Edit handlers ──
+  const handleEditModuleSave = useCallback(
+    (mod: ModuleItem) => {
+      if (!editModuleDialog) return;
+      setNodes((nds) =>
+        nds.map((n) =>
+          n.id === editModuleDialog.nodeId
+            ? { ...n, data: { ...n.data, label: mod.name, moduleId: mod.id } }
+            : n,
+        ),
+      );
+      setEditModuleDialog(null);
+    },
+    [editModuleDialog],
+  );
+
+  const handleEditEvalSave = useCallback(
+    (cfg: EvaluationConfig) => {
+      if (!editEvalDialog) return;
+      const { stepType, ...rest } = cfg;
+      setNodes((nds) =>
+        nds.map((n) =>
+          n.id === editEvalDialog.nodeId
+            ? {
+                ...n,
+                data: {
+                  ...n.data,
+                  stepType,
+                  label: cfg.questionBankName ?? n.data.label,
+                  evaluationConfig: rest,
+                },
+              }
+            : n,
+        ),
+      );
+      setEditEvalDialog(null);
+    },
+    [editEvalDialog],
+  );
+
+  const handleEditAttestationSave = useCallback(
+    (att: AttestationItem) => {
+      if (!editAttestationDialog) return;
+      setNodes((nds) =>
+        nds.map((n) =>
+          n.id === editAttestationDialog.nodeId
+            ? { ...n, data: { ...n.data, label: att.name, attestationId: att.id } }
+            : n,
+        ),
+      );
+      setEditAttestationDialog(null);
+    },
+    [editAttestationDialog],
+  );
+
+  const handleEditEmailSave = useCallback(
+    (template: EmailTemplate) => {
+      if (!editEmailDialog) return;
+      setNodes((nds) =>
+        nds.map((n) =>
+          n.id === editEmailDialog.nodeId
+            ? {
+                ...n,
+                data: {
+                  ...n.data,
+                  label: template.name,
+                  emailTemplateId: template.id,
+                  emailTemplateName: template.name,
+                },
+              }
+            : n,
+        ),
+      );
+      setEditEmailDialog(null);
+    },
+    [editEmailDialog],
+  );
+
+  // ── Used module IDs excluding the one currently being edited ──
+  const editModuleUsedIds = useMemo(
+    () => usedModuleIds.filter((id) => id !== editModuleDialog?.moduleId),
+    [usedModuleIds, editModuleDialog?.moduleId],
   );
 
   // ── ReactFlow handlers ──
@@ -508,8 +695,8 @@ export default function ProgramFlow() {
   );
 
   const flowActions = useMemo(
-    () => ({ onDeleteNode, onConfigureEdge }),
-    [onDeleteNode, onConfigureEdge],
+    () => ({ onDeleteNode, onConfigureEdge, onEditNode }),
+    [onDeleteNode, onConfigureEdge, onEditNode],
   );
 
   return (
@@ -548,13 +735,13 @@ export default function ProgramFlow() {
           </Button>
 
           <span className="ml-auto text-xs text-muted-foreground">
-            {nodes.length} étape{nodes.length !== 1 ? 's' : ''}
+            {nodes.filter((n) => n.data.stepType !== 'email').length} étape{nodes.filter((n) => n.data.stepType !== 'email').length !== 1 ? 's' : ''}
           </span>
         </div>
 
         {/* ── Canvas ── */}
         <div className="relative flex-1">
-          {nodes.length === 0 && (
+          {nodes.every((n) => n.data.stepType === 'email') && (
             <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-1 text-center">
               <BookOpen className="mb-2 size-8 text-muted-foreground/30" />
               <p className="text-sm font-medium text-muted-foreground">Canvas vide</p>
@@ -620,6 +807,45 @@ export default function ProgramFlow() {
         initialRules={attestationDialog?.initialRules}
         nodeOptions={retakeNodeOptions}
         onSave={handleAttestationSave}
+      />
+
+      {/* ── Edit-node dialogs ── */}
+      <SelectEmailTemplateDialog
+        key={editEmailDialog?.nodeId}
+        open={editEmailDialog !== null}
+        onOpenChange={(open) => {
+          if (!open) setEditEmailDialog(null);
+        }}
+        initialTemplateId={editEmailDialog?.emailTemplateId}
+        onSelect={handleEditEmailSave}
+      />
+      <SelectModuleDialog
+        key={editModuleDialog?.nodeId}
+        open={editModuleDialog !== null}
+        onOpenChange={(open) => {
+          if (!open) setEditModuleDialog(null);
+        }}
+        usedModuleIds={editModuleUsedIds}
+        onSelect={handleEditModuleSave}
+      />
+      <AddEvaluationDialog
+        key={editEvalDialog?.nodeId}
+        open={editEvalDialog !== null}
+        onOpenChange={(open) => {
+          if (!open) setEditEvalDialog(null);
+        }}
+        hasFinalEval={editEvalDialog?.hasFinalEval ?? false}
+        initialConfig={editEvalDialog?.config}
+        onConfirm={handleEditEvalSave}
+      />
+      <SelectAttestationDialog
+        key={editAttestationDialog?.nodeId}
+        open={editAttestationDialog !== null}
+        onOpenChange={(open) => {
+          if (!open) setEditAttestationDialog(null);
+        }}
+        initialAttestationId={editAttestationDialog?.attestationId}
+        onSelect={handleEditAttestationSave}
       />
     </FlowActionsContext.Provider>
   );

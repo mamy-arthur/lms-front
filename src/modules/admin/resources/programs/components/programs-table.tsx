@@ -1,6 +1,6 @@
 'use client';
 
-import { Eye, MoreHorizontal, Pencil, Plus, Search, Settings2, Trash2 } from 'lucide-react';
+import { MoreHorizontal, Pencil, Plus, Search, Settings2, Trash2 } from 'lucide-react';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -86,10 +86,6 @@ function ProgramsTableBase({ onNew }: { onNew?: () => void }) {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-44">
-            <DropdownMenuItem>
-              <Eye className="mr-2 size-3.5 text-muted-foreground" />
-              Consulter
-            </DropdownMenuItem>
             <DropdownMenuItem>
               <Pencil className="mr-2 size-3.5 text-muted-foreground" />
               Modifier
