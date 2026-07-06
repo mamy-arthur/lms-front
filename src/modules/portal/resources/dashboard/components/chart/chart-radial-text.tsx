@@ -24,10 +24,7 @@ const chartConfig = {
 export function ProgressCard() {
   const [courseFilter, setCourseFilter] = useState<string>('all');
 
-  const courses = useMemo(
-    () => Array.from(new Set(STUDENTS.map((s) => s.course))).sort(),
-    [],
-  );
+  const courses = useMemo(() => Array.from(new Set(STUDENTS.map((s) => s.course))).sort(), []);
 
   const progress = useMemo(() => {
     const subset =
@@ -49,8 +46,8 @@ export function ProgressCard() {
     <Card>
       <CardHeader className="flex justify-between gap-2 items-center pb-0">
         <div>
-        <CardTitle>Progression global</CardTitle>
-        <CardDescription>Progression moyenne sur l’ensemble des formations.</CardDescription>
+          <CardTitle>Progression global</CardTitle>
+          <CardDescription>Progression moyenne sur l’ensemble des formations.</CardDescription>
         </div>
         <Select value={courseFilter} onValueChange={setCourseFilter}>
           <SelectTrigger className="mt-2 h-8 w-50" aria-label="Filtrer par parcours">
