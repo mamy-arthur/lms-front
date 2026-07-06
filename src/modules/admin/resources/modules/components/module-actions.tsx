@@ -1,14 +1,14 @@
-"use client";
+'use client';
 
-import { Copy, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Copy, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from '@/components/ui/dropdown-menu';
 
 export interface ModuleActionsProps {
   moduleLabel: string;
@@ -17,12 +17,7 @@ export interface ModuleActionsProps {
   onDelete?: () => void;
 }
 
-export function ModuleActions({
-  moduleLabel,
-  onEdit,
-  onDuplicate,
-  onDelete,
-}: ModuleActionsProps) {
+export function ModuleActions({ moduleLabel, onEdit, onDuplicate, onDelete }: ModuleActionsProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>

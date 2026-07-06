@@ -1,16 +1,16 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
+import { useEffect, useState } from 'react';
 import {
   Sheet,
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
-} from "@/components/ui/sheet";
-import { ModuleCategoryForm } from "./module-category-form";
-import type { ModuleCategory } from "../lib/module-store";
-import { useModuleCategoryStore } from "../lib/module-store";
+} from '@/components/ui/sheet';
+import { ModuleCategoryForm } from './module-category-form';
+import type { ModuleCategory } from '../lib/module-store';
+import { useModuleCategoryStore } from '../lib/module-store';
 
 type Props = {
   open: boolean;
@@ -41,13 +41,11 @@ export function ModuleCategoryDrawer({ open, onOpenChange, editingId }: Props) {
     >
       <SheetContent className="flex w-full flex-col gap-0 p-0 sm:max-w-2xl lg:max-w-4xl">
         <SheetHeader className="border-b px-4 py-4">
-          <SheetTitle>
-            {editing ? "Modifier la catégorie" : "Nouvelle catégorie"}
-          </SheetTitle>
+          <SheetTitle>{editing ? 'Modifier la catégorie' : 'Nouvelle catégorie'}</SheetTitle>
           <SheetDescription>
             {editing
-              ? "Modifiez les informations de la catégorie."
-              : "Créez une nouvelle catégorie de module."}
+              ? 'Modifiez les informations de la catégorie.'
+              : 'Créez une nouvelle catégorie de module.'}
           </SheetDescription>
         </SheetHeader>
 

@@ -1,13 +1,13 @@
-"use client";
+'use client';
 
-import { useCallback, useState } from "react";
+import { useCallback, useState } from 'react';
 
 export interface QuizSearchParams {
   q?: string;
   category?: string;
   tenant_id?: string;
   sort_by?: string;
-  sort_dir?: "asc" | "desc";
+  sort_dir?: 'asc' | 'desc';
   page?: number;
   page_size?: number;
 }
@@ -15,26 +15,24 @@ export interface QuizSearchParams {
 export type UseQuizListControllerOptions = {
   includeTenantFilter?: boolean;
   defaultSortBy?: string;
-  defaultSortDir?: "asc" | "desc";
+  defaultSortDir?: 'asc' | 'desc';
   defaultPageSize?: number;
 };
 
-export function useQuizListController<TQuiz>(
-  opts?: UseQuizListControllerOptions,
-) {
+export function useQuizListController<TQuiz>(opts?: UseQuizListControllerOptions) {
   const {
     includeTenantFilter = false,
-    defaultSortBy = "name",
-    defaultSortDir = "asc",
+    defaultSortBy = 'name',
+    defaultSortDir = 'asc',
     defaultPageSize = 12,
   } = opts ?? {};
 
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingQuiz, setEditingQuiz] = useState<TQuiz | undefined>();
 
-  const [draftSearch, setDraftSearch] = useState("");
-  const [draftCategory, setDraftCategory] = useState<string[]>(["all"]);
-  const [draftTenant, setDraftTenant] = useState("all");
+  const [draftSearch, setDraftSearch] = useState('');
+  const [draftCategory, setDraftCategory] = useState<string[]>(['all']);
+  const [draftTenant, setDraftTenant] = useState('all');
 
   const [params, setParams] = useState<QuizSearchParams>({
     sort_by: defaultSortBy,
@@ -44,13 +42,13 @@ export function useQuizListController<TQuiz>(
   });
 
   const handleSearch = useCallback(() => {
-    const selected = draftCategory.filter((c) => c !== "all");
+    const selected = draftCategory.filter((c) => c !== 'all');
     setParams((prev) => ({
       ...prev,
       q: draftSearch || undefined,
-      category: selected.length > 0 ? selected.join(",") : undefined,
+      category: selected.length > 0 ? selected.join(',') : undefined,
       ...(includeTenantFilter
-        ? { tenant_id: draftTenant !== "all" ? draftTenant : undefined }
+        ? { tenant_id: draftTenant !== 'all' ? draftTenant : undefined }
         : {}),
       page: 0,
     }));
@@ -60,8 +58,7 @@ export function useQuizListController<TQuiz>(
     setParams((prev) => ({
       ...prev,
       sort_by: column,
-      sort_dir:
-        prev.sort_by === column && prev.sort_dir === "asc" ? "desc" : "asc",
+      sort_dir: prev.sort_by === column && prev.sort_dir === 'asc' ? 'desc' : 'asc',
       page: 0,
     }));
   }, []);
@@ -99,12 +96,12 @@ export function useQuizListController<TQuiz>(
   const pageSize = params.page_size ?? defaultPageSize;
   const sort = {
     column: params.sort_by ?? defaultSortBy,
-    direction: (params.sort_dir as "asc" | "desc") ?? defaultSortDir,
+    direction: (params.sort_dir as 'asc' | 'desc') ?? defaultSortDir,
   };
   const hasQuery = !!(
     draftSearch ||
-    draftCategory.some((c) => c !== "all") ||
-    (includeTenantFilter && draftTenant !== "all")
+    draftCategory.some((c) => c !== 'all') ||
+    (includeTenantFilter && draftTenant !== 'all')
   );
 
   return {

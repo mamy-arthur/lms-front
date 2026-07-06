@@ -1,10 +1,11 @@
-"use client";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+'use client';
 
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useCallback } from "react";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { Button } from "@/components/ui/button";
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useCallback } from 'react';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { Button } from '@/components/ui/button';
 import {
   Field,
   FieldContent,
@@ -12,15 +13,15 @@ import {
   FieldGroup,
   FieldLabel,
   FieldRoot,
-} from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import type { ModuleCategory, ModuleCategoryInput } from "../lib/module-store";
-import { useModuleCategoryStore } from "../lib/module-store";
+} from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import type { ModuleCategory, ModuleCategoryInput } from '../lib/module-store';
+import { useModuleCategoryStore } from '../lib/module-store';
 
 const schema = z.object({
-  name: z.string().min(1, "Nom requis"),
-  description: z.string().optional().or(z.literal("")),
+  name: z.string().min(1, 'Nom requis'),
+  description: z.string().optional().or(z.literal('')),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -37,8 +38,8 @@ export function ModuleCategoryForm({ category, onDone }: ModuleCategoryFormProps
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
-      name: category?.name ?? "",
-      description: category?.description ?? "",
+      name: category?.name ?? '',
+      description: category?.description ?? '',
     },
   });
 
@@ -47,12 +48,12 @@ export function ModuleCategoryForm({ category, onDone }: ModuleCategoryFormProps
       const input: ModuleCategoryInput = {
         name: values.name,
         identifier: values.name
-          .normalize("NFD")
-          .replace(/[\u0300-\u036f]/g, "")
-          .replace(/[^a-zA-Z0-9]+/g, "-")
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .replace(/[^a-zA-Z0-9]+/g, '-')
           .toLowerCase()
-          .replace(/^-|-$/g, ""),
-        description: values.description ?? "",
+          .replace(/^-|-$/g, ''),
+        description: values.description ?? '',
         visible: true,
       };
       if (isEdit && category) {
@@ -79,12 +80,7 @@ export function ModuleCategoryForm({ category, onDone }: ModuleCategoryFormProps
             <FieldGroup>
               <FieldLabel className="text-xs">Nom</FieldLabel>
               <FieldContent>
-                <Input
-                  autoFocus
-                  aria-label="Nom"
-                  className="text-xs"
-                  {...field}
-                />
+                <Input autoFocus aria-label="Nom" className="text-xs" {...field} />
               </FieldContent>
               <FieldError />
             </FieldGroup>
@@ -110,16 +106,11 @@ export function ModuleCategoryForm({ category, onDone }: ModuleCategoryFormProps
         />
 
         <div className="flex items-center justify-end gap-3 pt-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={onDone}
-          >
+          <Button type="button" variant="outline" size="sm" onClick={onDone}>
             Annuler
           </Button>
           <Button type="submit" size="sm">
-            {isEdit ? "Enregistrer" : "Créer"}
+            {isEdit ? 'Enregistrer' : 'Créer'}
           </Button>
         </div>
       </form>

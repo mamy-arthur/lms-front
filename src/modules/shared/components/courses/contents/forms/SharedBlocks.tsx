@@ -1,16 +1,16 @@
-import type { ReactNode } from "react";
+import type { ReactNode } from 'react';
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from "@/components/ui/accordion";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+} from '@/components/ui/accordion';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 export function MainBlock({
-  title = "Principale",
+  title = 'Principale',
   children,
 }: {
   title?: string;
@@ -18,6 +18,7 @@ export function MainBlock({
 }) {
   return (
     <section>
+      <h3 className="mb-4 text-lg font-semibold hidden">{title}</h3>
       <div className="space-y-4">{children}</div>
     </section>
   );

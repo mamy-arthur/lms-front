@@ -6,8 +6,8 @@
  * nécessaires pour des packages tiers (react-router, undici…) qui présupposent
  * un runtime navigateur ou Node 18+ complet.
  */
-import { TextDecoder, TextEncoder } from "util";
-import { ReadableStream, TransformStream } from "stream/web";
+import { TextDecoder, TextEncoder } from 'util';
+import { ReadableStream, TransformStream } from 'stream/web';
 
 Object.assign(global, {
   TextEncoder,

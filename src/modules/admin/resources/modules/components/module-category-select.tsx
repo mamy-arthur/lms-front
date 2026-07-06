@@ -1,22 +1,18 @@
-"use client";
+'use client';
 
-import { Check, ChevronsUpDown, Pencil, Plus, Trash2 } from "lucide-react";
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Check, ChevronsUpDown, Pencil, Plus, Trash2 } from 'lucide-react';
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
 import {
   Command,
   CommandEmpty,
   CommandInput,
   CommandItem,
   CommandList,
-} from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
-import { useModuleCategoryStore } from "../lib/module-store";
+} from '@/components/ui/command';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
+import { useModuleCategoryStore } from '../lib/module-store';
 
 interface CategorySelectProps {
   value: string;
@@ -51,9 +47,7 @@ export function CategorySelect({
             aria-label="Catégorie"
             className="h-9 w-full justify-between font-normal text-xs"
           >
-            {value
-              ? categories.find((c) => c.id === value)?.name
-              : "Sélectionner une catégorie"}
+            {value ? categories.find((c) => c.id === value)?.name : 'Sélectionner une catégorie'}
             <ChevronsUpDown className="ml-2 size-4 shrink-0 text-muted-foreground" />
           </Button>
         </PopoverTrigger>
@@ -79,10 +73,8 @@ export function CategorySelect({
                     <div className="flex items-center gap-2">
                       <Check
                         className={cn(
-                          "size-4",
-                          value === category.id
-                            ? "opacity-100"
-                            : "opacity-0",
+                          'size-4',
+                          value === category.id ? 'opacity-100' : 'opacity-0',
                         )}
                       />
                       <span>{category.name}</span>
@@ -102,10 +94,10 @@ export function CategorySelect({
                       <button
                         type="button"
                         className={cn(
-                          "inline-flex items-center justify-center rounded p-0.5",
+                          'inline-flex items-center justify-center rounded p-0.5',
                           usedCategoryIds?.has(category.id)
-                            ? "text-muted-foreground/40 cursor-not-allowed"
-                            : "text-muted-foreground hover:text-destructive hover:bg-destructive/10",
+                            ? 'text-muted-foreground/40 cursor-not-allowed'
+                            : 'text-muted-foreground hover:text-destructive hover:bg-destructive/10',
                         )}
                         onClick={(e) => {
                           e.stopPropagation();

@@ -1,31 +1,28 @@
-import { Role } from "@/shared/constants/roles";
+import { Role } from '@/shared/constants/roles';
 
 export interface AccessRule {
-    anyRoles?: Role[];
-    superAdminOnly?: boolean;
+  anyRoles?: Role[];
+  superAdminOnly?: boolean;
 }
 
 export interface PermissionSet {
-    role: Role;
-    isSuperAdmin: boolean;
+  role: Role;
+  isSuperAdmin: boolean;
 }
 
-export function canAccess(
-    permissions: PermissionSet | null,
-    rule?: AccessRule,
-): boolean {
-    if (!permissions) return false;
-    if (!rule) return true;
+export function canAccess(permissions: PermissionSet | null, rule?: AccessRule): boolean {
+  if (!permissions) return false;
+  if (!rule) return true;
 
-    if (rule.superAdminOnly) {
-        return permissions.isSuperAdmin;
-    }
+  if (rule.superAdminOnly) {
+    return permissions.isSuperAdmin;
+  }
 
-    if (rule.anyRoles) {
-        return rule.anyRoles.includes(permissions.role);
-    }
+  if (rule.anyRoles) {
+    return rule.anyRoles.includes(permissions.role);
+  }
 
-    return true;
+  return true;
 }
 
 export const ACCESS = {
@@ -36,7 +33,4 @@ export const ACCESS = {
     trainees: { anyRoles: [Role.CLIENT_MANAGER] },
     reports: { anyRoles: [Role.CLIENT_MANAGER] },
     tenants: { superAdminOnly: true },
-    templates: {
-        anyRoles: [ Role.SUPER_ADMIN, Role.CLIENT_MANAGER, Role.EDITOR],
-    },
 } as const satisfies Record<string, AccessRule>;

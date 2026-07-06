@@ -1,12 +1,12 @@
-"use client";
-import { useRouter } from "next/navigation";
-import { LayoutSideBar } from "@/modules/shared/layout/AppSidebar";
-import { ADMIN_NAV } from "@/modules/admin/config/navigation";
-import { useAuthStore } from "@/shared/stores/auth.store";
-import { usePermissions } from "@/shared/hooks/usePermissions";
-import { authApi } from "@/shared/api/auth.api";
-import { useTenant } from "@/shared/hooks/useTenant";
-import { ROUTES } from "@/shared/constants/routes";
+'use client';
+import { useRouter } from 'next/navigation';
+import { LayoutSideBar } from '@/modules/shared/layout/AppSidebar';
+import { ADMIN_NAV } from '@/modules/admin/config/navigation';
+import { useAuthStore } from '@/shared/stores/auth.store';
+import { usePermissions } from '@/shared/hooks/usePermissions';
+import { authApi } from '@/shared/api/auth.api';
+import { useTenant } from '@/shared/hooks/useTenant';
+import { ROUTES } from '@/shared/constants/routes';
 
 export function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -14,9 +14,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
   const { can } = usePermissions();
   const { logoUrl, tenantName } = useTenant();
 
-  const navItems = ADMIN_NAV.filter((item) =>
-    !item.access || can(item.access),
-  );
+  const navItems = ADMIN_NAV.filter((item) => !item.access || can(item.access));
 
   const handleLogout = async () => {
     try {

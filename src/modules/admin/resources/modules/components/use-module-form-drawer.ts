@@ -1,13 +1,12 @@
-import { useCallback, useMemo, useState } from "react";
-import type { FieldValues } from "react-hook-form";
-import { useWatch } from "react-hook-form";
-import type { z } from "zod";
-import {
-  MOCK_COURSE_CATEGORIES,
-  MOCK_COURSES,
-} from "@/shared/mocks/courses.mock";
-import type { MutationLike } from "@/shared/types/mutation";
-import { useFormDrawer as _useFormDrawer } from "@/shared/components/form-drawer/use-form-drawer";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
+import { useCallback, useMemo, useState } from 'react';
+import type { FieldValues } from 'react-hook-form';
+import { useWatch } from 'react-hook-form';
+import type { z } from 'zod';
+import { MOCK_COURSE_CATEGORIES, MOCK_COURSES } from '@/shared/mocks/courses.mock';
+import type { MutationLike } from '@/shared/types/mutation';
+import { useFormDrawer as _useFormDrawer } from '@/shared/components/form-drawer/use-form-drawer';
 
 export type { MutationLike };
 
@@ -63,16 +62,16 @@ export function useModuleFormDrawer({
 
   const selectedCourseIds = useWatch({
     control: base.form.control,
-    name: "courseIds",
+    name: 'courseIds',
   }) as unknown as string[];
 
   const toggleCourse = useCallback(
     (courseId: string) => {
-      const current = base.form.getValues("courseIds") as unknown as string[];
+      const current = base.form.getValues('courseIds') as unknown as string[];
       const next = current.includes(courseId)
         ? current.filter((id: string) => id !== courseId)
         : [...current, courseId];
-      base.form.setValue("courseIds", next, { shouldValidate: true });
+      base.form.setValue('courseIds', next, { shouldValidate: true });
     },
     [base.form],
   );
@@ -89,8 +88,8 @@ export function useModuleFormDrawer({
     return Array.from(map.values());
   }, []);
 
-  const [openCategories, setOpenCategories] = useState(() =>
-    new Set(coursesByCategory.map(({ name }) => name)),
+  const [openCategories, setOpenCategories] = useState(
+    () => new Set(coursesByCategory.map(({ name }) => name)),
   );
 
   const toggleCategory = useCallback((name: string) => {
@@ -104,7 +103,7 @@ export function useModuleFormDrawer({
 
   const name = useWatch({
     control: base.form.control,
-    name: "name",
+    name: 'name',
   }) as unknown as string;
 
   return {

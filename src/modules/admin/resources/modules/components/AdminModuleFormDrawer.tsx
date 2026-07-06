@@ -1,38 +1,44 @@
-"use client";
+'use client';
 
-import { memo, useEffect, useMemo } from "react";
-import { z } from "zod";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { ModuleForm } from "./module-form";
-import { genIdentifier } from "./module-form-utils";
-import { useModuleFormDrawer } from "./use-module-form-drawer";
-import { useCreateModule } from "../hooks/useCreateModule";
-import { useUpdateModule } from "../hooks/useUpdateModule";
-import type { CreateModulePayload, Module, UpdateModulePayload } from "../types";
+import { memo, useEffect, useMemo } from 'react';
+import { z } from 'zod';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
+import { ModuleForm } from './module-form';
+import { genIdentifier } from './module-form-utils';
+import { useModuleFormDrawer } from './use-module-form-drawer';
+import { useCreateModule } from '../hooks/useCreateModule';
+import { useUpdateModule } from '../hooks/useUpdateModule';
+import type { CreateModulePayload, Module, UpdateModulePayload } from '../types';
 
 const createSchema = z.object({
-  name: z.string().min(1, "Nom requis").max(255),
-  identifier: z.string().min(1, "Identifiant requis").max(60),
-  description: z.string().max(2000).optional().or(z.literal("")),
-  category: z.string().min(1, "Catégorie requise"),
+  name: z.string().min(1, 'Nom requis').max(255),
+  identifier: z.string().min(1, 'Identifiant requis').max(60),
+  description: z.string().max(2000).optional().or(z.literal('')),
+  category: z.string().min(1, 'Catégorie requise'),
   courseIds: z.array(z.string()).min(0),
 });
 
 const updateSchema = z.object({
-  name: z.string().min(1, "Nom requis").max(255),
-  identifier: z.string().min(1, "Identifiant requis").max(60),
-  description: z.string().max(2000).optional().or(z.literal("")),
-  category: z.string().min(1, "Catégorie requise"),
+  name: z.string().min(1, 'Nom requis').max(255),
+  identifier: z.string().min(1, 'Identifiant requis').max(60),
+  description: z.string().max(2000).optional().or(z.literal('')),
+  category: z.string().min(1, 'Catégorie requise'),
   courseIds: z.array(z.string()).min(0),
 });
 
 type CreateFormValues = z.infer<typeof createSchema>;
 
 const CREATE_DEFAULTS: CreateFormValues = {
-  name: "",
-  identifier: "",
-  description: "",
-  category: "",
+  name: '',
+  identifier: '',
+  description: '',
+  category: '',
   courseIds: [],
 };
 
@@ -98,7 +104,7 @@ function AdminModuleFormDrawerBase({
     buildCreatePayload: (values) =>
       ({
         ...values,
-        description: values.description ?? "",
+        description: values.description ?? '',
         course_ids: values.courseIds,
       }) as CreateModulePayload,
     buildUpdatePayload: (values, id) => ({
@@ -106,7 +112,7 @@ function AdminModuleFormDrawerBase({
       data: {
         name: values.name,
         identifier: values.identifier,
-        description: values.description ?? "",
+        description: values.description ?? '',
         category: values.category,
         course_ids: values.courseIds,
       } as UpdateModulePayload,
@@ -119,7 +125,11 @@ function AdminModuleFormDrawerBase({
     }
   }, [open, defaultValues, formState.form]);
 
-  const title = isEdit ? "Modifier le module" : isDuplicate ? "Dupliquer le module" : "Ajouter un module";
+  const title = isEdit
+    ? 'Modifier le module'
+    : isDuplicate
+      ? 'Dupliquer le module'
+      : 'Ajouter un module';
 
   return (
     <Sheet open={open} onOpenChange={(nextOpen) => !nextOpen && formState.handleClose()}>
@@ -131,9 +141,7 @@ function AdminModuleFormDrawerBase({
       >
         <SheetHeader className="border-b px-4 py-4">
           <SheetTitle>{title}</SheetTitle>
-          <SheetDescription>
-            Renseignez les informations pour le module.
-          </SheetDescription>
+          <SheetDescription>Renseignez les informations pour le module.</SheetDescription>
         </SheetHeader>
         <ModuleForm
           form={formState.form}

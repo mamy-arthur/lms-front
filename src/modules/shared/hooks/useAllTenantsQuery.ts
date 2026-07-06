@@ -1,6 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
-import { MOCK_TENANTS as RAW_MOCK_TENANTS } from "@/shared/mocks/tenant/mock-tenants";
-import type { Tenant } from "@/shared/types/tenant.types";
+import { useQuery } from '@tanstack/react-query';
+import { MOCK_TENANTS as RAW_MOCK_TENANTS } from '@/shared/mocks/tenant/mock-tenants';
+import type { Tenant } from '@/shared/types/tenant.types';
 
 const MOCK_TENANTS: Tenant[] = RAW_MOCK_TENANTS.map((t) => ({
   id: String(t.id),
@@ -8,13 +8,13 @@ const MOCK_TENANTS: Tenant[] = RAW_MOCK_TENANTS.map((t) => ({
   name: t.name,
   domain: `${t.subdomain}.learneo.io`,
   status: 'active',
-  is_active: t.status === "active",
+  is_active: t.status === 'active',
   branding: {
-    primary_color: "#64748b",
-    secondary_color: "#64748b",
-    logo_url: "",
-    favicon_url: "",
-    fontFamily: "Inter",
+    primary_color: '#64748b',
+    secondary_color: '#64748b',
+    logo_url: '',
+    favicon_url: '',
+    fontFamily: 'Inter',
   },
   features: {
     certificates: true,
@@ -23,7 +23,7 @@ const MOCK_TENANTS: Tenant[] = RAW_MOCK_TENANTS.map((t) => ({
   },
 }));
 
-export const ALL_TENANTS_QUERY_KEY = ["admin", "all-tenants"] as const;
+export const ALL_TENANTS_QUERY_KEY = ['admin', 'all-tenants'] as const;
 
 export function useAllTenantsQuery() {
   return useQuery({

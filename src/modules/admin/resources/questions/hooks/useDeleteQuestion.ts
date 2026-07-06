@@ -1,6 +1,6 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import type { Question } from "../types";
-import { ADMIN_QUESTIONS_QUERY_KEY } from "./useQuestionsQuery";
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import type { Question } from '../types';
+import { ADMIN_QUESTIONS_QUERY_KEY } from './useQuestionsQuery';
 
 export function useDeleteQuestion() {
   const queryClient = useQueryClient();

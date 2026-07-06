@@ -24,40 +24,36 @@ export interface Quiz {
 
 export function normalizeModule(raw: Record<string, unknown>): Module {
   return {
-    id: String(raw.id ?? raw._id ?? ""),
-    name: String(raw.name ?? raw.fullName ?? ""),
-    identifier: String(raw.identifier ?? ""),
-    description: String(raw.description ?? ""),
-    category: String(raw.category ?? ""),
-    tenantId: String(raw.tenantId ?? raw.tenant_id ?? ""),
+    id: String(raw.id ?? raw._id ?? ''),
+    name: String(raw.name ?? raw.fullName ?? ''),
+    identifier: String(raw.identifier ?? ''),
+    description: String(raw.description ?? ''),
+    category: String(raw.category ?? ''),
+    tenantId: String(raw.tenantId ?? raw.tenant_id ?? ''),
     courseIds: (() => {
       const ids = raw.courseIds ?? raw.course_ids;
       return Array.isArray(ids) ? ids.map(String) : [];
     })(),
-    createdAt: String(raw.createdAt ?? raw.created_at ?? ""),
+    createdAt: String(raw.createdAt ?? raw.created_at ?? ''),
   };
 }
 
 export function normalizeQuiz(raw: Record<string, unknown>): Quiz {
   return {
-    id: String(raw.id ?? raw._id ?? ""),
-    title: String(raw.title ?? ""),
-    slug: String(raw.slug ?? ""),
-    description: String(raw.description ?? ""),
-    isFinalEvaluation: Boolean(
-      raw.isFinalEvaluation ?? raw.is_final_evaluation ?? false,
-    ),
-    formationId: String(raw.formationId ?? raw.formation_id ?? ""),
+    id: String(raw.id ?? raw._id ?? ''),
+    title: String(raw.title ?? ''),
+    slug: String(raw.slug ?? ''),
+    description: String(raw.description ?? ''),
+    isFinalEvaluation: Boolean(raw.isFinalEvaluation ?? raw.is_final_evaluation ?? false),
+    formationId: String(raw.formationId ?? raw.formation_id ?? ''),
     questionCount: Number(raw.questionCount ?? raw.question_count ?? 0),
-    activeQuestionCount: Number(
-      raw.activeQuestionCount ?? raw.active_question_count ?? 0,
-    ),
-    tenantId: String(raw.tenantId ?? raw.tenant_id ?? ""),
-    updatedAt: String(raw.updatedAt ?? raw.updated_at ?? ""),
+    activeQuestionCount: Number(raw.activeQuestionCount ?? raw.active_question_count ?? 0),
+    tenantId: String(raw.tenantId ?? raw.tenant_id ?? ''),
+    updatedAt: String(raw.updatedAt ?? raw.updated_at ?? ''),
   };
 }
 
-export type QuestionType = "true_false" | "single_choice" | "multiple_choice" | "matching";
+export type QuestionType = 'true_false' | 'single_choice' | 'multiple_choice' | 'matching';
 
 export interface QuestionOption {
   id: string;
@@ -75,7 +71,7 @@ export interface MatchingPair {
 
 export interface Duration {
   value: number;
-  unit: "second" | "minute" | "hour" | "day" | "week";
+  unit: 'second' | 'minute' | 'hour' | 'day' | 'week';
 }
 
 export interface Question {
@@ -102,37 +98,43 @@ export function normalizeQuestion(raw: Record<string, unknown>): Question {
   const rawPairs = raw.pairs;
   const rawDuration = raw.duration;
   return {
-    id: String(raw.id ?? raw._id ?? ""),
-    quizId: String(raw.quizId ?? raw.quiz_id ?? ""),
-    name: String(raw.name ?? ""),
-    text: String(raw.text ?? ""),
-    type: String(raw.type ?? "single_choice") as QuestionType,
-    generalFeedback: String(raw.generalFeedback ?? raw.general_feedback ?? ""),
-    referenceNumber: String(raw.referenceNumber ?? raw.identification_number ?? ""),
+    id: String(raw.id ?? raw._id ?? ''),
+    quizId: String(raw.quizId ?? raw.quiz_id ?? ''),
+    name: String(raw.name ?? ''),
+    text: String(raw.text ?? ''),
+    type: String(raw.type ?? 'single_choice') as QuestionType,
+    generalFeedback: String(raw.generalFeedback ?? raw.general_feedback ?? ''),
+    referenceNumber: String(raw.referenceNumber ?? raw.identification_number ?? ''),
     isActive: Boolean(raw.isActive ?? raw.is_active ?? true),
-    duration: rawDuration && typeof rawDuration === "object"
-      ? { value: Number((rawDuration as Record<string, unknown>).value ?? 0), unit: String((rawDuration as Record<string, unknown>).unit ?? "minute") as Duration["unit"] }
-      : null,
-    moduleId: String(raw.moduleId ?? raw.module_id ?? ""),
+    duration:
+      rawDuration && typeof rawDuration === 'object'
+        ? {
+            value: Number((rawDuration as Record<string, unknown>).value ?? 0),
+            unit: String(
+              (rawDuration as Record<string, unknown>).unit ?? 'minute',
+            ) as Duration['unit'],
+          }
+        : null,
+    moduleId: String(raw.moduleId ?? raw.module_id ?? ''),
     correctAnswer: Boolean(raw.correctAnswer ?? raw.correct_answer ?? false),
-    feedbackTrue: String(raw.feedbackTrue ?? raw.feedback_true ?? ""),
-    feedbackFalse: String(raw.feedbackFalse ?? raw.feedback_false ?? ""),
+    feedbackTrue: String(raw.feedbackTrue ?? raw.feedback_true ?? ''),
+    feedbackFalse: String(raw.feedbackFalse ?? raw.feedback_false ?? ''),
     options: Array.isArray(rawOptions)
       ? rawOptions.map((o: Record<string, unknown>) => ({
-          id: String(o.id ?? ""),
-          label: String(o.label ?? ""),
+          id: String(o.id ?? ''),
+          label: String(o.label ?? ''),
           isCorrect: Boolean(o.isCorrect ?? o.is_correct ?? false),
           score: Number(o.score ?? 0),
-          feedback: String(o.feedback ?? ""),
+          feedback: String(o.feedback ?? ''),
         }))
       : [],
     pairs: Array.isArray(rawPairs)
       ? rawPairs.map((p: Record<string, unknown>) => ({
-          id: String(p.id ?? ""),
-          question: String(p.question ?? ""),
-          answer: String(p.answer ?? ""),
+          id: String(p.id ?? ''),
+          question: String(p.question ?? ''),
+          answer: String(p.answer ?? ''),
         }))
       : [],
-    updatedAt: String(raw.updatedAt ?? raw.updated_at ?? ""),
+    updatedAt: String(raw.updatedAt ?? raw.updated_at ?? ''),
   };
 }

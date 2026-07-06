@@ -1,8 +1,8 @@
 export enum Role {
-  SUPER_ADMIN = "SUPER_ADMIN",
-  EDITOR = "EDITOR",
-  CLIENT_MANAGER = "CLIENT_MANAGER",
-  TRAINEE = "TRAINEE",
+  SUPER_ADMIN = 'SUPER_ADMIN',
+  EDITOR = 'EDITOR',
+  CLIENT_MANAGER = 'CLIENT_MANAGER',
+  TRAINEE = 'TRAINEE',
 }
 
 /** Utilisateurs de la plateforme centrale — login via POST /platform/auth/login */

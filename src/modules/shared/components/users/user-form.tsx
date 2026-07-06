@@ -1,9 +1,10 @@
-"use client";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+'use client';
 
-import { Eye, EyeOff, Loader2 } from "lucide-react";
-import type { ReactNode } from "react";
-import type { UseFormReturn } from "react-hook-form";
-import { Button } from "@/components/ui/button";
+import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import type { ReactNode } from 'react';
+import type { UseFormReturn } from 'react-hook-form';
+import { Button } from '@/components/ui/button';
 import {
   Field,
   FieldContent,
@@ -11,17 +12,17 @@ import {
   FieldGroup,
   FieldLabel,
   FieldRoot,
-} from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
+} from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import type { MutationLike } from "@/shared/types/mutation";
-import { extractApiError } from "@/shared/utils/api-error";
+} from '@/components/ui/select';
+import type { MutationLike } from '@/shared/types/mutation';
+import { extractApiError } from '@/shared/utils/api-error';
 
 export interface UserFormProps {
   form: UseFormReturn<any>;
@@ -50,11 +51,7 @@ export function UserForm({
 }: UserFormProps) {
   return (
     <Field {...form}>
-      <form
-        onSubmit={form.handleSubmit(onSubmit)}
-        className="flex flex-1 flex-col"
-        noValidate
-      >
+      <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-1 flex-col" noValidate>
         <div className="flex-1 space-y-5 overflow-y-auto px-6 py-4">
           {mutation.isError && (
             <div
@@ -73,12 +70,7 @@ export function UserForm({
                 <FieldGroup>
                   <FieldLabel className="text-xs">Nom</FieldLabel>
                   <FieldContent>
-                    <Input
-                      autoFocus
-                      aria-label="Nom"
-                      className="text-xs"
-                      {...field}
-                    />
+                    <Input autoFocus aria-label="Nom" className="text-xs" {...field} />
                   </FieldContent>
                   <FieldError />
                 </FieldGroup>
@@ -91,11 +83,7 @@ export function UserForm({
                 <FieldGroup>
                   <FieldLabel className="text-xs">Prénom</FieldLabel>
                   <FieldContent>
-                    <Input
-                      aria-label="Prénom"
-                      className="text-xs"
-                      {...field}
-                    />
+                    <Input aria-label="Prénom" className="text-xs" {...field} />
                   </FieldContent>
                   <FieldError />
                 </FieldGroup>
@@ -110,11 +98,7 @@ export function UserForm({
               <FieldGroup>
                 <FieldLabel className="text-xs">Nom d'utilisateur</FieldLabel>
                 <FieldContent>
-                  <Input
-                    aria-label="Nom d'utilisateur"
-                    className="text-xs"
-                    {...field}
-                  />
+                  <Input aria-label="Nom d'utilisateur" className="text-xs" {...field} />
                 </FieldContent>
                 <FieldError />
               </FieldGroup>
@@ -128,12 +112,7 @@ export function UserForm({
               <FieldGroup>
                 <FieldLabel className="text-xs">Email</FieldLabel>
                 <FieldContent>
-                  <Input
-                    type="email"
-                    aria-label="Email"
-                    className="text-xs"
-                    {...field}
-                  />
+                  <Input type="email" aria-label="Email" className="text-xs" {...field} />
                 </FieldContent>
                 <FieldError />
               </FieldGroup>
@@ -146,16 +125,9 @@ export function UserForm({
             render={({ field }) => (
               <FieldGroup>
                 <FieldLabel className="text-xs">Rôle</FieldLabel>
-                <Select
-                  onValueChange={field.onChange}
-                  defaultValue={field.value}
-                >
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
                   <FieldContent>
-                    <SelectTrigger
-                      size="default"
-                      aria-label="Rôle"
-                      className="w-full"
-                    >
+                    <SelectTrigger size="default" aria-label="Rôle" className="w-full">
                       <SelectValue placeholder="Sélectionner un rôle" />
                     </SelectTrigger>
                   </FieldContent>
@@ -181,11 +153,7 @@ export function UserForm({
               <FieldGroup>
                 <FieldLabel className="text-xs">Ville</FieldLabel>
                 <FieldContent>
-                  <Input
-                    aria-label="Ville"
-                    className="text-xs"
-                    {...field}
-                  />
+                  <Input aria-label="Ville" className="text-xs" {...field} />
                 </FieldContent>
                 <FieldError />
               </FieldGroup>
@@ -199,11 +167,7 @@ export function UserForm({
               <FieldGroup>
                 <FieldLabel className="text-xs">Pays</FieldLabel>
                 <FieldContent>
-                  <Input
-                    aria-label="Pays"
-                    className="text-xs"
-                    {...field}
-                  />
+                  <Input aria-label="Pays" className="text-xs" {...field} />
                 </FieldContent>
                 <FieldError />
               </FieldGroup>
@@ -212,16 +176,14 @@ export function UserForm({
 
           {isEdit && lastLogin && (
             <div className="flex flex-col gap-1">
-              <span className="text-xs text-muted-foreground">
-                Dernière connexion
-              </span>
+              <span className="text-xs text-muted-foreground">Dernière connexion</span>
               <span className="text-sm text-foreground">
-                {new Date(lastLogin).toLocaleDateString("fr-FR", {
-                  day: "2-digit",
-                  month: "short",
-                  year: "numeric",
-                  hour: "2-digit",
-                  minute: "2-digit",
+                {new Date(lastLogin).toLocaleDateString('fr-FR', {
+                  day: '2-digit',
+                  month: 'short',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
                 })}
               </span>
             </div>
@@ -236,7 +198,7 @@ export function UserForm({
                 <FieldContent>
                   <div className="relative">
                     <Input
-                      type={showPassword ? "text" : "password"}
+                      type={showPassword ? 'text' : 'password'}
                       aria-label="Mot de passe"
                       className="text-xs"
                       {...field}
@@ -247,16 +209,10 @@ export function UserForm({
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                       tabIndex={-1}
                       aria-label={
-                        showPassword
-                          ? "Masquer le mot de passe"
-                          : "Afficher le mot de passe"
+                        showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'
                       }
                     >
-                      {showPassword ? (
-                        <EyeOff className="size-4" />
-                      ) : (
-                        <Eye className="size-4" />
-                      )}
+                      {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                     </button>
                   </div>
                 </FieldContent>
@@ -276,17 +232,20 @@ export function UserForm({
           >
             Annuler
           </Button>
-          <Button type="submit" disabled={mutation.isPending} size="lg" className="bg-(--color-primary) hover:bg-(--color-primary)/80">
-            {mutation.isPending && (
-              <Loader2 className="size-4 animate-spin" />
-            )}
+          <Button
+            type="submit"
+            disabled={mutation.isPending}
+            size="lg"
+            className="bg-(--color-primary) hover:bg-(--color-primary)/80"
+          >
+            {mutation.isPending && <Loader2 className="size-4 animate-spin" />}
             {mutation.isPending
               ? isEdit
-                ? "Enregistrement…"
-                : "Création…"
+                ? 'Enregistrement…'
+                : 'Création…'
               : isEdit
-                ? "Enregistrer"
-                : "Créer"}
+                ? 'Enregistrer'
+                : 'Créer'}
           </Button>
         </div>
       </form>

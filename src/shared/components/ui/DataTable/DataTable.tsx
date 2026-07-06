@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
-import { useCallback, useMemo } from "react";
+import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react';
+import { useCallback, useMemo } from 'react';
 import {
   Pagination,
   PaginationContent,
@@ -10,8 +10,8 @@ import {
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
-} from "@/components/ui/pagination";
-import { Skeleton } from "@/components/ui/skeleton";
+} from '@/components/ui/pagination';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
   TableBody,
@@ -19,12 +19,12 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { cn } from "@/shared/lib/cn";
+} from '@/components/ui/table';
+import { cn } from '@/shared/lib/cn';
 
 export interface DataTableSort {
   column: string;
-  direction: "asc" | "desc";
+  direction: 'asc' | 'desc';
 }
 
 export interface DataTableColumn<T> {
@@ -64,48 +64,36 @@ const PAGE_SIZE_OPTIONS = [25, 50, 100] as const;
 
 function SortIcon({ column, sort }: { column: string; sort?: DataTableSort }) {
   if (!sort || sort.column !== column) {
-    return (
-      <ArrowUpDown className="ml-1 size-3 shrink-0 text-muted-foreground/40" />
-    );
+    return <ArrowUpDown className="ml-1 size-3 shrink-0 text-muted-foreground/40" />;
   }
-  return sort.direction === "asc" ? (
+  return sort.direction === 'asc' ? (
     <ArrowUp className="ml-1 size-3 shrink-0 text-muted-foreground" />
   ) : (
     <ArrowDown className="ml-1 size-3 shrink-0 text-muted-foreground" />
   );
 }
 
-function EmptyState({
-  hasQuery,
-  state,
-}: {
-  hasQuery: boolean;
-  state?: DataTableEmptyState;
-}) {
+function EmptyState({ hasQuery, state }: { hasQuery: boolean; state?: DataTableEmptyState }) {
   if (!state) return null;
 
   return (
     <div className="flex flex-col items-center justify-center py-20 text-center">
-      {state.icon && (
-        <div className="mb-4 rounded-full bg-muted p-4">{state.icon}</div>
-      )}
+      {state.icon && <div className="mb-4 rounded-full bg-muted p-4">{state.icon}</div>}
       <p className="text-sm font-medium text-foreground mb-1">
-        {hasQuery
-          ? (state.filteredTitle ?? "Aucun résultat")
-          : (state.title ?? "")}
+        {hasQuery ? (state.filteredTitle ?? 'Aucun résultat') : (state.title ?? '')}
       </p>
       <p className="text-xs text-muted-foreground max-w-xs">
         {hasQuery
           ? (state.filteredDescription ??
-            "Modifiez votre recherche ou vos filtres pour trouver ce que vous cherchez.")
-          : (state.description ?? "")}
+            'Modifiez votre recherche ou vos filtres pour trouver ce que vous cherchez.')
+          : (state.description ?? '')}
       </p>
     </div>
   );
 }
 
 function SkeletonCell({ width }: { width: string }) {
-  return <Skeleton className={cn("h-3", width)} />;
+  return <Skeleton className={cn('h-3', width)} />;
 }
 
 export function DataTable<T extends { id: string | number }>({
@@ -128,43 +116,43 @@ export function DataTable<T extends { id: string | number }>({
 
   const sortedData = useMemo(() => {
     if (!sort) return data;
+
     return [...data].sort((a, b) => {
       const aVal = a[sort.column as keyof T];
       const bVal = b[sort.column as keyof T];
+
       if (aVal == null) return 1;
       if (bVal == null) return -1;
-      let cmp = 0;
-      if (typeof aVal === "string" && typeof bVal === "string") {
-        cmp = aVal.localeCompare(bVal);
-      } else if (typeof aVal === "number" && typeof bVal === "number") {
-        cmp = aVal - bVal;
-      } else {
-        cmp = String(aVal).localeCompare(String(bVal));
-      }
-      return sort.direction === "asc" ? cmp : -cmp;
+
+      const cmp =
+        typeof aVal === 'string' && typeof bVal === 'string'
+          ? aVal.localeCompare(bVal)
+          : typeof aVal === 'number' && typeof bVal === 'number'
+            ? aVal - bVal
+            : String(aVal).localeCompare(String(bVal));
+
+      return sort.direction === 'asc' ? cmp : -cmp;
     });
   }, [data, sort]);
 
   const buildPages = useCallback(() => {
-    const pages: (number | "ellipsis")[] = [];
+    const pages: (number | 'ellipsis')[] = [];
     if (pageCount <= 7) {
       for (let i = 0; i < pageCount; i++) pages.push(i);
     } else {
       pages.push(0);
-      if (page > 2) pages.push("ellipsis");
+      if (page > 2) pages.push('ellipsis');
       const start = Math.max(1, page - 1);
       const end = Math.min(pageCount - 2, page + 1);
       for (let i = start; i <= end; i++) pages.push(i);
-      if (page < pageCount - 3) pages.push("ellipsis");
+      if (page < pageCount - 3) pages.push('ellipsis');
       pages.push(pageCount - 1);
     }
     return pages;
   }, [page, pageCount]);
 
   const skeletonCells = columns.map((col, i) => (
-    <TableCell key={col.key ?? i}>
-      {col.skeleton ?? <SkeletonCell width="w-20" />}
-    </TableCell>
+    <TableCell key={col.key ?? i}>{col.skeleton ?? <SkeletonCell width="w-20" />}</TableCell>
   ));
 
   return (
@@ -176,10 +164,8 @@ export function DataTable<T extends { id: string | number }>({
               <TableHead
                 key={col.key}
                 className={cn(
-                  "text-xs font-medium uppercase tracking-wide text-muted-foreground",
-                  col.sortable &&
-                    onSort &&
-                    "cursor-pointer select-none hover:text-foreground",
+                  'text-xs font-medium uppercase tracking-wide text-muted-foreground',
+                  col.sortable && onSort && 'cursor-pointer select-none hover:text-foreground',
                 )}
                 onClick={() => {
                   if (col.sortable) onSort?.(col.key);
@@ -195,9 +181,7 @@ export function DataTable<T extends { id: string | number }>({
         </TableHeader>
         <TableBody>
           {isLoading ? (
-            <TableRow className="hover:bg-transparent">
-              {skeletonCells}
-            </TableRow>
+            <TableRow className="hover:bg-transparent">{skeletonCells}</TableRow>
           ) : sortedData.length === 0 ? (
             <TableRow className="hover:bg-transparent">
               <TableCell colSpan={columns.length} className="p-0">
@@ -210,8 +194,8 @@ export function DataTable<T extends { id: string | number }>({
                 key={row.id}
                 data-testid={rowTestId}
                 className={cn(
-                  "transition-colors",
-                  onRowClick && "cursor-pointer hover:bg-muted/40 group",
+                  'transition-colors',
+                  onRowClick && 'cursor-pointer hover:bg-muted/40 group',
                 )}
                 onClick={() => onRowClick?.(row)}
               >
@@ -240,8 +224,7 @@ export function DataTable<T extends { id: string | number }>({
               ))}
             </select>
             <span>
-              {page * pageSize + 1}–{Math.min((page + 1) * pageSize, total)} sur{" "}
-              {total}
+              {page * pageSize + 1}–{Math.min((page + 1) * pageSize, total)} sur {total}
             </span>
           </div>
 
@@ -259,7 +242,7 @@ export function DataTable<T extends { id: string | number }>({
               </PaginationItem>
 
               {buildPages().map((p, i) =>
-                p === "ellipsis" ? (
+                p === 'ellipsis' ? (
                   <PaginationItem key={`e-${i}`}>
                     <PaginationEllipsis />
                   </PaginationItem>

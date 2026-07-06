@@ -1,3 +1,8 @@
+import { useEditor, useEditorState, EditorContent, type Editor } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import Link from '@tiptap/extension-link';
+import Placeholder from '@tiptap/extension-placeholder';
+import { Markdown } from 'tiptap-markdown';
 import { useEffect, useState, type ReactNode } from "react";
 import {
   useEditor,
@@ -68,8 +73,26 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+  Bold,
+  Italic,
+  Strikethrough,
+  Code,
+  Heading1,
+  Heading2,
+  Heading3,
+  List,
+  ListOrdered,
+  Quote,
+  Link as LinkIcon,
+  Unlink,
+  Undo,
+  Redo,
+  Minus,
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
-declare module "@tiptap/core" {
+declare module '@tiptap/core' {
   interface Storage {
     markdown: {
       getMarkdown: () => string;
@@ -109,7 +132,7 @@ function ToolbarButton({
       title={label}
       disabled={disabled}
       onClick={onClick}
-      className={cn("size-8", active && "bg-(--color-primary) text-white")}
+      className={cn('size-8', active && 'bg-(--color-primary) text-white')}
     >
       {children}
     </Button>
@@ -137,12 +160,12 @@ function Toolbar({
 
     if (url === null) return;
 
-    if (url === "") {
-      editor.chain().focus().extendMarkRange("link").unsetLink().run();
+    if (url === '') {
+      editor.chain().focus().extendMarkRange('link').unsetLink().run();
       return;
     }
 
-    editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
+    editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
   };
 
   // S'abonne aux transactions de l'éditeur pour que les boutons
@@ -150,17 +173,17 @@ function Toolbar({
   const state = useEditorState({
     editor,
     selector: ({ editor }) => ({
-      bold: editor.isActive("bold"),
-      italic: editor.isActive("italic"),
-      strike: editor.isActive("strike"),
-      code: editor.isActive("code"),
-      heading1: editor.isActive("heading", { level: 1 }),
-      heading2: editor.isActive("heading", { level: 2 }),
-      heading3: editor.isActive("heading", { level: 3 }),
-      bulletList: editor.isActive("bulletList"),
-      orderedList: editor.isActive("orderedList"),
-      blockquote: editor.isActive("blockquote"),
-      link: editor.isActive("link"),
+      bold: editor.isActive('bold'),
+      italic: editor.isActive('italic'),
+      strike: editor.isActive('strike'),
+      code: editor.isActive('code'),
+      heading1: editor.isActive('heading', { level: 1 }),
+      heading2: editor.isActive('heading', { level: 2 }),
+      heading3: editor.isActive('heading', { level: 3 }),
+      bulletList: editor.isActive('bulletList'),
+      orderedList: editor.isActive('orderedList'),
+      blockquote: editor.isActive('blockquote'),
+      link: editor.isActive('link'),
       canUndo: editor.can().undo(),
       canRedo: editor.can().redo(),
     }),
@@ -253,11 +276,7 @@ function Toolbar({
 
       <Separator />
 
-      <ToolbarButton
-        label="Insérer un lien"
-        active={state.link}
-        onClick={setLink}
-      >
+      <ToolbarButton label="Insérer un lien" active={state.link} onClick={setLink}>
         <LinkIcon className="size-4" />
       </ToolbarButton>
       <ToolbarButton

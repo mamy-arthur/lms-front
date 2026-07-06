@@ -1,5 +1,6 @@
-import { create } from "zustand";
-import { Tenant } from "@/shared/types/tenant.types";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { create } from 'zustand';
+import { Tenant } from '@/shared/types/tenant.types';
 
 /**
  * "idle"     → résolution pas encore démarrée (état initial)
@@ -8,12 +9,7 @@ import { Tenant } from "@/shared/types/tenant.types";
  * "not-found"→ hostname inconnu du backend (404)
  * "inactive" → tenant trouvé mais désactivé
  */
-export type TenantResolutionStatus =
-  | "idle"
-  | "loading"
-  | "resolved"
-  | "not-found"
-  | "inactive";
+export type TenantResolutionStatus = 'idle' | 'loading' | 'resolved' | 'not-found' | 'inactive';
 
 interface TenantState {
   tenant: Tenant | null;
@@ -25,9 +21,8 @@ interface TenantState {
 
 export const useTenantStore = create<TenantState>((set: any) => ({
   tenant: null,
-  resolutionStatus: "idle",
+  resolutionStatus: 'idle',
   setTenant: (tenant: Tenant) => set({ tenant }),
-  clearTenant: () => set({ tenant: null, resolutionStatus: "idle" }),
-  setResolutionStatus: (resolutionStatus: TenantResolutionStatus) =>
-    set({ resolutionStatus }),
+  clearTenant: () => set({ tenant: null, resolutionStatus: 'idle' }),
+  setResolutionStatus: (resolutionStatus: TenantResolutionStatus) => set({ resolutionStatus }),
 }));

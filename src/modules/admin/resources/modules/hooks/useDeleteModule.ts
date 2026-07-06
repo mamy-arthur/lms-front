@@ -1,7 +1,7 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { adminModulesApi } from "../api";
-import type { Module } from "../types";
-import { ADMIN_MODULES_QUERY_KEY } from "./useModulesQuery";
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { adminModulesApi } from '../api';
+import type { Module } from '../types';
+import { ADMIN_MODULES_QUERY_KEY } from './useModulesQuery';
 
 export function useDeleteModule() {
   const queryClient = useQueryClient();

@@ -1,6 +1,6 @@
-"use client";
-import { usePermissions } from "@/shared/hooks/usePermissions";
-import { AccessRule } from "@/shared/auth/permissions";
+'use client';
+import { usePermissions } from '@/shared/hooks/usePermissions';
+import { AccessRule } from '@/shared/auth/permissions';
 
 interface RoleGuardProps {
   rule: AccessRule;

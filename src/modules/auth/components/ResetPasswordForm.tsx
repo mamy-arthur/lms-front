@@ -1,16 +1,14 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-
-import { resetPasswordSchema, type ResetPasswordSchema } from "@/shared/schemas/auth.schema";
-import { authApi } from "@/shared/api/auth.api";
-import { ROUTES } from "@/shared/constants/routes";
-import { Button } from "@/shared/components/ui/Button/Button";
-import { cn } from "@/shared/lib/cn";
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useRouter } from 'next/navigation';
+import { resetPasswordSchema, type ResetPasswordSchema } from '@/shared/schemas/auth.schema';
+import { authApi } from '@/shared/api/auth.api';
+import { ROUTES } from '@/shared/constants/routes';
+import { Button } from '@/shared/components/ui/Button/Button';
+import { cn } from '@/shared/lib/cn';
 
 interface ResetPasswordFormProps {
   email: string;
@@ -36,7 +34,7 @@ export function ResetPasswordForm({ email, token }: ResetPasswordFormProps) {
       await authApi.resetPassword(data);
       router.replace(`${ROUTES.auth.login}?reset=1`);
     } catch {
-      setServerError("Le lien est invalide ou a expiré. Veuillez refaire une demande.");
+      setServerError('Le lien est invalide ou a expiré. Veuillez refaire une demande.');
     }
   };
 
@@ -48,8 +46,8 @@ export function ResetPasswordForm({ email, token }: ResetPasswordFormProps) {
         </div>
       )}
 
-      <input type="hidden" {...register("email")} />
-      <input type="hidden" {...register("token")} />
+      <input type="hidden" {...register('email')} />
+      <input type="hidden" {...register('token')} />
 
       <div className="space-y-1">
         <label htmlFor="password" className="block text-sm font-medium text-gray-700">
@@ -59,17 +57,15 @@ export function ResetPasswordForm({ email, token }: ResetPasswordFormProps) {
           id="password"
           type="password"
           autoComplete="new-password"
-          {...register("password")}
+          {...register('password')}
           className={cn(
-            "w-full rounded-md border px-3 py-2 text-sm shadow-sm outline-none",
-            "placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500",
-            errors.password ? "border-red-400 bg-red-50" : "border-gray-300 bg-white"
+            'w-full rounded-md border px-3 py-2 text-sm shadow-sm outline-none',
+            'placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500',
+            errors.password ? 'border-red-400 bg-red-50' : 'border-gray-300 bg-white',
           )}
           placeholder="••••••••"
         />
-        {errors.password && (
-          <p className="text-xs text-red-600">{errors.password.message}</p>
-        )}
+        {errors.password && <p className="text-xs text-red-600">{errors.password.message}</p>}
       </div>
 
       <div className="space-y-1">
@@ -80,11 +76,11 @@ export function ResetPasswordForm({ email, token }: ResetPasswordFormProps) {
           id="password_confirmation"
           type="password"
           autoComplete="new-password"
-          {...register("password_confirmation")}
+          {...register('password_confirmation')}
           className={cn(
-            "w-full rounded-md border px-3 py-2 text-sm shadow-sm outline-none",
-            "placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500",
-            errors.password_confirmation ? "border-red-400 bg-red-50" : "border-gray-300 bg-white"
+            'w-full rounded-md border px-3 py-2 text-sm shadow-sm outline-none',
+            'placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500',
+            errors.password_confirmation ? 'border-red-400 bg-red-50' : 'border-gray-300 bg-white',
           )}
           placeholder="••••••••"
         />

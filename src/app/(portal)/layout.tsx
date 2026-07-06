@@ -1,12 +1,12 @@
-"use client";
-import { useRouter } from "next/navigation";
-import { AuthGuard } from "@/modules/auth/guards/AuthGuard";
-import { LayoutSideBar } from "@/modules/shared/layout/AppSidebar";
-import { PORTAL_NAV } from "@/modules/portal/config/navigation";
-import { useAuthStore } from "@/shared/stores/auth.store";
-import { useTenant } from "@/shared/hooks/useTenant";
-import { authApi } from "@/shared/api/auth.api";
-import { ROUTES } from "@/shared/constants/routes";
+'use client';
+import { useRouter } from 'next/navigation';
+import { AuthGuard } from '@/modules/auth/guards/AuthGuard';
+import { LayoutSideBar } from '@/modules/shared/layout/AppSidebar';
+import { PORTAL_NAV } from '@/modules/portal/config/navigation';
+import { useAuthStore } from '@/shared/stores/auth.store';
+import { useTenant } from '@/shared/hooks/useTenant';
+import { authApi } from '@/shared/api/auth.api';
+import { ROUTES } from '@/shared/constants/routes';
 
 function PortalLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -35,11 +35,7 @@ function PortalLayout({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default function PortalRouteLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function PortalRouteLayout({ children }: { children: React.ReactNode }) {
   return (
     <AuthGuard>
       <PortalLayout>{children}</PortalLayout>

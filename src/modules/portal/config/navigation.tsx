@@ -1,11 +1,11 @@
-import type { LucideIcon } from "lucide-react";
+import type { LucideIcon } from 'lucide-react';
 import {
   LayoutDashboard,
   GraduationCap,
   Users,
   LayoutTemplate,
-} from "lucide-react";
-import { ROUTES } from "@/shared/constants/routes";
+} from 'lucide-react';
+import { ROUTES } from '@/shared/constants/routes';
 
 export interface PortalNavItem {
   url: string;

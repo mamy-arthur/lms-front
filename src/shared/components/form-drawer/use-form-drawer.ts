@@ -1,10 +1,12 @@
-"use client";
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { useCallback } from "react";
-import { useForm, type FieldValues } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import type { z } from "zod";
-import type { MutationLike } from "@/shared/types/mutation";
+'use client';
+
+import { useCallback } from 'react';
+import { useForm, type FieldValues } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import type { z } from 'zod';
+import type { MutationLike } from '@/shared/types/mutation';
 
 export interface UseFormDrawerOptions {
   open: boolean;

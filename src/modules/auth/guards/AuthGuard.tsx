@@ -1,9 +1,9 @@
-"use client";
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { useAuthStore } from "@/shared/stores/auth.store";
-import { ROUTES } from "@/shared/constants/routes";
-import { LoadingSpinner } from "@/shared/components/feedback/LoadingSpinner";
+'use client';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuthStore } from '@/shared/stores/auth.store';
+import { ROUTES } from '@/shared/constants/routes';
+import { LoadingSpinner } from '@/shared/components/feedback/LoadingSpinner';
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -12,15 +12,11 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   // Zustand v5 persist hydrates localStorage asynchronously.
   // We must wait for hydration to complete before checking auth,
   // otherwise we redirect on the first render before the user is restored.
-  const [hydrated, setHydrated] = useState(() =>
-    useAuthStore.persist.hasHydrated(),
-  );
+  const [hydrated, setHydrated] = useState(() => useAuthStore.persist.hasHydrated());
 
   useEffect(() => {
     if (hydrated) return;
-    const unsub = useAuthStore.persist.onFinishHydration(() =>
-      setHydrated(true),
-    );
+    const unsub = useAuthStore.persist.onFinishHydration(() => setHydrated(true));
     // In case hydration already finished between the useState init and this effect
     if (useAuthStore.persist.hasHydrated()) setHydrated(true);
     return unsub;
@@ -36,7 +32,6 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     }
   }, [hydrated, isAuthenticated, router]);
 
-  if (!hydrated || !isAuthenticated)
-    return <LoadingSpinner className="h-screen" />;
+  if (!hydrated || !isAuthenticated) return <LoadingSpinner className="h-screen" />;
   return <>{children}</>;
 }
