@@ -5,7 +5,7 @@ const kpis = [
   {
     label: 'Solde disponible',
     description: 'Disponible pour les prochains achats',
-    value: '400 000 €',
+    value: '3 000 pts',
     icon: Wallet,
     highlight: true,
     span: 'lg:col-span-2',
