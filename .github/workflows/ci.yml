@@ -26,7 +26,7 @@ jobs:
       - run: npm ci
 
       - run: npm run lint
-      
+
   format:
     name: Format Check (Prettier)
     runs-on: ubuntu-latest
