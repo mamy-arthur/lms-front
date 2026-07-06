@@ -104,7 +104,7 @@ export function CreateTenantWizard({ open, onOpenChange }: Props) {
   }, [trigger]);
 
   const onSubmit = useCallback(
-    async (_data: WizardFormData) => {
+    async () => {
       setLoading(true);
       await new Promise((r) => setTimeout(r, 1800));
       setLoading(false);

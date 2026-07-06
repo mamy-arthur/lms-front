@@ -11,7 +11,6 @@ import {
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import {
   Sheet,
@@ -30,13 +29,13 @@ interface StudentDrawerProps {
   onOpenChange: (open: boolean) => void;
 }
 
-function SectionTitle({ children }: { children: React.ReactNode }) {
-  return (
-    <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-      {children}
-    </h3>
-  );
-}
+// function SectionTitle({ children }: { children: React.ReactNode }) {
+//   return (
+//     <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+//       {children}
+//     </h3>
+//   );
+// }
 
 export function StudentDrawer({ student, open, onOpenChange }: StudentDrawerProps) {
   if (!student) {

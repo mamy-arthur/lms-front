@@ -9,13 +9,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { MainBlock, Field } from './SharedBlocks';
+import { MainBlock } from './SharedBlocks';
 import { FormActions } from './PageForm';
 import { Label } from '@/components/ui/label';
 import { RichTextEditor } from '@/modules/shared/components/tiptap/RichTextEditor';
-import { useRef, useState, type DragEvent, type ChangeEvent } from 'react';
-import { FileArchive, Upload, X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { useState } from 'react';
 import { FileUploadField } from '@/modules/shared/components/input-upload/FileUploadField';
 
 const schema = z.object({

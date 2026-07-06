@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { MainBlock, Field } from './SharedBlocks';
+import { MainBlock } from './SharedBlocks';
 import { FormActions } from './PageForm';
 import { Label } from '@/components/ui/label';
 import { RichTextEditor } from '@/modules/shared/components/tiptap/RichTextEditor';

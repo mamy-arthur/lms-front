@@ -66,7 +66,7 @@ export function SectionCard({ section, selectedContentId, onSelectContent }: Pro
   const updateSection = useCourseStore((s) => s.updateSection);
   const removeSection = useCourseStore((s) => s.removeSection);
 
-  const [type, setType] = useState<ContentType | null>(null);
+  const [, setType] = useState<ContentType | null>(null);
 
   const save = () => {
     updateSection(section.id, {

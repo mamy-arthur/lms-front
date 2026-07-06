@@ -1,10 +1,7 @@
 import ReactMarkdown from 'react-markdown';
 import { ClipboardList } from 'lucide-react';
-
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { CONTENT_TYPE_META } from '@/modules/shared/components/courses/types';
 

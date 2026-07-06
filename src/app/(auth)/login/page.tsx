@@ -6,7 +6,7 @@ interface Props {
 }
 
 export default async function LoginPage({ searchParams }: Props) {
-  const { reset } = await searchParams;
+  await searchParams;
 
   return (
     <main className="min-h-screen bg-background w-full">

@@ -8,13 +8,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 
 import {
   ArrowRight,
-  BookOpen,
   Eye,
   EyeOff,
   GraduationCap,
   Loader2,
-  Sparkles,
-  Users,
 } from 'lucide-react';
 
 import { loginSchema, type LoginSchema } from '@/shared/schemas/auth.schema';

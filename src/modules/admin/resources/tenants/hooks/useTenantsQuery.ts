@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { tenantApi } from '../api';
-import { CreateTenantPayload, UpdateTenantPayload } from '@/shared/types/tenants/tenant';
+import { UpdateTenantPayload } from '@/shared/types/tenants/tenant';
 
 export const useTenants = () => {
   return useQuery({
@@ -28,7 +28,7 @@ export const useUpdateTenant = () => {
   return useMutation({
     mutationFn: ({ id, payload }: { id: string; payload: UpdateTenantPayload }) =>
       tenantApi.update(id, payload),
-    onSuccess: (_, variables) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ['tenants'],
       });

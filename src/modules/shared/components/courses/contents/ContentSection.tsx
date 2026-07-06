@@ -10,8 +10,6 @@ import { SurveyForm } from './forms/SurveyForm';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 
-const VALID: ContentType[] = ['page', 'file', 'folder', 'scorm', 'url', 'survey', 'text-media'];
-
 export function SectionContent({
   sectionId,
   type,

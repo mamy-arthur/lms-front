@@ -7,8 +7,8 @@ import {
   type DataTableSort,
 } from '@/shared/components/ui/DataTable';
 
-export interface UsersTableColumn<T> extends DataTableColumn<T> {}
-export interface UsersTableSort extends DataTableSort {}
+export type UsersTableColumn<T> = DataTableColumn<T>;
+export type UsersTableSort = DataTableSort;
 
 interface UsersTableProps<T extends { id: string | number }> {
   data: T[];

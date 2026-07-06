@@ -9,14 +9,6 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet';
-import { FieldContent, FieldError, FieldGroup, FieldLabel, FieldRoot } from '@/components/ui/field';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Role } from '@/shared/constants/roles';
 import { useUserFormDrawer } from '@modules/shared/components/users/use-user-form-drawer';
 import { UserForm } from '@modules/shared/components/users/user-form';

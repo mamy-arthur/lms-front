@@ -29,8 +29,7 @@ const PAGE_SIZE = 5;
 
 export function StudentsTable({ students, loading, onSelect }: StudentsTableProps) {
   const [query, setQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<StudentStatus | 'all'>('all');
-  const [page, setPage] = useState(1);
+  const [statusFilter] = useState<StudentStatus | 'all'>('all');
 
   const filtered = useMemo(() => {
     return students.filter((s) => {
@@ -43,9 +42,9 @@ export function StudentsTable({ students, loading, onSelect }: StudentsTableProp
     });
   }, [students, query, statusFilter]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const currentPage = Math.min(page, totalPages);
-  const paginated = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  // const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  // const currentPage = Math.min(page, totalPages);
+  // const paginated = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   return (
     <Card className="flex flex-col">
@@ -64,7 +63,6 @@ export function StudentsTable({ students, loading, onSelect }: StudentsTableProp
               value={query}
               onChange={(e) => {
                 setQuery(e.target.value);
-                setPage(1);
               }}
               placeholder="Rechercher un étudiant…"
               className="h-8  pl-8"

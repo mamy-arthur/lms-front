@@ -116,19 +116,21 @@ export function DataTable<T extends { id: string | number }>({
 
   const sortedData = useMemo(() => {
     if (!sort) return data;
+
     return [...data].sort((a, b) => {
       const aVal = a[sort.column as keyof T];
       const bVal = b[sort.column as keyof T];
+
       if (aVal == null) return 1;
       if (bVal == null) return -1;
-      let cmp = 0;
-      if (typeof aVal === 'string' && typeof bVal === 'string') {
-        cmp = aVal.localeCompare(bVal);
-      } else if (typeof aVal === 'number' && typeof bVal === 'number') {
-        cmp = aVal - bVal;
-      } else {
-        cmp = String(aVal).localeCompare(String(bVal));
-      }
+
+      const cmp =
+        typeof aVal === 'string' && typeof bVal === 'string'
+          ? aVal.localeCompare(bVal)
+          : typeof aVal === 'number' && typeof bVal === 'number'
+            ? aVal - bVal
+            : String(aVal).localeCompare(String(bVal));
+
       return sort.direction === 'asc' ? cmp : -cmp;
     });
   }, [data, sort]);

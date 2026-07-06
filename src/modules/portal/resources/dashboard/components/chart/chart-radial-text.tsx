@@ -2,21 +2,10 @@
 
 import { Label, PolarGrid, PolarRadiusAxis, RadialBar, RadialBarChart } from 'recharts';
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartContainer, type ChartConfig } from '@/components/ui/chart';
-import { CheckCircle2, Circle, Clock3 } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 
 const progress = 42;
-const completed = 18;
-const total = 25;
 
 const chartData = [
   {

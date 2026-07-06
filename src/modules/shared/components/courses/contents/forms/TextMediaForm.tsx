@@ -2,7 +2,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Input } from '@/components/ui/input';
-import { MainBlock, Field } from './SharedBlocks';
+import { MainBlock } from './SharedBlocks';
 import { FormActions } from './PageForm';
 import { RichTextEditor } from '@/modules/shared/components/tiptap/RichTextEditor';
 import { Label } from '@/components/ui/label';

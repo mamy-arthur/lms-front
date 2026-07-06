@@ -167,7 +167,6 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
 
     // Pas de cleanup : le guard au début de l'effet garantit l'exécution unique.
     // Un cleanup qui remet le status à "idle" créerait une boucle infinie.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // [] intentionnel : la résolution ne doit s'exécuter qu'une seule fois au montage
 
   if (resolutionStatus === 'idle' || resolutionStatus === 'loading') {
