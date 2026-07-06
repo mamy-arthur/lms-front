@@ -47,7 +47,7 @@ import {
 
 type StepType = 'email' | 'module' | 'evaluation-intermediate' | 'evaluation-final' | 'attestation';
 
-type StepNodeData = {
+export type StepNodeData = {
   stepType: StepType;
   label: string;
   moduleId?: string;
@@ -59,7 +59,7 @@ type StepNodeData = {
 
 type StepNode = Node<StepNodeData, 'programStep'>;
 
-type EdgeRuleData = {
+export type EdgeRuleData = {
   kind?: 'retake';
   accessRules?: AccessRules;
   attestationRules?: AttestationRules;
@@ -151,6 +151,11 @@ export type ProgramFlowPayload = {
 
 export type ProgramFlowHandle = {
   getPayload: () => ProgramFlowPayload;
+  getRawFlow: () => {
+    nodes: StepNode[];
+    edges: Edge<EdgeRuleData>[];
+    nodeOrder: string[];
+  };
 };
 
 // ─── Step config ──────────────────────────────────────────────────────────────
@@ -370,10 +375,17 @@ const initialEmailNode: StepNode = {
 
 // ─── ProgramFlow ──────────────────────────────────────────────────────────────
 
-const ProgramFlow = forwardRef<ProgramFlowHandle>(function ProgramFlow(_, ref) {
-  const [nodes, setNodes] = useState<StepNode[]>([initialEmailNode]);
-  const [edges, setEdges] = useState<Edge<EdgeRuleData>[]>([]);
-  const [nodeOrder, setNodeOrder] = useState<string[]>([EMAIL_NODE_ID]);
+export type ProgramFlowProps = {
+  initialNodes?: StepNode[];
+  initialEdges?: Edge<EdgeRuleData>[];
+  initialNodeOrder?: string[];
+};
+
+const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(
+  function ProgramFlow({ initialNodes, initialEdges, initialNodeOrder }, ref) {
+  const [nodes, setNodes] = useState<StepNode[]>(initialNodes ?? [initialEmailNode]);
+  const [edges, setEdges] = useState<Edge<EdgeRuleData>[]>(initialEdges ?? []);
+  const [nodeOrder, setNodeOrder] = useState<string[]>(initialNodeOrder ?? [EMAIL_NODE_ID]);
 
   // Always-fresh refs — avoids stale closures in stable callbacks
   const nodesRef = useRef(nodes);
@@ -532,7 +544,8 @@ const ProgramFlow = forwardRef<ProgramFlowHandle>(function ProgramFlow(_, ref) {
   // ── Delete a node and reconnect its neighbours ──
   const onDeleteNode = useCallback((nodeId: string) => {
     // The email start node is mandatory and cannot be removed
-    if (nodeId === EMAIL_NODE_ID) return;
+    const targetNode = nodesRef.current.find((n) => n.id === nodeId);
+    if (targetNode?.data.stepType === 'email') return;
 
     const order = nodeOrderRef.current;
     const idx = order.indexOf(nodeId);
@@ -845,7 +858,18 @@ const ProgramFlow = forwardRef<ProgramFlowHandle>(function ProgramFlow(_, ref) {
     return { etapes, connexions };
   }, []);
 
-  useImperativeHandle(ref, () => ({ getPayload: buildPayload }), [buildPayload]);
+  useImperativeHandle(
+    ref,
+    () => ({
+      getPayload: buildPayload,
+      getRawFlow: () => ({
+        nodes: nodesRef.current,
+        edges: edgesRef.current,
+        nodeOrder: nodeOrderRef.current,
+      }),
+    }),
+    [buildPayload],
+  );
 
   // ── ReactFlow handlers ──
   const onNodesChange = useCallback(
@@ -1016,6 +1040,7 @@ const ProgramFlow = forwardRef<ProgramFlowHandle>(function ProgramFlow(_, ref) {
       />
     </FlowActionsContext.Provider>
   );
-});
+  },
+);
 
 export default ProgramFlow;
