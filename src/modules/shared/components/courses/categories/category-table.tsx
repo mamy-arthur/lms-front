@@ -7,7 +7,6 @@ import {
   Trash2,
   Plus,
   FolderTree,
-  CornerDownRight,
   Search,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';

@@ -3,12 +3,9 @@
 import * as React from 'react';
 // import Link from "next/link";
 // import Image from "next/image";
-import { usePathname } from 'next/navigation';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { AppSidebar } from '../components/sidebar/app-sidebar';
-import { Separator } from '@/components/ui/separator';
 import { LucideIcon } from 'lucide-react';
-import { useAuthStore } from '@/shared/stores/auth.store';
 import { AppHeader } from '../components/sidebar/app-header';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -32,9 +29,9 @@ interface AppSidebarProps {
 
 export function LayoutSideBar({
   navItems,
-  user,
-  logoUrl,
-  tenantName,
+  // user,
+  // logoUrl,
+  // tenantName,
   onLogout,
   children,
 }: AppSidebarProps) {

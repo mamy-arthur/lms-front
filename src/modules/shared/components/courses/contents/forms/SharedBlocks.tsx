@@ -18,6 +18,7 @@ export function MainBlock({
 }) {
   return (
     <section>
+      <h3 className="mb-4 text-lg font-semibold hidden">{title}</h3>
       <div className="space-y-4">{children}</div>
     </section>
   );

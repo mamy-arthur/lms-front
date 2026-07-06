@@ -36,7 +36,6 @@ export const TenantInfoStep = React.memo(function TenantInfoStep({
   fileInputRef,
   logoPreview,
   handleLogoChange,
-  color,
 }: Props) {
   return (
     <div className="space-y-6">
@@ -76,7 +75,7 @@ export const TenantInfoStep = React.memo(function TenantInfoStep({
       <FormField
         control={form.control}
         name="logo"
-        render={({ field: { value, onChange, ...field } }) => (
+        render={({ field: { onChange } }) => (
           <FormItem>
             <FormLabel className="text-xs">Logo</FormLabel>
             <FormControl>

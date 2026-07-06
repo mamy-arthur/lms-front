@@ -43,11 +43,6 @@ export function QuestionFormFieldsChoices({ form, selectedType }: ChoicesFieldsP
 
   const optionCount = optionFields.length;
 
-  const helperText =
-    selectedType === 'single_choice'
-      ? 'Cliquez sur le bouton pour indiquer la bonne réponse.'
-      : 'Cliquez sur les boutons pour indiquer une ou plusieurs bonnes réponses.';
-
   const handleScoreChange = useCallback(
     (index: number, value: number) => {
       const clamped = Math.min(100, Math.max(0, value));

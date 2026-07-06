@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import { Check, ChevronDown, ChevronsUpDown, GripVertical, Loader2 } from 'lucide-react';
@@ -149,7 +150,7 @@ export function ModuleForm({
   genIdentifierFn,
   usedCategoryIds,
 }: ModuleFormProps) {
-  const { categories, deleteCategory } = useModuleCategoryStore();
+  const { deleteCategory } = useModuleCategoryStore();
   const [categoryDrawerOpen, setCategoryDrawerOpen] = useState(false);
   const [categoryDrawerEditId, setCategoryDrawerEditId] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
@@ -296,7 +297,7 @@ export function ModuleForm({
           <FieldRoot
             control={form.control}
             name="courseIds"
-            render={({ field }) => (
+            render={() => (
               <FieldGroup>
                 <FieldLabel className="text-xs">Cours liés</FieldLabel>
                 <Popover open={coursePopoverOpen} onOpenChange={setCoursePopoverOpen}>
@@ -329,7 +330,7 @@ export function ModuleForm({
 
                       <CommandEmpty>Aucun cours trouvé.</CommandEmpty>
 
-                      <div className="max-h-[400px] overflow-y-auto overscroll-contain">
+                      <div className="max-h-100 overflow-y-auto overscroll-contain">
                         {coursesByCategory.map(({ name, courses }) => {
                           const isOpen = openCategories.has(name);
 

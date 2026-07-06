@@ -1,7 +1,5 @@
 import { CheckCircle2, Circle, Clock } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { CourseModule, Student } from '../lib/students-data';
 

@@ -6,16 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 
-import {
-  ArrowRight,
-  BookOpen,
-  Eye,
-  EyeOff,
-  GraduationCap,
-  Loader2,
-  Sparkles,
-  Users,
-} from 'lucide-react';
+import { ArrowRight, Eye, EyeOff, GraduationCap, Loader2 } from 'lucide-react';
 
 import { loginSchema, type LoginSchema } from '@/shared/schemas/auth.schema';
 import { useAuthStore } from '@/shared/stores/auth.store';

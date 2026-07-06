@@ -1,13 +1,7 @@
 'use client';
 import * as React from 'react';
-import {
-  AudioWaveform,
-  Command,
-  GalleryVerticalEnd,
-  AudioWaveform as AudioWaveformIcon,
-} from 'lucide-react';
+import { AudioWaveform, Command, GalleryVerticalEnd } from 'lucide-react';
 import { NavMain } from './nav-main';
-import { NavProjects } from './nav-projects';
 import { NavUser } from './nav-user';
 import { TeamSwitcher } from './team-switcher';
 import {
@@ -18,7 +12,6 @@ import {
   SidebarRail,
 } from '@/components/ui/sidebar';
 import { AdminNavItem } from '@/modules/admin/config/navigation';
-import { useAuthStore } from '@/shared/stores/auth.store';
 
 const data = {
   user: {
