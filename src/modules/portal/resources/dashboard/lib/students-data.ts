@@ -29,6 +29,8 @@ export interface Student {
   lastActivity: string;
   startDate: string;
   elapsed: string;
+  /** ISO date string (YYYY-MM-DD) */
+  deadline?: string;
   modules: CourseModule[];
   activity: ActivityEvent[];
 }
@@ -44,6 +46,7 @@ export const STUDENTS: Student[] = [
     lastActivity: 'il y a 2h',
     startDate: '12 sept. 2024',
     elapsed: '3 mois',
+    deadline: '2026-07-08',
     modules: [
       {
         id: 'm1',
@@ -115,6 +118,7 @@ export const STUDENTS: Student[] = [
     lastActivity: 'il y a 1j',
     startDate: '3 oct. 2024',
     elapsed: '2 mois',
+    deadline: '2026-07-03',
     modules: [
       {
         id: 'm1',
@@ -179,6 +183,7 @@ export const STUDENTS: Student[] = [
     lastActivity: 'il y a 30min',
     startDate: '1 août 2024',
     elapsed: '5 mois',
+    deadline: '2026-07-12',
     modules: [
       {
         id: 'm1',
@@ -243,6 +248,7 @@ export const STUDENTS: Student[] = [
     lastActivity: 'il y a 12j',
     startDate: '20 oct. 2024',
     elapsed: '2 mois',
+    deadline: '2026-07-06',
     modules: [
       {
         id: 'm1',
@@ -307,6 +313,7 @@ export const STUDENTS: Student[] = [
     lastActivity: 'il y a 3j',
     startDate: '10 mai 2024',
     elapsed: '7 mois',
+    deadline: '2026-07-04',
     modules: [
       {
         id: 'm1',
@@ -378,6 +385,7 @@ export const STUDENTS: Student[] = [
     lastActivity: 'il y a 5j',
     startDate: '15 sept. 2024',
     elapsed: '3 mois',
+    deadline: '2026-08-01',
     modules: [
       {
         id: 'm1',
@@ -442,6 +450,7 @@ export const STUDENTS: Student[] = [
     lastActivity: 'il y a 4h',
     startDate: '5 sept. 2024',
     elapsed: '4 mois',
+    deadline: '2026-07-08',
     modules: [
       {
         id: 'm1',
@@ -505,6 +514,7 @@ export const STUDENTS: Student[] = [
     status: 'active',
     lastActivity: 'il y a 1j',
     startDate: '1 sept. 2024',
+    deadline: '2026-07-08',
     elapsed: '4 mois',
     modules: [
       {
