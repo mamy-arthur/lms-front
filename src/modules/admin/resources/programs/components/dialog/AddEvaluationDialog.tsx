@@ -102,7 +102,13 @@ type Props = {
   onConfirm: (config: EvaluationConfig) => void;
 };
 
-export function AddEvaluationDialog({ open, onOpenChange, hasFinalEval, initialConfig, onConfirm }: Props) {
+export function AddEvaluationDialog({
+  open,
+  onOpenChange,
+  hasFinalEval,
+  initialConfig,
+  onConfirm,
+}: Props) {
   const [config, setConfig] = useState<EvaluationConfig>(initialConfig ?? DEFAULT_CONFIG);
   const [bankSearch, setBankSearch] = useState('');
 
@@ -111,7 +117,6 @@ export function AddEvaluationDialog({ open, onOpenChange, hasFinalEval, initialC
       setConfig(initialConfig ?? DEFAULT_CONFIG);
       setBankSearch('');
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   const set = <K extends keyof EvaluationConfig>(key: K, val: EvaluationConfig[K]) =>

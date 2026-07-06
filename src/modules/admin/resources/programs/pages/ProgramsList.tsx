@@ -22,11 +22,7 @@ export function ProgramsList() {
     setDrawerOpen(true);
   };
 
-  const handleSave = (
-    id: string | null,
-    formValues: ProgramFormValues,
-    flow: StoredFlowData,
-  ) => {
+  const handleSave = (id: string | null, formValues: ProgramFormValues, flow: StoredFlowData) => {
     if (id) {
       update(id, formValues, flow);
     } else {
@@ -45,12 +41,7 @@ export function ProgramsList() {
             </p>
           </div>
         </header>
-        <ProgramsTable
-          programs={programs}
-          onNew={openNew}
-          onEdit={openEdit}
-          onDelete={remove}
-        />
+        <ProgramsTable programs={programs} onNew={openNew} onEdit={openEdit} onDelete={remove} />
         <ProgramDrawer
           open={drawerOpen}
           onOpenChange={setDrawerOpen}

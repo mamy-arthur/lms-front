@@ -1,6 +1,15 @@
 'use client';
 
-import { createContext, forwardRef, useCallback, useContext, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import {
+  createContext,
+  forwardRef,
+  useCallback,
+  useContext,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
   Background,
   BaseEdge,
@@ -38,10 +47,7 @@ import {
 import { SelectModuleDialog, type ModuleItem } from './dialog/SelectModuleDialog';
 import { AddEvaluationDialog, type EvaluationConfig } from './dialog/AddEvaluationDialog';
 import { SelectAttestationDialog, type AttestationItem } from './dialog/SelectAttestationDialog';
-import {
-  SelectEmailTemplateDialog,
-  type EmailTemplate,
-} from './dialog/SelectEmailTemplateDialog';
+import { SelectEmailTemplateDialog, type EmailTemplate } from './dialog/SelectEmailTemplateDialog';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -108,10 +114,7 @@ export type AttestationStepPayload = {
 };
 
 export type FlowStepPayload =
-  | EmailStepPayload
-  | ModuleStepPayload
-  | EvaluationStepPayload
-  | AttestationStepPayload;
+  EmailStepPayload | ModuleStepPayload | EvaluationStepPayload | AttestationStepPayload;
 
 export type AccessRulesPayload = {
   modulePrecedentTermine: boolean;
@@ -381,8 +384,10 @@ export type ProgramFlowProps = {
   initialNodeOrder?: string[];
 };
 
-const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(
-  function ProgramFlow({ initialNodes, initialEdges, initialNodeOrder }, ref) {
+const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function ProgramFlow(
+  { initialNodes, initialEdges, initialNodeOrder },
+  ref,
+) {
   const [nodes, setNodes] = useState<StepNode[]>(initialNodes ?? [initialEmailNode]);
   const [edges, setEdges] = useState<Edge<EdgeRuleData>[]>(initialEdges ?? []);
   const [nodeOrder, setNodeOrder] = useState<string[]>(initialNodeOrder ?? [EMAIL_NODE_ID]);
@@ -789,9 +794,21 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(
 
       switch (d.stepType) {
         case 'email':
-          return { id: nodeId, type: 'email', position: node.position, emailTemplateId: d.emailTemplateId, emailTemplateName: d.emailTemplateName };
+          return {
+            id: nodeId,
+            type: 'email',
+            position: node.position,
+            emailTemplateId: d.emailTemplateId,
+            emailTemplateName: d.emailTemplateName,
+          };
         case 'module':
-          return { id: nodeId, type: 'module', position: node.position, label: d.label, moduleId: d.moduleId };
+          return {
+            id: nodeId,
+            type: 'module',
+            position: node.position,
+            label: d.label,
+            moduleId: d.moduleId,
+          };
         case 'evaluation-intermediate':
         case 'evaluation-final':
           return {
@@ -808,7 +825,13 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(
             durationMinutes: d.evaluationConfig?.durationMinutes ?? 0,
           };
         case 'attestation':
-          return { id: nodeId, type: 'attestation', position: node.position, label: d.label, attestationId: d.attestationId };
+          return {
+            id: nodeId,
+            type: 'attestation',
+            position: node.position,
+            label: d.label,
+            attestationId: d.attestationId,
+          };
       }
     });
 
@@ -926,7 +949,8 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(
           </Button>
 
           <span className="ml-auto text-xs text-muted-foreground">
-            {nodes.filter((n) => n.data.stepType !== 'email').length} étape{nodes.filter((n) => n.data.stepType !== 'email').length !== 1 ? 's' : ''}
+            {nodes.filter((n) => n.data.stepType !== 'email').length} étape
+            {nodes.filter((n) => n.data.stepType !== 'email').length !== 1 ? 's' : ''}
           </span>
         </div>
 
@@ -1040,7 +1064,6 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(
       />
     </FlowActionsContext.Provider>
   );
-  },
-);
+});
 
 export default ProgramFlow;

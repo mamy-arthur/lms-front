@@ -16,7 +16,12 @@ const n = {
       id,
       type: 'programStep',
       position: { x: X, y },
-      data: { stepType: 'email', label: templateName, emailTemplateId: templateId, emailTemplateName: templateName },
+      data: {
+        stepType: 'email',
+        label: templateName,
+        emailTemplateId: templateId,
+        emailTemplateName: templateName,
+      },
     };
   },
 
@@ -72,27 +77,73 @@ const n = {
 };
 
 function e(source: string, target: string, data: EdgeRuleData = {}): ProgramEdge {
-  return { id: `e-${source}-${target}`, source, target, type: 'configurableEdge', animated: true, data };
+  return {
+    id: `e-${source}-${target}`,
+    source,
+    target,
+    type: 'configurableEdge',
+    animated: true,
+    data,
+  };
 }
 
 // Pre-built edge rule presets
 const prevCompleted: EdgeRuleData = {
-  accessRules: { prevModuleCompleted: true, allModulesCompleted: false, prevModuleMinScore: false, prevModuleMinScoreValue: 50 },
+  accessRules: {
+    prevModuleCompleted: true,
+    allModulesCompleted: false,
+    prevModuleMinScore: false,
+    prevModuleMinScoreValue: 50,
+  },
 };
 const allCompleted: EdgeRuleData = {
-  accessRules: { prevModuleCompleted: false, allModulesCompleted: true, prevModuleMinScore: false, prevModuleMinScoreValue: 50 },
+  accessRules: {
+    prevModuleCompleted: false,
+    allModulesCompleted: true,
+    prevModuleMinScore: false,
+    prevModuleMinScoreValue: 50,
+  },
 };
 const minScore = (value: number): EdgeRuleData => ({
-  accessRules: { prevModuleCompleted: false, allModulesCompleted: false, prevModuleMinScore: true, prevModuleMinScoreValue: value },
+  accessRules: {
+    prevModuleCompleted: false,
+    allModulesCompleted: false,
+    prevModuleMinScore: true,
+    prevModuleMinScoreValue: value,
+  },
 });
 const finalScore = (min: number): EdgeRuleData => ({
-  attestationRules: { avgScore: false, avgScoreMin: 10, finalScore: true, finalScoreMin: min, noRule: false, retake: false, retakeTargetNodeId: null },
+  attestationRules: {
+    avgScore: false,
+    avgScoreMin: 10,
+    finalScore: true,
+    finalScoreMin: min,
+    noRule: false,
+    retake: false,
+    retakeTargetNodeId: null,
+  },
 });
 const avgScore = (min: number): EdgeRuleData => ({
-  attestationRules: { avgScore: true, avgScoreMin: min, finalScore: false, finalScoreMin: 10, noRule: false, retake: false, retakeTargetNodeId: null },
+  attestationRules: {
+    avgScore: true,
+    avgScoreMin: min,
+    finalScore: false,
+    finalScoreMin: 10,
+    noRule: false,
+    retake: false,
+    retakeTargetNodeId: null,
+  },
 });
 const noRule: EdgeRuleData = {
-  attestationRules: { avgScore: false, avgScoreMin: 10, finalScore: false, finalScoreMin: 10, noRule: true, retake: false, retakeTargetNodeId: null },
+  attestationRules: {
+    avgScore: false,
+    avgScoreMin: 10,
+    finalScore: false,
+    finalScoreMin: 10,
+    noRule: true,
+    retake: false,
+    retakeTargetNodeId: null,
+  },
 };
 
 // ─── Program 1 : React Avancé ─────────────────────────────────────────────────
@@ -115,19 +166,19 @@ const p1: StoredProgram = {
   },
   flow: {
     nodes: [
-      n.email('p1-email', 0,              'et1', 'Bienvenue dans le parcours'),
-      n.module('p1-m1',   GAP,            'React Fondamentaux',   'm2'),
-      n.module('p1-m2',   GAP * 2,        'TypeScript Essentiel', 'm3'),
-      n.eval('p1-ei',     GAP * 3, 'evaluation-intermediate', 'qb2', 'React & Hooks',     15, 2),
-      n.eval('p1-ef',     GAP * 4, 'evaluation-final',        'qb1', 'JavaScript Avancé', 30, 1, true, 1, 30),
+      n.email('p1-email', 0, 'et1', 'Bienvenue dans le parcours'),
+      n.module('p1-m1', GAP, 'React Fondamentaux', 'm2'),
+      n.module('p1-m2', GAP * 2, 'TypeScript Essentiel', 'm3'),
+      n.eval('p1-ei', GAP * 3, 'evaluation-intermediate', 'qb2', 'React & Hooks', 15, 2),
+      n.eval('p1-ef', GAP * 4, 'evaluation-final', 'qb1', 'JavaScript Avancé', 30, 1, true, 1, 30),
       n.attestation('p1-att', GAP * 5, 'Expert React', 'at4'),
     ],
     edges: [
       e('p1-email', 'p1-m1'),
-      e('p1-m1',    'p1-m2',  prevCompleted),
-      e('p1-m2',    'p1-ei',  allCompleted),
-      e('p1-ei',    'p1-ef'),
-      e('p1-ef',    'p1-att', finalScore(14)),
+      e('p1-m1', 'p1-m2', prevCompleted),
+      e('p1-m2', 'p1-ei', allCompleted),
+      e('p1-ei', 'p1-ef'),
+      e('p1-ef', 'p1-att', finalScore(14)),
     ],
     nodeOrder: ['p1-email', 'p1-m1', 'p1-m2', 'p1-ei', 'p1-ef', 'p1-att'],
   },
@@ -143,7 +194,8 @@ const p2: StoredProgram = {
   status: 'Brouillon',
   formValues: {
     name: 'Docker & Kubernetes',
-    description: 'Apprenez à conteneuriser et orchestrer vos applications avec Docker et Kubernetes.',
+    description:
+      'Apprenez à conteneuriser et orchestrer vos applications avec Docker et Kubernetes.',
     visible: false,
     deadline: new Date('2026-11-15'),
     category: 'tech',
@@ -155,17 +207,17 @@ const p2: StoredProgram = {
   },
   flow: {
     nodes: [
-      n.email('p2-email', 0,       'et2', 'Rappel de connexion'),
-      n.module('p2-m1',   GAP,     'Docker & Conteneurisation', 'm5'),
-      n.module('p2-m2',   GAP * 2, 'Kubernetes Avancé',         'm7'),
-      n.eval('p2-ef',     GAP * 3, 'evaluation-final', 'qb3', 'Docker & Kubernetes', 25, 1),
+      n.email('p2-email', 0, 'et2', 'Rappel de connexion'),
+      n.module('p2-m1', GAP, 'Docker & Conteneurisation', 'm5'),
+      n.module('p2-m2', GAP * 2, 'Kubernetes Avancé', 'm7'),
+      n.eval('p2-ef', GAP * 3, 'evaluation-final', 'qb3', 'Docker & Kubernetes', 25, 1),
       n.attestation('p2-att', GAP * 4, 'Ingénieur DevOps', 'at2'),
     ],
     edges: [
       e('p2-email', 'p2-m1'),
-      e('p2-m1',    'p2-m2',  prevCompleted),
-      e('p2-m2',    'p2-ef'),
-      e('p2-ef',    'p2-att', finalScore(12)),
+      e('p2-m1', 'p2-m2', prevCompleted),
+      e('p2-m2', 'p2-ef'),
+      e('p2-ef', 'p2-att', finalScore(12)),
     ],
     nodeOrder: ['p2-email', 'p2-m1', 'p2-m2', 'p2-ef', 'p2-att'],
   },
@@ -193,19 +245,19 @@ const p3: StoredProgram = {
   },
   flow: {
     nodes: [
-      n.email('p3-email', 0,       'et1', 'Bienvenue dans le parcours'),
-      n.module('p3-m1',   GAP,     'Gestion de projet Agile', 'm8'),
-      n.eval('p3-ei',     GAP * 2, 'evaluation-intermediate', 'qb4', 'Gestion de projet Agile', 10, 3),
-      n.module('p3-m2',   GAP * 3, 'Leadership & Management', 'm9'),
-      n.eval('p3-ef',     GAP * 4, 'evaluation-final',        'qb4', 'Gestion de projet Agile', 20, 1),
+      n.email('p3-email', 0, 'et1', 'Bienvenue dans le parcours'),
+      n.module('p3-m1', GAP, 'Gestion de projet Agile', 'm8'),
+      n.eval('p3-ei', GAP * 2, 'evaluation-intermediate', 'qb4', 'Gestion de projet Agile', 10, 3),
+      n.module('p3-m2', GAP * 3, 'Leadership & Management', 'm9'),
+      n.eval('p3-ef', GAP * 4, 'evaluation-final', 'qb4', 'Gestion de projet Agile', 20, 1),
       n.attestation('p3-att', GAP * 5, 'Chef de Projet Digital', 'at3'),
     ],
     edges: [
       e('p3-email', 'p3-m1'),
-      e('p3-m1',    'p3-ei',  prevCompleted),
-      e('p3-ei',    'p3-m2'),
-      e('p3-m2',    'p3-ef',  prevCompleted),
-      e('p3-ef',    'p3-att', avgScore(12)),
+      e('p3-m1', 'p3-ei', prevCompleted),
+      e('p3-ei', 'p3-m2'),
+      e('p3-m2', 'p3-ef', prevCompleted),
+      e('p3-ef', 'p3-att', avgScore(12)),
     ],
     nodeOrder: ['p3-email', 'p3-m1', 'p3-ei', 'p3-m2', 'p3-ef', 'p3-att'],
   },
@@ -221,7 +273,7 @@ const p4: StoredProgram = {
   status: 'Brouillon',
   formValues: {
     name: 'Full-Stack JavaScript',
-    description: "Du débutant au développeur full-stack avec JavaScript, TypeScript et React.",
+    description: 'Du débutant au développeur full-stack avec JavaScript, TypeScript et React.',
     visible: false,
     deadline: undefined,
     category: 'tech',
@@ -233,19 +285,19 @@ const p4: StoredProgram = {
   },
   flow: {
     nodes: [
-      n.email('p4-email', 0,       'et1', 'Bienvenue dans le parcours'),
-      n.module('p4-m1',   GAP,     'Introduction au JavaScript', 'm1'),
-      n.module('p4-m2',   GAP * 2, 'React Fondamentaux',         'm2'),
-      n.module('p4-m3',   GAP * 3, 'TypeScript Essentiel',       'm3'),
-      n.eval('p4-ef',     GAP * 4, 'evaluation-final', 'qb1', 'JavaScript Avancé', 40, 2, true, 2, 0),
+      n.email('p4-email', 0, 'et1', 'Bienvenue dans le parcours'),
+      n.module('p4-m1', GAP, 'Introduction au JavaScript', 'm1'),
+      n.module('p4-m2', GAP * 2, 'React Fondamentaux', 'm2'),
+      n.module('p4-m3', GAP * 3, 'TypeScript Essentiel', 'm3'),
+      n.eval('p4-ef', GAP * 4, 'evaluation-final', 'qb1', 'JavaScript Avancé', 40, 2, true, 2, 0),
       n.attestation('p4-att', GAP * 5, 'Développeur Web Full-Stack', 'at1'),
     ],
     edges: [
       e('p4-email', 'p4-m1'),
-      e('p4-m1',    'p4-m2', prevCompleted),
-      e('p4-m2',    'p4-m3', prevCompleted),
-      e('p4-m3',    'p4-ef', allCompleted),
-      e('p4-ef',    'p4-att', noRule),
+      e('p4-m1', 'p4-m2', prevCompleted),
+      e('p4-m2', 'p4-m3', prevCompleted),
+      e('p4-m3', 'p4-ef', allCompleted),
+      e('p4-ef', 'p4-att', noRule),
     ],
     nodeOrder: ['p4-email', 'p4-m1', 'p4-m2', 'p4-m3', 'p4-ef', 'p4-att'],
   },
@@ -273,17 +325,28 @@ const p5: StoredProgram = {
   },
   flow: {
     nodes: [
-      n.email('p5-email', 0,       'et4', "Invitation à l'évaluation"),
-      n.module('p5-m1',   GAP,     'SQL & Bases de données',  'm4'),
-      n.eval('p5-ei',     GAP * 2, 'evaluation-intermediate', 'qb5', 'SQL & NoSQL',          15, 2),
-      n.eval('p5-ef',     GAP * 3, 'evaluation-final',        'qb6', 'Sécurité web (OWASP)', 20, 1, true, 1, 0),
+      n.email('p5-email', 0, 'et4', "Invitation à l'évaluation"),
+      n.module('p5-m1', GAP, 'SQL & Bases de données', 'm4'),
+      n.eval('p5-ei', GAP * 2, 'evaluation-intermediate', 'qb5', 'SQL & NoSQL', 15, 2),
+      n.eval(
+        'p5-ef',
+        GAP * 3,
+        'evaluation-final',
+        'qb6',
+        'Sécurité web (OWASP)',
+        20,
+        1,
+        true,
+        1,
+        0,
+      ),
       n.attestation('p5-att', GAP * 4, 'Cybersécurité Web', 'at6'),
     ],
     edges: [
       e('p5-email', 'p5-m1'),
-      e('p5-m1',    'p5-ei', prevCompleted),
-      e('p5-ei',    'p5-ef', minScore(12)),
-      e('p5-ef',    'p5-att', finalScore(16)),
+      e('p5-m1', 'p5-ei', prevCompleted),
+      e('p5-ei', 'p5-ef', minScore(12)),
+      e('p5-ef', 'p5-att', finalScore(16)),
     ],
     nodeOrder: ['p5-email', 'p5-m1', 'p5-ei', 'p5-ef', 'p5-att'],
   },

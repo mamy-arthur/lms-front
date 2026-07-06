@@ -66,7 +66,12 @@ type Props = {
   onSelect: (attestation: AttestationItem) => void;
 };
 
-export function SelectAttestationDialog({ open, onOpenChange, initialAttestationId, onSelect }: Props) {
+export function SelectAttestationDialog({
+  open,
+  onOpenChange,
+  initialAttestationId,
+  onSelect,
+}: Props) {
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<AttestationItem | null>(
     initialAttestationId

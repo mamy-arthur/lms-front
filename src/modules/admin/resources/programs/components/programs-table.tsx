@@ -1,13 +1,6 @@
 'use client';
 
-import {
-  MoreHorizontal,
-  Pencil,
-  Plus,
-  Search,
-  Settings2,
-  Trash2,
-} from 'lucide-react';
+import { MoreHorizontal, Pencil, Plus, Search, Settings2, Trash2 } from 'lucide-react';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -46,9 +39,7 @@ function ProgramsTableBase({ programs, onNew, onEdit, onDelete }: Props) {
 
   const filtered = useMemo(() => {
     if (!search.trim()) return programs;
-    return programs.filter((p) =>
-      p.formValues.name.toLowerCase().includes(search.toLowerCase()),
-    );
+    return programs.filter((p) => p.formValues.name.toLowerCase().includes(search.toLowerCase()));
   }, [programs, search]);
 
   const ActionMenu = useCallback(

@@ -43,7 +43,7 @@ export function ProgramDrawer({ open, onOpenChange, program, onSave }: ProgramDr
   useEffect(() => {
     if (open) setFormValues(program?.formValues ?? DEFAULT_FORM_VALUES);
     // program?.id intentionally omitted from deps — we only want to reset on open/program change
-  }, [open, program?.id]); 
+  }, [open, program?.id]);
 
   const handleSave = () => {
     const rawFlow = flowRef.current?.getRawFlow();
