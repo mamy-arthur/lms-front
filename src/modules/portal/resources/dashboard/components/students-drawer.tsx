@@ -109,7 +109,7 @@ export function StudentDrawer({ student, open, onOpenChange }: StudentDrawerProp
           <div className="space-y-5 px-6 pb-10 pt-5">
             <p className="text-base font-semibold text-gray-900">{student.course}</p>
             <section className="space-y-3">
-           <div className="flex justify-between gap-4 bg-gray-100/50 p-2 rounded-lg font-semibold">
+              <div className="flex justify-between gap-4 bg-gray-100/50 p-2 rounded-lg font-semibold">
                 <div className="flex items-center gap-1 text-xs">
                   <CalendarDays className="h-3 w-4" aria-hidden />
                   <span className="text-xs">Début · {student.startDate}</span>
