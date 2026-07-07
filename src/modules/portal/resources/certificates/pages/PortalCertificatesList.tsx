@@ -52,9 +52,9 @@ export function PortalCertificatesList() {
         />
         <div className="flex items-center gap-2 sm:ml-auto">
           <AdminCertificatesFilter
-            statusFilter={ctrl.draftCategory}
+            statusFilter={ctrl.draftCategory[0] ?? 'all'}
             tenantFilter={ctrl.draftTenant}
-            onStatusFilterChange={ctrl.setDraftCategory}
+            onStatusFilterChange={(v) => ctrl.setDraftCategory([v])}
             onTenantFilterChange={ctrl.setDraftTenant}
             onSearch={ctrl.handleSearch}
             tenants={tenants}

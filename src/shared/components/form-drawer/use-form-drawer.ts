@@ -49,7 +49,7 @@ export function useFormDrawer({
     if (open) {
       form.reset(defaultValues);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    
   }, [open, entity?.id]);
 
   const handleClose = useCallback(() => {

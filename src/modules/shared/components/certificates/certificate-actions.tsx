@@ -1,6 +1,6 @@
 'use client';
 
-import { Eye, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { Copy, Eye, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -15,6 +15,7 @@ export interface CertificateActionsProps {
   onEdit?: () => void;
   onDelete?: () => void;
   onPreview?: () => void;
+  onDuplicate?: () => void;
 }
 
 export function CertificateActions({
@@ -22,6 +23,7 @@ export function CertificateActions({
   onEdit,
   onDelete,
   onPreview,
+  onDuplicate,
 }: CertificateActionsProps) {
   return (
     <DropdownMenu>
@@ -44,6 +46,10 @@ export function CertificateActions({
         <DropdownMenuItem onClick={() => onEdit?.()}>
           <Pencil className="mr-2 size-3.5 text-muted-foreground" />
           Modifier
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onDuplicate?.()}>
+          <Copy className="mr-2 size-3.5 text-muted-foreground" />
+          Dupliquer
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem

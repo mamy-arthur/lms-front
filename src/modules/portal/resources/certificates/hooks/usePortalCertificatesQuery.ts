@@ -9,10 +9,15 @@ export function usePortalCertificatesQuery(params?: CertificateSearchParams) {
   return useQuery({
     queryKey: [...PORTAL_CERTIFICATES_QUERY_KEY, params],
     queryFn: async () => {
-      const response = await portalCertificatesApi.list();
+      const { category, ...rest } = (params ?? {}) as Record<string, unknown>;
+      const apiParams = {
+        ...rest,
+        ...(category !== undefined ? { status: category } : {}),
+      };
+      const response = await portalCertificatesApi.list(apiParams);
       const raw = response.data ?? [];
       const data = raw.map((c) => normalizeCertificate(c));
-      return { data, total: data.length };
+      return { data, total: response.total ?? data.length };
     },
     placeholderData: (prev) => prev,
   });

@@ -75,8 +75,16 @@ export const httpClient = async (
   return { status: res.status, headers: res.headers, body, json };
 };
 
-export async function apiGet<T>(path: string): Promise<T> {
-  const { json } = await httpClient(`/api/v1/${path.replace(/^\/+/, '')}`);
+export async function apiGet<T>(path: string, params?: Record<string, unknown>): Promise<T> {
+  let url = `/api/v1/${path.replace(/^\/+/, '')}`;
+  if (params) {
+    const qs = Object.entries(params)
+      .filter(([, v]) => v !== undefined && v !== null && v !== '')
+      .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`)
+      .join('&');
+    if (qs) url += `?${qs}`;
+  }
+  const { json } = await httpClient(url);
   return json as T;
 }
 

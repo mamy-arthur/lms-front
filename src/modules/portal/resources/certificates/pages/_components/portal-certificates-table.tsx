@@ -13,6 +13,7 @@ import {
   type DataTableSort,
 } from '@/shared/components/ui/DataTable';
 import { formatDate } from '@/shared/lib/date';
+import { useDuplicatePortalCertificate } from '../../hooks/useDuplicatePortalCertificate';
 import type { Certificate } from '../../types';
 
 export type SortConfig = DataTableSort;
@@ -49,6 +50,7 @@ export function PortalCertificatesTable({
   tenantNames,
 }: PortalCertificatesTableProps) {
   const [previewCert, setPreviewCert] = useState<Certificate | null>(null);
+  const duplicateMutation = useDuplicatePortalCertificate();
   const columns: DataTableColumn<Certificate>[] = [
     {
       key: 'name',
@@ -119,6 +121,7 @@ export function PortalCertificatesTable({
           certificateLabel={cert.name}
           onPreview={() => setPreviewCert(cert)}
           onEdit={() => onEdit(cert)}
+          onDuplicate={() => duplicateMutation.mutate(cert.id)}
           onDelete={() => onDelete?.(cert)}
         />
       ),

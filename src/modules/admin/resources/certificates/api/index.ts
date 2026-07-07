@@ -1,6 +1,6 @@
 import { apiDelete, apiGet, apiPatch, apiPost, apiUpload } from '@/shared/lib/apiClient';
 import type {
-  Certificate,
+  // Certificate,
   CreateCertificatePayload,
   PreviewCertificatePayload,
   UpdateCertificatePayload,
@@ -8,6 +8,7 @@ import type {
 
 interface CertificateListResponse {
   data?: Record<string, unknown>[];
+  total?: number;
 }
 
 interface CertificatePreviewResponse {
@@ -19,9 +20,8 @@ interface CertificateMediaResponse {
 }
 
 export const adminCertificatesApi = {
-  list: () => apiGet<CertificateListResponse>(`platform/certificates`),
-
-  getById: (id: string) => apiGet<{ data: Certificate }>(`platform/certificates/${id}`),
+  list: (params?: Record<string, unknown>) =>
+    apiGet<CertificateListResponse>('platform/certificates', params),
 
   create: (data: CreateCertificatePayload) =>
     apiPost<{ data: Record<string, unknown> }>(`platform/certificates`, data),
@@ -33,6 +33,9 @@ export const adminCertificatesApi = {
 
   preview: (id: string, payload: PreviewCertificatePayload) =>
     apiPost<CertificatePreviewResponse>(`platform/certificates/${id}/preview`, payload),
+
+  duplicate: (id: string) =>
+    apiPost<{ data: Record<string, unknown> }>(`platform/certificates/${id}/duplicate`),
 
   uploadMedia: (file: File) => {
     const formData = new FormData();

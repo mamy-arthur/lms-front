@@ -1,5 +1,6 @@
 import { useState, useEffect, type ReactNode } from 'react';
 import { useEditor, useEditorState, EditorContent, type Editor } from '@tiptap/react';
+import { DOMParser as PmDOMParser } from '@tiptap/pm/model';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
 import Image from '@tiptap/extension-image';
@@ -17,6 +18,7 @@ import {
   Italic,
   Strikethrough,
   Code,
+  Code2,
   Heading1,
   Heading2,
   Heading3,
@@ -137,11 +139,15 @@ function Toolbar({
   extras,
   onExpand,
   onMinimize,
+  onToggleSource,
+  sourceMode,
 }: {
   editor: Editor;
   extras?: (editor: Editor) => ReactNode;
   onExpand?: () => void;
   onMinimize?: () => void;
+  onToggleSource?: () => void;
+  sourceMode?: boolean;
 }) {
   const setLink = () => {
     const previousUrl = editor.getAttributes('link').href as string | undefined;
@@ -317,6 +323,15 @@ function Toolbar({
           </ToolbarButton>
         </>
       )}
+
+      {onToggleSource && (
+        <>
+          <Separator />
+          <ToolbarButton label="Source HTML" active={sourceMode} onClick={onToggleSource}>
+            <Code2 className="size-4" />
+          </ToolbarButton>
+        </>
+      )}
     </div>
   );
 }
@@ -332,6 +347,8 @@ export function RichTextEditor({
 }: Props) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [expandedContent, setExpandedContent] = useState('');
+  const [sourceMode, setSourceMode] = useState(false);
+  const [sourceValue, setSourceValue] = useState('');
 
   const editor = useEditor({
     extensions: [
@@ -347,11 +364,15 @@ export function RichTextEditor({
       Placeholder.configure({
         placeholder: placeholder ?? 'Décrivez le cours…',
       }),
-      Markdown.configure({
-        html: outputFormat === 'html',
-        tightLists: true,
-        transformPastedText: true,
-      }),
+      ...(outputFormat === 'markdown'
+        ? [
+            Markdown.configure({
+              html: false,
+              tightLists: true,
+              transformPastedText: true,
+            }),
+          ]
+        : []),
     ],
     content: value,
     editorProps: {
@@ -362,13 +383,30 @@ export function RichTextEditor({
           'prose prose-sm max-w-none dark:prose-invert',
           '[&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_h1]:mb-2 [&_h1]:mt-3 [&_h2]:mb-2 [&_h2]:mt-3 [&_h3]:mb-1 [&_h3]:mt-2',
           '[&_blockquote]:border-l-2 [&_blockquote]:border-muted-foreground/30 [&_blockquote]:pl-3 [&_blockquote]:italic',
-          '[&_code]:rounded [&_code]:bg-muted [&_code]:px-1 [&_code]:py-0.5 [&_code]:text-xs',
-          '[&_pre]:rounded [&_pre]:bg-muted [&_pre]:p-2 [&_pre]:text-xs',
+          '[&_code]:rounded [&_code]:bg-[#1e1e1e] [&_code]:text-[#d4d4d4] [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:text-xs [&_code]:font-mono',
+          '[&_pre]:rounded [&_pre]:bg-[#1e1e1e] [&_pre]:text-[#d4d4d4] [&_pre]:p-4 [&_pre]:text-xs [&_pre]:font-mono [&_pre]:overflow-x-auto',
+          '[&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_pre_code]:text-inherit',
           '[&_a]:text-primary [&_a]:underline',
           // overflow-hidden crée un BFC : le texte ne passe pas sous le float
           '[&_p]:overflow-hidden',
         ),
       },
+      // Mode HTML : on intercepte TOUJOURS le coller si le text/plain contient
+      // des balises HTML — que le navigateur fournisse ou non un text/html
+      // (ex : copie depuis VS Code qui ajoute du text/html avec coloration).
+      handlePaste:
+        outputFormat === 'html'
+          ? (view, event) => {
+              const plain = event.clipboardData?.getData('text/plain') ?? '';
+              if (!/<[a-z][^>]*>/i.test(plain)) return false;
+              event.preventDefault();
+              const dom = new window.DOMParser().parseFromString(plain, 'text/html');
+              const parser = PmDOMParser.fromSchema(view.state.schema);
+              const slice = parser.parseSlice(dom.body);
+              view.dispatch(view.state.tr.replaceSelection(slice));
+              return true;
+            }
+          : undefined,
     },
     onUpdate: ({ editor }) => {
       onChange(outputFormat === 'html' ? editor.getHTML() : editor.storage.markdown.getMarkdown());
@@ -388,6 +426,19 @@ export function RichTextEditor({
   }, [value, editor]);
 
   if (!editor) return null;
+
+  const handleToggleSource = () => {
+    if (!sourceMode) {
+      // Passe en mode source : exporte le HTML actuel dans la textarea
+      setSourceValue(editor.getHTML());
+      setSourceMode(true);
+    } else {
+      // Revient en mode WYSIWYG : parse le HTML de la textarea
+      editor.commands.setContent(sourceValue, false);
+      onChange(editor.getHTML());
+      setSourceMode(false);
+    }
+  };
 
   const handleExpand = () => {
     setExpandedContent(
@@ -413,8 +464,22 @@ export function RichTextEditor({
           editor={editor}
           extras={toolbarExtras}
           onExpand={expandable ? handleExpand : undefined}
+          onToggleSource={outputFormat === 'html' ? handleToggleSource : undefined}
+          sourceMode={sourceMode}
         />
-        <EditorContent editor={editor} />
+        {sourceMode ? (
+          <textarea
+            className="min-h-32 w-full rounded-b-md border bg-[#1e1e1e] text-[#d4d4d4] font-mono text-xs px-3 py-2 resize-y focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            value={sourceValue}
+            onChange={(e) => {
+              setSourceValue(e.target.value);
+              onChange(e.target.value);
+            }}
+            spellCheck={false}
+          />
+        ) : (
+          <EditorContent editor={editor} />
+        )}
       </div>
 
       <Dialog open={isExpanded} onOpenChange={(open) => !open && handleCancel()}>
