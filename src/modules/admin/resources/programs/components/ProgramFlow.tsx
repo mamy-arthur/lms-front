@@ -1,6 +1,15 @@
 'use client';
 
-import { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
+import {
+  createContext,
+  forwardRef,
+  useCallback,
+  useContext,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
   Background,
   BaseEdge,
@@ -25,7 +34,7 @@ import type {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
-import { Award, BadgeCheck, BookOpen, ClipboardCheck, Settings2, Trash2 } from 'lucide-react';
+import { Award, BadgeCheck, BookOpen, ClipboardCheck, Mail, Settings2, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/shared/lib/cn';
@@ -37,26 +46,119 @@ import {
 } from './dialog/AttestationRulesDialog';
 import { SelectModuleDialog, type ModuleItem } from './dialog/SelectModuleDialog';
 import { AddEvaluationDialog, type EvaluationConfig } from './dialog/AddEvaluationDialog';
-import { SelectAttestationDialog } from './dialog/SelectAttestationDialog';
+import { SelectAttestationDialog, type AttestationItem } from './dialog/SelectAttestationDialog';
+import { SelectEmailTemplateDialog, type EmailTemplate } from './dialog/SelectEmailTemplateDialog';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type StepType = 'module' | 'evaluation-intermediate' | 'evaluation-final' | 'attestation';
+type StepType = 'email' | 'module' | 'evaluation-intermediate' | 'evaluation-final' | 'attestation';
 
-type StepNodeData = {
+export type StepNodeData = {
   stepType: StepType;
   label: string;
   moduleId?: string;
   attestationId?: string;
+  emailTemplateId?: string;
+  emailTemplateName?: string;
   evaluationConfig?: Omit<EvaluationConfig, 'stepType'>;
 };
 
 type StepNode = Node<StepNodeData, 'programStep'>;
 
-type EdgeRuleData = {
+export type EdgeRuleData = {
   kind?: 'retake';
   accessRules?: AccessRules;
   attestationRules?: AttestationRules;
+};
+
+// ─── Payload Types ────────────────────────────────────────────────────────────
+
+type StepPosition = { x: number; y: number };
+
+export type EmailStepPayload = {
+  id: string;
+  type: 'email';
+  position: StepPosition;
+  emailTemplateId: string | undefined;
+  emailTemplateName: string | undefined;
+};
+
+export type ModuleStepPayload = {
+  id: string;
+  type: 'module';
+  position: StepPosition;
+  label: string;
+  moduleId: string | undefined;
+};
+
+export type EvaluationStepPayload = {
+  id: string;
+  type: 'evaluation-intermediate' | 'evaluation-final';
+  position: StepPosition;
+  label: string;
+  questionBankId: string | null;
+  questionBankName: string | null;
+  questionCount: number;
+  attemptCount: number;
+  durationEnabled: boolean;
+  durationHours: number;
+  durationMinutes: number;
+};
+
+export type AttestationStepPayload = {
+  id: string;
+  type: 'attestation';
+  position: StepPosition;
+  label: string;
+  attestationId: string | undefined;
+};
+
+export type FlowStepPayload =
+  EmailStepPayload | ModuleStepPayload | EvaluationStepPayload | AttestationStepPayload;
+
+export type AccessRulesPayload = {
+  modulePrecedentTermine: boolean;
+  tousLesAutresModulesTermines: boolean;
+  modulePrecedentScoreMinimumAtteint: boolean;
+  /** Valeur du score minimum — non null uniquement si `modulePrecedentScoreMinimumAtteint` est vrai */
+  scoreMinimum: number | null;
+};
+
+export type AttestationRulesPayload = {
+  scoreMoyenRequis: boolean;
+  /** Non null uniquement si `scoreMoyenRequis` est vrai */
+  scoreMoyenMinimum: number | null;
+  scoreFinalRequis: boolean;
+  /** Non null uniquement si `scoreFinalRequis` est vrai */
+  scoreFinalMinimum: number | null;
+  aucuneRegle: boolean;
+  reprise: boolean;
+  /** Non null uniquement si `reprise` est vrai */
+  repriseVersNoeudId: string | null;
+};
+
+export type FlowConnectionPayload = {
+  sourceId: string;
+  targetId: string;
+  estReprise: boolean;
+  reglesAcces?: AccessRulesPayload;
+  reglesAttestation?: AttestationRulesPayload;
+};
+
+export type ProgramFlowPayload = {
+  /** Étapes ordonnées du parcours (email de démarrage inclus) */
+  etapes: FlowStepPayload[];
+  /** Connexions entre les étapes avec leurs règles */
+  connexions: FlowConnectionPayload[];
+};
+
+export type ProgramFlowHandle = {
+  getPayload: () => ProgramFlowPayload;
+  getRawFlow: () => {
+    nodes: StepNode[];
+    edges: Edge<EdgeRuleData>[];
+    nodeOrder: string[];
+  };
 };
 
 // ─── Step config ──────────────────────────────────────────────────────────────
@@ -72,6 +174,15 @@ type StepConfig = {
 };
 
 const STEP_CONFIG: Record<StepType, StepConfig> = {
+  email: {
+    label: 'Email de démarrage',
+    Icon: Mail,
+    border: 'border-violet-300',
+    bg: 'bg-violet-50',
+    iconColor: 'text-violet-500',
+    badgeClass: 'border-violet-200 bg-violet-100 text-violet-700',
+    badgeLabel: 'Email',
+  },
   module: {
     label: 'Module',
     Icon: BookOpen,
@@ -115,17 +226,26 @@ const STEP_CONFIG: Record<StepType, StepConfig> = {
 const FlowActionsContext = createContext<{
   onDeleteNode: (id: string) => void;
   onConfigureEdge: (edgeId: string) => void;
-}>({ onDeleteNode: () => {}, onConfigureEdge: () => {} });
+  onEditNode: (id: string) => void;
+}>({ onDeleteNode: () => {}, onConfigureEdge: () => {}, onEditNode: () => {} });
 
 // ─── Custom Node ──────────────────────────────────────────────────────────────
 
 function ProgramStepNode({ id, data, isConnectable }: NodeProps<StepNode>) {
-  const { onDeleteNode } = useContext(FlowActionsContext);
+  const { onDeleteNode, onEditNode } = useContext(FlowActionsContext);
   const cfg = STEP_CONFIG[data.stepType];
   const { Icon } = cfg;
+  const isEmail = data.stepType === 'email';
 
   return (
-    <div className={cn('min-w-55 rounded-md border px-4 py-3 shadow-sm', cfg.border, cfg.bg)}>
+    <div
+      className={cn(
+        'min-w-55 cursor-pointer rounded-md border px-4 py-3 shadow-sm',
+        cfg.border,
+        cfg.bg,
+      )}
+      onClick={() => onEditNode(id)}
+    >
       <Handle type="target" position={Position.Top} isConnectable={isConnectable} />
 
       <div className="flex items-center justify-between gap-2">
@@ -133,14 +253,19 @@ function ProgramStepNode({ id, data, isConnectable }: NodeProps<StepNode>) {
           <Icon className={cn('size-4 shrink-0', cfg.iconColor)} />
           <span className="truncate text-sm font-semibold text-foreground">{data.label}</span>
         </div>
-        <Button
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={() => onDeleteNode(id)}
-          className="flex size-5 shrink-0 bg-gray-50 items-center justify-center rounded-full text-muted-foreground/50 transition-colors hover:bg-black/10 hover:text-red-500"
-          aria-label="Supprimer ce nœud"
-        >
-          <Trash2 className="size-3" />
-        </Button>
+        {!isEmail && (
+          <Button
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              onDeleteNode(id);
+            }}
+            className="flex size-5 shrink-0 bg-gray-50 items-center justify-center rounded-full text-muted-foreground/50 transition-colors hover:bg-black/10 hover:text-red-500"
+            aria-label="Supprimer ce nœud"
+          >
+            <Trash2 className="size-3" />
+          </Button>
+        )}
       </div>
 
       <div className="mt-2">
@@ -242,12 +367,30 @@ const NODE_GAP = 150;
 let _counter = 0;
 const genId = () => `step-${++_counter}`;
 
+const EMAIL_NODE_ID = 'email-start';
+
+const initialEmailNode: StepNode = {
+  id: EMAIL_NODE_ID,
+  type: 'programStep',
+  position: { x: CANVAS_X, y: 0 },
+  data: { stepType: 'email', label: 'Email de démarrage' },
+};
+
 // ─── ProgramFlow ──────────────────────────────────────────────────────────────
 
-export default function ProgramFlow() {
-  const [nodes, setNodes] = useState<StepNode[]>([]);
-  const [edges, setEdges] = useState<Edge<EdgeRuleData>[]>([]);
-  const [nodeOrder, setNodeOrder] = useState<string[]>([]);
+export type ProgramFlowProps = {
+  initialNodes?: StepNode[];
+  initialEdges?: Edge<EdgeRuleData>[];
+  initialNodeOrder?: string[];
+};
+
+const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function ProgramFlow(
+  { initialNodes, initialEdges, initialNodeOrder },
+  ref,
+) {
+  const [nodes, setNodes] = useState<StepNode[]>(initialNodes ?? [initialEmailNode]);
+  const [edges, setEdges] = useState<Edge<EdgeRuleData>[]>(initialEdges ?? []);
+  const [nodeOrder, setNodeOrder] = useState<string[]>(initialNodeOrder ?? [EMAIL_NODE_ID]);
 
   // Always-fresh refs — avoids stale closures in stable callbacks
   const nodesRef = useRef(nodes);
@@ -274,6 +417,28 @@ export default function ProgramFlow() {
     attestationNodeId: string;
     incomingSourceNodeId: string;
     initialRules?: AttestationRules;
+  } | null>(null);
+
+  // ── Edit-node dialog states ──
+  const [editModuleDialog, setEditModuleDialog] = useState<{
+    nodeId: string;
+    moduleId?: string;
+  } | null>(null);
+
+  const [editEvalDialog, setEditEvalDialog] = useState<{
+    nodeId: string;
+    config: EvaluationConfig;
+    hasFinalEval: boolean;
+  } | null>(null);
+
+  const [editAttestationDialog, setEditAttestationDialog] = useState<{
+    nodeId: string;
+    attestationId?: string;
+  } | null>(null);
+
+  const [editEmailDialog, setEditEmailDialog] = useState<{
+    nodeId: string;
+    emailTemplateId?: string;
   } | null>(null);
 
   // ── Business rule flags ──
@@ -383,6 +548,10 @@ export default function ProgramFlow() {
 
   // ── Delete a node and reconnect its neighbours ──
   const onDeleteNode = useCallback((nodeId: string) => {
+    // The email start node is mandatory and cannot be removed
+    const targetNode = nodesRef.current.find((n) => n.id === nodeId);
+    if (targetNode?.data.stepType === 'email') return;
+
     const order = nodeOrderRef.current;
     const idx = order.indexOf(nodeId);
     const prev = order[idx - 1] ?? null;
@@ -408,6 +577,46 @@ export default function ProgramFlow() {
     });
 
     setNodeOrder((o) => o.filter((id) => id !== nodeId));
+  }, []);
+
+  // ── Open the right edit dialog when a node is clicked ──
+  const onEditNode = useCallback((nodeId: string) => {
+    const node = nodesRef.current.find((n) => n.id === nodeId);
+    if (!node) return;
+
+    switch (node.data.stepType) {
+      case 'email':
+        setEditEmailDialog({
+          nodeId,
+          emailTemplateId: node.data.emailTemplateId,
+        });
+        break;
+      case 'module':
+        setEditModuleDialog({ nodeId, moduleId: node.data.moduleId });
+        break;
+      case 'evaluation-intermediate':
+      case 'evaluation-final':
+        setEditEvalDialog({
+          nodeId,
+          config: {
+            stepType: node.data.stepType,
+            durationEnabled: node.data.evaluationConfig?.durationEnabled ?? false,
+            durationHours: node.data.evaluationConfig?.durationHours ?? 0,
+            durationMinutes: node.data.evaluationConfig?.durationMinutes ?? 30,
+            questionCount: node.data.evaluationConfig?.questionCount ?? 20,
+            attemptCount: node.data.evaluationConfig?.attemptCount ?? 1,
+            questionBankId: node.data.evaluationConfig?.questionBankId ?? null,
+            questionBankName: node.data.evaluationConfig?.questionBankName ?? null,
+          },
+          hasFinalEval: nodesRef.current.some(
+            (n) => n.data.stepType === 'evaluation-final' && n.id !== nodeId,
+          ),
+        });
+        break;
+      case 'attestation':
+        setEditAttestationDialog({ nodeId, attestationId: node.data.attestationId });
+        break;
+    }
   }, []);
 
   // ── Append a new step to the end of the chain ──
@@ -484,13 +693,205 @@ export default function ProgramFlow() {
 
   // ── Handle attestation selection ──
   const handleAttestationSelect = useCallback(
-    (att: { id: string; name: string }) => {
+    (att: AttestationItem) => {
       addStep('attestation', {
         label: att.name,
         attestationId: att.id,
       });
     },
     [addStep],
+  );
+
+  // ── Edit handlers ──
+  const handleEditModuleSave = useCallback(
+    (mod: ModuleItem) => {
+      if (!editModuleDialog) return;
+      setNodes((nds) =>
+        nds.map((n) =>
+          n.id === editModuleDialog.nodeId
+            ? { ...n, data: { ...n.data, label: mod.name, moduleId: mod.id } }
+            : n,
+        ),
+      );
+      setEditModuleDialog(null);
+    },
+    [editModuleDialog],
+  );
+
+  const handleEditEvalSave = useCallback(
+    (cfg: EvaluationConfig) => {
+      if (!editEvalDialog) return;
+      const { stepType, ...rest } = cfg;
+      setNodes((nds) =>
+        nds.map((n) =>
+          n.id === editEvalDialog.nodeId
+            ? {
+                ...n,
+                data: {
+                  ...n.data,
+                  stepType,
+                  label: cfg.questionBankName ?? n.data.label,
+                  evaluationConfig: rest,
+                },
+              }
+            : n,
+        ),
+      );
+      setEditEvalDialog(null);
+    },
+    [editEvalDialog],
+  );
+
+  const handleEditAttestationSave = useCallback(
+    (att: AttestationItem) => {
+      if (!editAttestationDialog) return;
+      setNodes((nds) =>
+        nds.map((n) =>
+          n.id === editAttestationDialog.nodeId
+            ? { ...n, data: { ...n.data, label: att.name, attestationId: att.id } }
+            : n,
+        ),
+      );
+      setEditAttestationDialog(null);
+    },
+    [editAttestationDialog],
+  );
+
+  const handleEditEmailSave = useCallback(
+    (template: EmailTemplate) => {
+      if (!editEmailDialog) return;
+      setNodes((nds) =>
+        nds.map((n) =>
+          n.id === editEmailDialog.nodeId
+            ? {
+                ...n,
+                data: {
+                  ...n.data,
+                  label: template.name,
+                  emailTemplateId: template.id,
+                  emailTemplateName: template.name,
+                },
+              }
+            : n,
+        ),
+      );
+      setEditEmailDialog(null);
+    },
+    [editEmailDialog],
+  );
+
+  // ── Used module IDs excluding the one currently being edited ──
+  const editModuleUsedIds = useMemo(
+    () => usedModuleIds.filter((id) => id !== editModuleDialog?.moduleId),
+    [usedModuleIds, editModuleDialog?.moduleId],
+  );
+
+  // ── Build the serializable payload ──
+  const buildPayload = useCallback((): ProgramFlowPayload => {
+    const etapes: FlowStepPayload[] = nodeOrderRef.current.map((nodeId) => {
+      const node = nodesRef.current.find((n) => n.id === nodeId)!;
+      const d = node.data;
+
+      switch (d.stepType) {
+        case 'email':
+          return {
+            id: nodeId,
+            type: 'email',
+            position: node.position,
+            emailTemplateId: d.emailTemplateId,
+            emailTemplateName: d.emailTemplateName,
+          };
+        case 'module':
+          return {
+            id: nodeId,
+            type: 'module',
+            position: node.position,
+            label: d.label,
+            moduleId: d.moduleId,
+          };
+        case 'evaluation-intermediate':
+        case 'evaluation-final':
+          return {
+            id: nodeId,
+            type: d.stepType,
+            position: node.position,
+            label: d.label,
+            questionBankId: d.evaluationConfig?.questionBankId ?? null,
+            questionBankName: d.evaluationConfig?.questionBankName ?? null,
+            questionCount: d.evaluationConfig?.questionCount ?? 0,
+            attemptCount: d.evaluationConfig?.attemptCount ?? 0,
+            durationEnabled: d.evaluationConfig?.durationEnabled ?? false,
+            durationHours: d.evaluationConfig?.durationHours ?? 0,
+            durationMinutes: d.evaluationConfig?.durationMinutes ?? 0,
+          };
+        case 'attestation':
+          return {
+            id: nodeId,
+            type: 'attestation',
+            position: node.position,
+            label: d.label,
+            attestationId: d.attestationId,
+          };
+      }
+    });
+
+    const connexions: FlowConnectionPayload[] = edgesRef.current.map((edge) => {
+      const ruleData = edge.data as EdgeRuleData | undefined;
+      const isRetake = ruleData?.kind === 'retake';
+
+      let reglesAcces: AccessRulesPayload | undefined;
+      if (!isRetake && ruleData?.accessRules) {
+        const r = ruleData.accessRules;
+        if (r.prevModuleCompleted || r.allModulesCompleted || r.prevModuleMinScore) {
+          reglesAcces = {
+            modulePrecedentTermine: r.prevModuleCompleted,
+            tousLesAutresModulesTermines: r.allModulesCompleted,
+            modulePrecedentScoreMinimumAtteint: r.prevModuleMinScore,
+            scoreMinimum: r.prevModuleMinScore ? r.prevModuleMinScoreValue : null,
+          };
+        }
+      }
+
+      let reglesAttestation: AttestationRulesPayload | undefined;
+      if (!isRetake && ruleData?.attestationRules) {
+        const r = ruleData.attestationRules;
+        if (r.avgScore || r.finalScore || r.noRule || r.retake) {
+          reglesAttestation = {
+            scoreMoyenRequis: r.avgScore,
+            scoreMoyenMinimum: r.avgScore ? r.avgScoreMin : null,
+            scoreFinalRequis: r.finalScore,
+            scoreFinalMinimum: r.finalScore ? r.finalScoreMin : null,
+            aucuneRegle: r.noRule,
+            reprise: r.retake,
+            repriseVersNoeudId: r.retake ? r.retakeTargetNodeId : null,
+          };
+        }
+      }
+
+      const conn: FlowConnectionPayload = {
+        sourceId: edge.source,
+        targetId: edge.target,
+        estReprise: isRetake,
+      };
+      if (reglesAcces) conn.reglesAcces = reglesAcces;
+      if (reglesAttestation) conn.reglesAttestation = reglesAttestation;
+      return conn;
+    });
+
+    return { etapes, connexions };
+  }, []);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      getPayload: buildPayload,
+      getRawFlow: () => ({
+        nodes: nodesRef.current,
+        edges: edgesRef.current,
+        nodeOrder: nodeOrderRef.current,
+      }),
+    }),
+    [buildPayload],
   );
 
   // ── ReactFlow handlers ──
@@ -508,8 +909,8 @@ export default function ProgramFlow() {
   );
 
   const flowActions = useMemo(
-    () => ({ onDeleteNode, onConfigureEdge }),
-    [onDeleteNode, onConfigureEdge],
+    () => ({ onDeleteNode, onConfigureEdge, onEditNode }),
+    [onDeleteNode, onConfigureEdge, onEditNode],
   );
 
   return (
@@ -548,13 +949,14 @@ export default function ProgramFlow() {
           </Button>
 
           <span className="ml-auto text-xs text-muted-foreground">
-            {nodes.length} étape{nodes.length !== 1 ? 's' : ''}
+            {nodes.filter((n) => n.data.stepType !== 'email').length} étape
+            {nodes.filter((n) => n.data.stepType !== 'email').length !== 1 ? 's' : ''}
           </span>
         </div>
 
         {/* ── Canvas ── */}
         <div className="relative flex-1">
-          {nodes.length === 0 && (
+          {nodes.every((n) => n.data.stepType === 'email') && (
             <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-1 text-center">
               <BookOpen className="mb-2 size-8 text-muted-foreground/30" />
               <p className="text-sm font-medium text-muted-foreground">Canvas vide</p>
@@ -621,6 +1023,47 @@ export default function ProgramFlow() {
         nodeOptions={retakeNodeOptions}
         onSave={handleAttestationSave}
       />
+
+      {/* ── Edit-node dialogs ── */}
+      <SelectEmailTemplateDialog
+        key={editEmailDialog?.nodeId}
+        open={editEmailDialog !== null}
+        onOpenChange={(open) => {
+          if (!open) setEditEmailDialog(null);
+        }}
+        initialTemplateId={editEmailDialog?.emailTemplateId}
+        onSelect={handleEditEmailSave}
+      />
+      <SelectModuleDialog
+        key={editModuleDialog?.nodeId}
+        open={editModuleDialog !== null}
+        onOpenChange={(open) => {
+          if (!open) setEditModuleDialog(null);
+        }}
+        usedModuleIds={editModuleUsedIds}
+        onSelect={handleEditModuleSave}
+      />
+      <AddEvaluationDialog
+        key={editEvalDialog?.nodeId}
+        open={editEvalDialog !== null}
+        onOpenChange={(open) => {
+          if (!open) setEditEvalDialog(null);
+        }}
+        hasFinalEval={editEvalDialog?.hasFinalEval ?? false}
+        initialConfig={editEvalDialog?.config}
+        onConfirm={handleEditEvalSave}
+      />
+      <SelectAttestationDialog
+        key={editAttestationDialog?.nodeId}
+        open={editAttestationDialog !== null}
+        onOpenChange={(open) => {
+          if (!open) setEditAttestationDialog(null);
+        }}
+        initialAttestationId={editAttestationDialog?.attestationId}
+        onSelect={handleEditAttestationSave}
+      />
     </FlowActionsContext.Provider>
   );
-}
+});
+
+export default ProgramFlow;

@@ -3,9 +3,32 @@
 import { useState } from 'react';
 import { ProgramDrawer } from '../components/ProgramDrawer';
 import { ProgramsTable } from '../components/programs-table';
+import { useProgramStore } from '../hooks/useProgramStore';
+import type { ProgramFormValues } from '../components/ProgramFormPanel';
+import type { StoredFlowData, StoredProgram } from '../types';
 
 export function ProgramsList() {
+  const { programs, create, update, remove } = useProgramStore();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [editingProgram, setEditingProgram] = useState<StoredProgram | undefined>(undefined);
+
+  const openNew = () => {
+    setEditingProgram(undefined);
+    setDrawerOpen(true);
+  };
+
+  const openEdit = (program: StoredProgram) => {
+    setEditingProgram(program);
+    setDrawerOpen(true);
+  };
+
+  const handleSave = (id: string | null, formValues: ProgramFormValues, flow: StoredFlowData) => {
+    if (id) {
+      update(id, formValues, flow);
+    } else {
+      create(formValues, flow);
+    }
+  };
 
   return (
     <div className="bg-background">
@@ -18,8 +41,13 @@ export function ProgramsList() {
             </p>
           </div>
         </header>
-        <ProgramsTable onNew={() => setDrawerOpen(true)} />
-        <ProgramDrawer open={drawerOpen} onOpenChange={setDrawerOpen} />
+        <ProgramsTable programs={programs} onNew={openNew} onEdit={openEdit} onDelete={remove} />
+        <ProgramDrawer
+          open={drawerOpen}
+          onOpenChange={setDrawerOpen}
+          program={editingProgram}
+          onSave={handleSave}
+        />
       </div>
     </div>
   );

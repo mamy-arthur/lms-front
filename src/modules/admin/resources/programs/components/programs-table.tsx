@@ -1,6 +1,6 @@
 'use client';
 
-import { Eye, MoreHorizontal, Pencil, Plus, Search, Settings2, Trash2 } from 'lucide-react';
+import { MoreHorizontal, Pencil, Plus, Search, Settings2, Trash2 } from 'lucide-react';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -13,117 +13,102 @@ import {
 import { Input } from '@/components/ui/input';
 import { DataTable, type DataTableColumn } from '@/shared/components/ui/DataTable';
 import { formatDate } from '@/shared/lib/date';
-import { StatusBadge } from './StatusBadge';
+import type { StoredProgram } from '../types';
 
-export type Formation = {
-  id: number;
-  name: string;
-  category: string;
-  status: 'Publié' | 'Brouillon' | 'Archivé';
-  deadline?: string;
-  cost?: number;
-  currency?: string;
+// ─── Category labels ──────────────────────────────────────────────────────────
+
+const CATEGORY_LABELS: Record<string, string> = {
+  tech: 'Technologie',
+  business: 'Business',
+  design: 'Design',
+  marketing: 'Marketing',
 };
 
-const formations: Formation[] = [
-  {
-    id: 1,
-    name: 'React Avancé',
-    category: 'Développement',
-    status: 'Publié',
-    deadline: '2026-09-30',
-    cost: 299,
-    currency: 'EUR',
-  },
-  {
-    id: 2,
-    name: 'Docker',
-    category: 'DevOps',
-    status: 'Brouillon',
-    deadline: '2026-08-15',
-    cost: 0,
-    currency: 'EUR',
-  },
-  {
-    id: 3,
-    name: 'Scrum',
-    category: 'Management',
-    status: 'Archivé',
-    cost: 149,
-    currency: 'EUR',
-  },
-  {
-    id: 4,
-    name: 'Next.js',
-    category: 'Développement',
-    status: 'Publié',
-    deadline: '2026-12-01',
-    cost: 199,
-    currency: 'USD',
-  },
-];
+// ─── Table ────────────────────────────────────────────────────────────────────
 
-function ProgramsTableBase({ onNew }: { onNew?: () => void }) {
+type Props = {
+  programs: StoredProgram[];
+  onNew?: () => void;
+  onEdit?: (program: StoredProgram) => void;
+  onDelete?: (id: string) => void;
+};
+
+function ProgramsTableBase({ programs, onNew, onEdit, onDelete }: Props) {
   const [search, setSearch] = useState('');
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return formations;
-    return formations.filter((f) => f.name.toLowerCase().includes(search.toLowerCase()));
-  }, [search]);
+    if (!search.trim()) return programs;
+    return programs.filter((p) => p.formValues.name.toLowerCase().includes(search.toLowerCase()));
+  }, [programs, search]);
 
-  const ActionMenu = useCallback(function ActionMenu({ item }: { item: Formation }) {
-    return (
-      <div className="text-right" onClick={(e) => e.stopPropagation()}>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              size="icon"
-              variant="ghost"
-              className="size-8 text-muted-foreground hover:text-foreground data-[state=open]:bg-muted"
-              aria-label={`Actions pour ${item.name}`}
-            >
-              <MoreHorizontal className="size-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-44">
-            <DropdownMenuItem>
-              <Eye className="mr-2 size-3.5 text-muted-foreground" />
-              Consulter
-            </DropdownMenuItem>
-            <DropdownMenuItem>
-              <Pencil className="mr-2 size-3.5 text-muted-foreground" />
-              Modifier
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive focus:text-destructive">
-              <Trash2 className="mr-2 size-3.5" />
-              Supprimer
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-    );
-  }, []);
+  const ActionMenu = useCallback(
+    function ActionMenu({ item }: { item: StoredProgram }) {
+      return (
+        <div className="text-right" onClick={(e) => e.stopPropagation()}>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="size-8 text-muted-foreground hover:text-foreground data-[state=open]:bg-muted"
+                aria-label={`Actions pour ${item.formValues.name}`}
+              >
+                <MoreHorizontal className="size-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44">
+              <DropdownMenuItem onClick={() => onEdit?.(item)}>
+                <Pencil className="mr-2 size-3.5 text-muted-foreground" />
+                Modifier
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                onClick={() => onDelete?.(item.id)}
+              >
+                <Trash2 className="mr-2 size-3.5" />
+                Supprimer
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      );
+    },
+    [onEdit, onDelete],
+  );
 
-  const columns: DataTableColumn<Formation>[] = useMemo(
+  const columns: DataTableColumn<StoredProgram>[] = useMemo(
     () => [
       {
         key: 'name',
         label: 'Nom',
         sortable: true,
-        render: (row) => <span className="text-xs font-medium">{row.name}</span>,
+        render: (row) => <span className="text-xs font-medium">{row.formValues.name}</span>,
       },
       {
         key: 'category',
         label: 'Catégorie',
         sortable: true,
-        render: (row) => <span className="text-xs text-muted-foreground">{row.category}</span>,
+        render: (row) => (
+          <span className="text-xs text-muted-foreground">
+            {CATEGORY_LABELS[row.formValues.category] ?? row.formValues.category}
+          </span>
+        ),
       },
       {
-        key: 'status',
-        label: 'Statut',
+        key: 'visibility',
+        label: 'Visibilité',
         sortable: true,
-        render: (row) => <StatusBadge status={row.status} />,
+        render: (row) =>
+          row.formValues.visible ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
+              Visible
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-500 ring-1 ring-inset ring-gray-400/20">
+              Masqué
+            </span>
+          ),
       },
       {
         key: 'deadline',
@@ -131,7 +116,9 @@ function ProgramsTableBase({ onNew }: { onNew?: () => void }) {
         sortable: true,
         render: (row) => (
           <span className="text-xs text-muted-foreground tabular-nums">
-            {row.deadline ? formatDate(row.deadline) : '—'}
+            {row.formValues.deadline
+              ? formatDate(row.formValues.deadline.toISOString().split('T')[0])
+              : '—'}
           </span>
         ),
       },
@@ -140,13 +127,14 @@ function ProgramsTableBase({ onNew }: { onNew?: () => void }) {
         label: 'Tarification',
         sortable: true,
         render: (row) => {
-          if (row.cost === undefined)
+          const cost = parseFloat(row.formValues.cost);
+          if (isNaN(cost) || row.formValues.cost === '')
             return <span className="text-xs text-muted-foreground">—</span>;
-          if (row.cost === 0)
+          if (cost === 0)
             return <span className="text-xs font-medium text-emerald-600">Gratuit</span>;
           return (
             <span className="text-xs font-medium tabular-nums">
-              {row.cost.toLocaleString('fr-FR')} {row.currency ?? 'EUR'}
+              {cost.toLocaleString('fr-FR')} {row.formValues.currency ?? 'EUR'}
             </span>
           );
         },
@@ -198,6 +186,7 @@ function ProgramsTableBase({ onNew }: { onNew?: () => void }) {
         total={filtered.length}
         onPageChange={() => {}}
         onPageSizeChange={() => {}}
+        onRowClick={onEdit}
         emptyState={{
           title: 'Aucune formation',
           description: 'Aucune formation pour le moment.',
