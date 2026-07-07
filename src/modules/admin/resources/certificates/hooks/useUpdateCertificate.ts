@@ -1,41 +1,16 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import type { Certificate, UpdateCertificatePayload } from "../types";
-import { normalizeCertificate } from "../types";
-import { ADMIN_CERTIFICATES_QUERY_KEY } from "./useCertificatesQuery";
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { adminCertificatesApi } from '../api';
+import type { UpdateCertificatePayload } from '../types';
+import { ADMIN_CERTIFICATES_QUERY_KEY } from './useCertificatesQuery';
 
 export function useUpdateCertificate() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({
-      id,
-      data,
-    }: {
-      id: string;
-      data: UpdateCertificatePayload;
-    }) => {
-      const mockRaw: Record<string, unknown> = {
-        id,
-        name: data.name,
-        is_active: data.is_active,
-        is_default_template: data.is_default_template,
-        body: data.body ?? "",
-        tenant_id: data.tenant_id,
-        updated_at: new Date().toISOString(),
-      };
-      return Promise.resolve({ data: mockRaw });
-    },
-    onSuccess: ({ data: rawCert }) => {
-      const updated = normalizeCertificate(rawCert as Record<string, unknown>);
-      queryClient.setQueryData<{ data: Certificate[]; total: number }>(
-        ADMIN_CERTIFICATES_QUERY_KEY,
-        (prev) => ({
-          data: (prev?.data ?? []).map((c) =>
-            c.id === updated.id ? updated : c,
-          ),
-          total: prev?.total ?? 0,
-        }),
-      );
+    mutationFn: ({ id, data }: { id: string; data: UpdateCertificatePayload }) =>
+      adminCertificatesApi.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ADMIN_CERTIFICATES_QUERY_KEY });
     },
   });
 }

@@ -1,25 +1,27 @@
-"use client";
+'use client';
 
-import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Eye, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from '@/components/ui/dropdown-menu';
 
 export interface CertificateActionsProps {
   certificateLabel: string;
   onEdit?: () => void;
   onDelete?: () => void;
+  onPreview?: () => void;
 }
 
 export function CertificateActions({
   certificateLabel,
   onEdit,
   onDelete,
+  onPreview,
 }: CertificateActionsProps) {
   return (
     <DropdownMenu>
@@ -34,6 +36,11 @@ export function CertificateActions({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-44">
+        <DropdownMenuItem onClick={() => onPreview?.()}>
+          <Eye className="mr-2 size-3.5 text-muted-foreground" />
+          Aperçu
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
         <DropdownMenuItem onClick={() => onEdit?.()}>
           <Pencil className="mr-2 size-3.5 text-muted-foreground" />
           Modifier

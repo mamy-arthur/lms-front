@@ -1,16 +1,17 @@
-"use client";
+'use client';
 
-import { Plus } from "lucide-react";
-import { useMemo } from "react";
-import { Button } from "@/components/ui/button";
-import { CertificateSearch } from "@modules/shared/components/certificates";
-import { useAllTenantsQuery } from "@/modules/shared/hooks/useAllTenantsQuery";
-import { useModuleListController } from "@/modules/shared/hooks/useModuleListController";
-import { usePortalCertificatesQuery } from "../hooks/usePortalCertificatesQuery";
-import type { Certificate } from "../types";
-import { AdminCertificatesFilter } from "@/modules/admin/resources/certificates/pages/_components/admin-certificates-filter";
-import { PortalCertificateFormDrawer } from "./_components/portal-certificate-form-drawer";
-import { PortalCertificatesTable } from "./_components/portal-certificates-table";
+import { Plus } from 'lucide-react';
+import { useMemo } from 'react';
+import { Button } from '@/components/ui/button';
+import { CertificateSearch } from '@modules/shared/components/certificates';
+import { useAllTenantsQuery } from '@/modules/shared/hooks/useAllTenantsQuery';
+import { useModuleListController } from '@/modules/shared/hooks/useModuleListController';
+import { usePortalCertificatesQuery } from '../hooks/usePortalCertificatesQuery';
+import { useDeletePortalCertificate } from '../hooks/useDeletePortalCertificate';
+import type { Certificate } from '../types';
+import { AdminCertificatesFilter } from '@/modules/admin/resources/certificates/pages/_components/admin-certificates-filter';
+import { PortalCertificateFormDrawer } from './_components/portal-certificate-form-drawer';
+import { PortalCertificatesTable } from './_components/portal-certificates-table';
 
 export function PortalCertificatesList() {
   const ctrl = useModuleListController<Certificate>({
@@ -22,6 +23,7 @@ export function PortalCertificatesList() {
   const tenants = tenantsData?.data ?? [];
 
   const { data, isLoading } = usePortalCertificatesQuery(ctrl.params);
+  const deleteMutation = useDeletePortalCertificate();
 
   const tenantNames = useMemo(() => {
     const map: Record<string, string> = {};
@@ -79,7 +81,7 @@ export function PortalCertificatesList() {
         onPageChange={ctrl.handlePageChange}
         onPageSizeChange={ctrl.handlePageSizeChange}
         onEdit={ctrl.handleEdit}
-        onDelete={() => {}}
+        onDelete={(cert) => deleteMutation.mutate(cert.id)}
         tenantNames={tenantNames}
       />
 
@@ -88,7 +90,6 @@ export function PortalCertificatesList() {
         onClose={ctrl.handleCloseDrawer}
         onSuccess={ctrl.handleSuccess}
         certificate={ctrl.editingModule as Certificate | undefined}
-        tenants={tenants}
       />
     </div>
   );

@@ -1,46 +1,28 @@
-"use client";
+'use client';
 
-import { memo, useMemo } from "react";
-import { z } from "zod";
+import { memo, useCallback, useMemo } from 'react';
+import { z } from 'zod';
 import {
   Sheet,
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
-} from "@/components/ui/sheet";
-import {
-  FieldContent,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-  FieldRoot,
-} from "@/components/ui/field";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { useFormDrawer } from "@/shared/components/form-drawer/use-form-drawer";
-import { CertificateForm } from "@modules/shared/components/certificates/certificate-form";
-import { certificateToolbarExtras } from "@modules/shared/components/certificates/certificate-toolbar-extras";
-import type { Tenant } from "@/shared/types/tenant.types";
-import { useCreateCertificate } from "../../hooks/useCreateCertificate";
-import { useUpdateCertificate } from "../../hooks/useUpdateCertificate";
-import type {
-  Certificate,
-  CreateCertificatePayload,
-  UpdateCertificatePayload,
-} from "../../types";
+} from '@/components/ui/sheet';
+import { useFormDrawer } from '@/shared/components/form-drawer/use-form-drawer';
+import { makeCertificateToolbarExtras } from '@modules/shared/components/certificates/certificate-toolbar-extras';
+import { CertificateForm } from '@modules/shared/components/certificates/certificate-form';
+import { useTenant } from '@/shared/hooks/useTenant';
+import { useCreateCertificate } from '../../hooks/useCreateCertificate';
+import { useUpdateCertificate } from '../../hooks/useUpdateCertificate';
+import { useUploadCertificateMedia } from '../../hooks/useUploadCertificateMedia';
+import type { Certificate, CreateCertificatePayload, UpdateCertificatePayload } from '../../types';
 
 const baseSchema = {
-  name: z.string().min(1, "Nom requis").max(255),
+  name: z.string().min(1, 'Nom requis').max(255),
   isActive: z.boolean(),
   isDefaultTemplate: z.boolean(),
-  body: z.string().min(1, "Corps requis"),
-  tenantId: z.string().min(1, "Tenant requis"),
+  body: z.string().min(1, 'Corps requis'),
 };
 
 const createSchema = z.object(baseSchema);
@@ -49,11 +31,10 @@ const updateSchema = z.object(baseSchema);
 type FormValues = z.infer<typeof createSchema>;
 
 const CREATE_DEFAULTS: FormValues = {
-  name: "",
+  name: '',
   isActive: true,
   isDefaultTemplate: false,
-  body: "",
-  tenantId: "",
+  body: '',
 };
 
 export interface AdminCertificateFormDrawerProps {
@@ -61,7 +42,6 @@ export interface AdminCertificateFormDrawerProps {
   onClose: () => void;
   onSuccess?: () => void;
   certificate?: Certificate;
-  tenants: Tenant[];
 }
 
 function AdminCertificateFormDrawerBase({
@@ -69,12 +49,30 @@ function AdminCertificateFormDrawerBase({
   onClose,
   onSuccess,
   certificate,
-  tenants,
 }: AdminCertificateFormDrawerProps) {
   const isEdit = !!certificate;
+  const { tenant } = useTenant();
 
   const createMutation = useCreateCertificate();
   const updateMutation = useUpdateCertificate();
+  const uploadMedia = useUploadCertificateMedia();
+
+  const uploadFn = useCallback(
+    async (file: File) => {
+      const { data } = await uploadMedia.mutateAsync(file);
+      return { mediaId: data.id };
+    },
+    [uploadMedia.mutateAsync],
+  );
+
+  const toolbarExtras = useMemo(
+    () =>
+      makeCertificateToolbarExtras({
+        uploadMedia: uploadFn,
+        apiPath: 'platform/template-variables',
+      }),
+    [uploadFn],
+  );
 
   const schema = isEdit ? updateSchema : createSchema;
 
@@ -85,7 +83,6 @@ function AdminCertificateFormDrawerBase({
         isActive: certificate.isActive,
         isDefaultTemplate: certificate.isDefaultTemplate,
         body: certificate.body,
-        tenantId: certificate.tenantId,
       };
     }
     return CREATE_DEFAULTS;
@@ -103,66 +100,24 @@ function AdminCertificateFormDrawerBase({
     createDefaults: CREATE_DEFAULTS,
     buildCreatePayload: (values): CreateCertificatePayload => ({
       name: values.name,
-      is_active: values.isActive,
-      is_default_template: values.isDefaultTemplate,
+      status: Boolean(values.isActive),
+      setasdefault: Boolean(values.isDefaultTemplate),
       body: values.body,
-      tenant_id: values.tenantId,
+      tenant_id: tenant?.id ?? '',
     }),
-    buildUpdatePayload: (
-      values,
-      id,
-    ): { id: string; data: UpdateCertificatePayload } => ({
+    buildUpdatePayload: (values, id): { id: string; data: UpdateCertificatePayload } => ({
       id,
       data: {
         name: values.name,
-        is_active: values.isActive,
-        is_default_template: values.isDefaultTemplate,
+        status: Boolean(values.isActive),
+        setasdefault: Boolean(values.isDefaultTemplate),
         body: values.body,
-        tenant_id: values.tenantId,
       },
     }),
   });
 
-  const tenantField = (
-    <FieldRoot
-      control={formState.form.control as any}
-      name="tenantId"
-      render={({ field }) => (
-        <FieldGroup>
-          <FieldLabel className="text-xs">Tenant *</FieldLabel>
-          <Select
-            onValueChange={field.onChange}
-            defaultValue={field.value}
-            value={field.value}
-          >
-            <FieldContent>
-              <SelectTrigger
-                size="default"
-                aria-label="Tenant"
-                className="w-full"
-              >
-                <SelectValue placeholder="Sélectionner un tenant" />
-              </SelectTrigger>
-            </FieldContent>
-            <SelectContent>
-              {tenants.map((t) => (
-                <SelectItem key={t.id} value={t.id}>
-                  {t.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <FieldError />
-        </FieldGroup>
-      )}
-    />
-  );
-
   return (
-    <Sheet
-      open={open}
-      onOpenChange={(nextOpen) => !nextOpen && formState.handleClose()}
-    >
+    <Sheet open={open} onOpenChange={(nextOpen) => !nextOpen && formState.handleClose()}>
       <SheetContent
         className="flex w-full flex-col gap-0 p-0 sm:max-w-2xl lg:max-w-4xl"
         showCloseButton={true}
@@ -170,12 +125,8 @@ function AdminCertificateFormDrawerBase({
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
         <SheetHeader className="border-b px-4 py-4">
-          <SheetTitle>
-            {isEdit ? "Modifier l'attestation" : "Ajouter une attestation"}
-          </SheetTitle>
-          <SheetDescription>
-            Renseignez les informations du modèle d'attestation.
-          </SheetDescription>
+          <SheetTitle>{isEdit ? "Modifier l'attestation" : 'Ajouter une attestation'}</SheetTitle>
+          <SheetDescription>Renseignez les informations du modèle d'attestation.</SheetDescription>
         </SheetHeader>
         <CertificateForm
           form={formState.form}
@@ -183,8 +134,7 @@ function AdminCertificateFormDrawerBase({
           isEdit={formState.isEdit}
           handleClose={formState.handleClose}
           onSubmit={formState.onSubmit}
-          extraFields={tenantField}
-          toolbarExtras={certificateToolbarExtras}
+          toolbarExtras={toolbarExtras}
         />
       </SheetContent>
     </Sheet>
@@ -192,3 +142,152 @@ function AdminCertificateFormDrawerBase({
 }
 
 export const AdminCertificateFormDrawer = memo(AdminCertificateFormDrawerBase);
+
+// const updateSchema = z.object(baseSchema);
+
+// type FormValues = z.infer<typeof createSchema>;
+
+// const CREATE_DEFAULTS: FormValues = {
+//   name: '',
+//   isActive: true,
+//   isDefaultTemplate: false,
+//   body: '',
+//   tenantId: '',
+// };
+
+// export interface AdminCertificateFormDrawerProps {
+//   open: boolean;
+//   onClose: () => void;
+//   onSuccess?: () => void;
+//   certificate?: Certificate;
+//   tenants: Tenant[];
+// }
+
+// function AdminCertificateFormDrawerBase({
+//   open,
+//   onClose,
+//   onSuccess,
+//   certificate,
+//   tenants,
+// }: AdminCertificateFormDrawerProps) {
+//   const isEdit = !!certificate;
+
+//   const createMutation = useCreateCertificate();
+//   const updateMutation = useUpdateCertificate();
+//   const uploadMedia = useUploadCertificateMedia();
+
+//   const uploadFn = useCallback(
+//     async (file: File) => {
+//       const { data } = await uploadMedia.mutateAsync(file);
+//       return { mediaId: data.id };
+//     },
+//     [uploadMedia.mutateAsync],
+//   );
+
+//   const toolbarExtras = useMemo(
+//     () =>
+//       makeCertificateToolbarExtras({
+//         uploadMedia: uploadFn,
+//         apiPath: 'platform/template-variables',
+//       }),
+//     [uploadFn],
+//   );
+
+//   const schema = isEdit ? updateSchema : createSchema;
+
+//   const defaultValues = useMemo<FormValues>(() => {
+//     if (certificate) {
+//       return {
+//         name: certificate.name,
+//         isActive: certificate.isActive,
+//         isDefaultTemplate: certificate.isDefaultTemplate,
+//         body: certificate.body,
+//         tenantId: certificate.tenantId,
+//       };
+//     }
+//     return CREATE_DEFAULTS;
+//   }, [certificate]);
+
+//   const formState = useFormDrawer({
+//     open,
+//     onClose,
+//     onSuccess,
+//     entity: certificate,
+//     createMutation,
+//     updateMutation,
+//     schema,
+//     defaultValues,
+//     createDefaults: CREATE_DEFAULTS,
+//     buildCreatePayload: (values): CreateCertificatePayload => ({
+//       name: values.name,
+//       status: Boolean(values.isActive),
+//       setasdefault: Boolean(values.isDefaultTemplate),
+//       body: values.body,
+//       tenant_id: values.tenantId,
+//     }),
+//     buildUpdatePayload: (values, id): { id: string; data: UpdateCertificatePayload } => ({
+//       id,
+//       data: {
+//         name: values.name,
+//         status: Boolean(values.isActive),
+//         setasdefault: Boolean(values.isDefaultTemplate),
+//         body: values.body,
+//         tenant_id: values.tenantId,
+//       },
+//     }),
+//   });
+
+//   const tenantField = (
+//     <FieldRoot
+//       control={formState.form.control as Control<FieldValues>}
+//       name="tenantId"
+//       render={({ field }) => (
+//         <FieldGroup>
+//           <FieldLabel className="text-xs">Tenant *</FieldLabel>
+//           <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
+//             <FieldContent>
+//               <SelectTrigger size="default" aria-label="Tenant" className="w-full">
+//                 <SelectValue placeholder="Sélectionner un tenant" />
+//               </SelectTrigger>
+//             </FieldContent>
+//             <SelectContent>
+//               {tenants.map((t) => (
+//                 <SelectItem key={t.id} value={t.id}>
+//                   {t.name}
+//                 </SelectItem>
+//               ))}
+//             </SelectContent>
+//           </Select>
+//           <FieldError />
+//         </FieldGroup>
+//       )}
+//     />
+//   );
+
+//   return (
+//     <Sheet open={open} onOpenChange={(nextOpen) => !nextOpen && formState.handleClose()}>
+//       <SheetContent
+//         className="flex w-full flex-col gap-0 p-0 sm:max-w-2xl lg:max-w-4xl"
+//         showCloseButton={true}
+//         onInteractOutside={(e) => e.preventDefault()}
+//         onEscapeKeyDown={(e) => e.preventDefault()}
+//       >
+//         <SheetHeader className="border-b px-4 py-4">
+//           <SheetTitle>{isEdit ? "Modifier l'attestation" : 'Ajouter une attestation'}</SheetTitle>
+//           <SheetDescription>Renseignez les informations du modèle d'attestation.</SheetDescription>
+//         </SheetHeader>
+//         <CertificateForm
+//           form={formState.form}
+//           mutation={formState.mutation}
+//           isEdit={formState.isEdit}
+//           handleClose={formState.handleClose}
+//           onSubmit={formState.onSubmit}
+//           extraFields={tenantField}
+//           toolbarExtras={toolbarExtras}
+//         />
+//       </SheetContent>
+//     </Sheet>
+//   );
+// }
+
+// export const AdminCertificateFormDrawer = memo(AdminCertificateFormDrawerBase);

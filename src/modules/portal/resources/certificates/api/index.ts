@@ -1,30 +1,42 @@
-import { apiGet } from "@/shared/lib/apiClient";
-import type { Certificate } from "../types";
-
-interface CertificateListParams {
-  page?: number;
-  limit?: number;
-  q?: string;
-  sort_by?: string;
-  sort_order?: "asc" | "desc";
-}
+import { apiDelete, apiGet, apiPatch, apiPost, apiUpload } from '@/shared/lib/apiClient';
+import type {
+  Certificate,
+  CreateCertificatePayload,
+  PreviewCertificatePayload,
+  UpdateCertificatePayload,
+} from '../types';
 
 interface CertificateListResponse {
-  items?: Certificate[];
-  data?: Certificate[];
-  total?: number;
+  data?: Record<string, unknown>[];
+}
+
+interface CertificatePreviewResponse {
+  data: { body: string; resolved: boolean };
+}
+
+interface CertificateMediaResponse {
+  data: { id: string; mime_type: string; original_name: string };
 }
 
 export const portalCertificatesApi = {
-  list: (params: CertificateListParams) => {
-    const query = new URLSearchParams();
-    query.set("page", String(params.page ?? 1));
-    query.set("limit", String(params.limit ?? 25));
-    if (params.q) query.set("q", params.q);
-    if (params.sort_by) query.set("sort_by", params.sort_by);
-    if (params.sort_order) query.set("sort_order", params.sort_order);
-    return apiGet<CertificateListResponse>(`certificates?${query.toString()}`);
-  },
+  list: () => apiGet<CertificateListResponse>(`certificates`),
 
-  getById: (id: string) => apiGet<Certificate>(`certificates/${id}`),
+  getById: (id: string) => apiGet<{ data: Certificate }>(`certificates/${id}`),
+
+  create: (data: CreateCertificatePayload) =>
+    apiPost<{ data: Record<string, unknown> }>(`certificates`, data),
+
+  update: (id: string, data: UpdateCertificatePayload) =>
+    apiPatch<{ data: Record<string, unknown> }>(`certificates/${id}`, data),
+
+  remove: (id: string) => apiDelete(`certificates/${id}`),
+
+  preview: (id: string, payload: PreviewCertificatePayload) =>
+    apiPost<CertificatePreviewResponse>(`certificates/${id}/preview`, payload),
+
+  uploadMedia: (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return apiUpload<CertificateMediaResponse>(`certificates/media`, formData);
+  },
 };

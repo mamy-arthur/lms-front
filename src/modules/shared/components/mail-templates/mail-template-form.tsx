@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import { Loader2 } from "lucide-react";
-import type { ReactNode } from "react";
-import type { UseFormReturn } from "react-hook-form";
-import type { Editor } from "@tiptap/react";
-import { Button } from "@/components/ui/button";
+import { Loader2 } from 'lucide-react';
+import type { ReactNode } from 'react';
+import type { FieldValues, UseFormReturn } from 'react-hook-form';
+import type { Editor } from '@tiptap/react';
+import { Button } from '@/components/ui/button';
 import {
   Field,
   FieldContent,
@@ -12,25 +12,25 @@ import {
   FieldGroup,
   FieldLabel,
   FieldRoot,
-} from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
+} from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import type { MutationLike } from "@/shared/types/mutation";
-import { extractApiError } from "@/shared/utils/api-error";
-import { RichTextEditor } from "@modules/shared/components/tiptap/RichTextEditor";
+} from '@/components/ui/select';
+import type { MutationLike } from '@/shared/types/mutation';
+import { extractApiError } from '@/shared/utils/api-error';
+import { RichTextEditor } from '@modules/shared/components/tiptap/RichTextEditor';
 
 export interface MailTemplateFormProps {
-  form: UseFormReturn<any>;
+  form: UseFormReturn<FieldValues>;
   mutation: MutationLike;
   isEdit: boolean;
   handleClose: () => void;
-  onSubmit: (values: any) => void;
+  onSubmit: (values: FieldValues) => void;
   extraFields?: ReactNode;
   toolbarExtras?: (editor: Editor) => ReactNode;
 }
@@ -110,15 +110,11 @@ export function MailTemplateForm({
               <FieldGroup>
                 <FieldLabel className="text-xs">Statut *</FieldLabel>
                 <Select
-                  onValueChange={(v) => field.onChange(v === "true")}
+                  onValueChange={(v) => field.onChange(v === 'true')}
                   value={String(field.value)}
                 >
                   <FieldContent>
-                    <SelectTrigger
-                      size="default"
-                      aria-label="Statut"
-                      className="w-full"
-                    >
+                    <SelectTrigger size="default" aria-label="Statut" className="w-full">
                       <SelectValue placeholder="Sélectionner un statut" />
                     </SelectTrigger>
                   </FieldContent>
@@ -144,8 +140,9 @@ export function MailTemplateForm({
                 <FieldLabel className="text-xs">Corps *</FieldLabel>
                 <FieldContent>
                   <RichTextEditor
-                    value={field.value ?? ""}
+                    value={field.value ?? ''}
                     onChange={field.onChange}
+                    outputFormat="html"
                     placeholder="Rédigez le contenu du mail…"
                     toolbarExtras={toolbarExtras}
                   />
@@ -171,10 +168,8 @@ export function MailTemplateForm({
             disabled={mutation.isPending}
             className="bg-(--color-primary) hover:bg-primary/80 text-primary-foreground"
           >
-            {mutation.isPending && (
-              <Loader2 className="mr-2 size-4 animate-spin" />
-            )}
-            {isEdit ? "Enregistrer" : "Ajouter"}
+            {mutation.isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
+            {isEdit ? 'Enregistrer' : 'Ajouter'}
           </Button>
         </div>
       </form>

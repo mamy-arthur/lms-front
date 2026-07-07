@@ -1,16 +1,16 @@
-"use client";
+'use client';
 
-import { Plus } from "lucide-react";
-import { useMemo } from "react";
-import { Button } from "@/components/ui/button";
-import { MailTemplateSearch } from "@modules/shared/components/mail-templates";
-import { useAllTenantsQuery } from "@/modules/shared/hooks/useAllTenantsQuery";
-import { useModuleListController } from "@/modules/shared/hooks/useModuleListController";
-import { useMailTemplatesQuery } from "../hooks/useMailTemplatesQuery";
-import type { MailTemplate } from "../types";
-import { AdminMailTemplateFormDrawer } from "./_components/admin-mail-template-form-drawer";
-import { AdminMailTemplatesFilter } from "./_components/admin-mail-templates-filter";
-import { AdminMailTemplatesTable } from "./_components/admin-mail-templates-table";
+import { Plus } from 'lucide-react';
+import { useMemo } from 'react';
+import { Button } from '@/components/ui/button';
+import { MailTemplateSearch } from '@modules/shared/components/mail-templates';
+import { useAllTenantsQuery } from '@/modules/shared/hooks/useAllTenantsQuery';
+import { useModuleListController } from '@/modules/shared/hooks/useModuleListController';
+import { useMailTemplatesQuery } from '../hooks/useMailTemplatesQuery';
+import type { MailTemplate } from '../types';
+import { AdminMailTemplateFormDrawer } from './_components/admin-mail-template-form-drawer';
+import { AdminMailTemplatesFilter } from './_components/admin-mail-templates-filter';
+import { AdminMailTemplatesTable } from './_components/admin-mail-templates-table';
 
 export function MailTemplatesList() {
   const ctrl = useModuleListController<MailTemplate>({
@@ -88,7 +88,6 @@ export function MailTemplatesList() {
         onClose={ctrl.handleCloseDrawer}
         onSuccess={ctrl.handleSuccess}
         template={ctrl.editingModule as MailTemplate | undefined}
-        tenants={tenants}
       />
     </div>
   );

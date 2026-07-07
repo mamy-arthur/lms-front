@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useForm, type FieldValues } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { z } from 'zod';
@@ -23,6 +23,7 @@ export interface UseFormDrawerOptions {
 }
 
 export function useFormDrawer({
+  open,
   onClose,
   onSuccess,
   entity,
@@ -42,6 +43,14 @@ export function useFormDrawer({
     resolver: zodResolver(schema as any),
     defaultValues,
   });
+
+  // Réinitialise le formulaire avec les valeurs de l'entité à chaque ouverture ou changement d'entité
+  useEffect(() => {
+    if (open) {
+      form.reset(defaultValues);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, entity?.id]);
 
   const handleClose = useCallback(() => {
     form.reset(createDefaults);

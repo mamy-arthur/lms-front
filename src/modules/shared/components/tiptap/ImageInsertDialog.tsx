@@ -1,28 +1,27 @@
-"use client";
+'use client';
 
-import { useEffect, useRef, useState } from "react";
-import type { Editor } from "@tiptap/react";
-import { ImagePlus } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+import { useEffect, useRef, useState } from 'react';
+import { ImagePlus, Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from '@/components/ui/select';
 
-type Align = "left" | "center" | "right";
+type Align = 'left' | 'center' | 'right';
 
 interface ImageAttrs {
   src: string;
@@ -32,59 +31,97 @@ interface ImageAttrs {
   align: Align;
 }
 
+export interface ImageConfirmAttrs extends ImageAttrs {
+  mediaId?: string;
+}
+
 const DEFAULTS: ImageAttrs = {
-  src: "",
-  alt: "",
+  src: '',
+  alt: '',
   width: null,
   height: null,
-  align: "left",
+  align: 'left',
 };
 
 interface ImageInsertDialogProps {
   open: boolean;
   onClose: () => void;
-  onConfirm: (attrs: ImageAttrs) => void;
+  onConfirm: (attrs: ImageConfirmAttrs) => void;
+  /** Si fourni, les fichiers sélectionnés sont uploadés via cette fonction.
+   *  Retourne le mediaId à stocker en data-media-id. */
+  onFileUpload?: (file: File) => Promise<{ mediaId: string }>;
 }
 
 export function ImageInsertDialog({
   open,
   onClose,
   onConfirm,
+  onFileUpload,
 }: ImageInsertDialogProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [attrs, setAttrs] = useState<ImageAttrs>(DEFAULTS);
   const [autoSize, setAutoSize] = useState(true);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   // Reset à chaque ouverture
   useEffect(() => {
     if (open) {
       setAttrs(DEFAULTS);
       setAutoSize(true);
+      setPendingFile(null);
+      setIsUploading(false);
     }
   }, [open]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
+
+    if (onFileUpload) {
+      // Stocker le fichier + prévisualiser via blob URL (temporaire)
+      setPendingFile(file);
+      const blobUrl = URL.createObjectURL(file);
       setAttrs((prev) => ({
         ...prev,
-        src: reader.result as string,
+        src: blobUrl,
         alt: prev.alt || file.name,
       }));
-    };
-    reader.readAsDataURL(file);
-    e.target.value = "";
+    } else {
+      // Comportement par défaut : data URL base64
+      const reader = new FileReader();
+      reader.onload = () => {
+        setAttrs((prev) => ({
+          ...prev,
+          src: reader.result as string,
+          alt: prev.alt || file.name,
+        }));
+      };
+      reader.readAsDataURL(file);
+    }
+    e.target.value = '';
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (!attrs.src) return;
-    onConfirm({
+
+    const finalAttrs: ImageConfirmAttrs = {
       ...attrs,
       width: autoSize ? null : attrs.width,
       height: autoSize ? null : attrs.height,
-    });
+    };
+
+    if (pendingFile && onFileUpload) {
+      setIsUploading(true);
+      try {
+        const { mediaId } = await onFileUpload(pendingFile);
+        finalAttrs.mediaId = mediaId;
+      } finally {
+        setIsUploading(false);
+      }
+    }
+
+    onConfirm(finalAttrs);
     onClose();
   };
 
@@ -106,8 +143,8 @@ export function ImageInsertDialog({
               <Input
                 className="text-xs"
                 placeholder="https://…"
-                value={attrs.src.startsWith("data:") ? "" : attrs.src}
-                onChange={(e) => set("src", e.target.value)}
+                value={attrs.src.startsWith('data:') ? '' : attrs.src}
+                onChange={(e) => set('src', e.target.value)}
               />
               <input
                 ref={fileInputRef}
@@ -131,19 +168,15 @@ export function ImageInsertDialog({
 
           {/* Alt */}
           <div className="space-y-1">
-            <Label className="text-xs">
-              Décrire l'image pour ceux qui ne peuvent pas la voir
-            </Label>
+            <Label className="text-xs">Décrire l'image pour ceux qui ne peuvent pas la voir</Label>
             <textarea
               className="w-full resize-none rounded-md border bg-background px-3 py-2 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               rows={2}
               maxLength={125}
               value={attrs.alt}
-              onChange={(e) => set("alt", e.target.value)}
+              onChange={(e) => set('alt', e.target.value)}
             />
-            <p className="text-right text-[10px] text-muted-foreground">
-              {attrs.alt.length}/125
-            </p>
+            <p className="text-right text-[10px] text-muted-foreground">{attrs.alt.length}/125</p>
           </div>
 
           {/* Dimensions */}
@@ -156,10 +189,8 @@ export function ImageInsertDialog({
                 placeholder="100"
                 min={1}
                 disabled={autoSize}
-                value={attrs.width ?? ""}
-                onChange={(e) =>
-                  set("width", e.target.value ? Number(e.target.value) : null)
-                }
+                value={attrs.width ?? ''}
+                onChange={(e) => set('width', e.target.value ? Number(e.target.value) : null)}
               />
               <span className="text-xs text-muted-foreground">×</span>
               <Input
@@ -168,10 +199,8 @@ export function ImageInsertDialog({
                 placeholder="100"
                 min={1}
                 disabled={autoSize}
-                value={attrs.height ?? ""}
-                onChange={(e) =>
-                  set("height", e.target.value ? Number(e.target.value) : null)
-                }
+                value={attrs.height ?? ''}
+                onChange={(e) => set('height', e.target.value ? Number(e.target.value) : null)}
               />
               <div className="flex items-center gap-1.5">
                 <Checkbox
@@ -189,10 +218,7 @@ export function ImageInsertDialog({
           {/* Alignement */}
           <div className="flex items-center gap-3">
             <Label className="text-xs shrink-0">Alignement</Label>
-            <Select
-              value={attrs.align}
-              onValueChange={(v) => set("align", v as Align)}
-            >
+            <Select value={attrs.align} onValueChange={(v) => set('align', v as Align)}>
               <SelectTrigger className="w-32 text-xs" size="sm">
                 <SelectValue />
               </SelectTrigger>
@@ -213,13 +239,12 @@ export function ImageInsertDialog({
           {/* Preview */}
           {attrs.src && (
             <div className="flex justify-center rounded-md border bg-muted/30 p-3">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={attrs.src}
-                alt={attrs.alt || "Aperçu"}
+                alt={attrs.alt || 'Aperçu'}
                 style={{
-                  maxWidth: "100%",
-                  maxHeight: "160px",
+                  maxWidth: '100%',
+                  maxHeight: '160px',
                   width: !autoSize && attrs.width ? attrs.width : undefined,
                   height: !autoSize && attrs.height ? attrs.height : undefined,
                 }}
@@ -229,16 +254,23 @@ export function ImageInsertDialog({
         </div>
 
         <DialogFooter>
-          <Button type="button" variant="outline" size="sm" onClick={onClose}>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={onClose}
+            disabled={isUploading}
+          >
             Annuler
           </Button>
           <Button
             type="button"
             size="sm"
-            disabled={!attrs.src}
-            onClick={handleConfirm}
+            disabled={!attrs.src || isUploading}
+            onClick={() => void handleConfirm()}
             className="bg-(--color-primary) hover:bg-primary/80 text-primary-foreground"
           >
+            {isUploading && <Loader2 className="mr-2 size-3.5 animate-spin" />}
             Enregistrer l'image
           </Button>
         </DialogFooter>

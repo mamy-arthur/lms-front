@@ -1,16 +1,17 @@
-"use client";
+'use client';
 
-import { Plus } from "lucide-react";
-import { useMemo, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { CertificateSearch } from "@modules/shared/components/certificates";
-import { useAllTenantsQuery } from "@/modules/shared/hooks/useAllTenantsQuery";
-import { useModuleListController } from "@/modules/shared/hooks/useModuleListController";
-import { useCertificatesQuery } from "../hooks/useCertificatesQuery";
-import type { Certificate } from "../types";
-import { AdminCertificateFormDrawer } from "./_components/admin-certificate-form-drawer";
-import { AdminCertificatesFilter } from "./_components/admin-certificates-filter";
-import { AdminCertificatesTable } from "./_components/admin-certificates-table";
+import { Plus } from 'lucide-react';
+import { useMemo } from 'react';
+import { Button } from '@/components/ui/button';
+import { CertificateSearch } from '@modules/shared/components/certificates';
+import { useAllTenantsQuery } from '@/modules/shared/hooks/useAllTenantsQuery';
+import { useModuleListController } from '@/modules/shared/hooks/useModuleListController';
+import { useCertificatesQuery } from '../hooks/useCertificatesQuery';
+import { useDeleteCertificate } from '../hooks/useDeleteCertificate';
+import type { Certificate } from '../types';
+import { AdminCertificateFormDrawer } from './_components/admin-certificate-form-drawer';
+import { AdminCertificatesFilter } from './_components/admin-certificates-filter';
+import { AdminCertificatesTable } from './_components/admin-certificates-table';
 
 export function CertificatesList() {
   const ctrl = useModuleListController<Certificate>({
@@ -22,6 +23,7 @@ export function CertificatesList() {
   const tenants = tenantsData?.data ?? [];
 
   const { data, isLoading } = useCertificatesQuery(ctrl.params);
+  const deleteMutation = useDeleteCertificate();
 
   const tenantNames = useMemo(() => {
     const map: Record<string, string> = {};
@@ -79,7 +81,7 @@ export function CertificatesList() {
         onPageChange={ctrl.handlePageChange}
         onPageSizeChange={ctrl.handlePageSizeChange}
         onEdit={ctrl.handleEdit}
-        onDelete={() => {}}
+        onDelete={(cert) => deleteMutation.mutate(cert.id)}
         tenantNames={tenantNames}
       />
 
@@ -88,7 +90,6 @@ export function CertificatesList() {
         onClose={ctrl.handleCloseDrawer}
         onSuccess={ctrl.handleSuccess}
         certificate={ctrl.editingModule as Certificate | undefined}
-        tenants={tenants}
       />
     </div>
   );

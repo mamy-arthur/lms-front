@@ -1,15 +1,19 @@
-"use client";
+'use client';
 
-import { Award, CheckCircle2, XCircle } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { CertificateActions } from "@modules/shared/components/certificates";
+import { Award, CheckCircle2, XCircle } from 'lucide-react';
+import { useState } from 'react';
+import { Badge } from '@/components/ui/badge';
+import {
+  CertificateActions,
+  CertificatePreviewDialog,
+} from '@modules/shared/components/certificates';
 import {
   DataTable,
   type DataTableColumn,
   type DataTableSort,
-} from "@/shared/components/ui/DataTable";
-import { formatDate } from "@/shared/lib/date";
-import type { Certificate } from "../../types";
+} from '@/shared/components/ui/DataTable';
+import { formatDate } from '@/shared/lib/date';
+import type { Certificate } from '../../types';
 
 export type SortConfig = DataTableSort;
 
@@ -44,18 +48,17 @@ export function AdminCertificatesTable({
   onDelete,
   tenantNames,
 }: AdminCertificatesTableProps) {
+  const [previewCert, setPreviewCert] = useState<Certificate | null>(null);
   const columns: DataTableColumn<Certificate>[] = [
     {
-      key: "name",
-      label: "Nom",
+      key: 'name',
+      label: 'Nom',
       sortable: true,
-      render: (cert) => (
-        <span className="text-xs font-medium text-foreground">{cert.name}</span>
-      ),
+      render: (cert) => <span className="text-xs font-medium text-foreground">{cert.name}</span>,
     },
     {
-      key: "isActive",
-      label: "Statut",
+      key: 'isActive',
+      label: 'Statut',
       sortable: false,
       render: (cert) =>
         cert.isActive ? (
@@ -67,25 +70,19 @@ export function AdminCertificatesTable({
             Actif
           </Badge>
         ) : (
-          <Badge
-            variant="outline"
-            className="gap-1 border-rose-200 bg-rose-50 text-rose-700"
-          >
+          <Badge variant="outline" className="gap-1 border-rose-200 bg-rose-50 text-rose-700">
             <XCircle className="size-3" />
             Inactif
           </Badge>
         ),
     },
     {
-      key: "isDefaultTemplate",
-      label: "Modèle par défaut",
+      key: 'isDefaultTemplate',
+      label: 'Modèle par défaut',
       sortable: false,
       render: (cert) =>
         cert.isDefaultTemplate ? (
-          <Badge
-            variant="outline"
-            className="gap-1 border-blue-200 bg-blue-50 text-blue-700"
-          >
+          <Badge variant="outline" className="gap-1 border-blue-200 bg-blue-50 text-blue-700">
             <CheckCircle2 className="size-3" />
             Oui
           </Badge>
@@ -94,18 +91,18 @@ export function AdminCertificatesTable({
         ),
     },
     {
-      key: "tenantId",
-      label: "Tenant",
+      key: 'tenantId',
+      label: 'Tenant',
       sortable: true,
       render: (cert) => (
         <span className="text-xs text-muted-foreground">
-          {tenantNames[cert.tenantId] || cert.tenantId || "—"}
+          {tenantNames[cert.tenantId] || cert.tenantId || '—'}
         </span>
       ),
     },
     {
-      key: "updatedAt",
-      label: "Mis à jour",
+      key: 'updatedAt',
+      label: 'Mis à jour',
       sortable: true,
       render: (cert) => (
         <span className="text-xs text-muted-foreground tabular-nums">
@@ -114,12 +111,13 @@ export function AdminCertificatesTable({
       ),
     },
     {
-      key: "id",
-      label: "Actions",
+      key: 'id',
+      label: 'Actions',
       sortable: false,
       render: (cert) => (
         <CertificateActions
           certificateLabel={cert.name}
+          onPreview={() => setPreviewCert(cert)}
           onEdit={() => onEdit(cert)}
           onDelete={() => onDelete?.(cert)}
         />
@@ -128,24 +126,35 @@ export function AdminCertificatesTable({
   ];
 
   return (
-    <DataTable
-      data={certificates}
-      columns={columns}
-      isLoading={isLoading}
-      hasQuery={hasQuery}
-      page={page}
-      pageSize={pageSize}
-      total={total}
-      sort={sort}
-      onSort={onSort}
-      onPageChange={onPageChange}
-      onPageSizeChange={onPageSizeChange}
-      emptyState={{
-        icon: <Award className="size-8 text-muted-foreground" />,
-        title: "Aucune attestation",
-        description:
-          "Créez votre première attestation en cliquant sur « Nouvelle attestation ».",
-      }}
-    />
+    <>
+      <DataTable
+        data={certificates}
+        columns={columns}
+        isLoading={isLoading}
+        hasQuery={hasQuery}
+        page={page}
+        pageSize={pageSize}
+        total={total}
+        sort={sort}
+        onSort={onSort}
+        onPageChange={onPageChange}
+        onPageSizeChange={onPageSizeChange}
+        emptyState={{
+          icon: <Award className="size-8 text-muted-foreground" />,
+          title: 'Aucune attestation',
+          description:
+            'Créez votre première attestation en cliquant sur \u00ab Nouvelle attestation \u00bb.',
+        }}
+      />
+
+      {previewCert && (
+        <CertificatePreviewDialog
+          open={!!previewCert}
+          onClose={() => setPreviewCert(null)}
+          name={previewCert.name}
+          body={previewCert.body}
+        />
+      )}
+    </>
   );
 }

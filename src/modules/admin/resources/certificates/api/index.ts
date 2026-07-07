@@ -1,48 +1,42 @@
-import { apiDelete, apiGet, apiPost, apiPut } from "@/shared/lib/apiClient";
+import { apiDelete, apiGet, apiPatch, apiPost, apiUpload } from '@/shared/lib/apiClient';
 import type {
   Certificate,
   CreateCertificatePayload,
+  PreviewCertificatePayload,
   UpdateCertificatePayload,
-} from "../types";
-
-interface CertificateListParams {
-  page?: number;
-  limit?: number;
-  q?: string;
-  sort_by?: string;
-  sort_order?: "asc" | "desc";
-  tenant_id?: string;
-  status?: "active" | "inactive";
-}
+} from '../types';
 
 interface CertificateListResponse {
-  items?: Certificate[];
-  data?: Certificate[];
-  total?: number;
+  data?: Record<string, unknown>[];
+}
+
+interface CertificatePreviewResponse {
+  data: { body: string; resolved: boolean };
+}
+
+interface CertificateMediaResponse {
+  data: { id: string; mime_type: string; original_name: string };
 }
 
 export const adminCertificatesApi = {
-  list: (params: CertificateListParams) => {
-    const query = new URLSearchParams();
-    query.set("page", String(params.page ?? 1));
-    query.set("limit", String(params.limit ?? 25));
-    if (params.q) query.set("q", params.q);
-    if (params.sort_by) query.set("sort_by", params.sort_by);
-    if (params.sort_order) query.set("sort_order", params.sort_order);
-    if (params.tenant_id) query.set("tenant_id", params.tenant_id);
-    if (params.status) query.set("status", params.status);
-    return apiGet<CertificateListResponse>(
-      `admin/certificates?${query.toString()}`,
-    );
-  },
+  list: () => apiGet<CertificateListResponse>(`platform/certificates`),
 
-  getById: (id: string) => apiGet<Certificate>(`admin/certificates/${id}`),
+  getById: (id: string) => apiGet<{ data: Certificate }>(`platform/certificates/${id}`),
 
   create: (data: CreateCertificatePayload) =>
-    apiPost<{ data: Certificate }>("admin/certificates", data),
+    apiPost<{ data: Record<string, unknown> }>(`platform/certificates`, data),
 
   update: (id: string, data: UpdateCertificatePayload) =>
-    apiPut<{ data: Certificate }>(`admin/certificates/${id}`, data),
+    apiPatch<{ data: Record<string, unknown> }>(`platform/certificates/${id}`, data),
 
-  remove: (id: string) => apiDelete(`admin/certificates/${id}`),
+  remove: (id: string) => apiDelete(`platform/certificates/${id}`),
+
+  preview: (id: string, payload: PreviewCertificatePayload) =>
+    apiPost<CertificatePreviewResponse>(`platform/certificates/${id}/preview`, payload),
+
+  uploadMedia: (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return apiUpload<CertificateMediaResponse>(`platform/certificates/media`, formData);
+  },
 };

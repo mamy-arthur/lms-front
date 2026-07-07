@@ -11,43 +11,47 @@ export interface Certificate {
 
 export interface CreateCertificatePayload {
   name: string;
-  is_active?: boolean;
-  is_default_template?: boolean;
-  body?: string;
+  status: boolean;
+  setasdefault: boolean;
+  body: string;
   tenant_id: string;
 }
 
 export interface UpdateCertificatePayload {
   name?: string;
-  is_active?: boolean;
-  is_default_template?: boolean;
+  status?: boolean;
+  setasdefault?: boolean;
   body?: string;
   tenant_id?: string;
+}
+
+export interface PreviewCertificatePayload {
+  resolve_variables?: boolean;
+  user_id?: string | null;
+  course_id?: string | null;
 }
 
 export interface CertificateSearchParams {
   q?: string;
   tenant_id?: string;
-  status?: "active" | "inactive";
+  status?: 'active' | 'inactive';
   sort_by?: string;
-  sort_dir?: "asc" | "desc";
+  sort_dir?: 'asc' | 'desc';
   page?: number;
   page_size?: number;
 }
 
-export function normalizeCertificate(
-  raw: Record<string, unknown>,
-): Certificate {
+export function normalizeCertificate(raw: Record<string, unknown>): Certificate {
   return {
-    id: String(raw.id ?? raw._id ?? ""),
-    name: String(raw.name ?? ""),
-    isActive: Boolean(raw.isActive ?? raw.is_active ?? false),
+    id: String(raw.id ?? raw._id ?? ''),
+    name: String(raw.name ?? ''),
+    isActive: Boolean(raw.isActive ?? raw.is_active ?? raw.status ?? false),
     isDefaultTemplate: Boolean(
-      raw.isDefaultTemplate ?? raw.is_default_template ?? false,
+      raw.isDefaultTemplate ?? raw.is_default_template ?? raw.setasdefault ?? false,
     ),
-    body: String(raw.body ?? ""),
-    tenantId: String(raw.tenantId ?? raw.tenant_id ?? ""),
-    createdAt: String(raw.createdAt ?? raw.created_at ?? ""),
-    updatedAt: String(raw.updatedAt ?? raw.updated_at ?? ""),
+    body: String(raw.body ?? ''),
+    tenantId: String(raw.tenantId ?? raw.tenant_id ?? ''),
+    createdAt: String(raw.createdAt ?? raw.created_at ?? ''),
+    updatedAt: String(raw.updatedAt ?? raw.updated_at ?? ''),
   };
 }

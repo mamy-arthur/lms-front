@@ -1,57 +1,17 @@
+import { useState, useEffect, type ReactNode } from 'react';
 import { useEditor, useEditorState, EditorContent, type Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
+import Image from '@tiptap/extension-image';
 import Placeholder from '@tiptap/extension-placeholder';
-import { Markdown } from 'tiptap-markdown';
-import { useEffect, useState, type ReactNode } from "react";
-import {
-  useEditor,
-  useEditorState,
-  EditorContent,
-  type Editor,
-} from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
-import Link from "@tiptap/extension-link";
-import Image from "@tiptap/extension-image";
-import Placeholder from "@tiptap/extension-placeholder";
 import {
   Dialog,
   DialogContent,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-
-const ALIGN_STYLES: Record<string, string> = {
-  left: "float: left; margin: 0 1em 0.5em 0;",
-  center: "display: block; margin: 0 auto 0.5em; clear: both;",
-  right: "float: right; margin: 0 0 0.5em 1em;",
-};
-
-const ExtendedImage = Image.extend({
-  addAttributes() {
-    return {
-      ...this.parent?.(),
-      width: {
-        default: null,
-        renderHTML: (attrs) =>
-          attrs.width ? { width: String(attrs.width) } : {},
-      },
-      height: {
-        default: null,
-        renderHTML: (attrs) =>
-          attrs.height ? { height: String(attrs.height) } : {},
-      },
-      align: {
-        default: "left",
-        renderHTML: (attrs) => ({
-          style: ALIGN_STYLES[attrs.align as string] ?? ALIGN_STYLES.left,
-        }),
-      },
-    };
-  },
-});
-import { Markdown } from "tiptap-markdown";
+} from '@/components/ui/dialog';
+import { Markdown } from 'tiptap-markdown';
 import {
   Bold,
   Italic,
@@ -70,24 +30,6 @@ import {
   Minus,
   Maximize2,
   Minimize2,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-  Bold,
-  Italic,
-  Strikethrough,
-  Code,
-  Heading1,
-  Heading2,
-  Heading3,
-  List,
-  ListOrdered,
-  Quote,
-  Link as LinkIcon,
-  Unlink,
-  Undo,
-  Redo,
-  Minus,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -99,13 +41,60 @@ declare module '@tiptap/core' {
     };
   }
 }
+const ALIGN_STYLES: Record<string, string> = {
+  left: 'float: left; margin: 0 1em 0.5em 0;',
+  center: 'display: block; margin: 0 auto 0.5em; clear: both;',
+  right: 'float: right; margin: 0 0 0.5em 1em;',
+};
+
+const ExtendedImage = Image.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      width: {
+        default: null,
+        parseHTML: (element: HTMLElement) => element.getAttribute('width') ?? null,
+        renderHTML: (attrs) => (attrs.width ? { width: String(attrs.width) } : {}),
+      },
+      height: {
+        default: null,
+        parseHTML: (element: HTMLElement) => element.getAttribute('height') ?? null,
+        renderHTML: (attrs) => (attrs.height ? { height: String(attrs.height) } : {}),
+      },
+      align: {
+        default: 'left',
+        parseHTML: (element: HTMLElement) => {
+          const style = element.getAttribute('style') ?? '';
+          if (style.includes('float: right') || style.includes('float:right')) return 'right';
+          if (style.includes('margin: 0 auto') || style.includes('margin:0 auto')) return 'center';
+          return 'left';
+        },
+        renderHTML: (attrs) => ({
+          style: ALIGN_STYLES[attrs.align as string] ?? ALIGN_STYLES.left,
+        }),
+      },
+      dataMediaId: {
+        default: null,
+        parseHTML: (element: HTMLElement) => element.getAttribute('data-media-id') ?? null,
+        renderHTML: (attrs: Record<string, unknown>) =>
+          attrs.dataMediaId ? { 'data-media-id': String(attrs.dataMediaId) } : {},
+      },
+    };
+  },
+});
 
 type Props = {
   value: string;
-  onChange: (markdown: string) => void;
+  onChange: (value: string) => void;
   placeholder?: string;
   className?: string;
   expandable?: boolean;
+  /**
+   * Format de sortie émis dans `onChange`.
+   * - `'markdown'` (défaut) : texte Markdown
+   * - `'html'` : HTML brut (pour attestations et templates mail)
+   */
+  outputFormat?: 'markdown' | 'html';
   /** Boutons optionnels ajoutés à la fin de la toolbar. Reçoit l'instance editor. */
   toolbarExtras?: (editor: Editor) => ReactNode;
 };
@@ -155,8 +144,8 @@ function Toolbar({
   onMinimize?: () => void;
 }) {
   const setLink = () => {
-    const previousUrl = editor.getAttributes("link").href as string | undefined;
-    const url = window.prompt("URL du lien", previousUrl ?? "");
+    const previousUrl = editor.getAttributes('link').href as string | undefined;
+    const url = window.prompt('URL du lien', previousUrl ?? '');
 
     if (url === null) return;
 
@@ -338,10 +327,11 @@ export function RichTextEditor({
   placeholder,
   className,
   expandable = true,
+  outputFormat = 'markdown',
   toolbarExtras,
 }: Props) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [expandedContent, setExpandedContent] = useState("");
+  const [expandedContent, setExpandedContent] = useState('');
 
   const editor = useEditor({
     extensions: [
@@ -355,10 +345,10 @@ export function RichTextEditor({
         allowBase64: true,
       }),
       Placeholder.configure({
-        placeholder: placeholder ?? "Décrivez le cours…",
+        placeholder: placeholder ?? 'Décrivez le cours…',
       }),
       Markdown.configure({
-        html: false,
+        html: outputFormat === 'html',
         tightLists: true,
         transformPastedText: true,
       }),
@@ -367,28 +357,42 @@ export function RichTextEditor({
     editorProps: {
       attributes: {
         class: cn(
-          "min-h-32 w-full rounded-b-md border bg-background px-3 py-2 text-sm",
-          "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
-          "prose prose-sm max-w-none dark:prose-invert",
-          "[&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_h1]:mb-2 [&_h1]:mt-3 [&_h2]:mb-2 [&_h2]:mt-3 [&_h3]:mb-1 [&_h3]:mt-2",
-          "[&_blockquote]:border-l-2 [&_blockquote]:border-muted-foreground/30 [&_blockquote]:pl-3 [&_blockquote]:italic",
-          "[&_code]:rounded [&_code]:bg-muted [&_code]:px-1 [&_code]:py-0.5 [&_code]:text-xs",
-          "[&_pre]:rounded [&_pre]:bg-muted [&_pre]:p-2 [&_pre]:text-xs",
-          "[&_a]:text-primary [&_a]:underline",
+          'min-h-32 w-full rounded-b-md border bg-background px-3 py-2 text-sm',
+          'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
+          'prose prose-sm max-w-none dark:prose-invert',
+          '[&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_h1]:mb-2 [&_h1]:mt-3 [&_h2]:mb-2 [&_h2]:mt-3 [&_h3]:mb-1 [&_h3]:mt-2',
+          '[&_blockquote]:border-l-2 [&_blockquote]:border-muted-foreground/30 [&_blockquote]:pl-3 [&_blockquote]:italic',
+          '[&_code]:rounded [&_code]:bg-muted [&_code]:px-1 [&_code]:py-0.5 [&_code]:text-xs',
+          '[&_pre]:rounded [&_pre]:bg-muted [&_pre]:p-2 [&_pre]:text-xs',
+          '[&_a]:text-primary [&_a]:underline',
           // overflow-hidden crée un BFC : le texte ne passe pas sous le float
-          "[&_p]:overflow-hidden",
+          '[&_p]:overflow-hidden',
         ),
       },
     },
     onUpdate: ({ editor }) => {
-      onChange(editor.storage.markdown.getMarkdown());
+      onChange(outputFormat === 'html' ? editor.getHTML() : editor.storage.markdown.getMarkdown());
     },
   });
+
+  // Synchronise les changements externes de `value` vers l'éditeur
+  // (ex : form.reset lors de l'ouverture du drawer en mode édition)
+  useEffect(() => {
+    if (!editor) return;
+    const current =
+      outputFormat === 'html' ? editor.getHTML() : editor.storage.markdown.getMarkdown();
+    if (current !== value) {
+      editor.commands.setContent(value ?? '', { emitUpdate: false });
+    }
+    // biome-ignore lint/correctness/useExhaustiveDependencies: outputFormat is a stable prop
+  }, [value, editor]);
 
   if (!editor) return null;
 
   const handleExpand = () => {
-    setExpandedContent(editor.storage.markdown.getMarkdown());
+    setExpandedContent(
+      outputFormat === 'html' ? editor.getHTML() : editor.storage.markdown.getMarkdown(),
+    );
     setIsExpanded(true);
   };
 
@@ -404,7 +408,7 @@ export function RichTextEditor({
 
   return (
     <>
-      <div className={cn("flex flex-col", className)}>
+      <div className={cn('flex flex-col', className)}>
         <Toolbar
           editor={editor}
           extras={toolbarExtras}
@@ -413,19 +417,14 @@ export function RichTextEditor({
         <EditorContent editor={editor} />
       </div>
 
-      <Dialog
-        open={isExpanded}
-        onOpenChange={(open) => !open && handleCancel()}
-      >
+      <Dialog open={isExpanded} onOpenChange={(open) => !open && handleCancel()}>
         <DialogContent
           className="flex flex-col gap-0 p-0 w-full max-w-[calc(100%-2rem)] sm:max-w-2xl md:max-w-4xl lg:max-w-6xl h-[90vh] sm:h-[85vh]"
           onInteractOutside={(e) => e.preventDefault()}
           onEscapeKeyDown={(e) => e.preventDefault()}
         >
           <DialogHeader className="border-b px-4 py-3 shrink-0">
-            <DialogTitle className="text-sm font-medium">
-              Édition
-            </DialogTitle>
+            <DialogTitle className="text-sm font-medium">Édition</DialogTitle>
           </DialogHeader>
 
           <div className="flex-1 overflow-y-auto p-4">
@@ -434,6 +433,7 @@ export function RichTextEditor({
               onChange={setExpandedContent}
               placeholder={placeholder}
               expandable={false}
+              outputFormat={outputFormat}
               toolbarExtras={toolbarExtras}
               className="h-full [&_.tiptap]:min-h-[55vh]"
             />

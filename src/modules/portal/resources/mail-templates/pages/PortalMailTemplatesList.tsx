@@ -1,23 +1,19 @@
-"use client";
+'use client';
 
-import { Plus } from "lucide-react";
-import { useMemo } from "react";
-import { Button } from "@/components/ui/button";
-import { MailTemplateSearch } from "@modules/shared/components/mail-templates";
-import { useAllTenantsQuery } from "@/modules/shared/hooks/useAllTenantsQuery";
-import { useModuleListController } from "@/modules/shared/hooks/useModuleListController";
-import { usePortalMailTemplatesQuery } from "../hooks/usePortalMailTemplatesQuery";
-import type { MailTemplate } from "../types";
-import { PortalMailTemplateFormDrawer } from "./_components/portal-mail-template-form-drawer";
-import { PortalMailTemplatesTable } from "./_components/portal-mail-templates-table";
+import { Plus } from 'lucide-react';
+
+import { Button } from '@/components/ui/button';
+import { MailTemplateSearch } from '@modules/shared/components/mail-templates';
+import { useModuleListController } from '@/modules/shared/hooks/useModuleListController';
+import { usePortalMailTemplatesQuery } from '../hooks/usePortalMailTemplatesQuery';
+import type { MailTemplate } from '../types';
+import { PortalMailTemplateFormDrawer } from './_components/portal-mail-template-form-drawer';
+import { PortalMailTemplatesTable } from './_components/portal-mail-templates-table';
 
 export function PortalMailTemplatesList() {
   const ctrl = useModuleListController<MailTemplate>({
     defaultPageSize: 25,
   });
-
-  const { data: tenantsData } = useAllTenantsQuery();
-  const tenants = tenantsData?.data ?? [];
 
   const { data, isLoading } = usePortalMailTemplatesQuery(ctrl.params);
 
@@ -69,7 +65,6 @@ export function PortalMailTemplatesList() {
         onClose={ctrl.handleCloseDrawer}
         onSuccess={ctrl.handleSuccess}
         template={ctrl.editingModule as MailTemplate | undefined}
-        tenants={tenants}
       />
     </div>
   );
