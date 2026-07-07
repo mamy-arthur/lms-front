@@ -1,2 +1,2 @@
-export { PortalMailTemplatesList } from "./pages/PortalMailTemplatesList";
-export type { MailTemplate } from "./types";
+export { PortalMailTemplatesList } from './pages/PortalMailTemplatesList';
+export type { MailTemplate } from './types';

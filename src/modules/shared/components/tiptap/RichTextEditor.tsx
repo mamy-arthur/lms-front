@@ -434,7 +434,7 @@ export function RichTextEditor({
       setSourceMode(true);
     } else {
       // Revient en mode WYSIWYG : parse le HTML de la textarea
-      editor.commands.setContent(sourceValue, false);
+      editor.commands.setContent(sourceValue, { emitUpdate: false });
       onChange(editor.getHTML());
       setSourceMode(false);
     }

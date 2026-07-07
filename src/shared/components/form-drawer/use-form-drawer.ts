@@ -49,7 +49,6 @@ export function useFormDrawer({
     if (open) {
       form.reset(defaultValues);
     }
-    
   }, [open, entity?.id]);
 
   const handleClose = useCallback(() => {

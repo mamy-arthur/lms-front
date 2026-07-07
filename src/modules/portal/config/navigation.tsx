@@ -1,10 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import {
-  LayoutDashboard,
-  GraduationCap,
-  Users,
-  LayoutTemplate,
-} from 'lucide-react';
+import { LayoutDashboard, GraduationCap, Users, LayoutTemplate } from 'lucide-react';
 import { ROUTES } from '@/shared/constants/routes';
 
 export interface PortalNavItem {
@@ -18,13 +13,13 @@ export interface PortalNavItem {
 export const PORTAL_NAV: PortalNavItem[] = [
   {
     url: ROUTES.portal.dashboard,
-    title: "Tableau de bord",
+    title: 'Tableau de bord',
     icon: LayoutDashboard,
-    items: [{ title: "Tableau de bord", url: ROUTES.portal.dashboard }],
+    items: [{ title: 'Tableau de bord', url: ROUTES.portal.dashboard }],
   },
   {
-    url: "#",
-    title: "Mes formations",
+    url: '#',
+    title: 'Mes formations',
     icon: GraduationCap,
     items: [
       // { title: "Cours", url: ROUTES.portal.courses },
@@ -36,11 +31,11 @@ export const PORTAL_NAV: PortalNavItem[] = [
   },
   {
     url: ROUTES.portal.certificate,
-    title: "Templates",
+    title: 'Templates',
     icon: LayoutTemplate,
     items: [
-      { title: "Attestations", url: ROUTES.portal.certificate },
-      { title: "Templates mail", url: ROUTES.portal.mailTemplates },
+      { title: 'Attestations', url: ROUTES.portal.certificate },
+      { title: 'Templates mail', url: ROUTES.portal.mailTemplates },
     ],
   },
   // {
@@ -51,9 +46,9 @@ export const PORTAL_NAV: PortalNavItem[] = [
   // },
   {
     url: ROUTES.portal.users,
-    title: "Utilisateurs",
+    title: 'Utilisateurs',
     icon: Users,
-    items: [{ title: "Utilisateurs", url: ROUTES.portal.users }],
+    items: [{ title: 'Utilisateurs', url: ROUTES.portal.users }],
   },
   // {
   //     url: ROUTES.portal.profile,

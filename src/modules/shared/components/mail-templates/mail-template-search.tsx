@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { Search } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { Search } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 
 export interface MailTemplateSearchProps {
   value: string;
@@ -9,11 +9,7 @@ export interface MailTemplateSearchProps {
   onSearch: () => void;
 }
 
-export function MailTemplateSearch({
-  value,
-  onChange,
-  onSearch,
-}: MailTemplateSearchProps) {
+export function MailTemplateSearch({ value, onChange, onSearch }: MailTemplateSearchProps) {
   return (
     <div className="relative w-full sm:max-w-sm">
       <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -23,7 +19,7 @@ export function MailTemplateSearch({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={(e) => {
-          if (e.key === "Enter") onSearch();
+          if (e.key === 'Enter') onSearch();
         }}
         className="pl-9"
       />

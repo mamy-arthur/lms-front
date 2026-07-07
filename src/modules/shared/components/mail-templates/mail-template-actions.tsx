@@ -1,14 +1,14 @@
-"use client";
+'use client';
 
-import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from '@/components/ui/dropdown-menu';
 
 export interface MailTemplateActionsProps {
   templateLabel: string;
@@ -16,11 +16,7 @@ export interface MailTemplateActionsProps {
   onDelete?: () => void;
 }
 
-export function MailTemplateActions({
-  templateLabel,
-  onEdit,
-  onDelete,
-}: MailTemplateActionsProps) {
+export function MailTemplateActions({ templateLabel, onEdit, onDelete }: MailTemplateActionsProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>

@@ -50,9 +50,9 @@ export function MailTemplatesList() {
         />
         <div className="flex items-center gap-2 sm:ml-auto">
           <AdminMailTemplatesFilter
-            statusFilter={ctrl.draftCategory}
+            statusFilter={ctrl.draftCategory[0] ?? 'all'}
             tenantFilter={ctrl.draftTenant}
-            onStatusFilterChange={ctrl.setDraftCategory}
+            onStatusFilterChange={(value) => ctrl.setDraftCategory([value])}
             onTenantFilterChange={ctrl.setDraftTenant}
             onSearch={ctrl.handleSearch}
             tenants={tenants}

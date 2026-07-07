@@ -26,12 +26,13 @@ export function canAccess(permissions: PermissionSet | null, rule?: AccessRule):
 }
 
 export const ACCESS = {
-    users: { anyRoles: [Role.SUPER_ADMIN, Role.CLIENT_MANAGER, Role.EDITOR] },
-    courses: { anyRoles: [Role.EDITOR] },
-    quizzes: { anyRoles: [Role.EDITOR] },
-    modules: { anyRoles: [Role.EDITOR] },
-    trainees: { anyRoles: [Role.CLIENT_MANAGER] },
-    reports: { anyRoles: [Role.CLIENT_MANAGER] },
+  users: { anyRoles: [Role.SUPER_ADMIN, Role.CLIENT_MANAGER, Role.EDITOR] },
+  courses: { anyRoles: [Role.EDITOR] },
+  quizzes: { anyRoles: [Role.EDITOR] },
+  modules: { anyRoles: [Role.EDITOR] },
+  trainees: { anyRoles: [Role.CLIENT_MANAGER] },
+  reports: { anyRoles: [Role.CLIENT_MANAGER] },
   store: { anyRoles: [Role.CLIENT_MANAGER, Role.EDITOR] },
-    tenants: { superAdminOnly: true },
+  tenants: { superAdminOnly: true },
+  templates: { anyRoles: [Role.EDITOR, Role.SUPER_ADMIN, Role.CLIENT_MANAGER] },
 } as const satisfies Record<string, AccessRule>;

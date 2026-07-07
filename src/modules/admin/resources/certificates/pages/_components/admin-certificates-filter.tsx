@@ -1,21 +1,17 @@
-"use client";
+'use client';
 
-import { Filter, Search } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Filter, Search } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import type { Tenant } from "@/shared/types/tenant.types";
+} from '@/components/ui/select';
+import type { Tenant } from '@/shared/types/tenant.types';
 
 interface AdminCertificatesFilterProps {
   statusFilter: string;
