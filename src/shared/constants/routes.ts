@@ -19,6 +19,7 @@ export const ROUTES = {
     tenants: '/admin/tenants',
     reports: '/admin/reports',
     programs: '/admin/programs',
+    store: '/admin/store',
     quizQuestions: (quizId: string) => `/admin/quizzes/${quizId}/questions`,
     certificate: "/admin/certificates",
     mailTemplates: "/admin/mail-templates",

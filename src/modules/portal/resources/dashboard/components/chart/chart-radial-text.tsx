@@ -1,19 +1,18 @@
 'use client';
 
+import { useMemo, useState } from 'react';
 import { Label, PolarGrid, PolarRadiusAxis, RadialBar, RadialBarChart } from 'recharts';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartContainer, type ChartConfig } from '@/components/ui/chart';
-
-const progress = 42;
-
-const chartData = [
-  {
-    name: 'progress',
-    value: progress,
-    fill: 'var(--color-primary)',
-  },
-];
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { STUDENTS } from '../../lib/students-data';
 
 const chartConfig = {
   progress: {
@@ -23,11 +22,46 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 export function ProgressCard() {
+  const [courseFilter, setCourseFilter] = useState<string>('all');
+
+  const courses = useMemo(() => Array.from(new Set(STUDENTS.map((s) => s.course))).sort(), []);
+
+  const progress = useMemo(() => {
+    const subset =
+      courseFilter === 'all' ? STUDENTS : STUDENTS.filter((s) => s.course === courseFilter);
+    if (subset.length === 0) return 0;
+    const avg = subset.reduce((sum, s) => sum + s.progress, 0) / subset.length;
+    return Math.round(avg);
+  }, [courseFilter]);
+
+  const chartData = [
+    {
+      name: 'progress',
+      value: progress,
+      fill: 'var(--color-primary)',
+    },
+  ];
+
   return (
     <Card>
-      <CardHeader className="items-center pb-0">
-        <CardTitle>Progression global</CardTitle>
-        <CardDescription>Progression moyenne sur l'ensemble des formations.</CardDescription>
+      <CardHeader className="flex justify-between gap-2 items-center pb-0">
+        <div>
+          <CardTitle>Progression global</CardTitle>
+          <CardDescription>Progression moyenne sur l’ensemble des formations.</CardDescription>
+        </div>
+        <Select value={courseFilter} onValueChange={setCourseFilter}>
+          <SelectTrigger className="mt-2 h-8 w-50" aria-label="Filtrer par parcours">
+            <SelectValue placeholder="Tous les parcours" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tous les parcours</SelectItem>
+            {courses.map((c) => (
+              <SelectItem key={c} value={c}>
+                {c}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </CardHeader>
       <CardContent className="pt-6">
         <div className="flex flex-col items-center gap-4">

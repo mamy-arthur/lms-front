@@ -38,7 +38,7 @@ export function OnlineStudentsCard() {
         {onlineStudents.map((student) => (
           <div
             key={student.id}
-            className="flex items-center justify-between rounded-lg bg-gray-100 p-2"
+            className="flex items-center justify-between rounded-lg bg-gray-100/40 p-2"
           >
             <div className="flex items-center gap-3">
               <Avatar className="h-6 w-6">

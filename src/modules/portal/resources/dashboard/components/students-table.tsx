@@ -5,6 +5,13 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   Table,
   TableBody,
   TableCell,
@@ -16,6 +23,7 @@ import {
 import { type Student, type StudentStatus } from '../lib/students-data';
 import { StudentsTableSkeleton } from './students-table-skeleton';
 import { ProgressVariant } from '@/shared/components/ui/progress/Progress';
+import { DeadlineBadge } from './DeadlineBadge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { DatePickerWithRange } from '@/shared/components/ui/date/DatePickerRange';
 
@@ -30,6 +38,12 @@ const PAGE_SIZE = 5;
 export function StudentsTable({ students, loading, onSelect }: StudentsTableProps) {
   const [query, setQuery] = useState('');
   const [statusFilter] = useState<StudentStatus | 'all'>('all');
+  const [courseFilter, setCourseFilter] = useState<string>('all');
+
+  const courses = useMemo(
+    () => Array.from(new Set(students.map((s) => s.course))).sort(),
+    [students],
+  );
 
   const filtered = useMemo(() => {
     return students.filter((s) => {
@@ -38,9 +52,10 @@ export function StudentsTable({ students, loading, onSelect }: StudentsTableProp
         s.name.toLowerCase().includes(query.toLowerCase()) ||
         s.course.toLowerCase().includes(query.toLowerCase());
       const matchesStatus = statusFilter === 'all' || s.status === statusFilter;
-      return matchesQuery && matchesStatus;
+      const matchesCourse = courseFilter === 'all' || s.course === courseFilter;
+      return matchesQuery && matchesStatus && matchesCourse;
     });
-  }, [students, query, statusFilter]);
+  }, [students, query, statusFilter, courseFilter]);
 
   // const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   // const currentPage = Math.min(page, totalPages);
@@ -50,11 +65,11 @@ export function StudentsTable({ students, loading, onSelect }: StudentsTableProp
     <Card className="flex flex-col">
       <CardHeader className="items-center pb-0 flex justify-between">
         <div>
-          <CardTitle>Suivi de la progression des étudiants par formation</CardTitle>
+          <CardTitle>Progression des étudiants par formation</CardTitle>
           <CardDescription>January - June 2024</CardDescription>
         </div>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="relative w-full sm:max-w-xs">
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+          <div className="relative w-full sm:max-w-50">
             <Search
               className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
               aria-hidden
@@ -65,24 +80,37 @@ export function StudentsTable({ students, loading, onSelect }: StudentsTableProp
                 setQuery(e.target.value);
               }}
               placeholder="Rechercher un étudiant…"
-              className="h-8  pl-8"
+              className="h-7 pl-8"
               aria-label="Rechercher un étudiant"
             />
           </div>
+          <Select value={courseFilter} onValueChange={setCourseFilter}>
+            <SelectTrigger className="h-8 w-full sm:w-48" aria-label="Filtrer par parcours">
+              <SelectValue placeholder="Tous les parcours" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tous les parcours</SelectItem>
+              {courses.map((c) => (
+                <SelectItem key={c} value={c}>
+                  {c}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <DatePickerWithRange />
         </div>
       </CardHeader>
-
       <CardContent className="flex-1 pb-0">
         <div className="space-y-4">
           <div className="overflow-hidden rounded-2xl border border-border/60 bg-card">
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  <TableHead className="w-[28%]">Étudiant</TableHead>
-                  <TableHead>Parcours</TableHead>
-                  <TableHead className="w-[20%]">Progression</TableHead>
-                  <TableHead className="text-right"></TableHead>
+                  <TableHead className="w-[20%]">Étudiant</TableHead>
+                  <TableHead className="w-[20%]">Parcours</TableHead>
+                  <TableHead className="w-[25%]">Échéance</TableHead>
+                  <TableHead className="w-[25%]">Progression</TableHead>
+                  <TableHead className="text-right"> </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -132,6 +160,18 @@ export function StudentsTable({ students, loading, onSelect }: StudentsTableProp
                         </div>
                       </TableCell>
                       <TableCell className="text-muted-foreground">{s.course}</TableCell>
+                      <TableCell className="text-xs tabular-nums text-muted-foreground">
+                        <div className="flex gap-5">
+                          {s.deadline
+                            ? new Date(s.deadline + 'T00:00:00').toLocaleDateString('fr-FR', {
+                                day: '2-digit',
+                                month: 'short',
+                                year: 'numeric',
+                              })
+                            : '—'}
+                          <DeadlineBadge deadline={s.deadline} progress={s.progress} />
+                        </div>
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-3">
                           <ProgressVariant

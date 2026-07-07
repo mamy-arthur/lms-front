@@ -1,9 +1,9 @@
 import { Badge } from '@/components/ui/badge';
-import { Formation } from './programs-table';
-
 import { CheckCircle2, FileText, Archive } from 'lucide-react';
 
-export function StatusBadge({ status }: { status: Formation['status'] }) {
+type Status = 'Publié' | 'Brouillon' | 'Archivé';
+
+export function StatusBadge({ status }: { status: Status }) {
   switch (status) {
     case 'Publié':
       return (

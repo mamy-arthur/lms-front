@@ -6,6 +6,7 @@ import {
   BarChart2,
   Building2,
   LucideIcon,
+  Store,
   LayoutTemplate,
 } from "lucide-react";
 import { ROUTES } from "@/shared/constants/routes";
@@ -25,14 +26,21 @@ export const ADMIN_NAV: AdminNavItem[] = [
     url: ROUTES.admin.root,
     title: "Tableau de bord",
     icon: LayoutDashboard,
-    items: [{ title: "Tableau de bord", url: ROUTES.admin.root }],
+    items: [],
+  },
+  {
+    url: ROUTES.admin.store,
+    title: 'Boutique',
+    access: ACCESS.store,
+    icon: Store,
+    items: [],
   },
   {
     url: ROUTES.admin.users,
     title: "Utilisateurs",
     icon: Users,
     access: ACCESS.users,
-    items: [{ title: "Utilisateurs", url: ROUTES.admin.users }],
+    items: [],
   },
   {
     url: ROUTES.admin.courses,
