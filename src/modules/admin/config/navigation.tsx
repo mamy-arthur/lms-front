@@ -30,6 +30,7 @@ export const ADMIN_NAV: AdminNavItem[] = [
   {
     url: ROUTES.admin.store,
     title: 'Boutique',
+    access: ACCESS.store,
     icon: Store,
     items: [],
   },

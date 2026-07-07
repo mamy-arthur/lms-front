@@ -32,5 +32,6 @@ export const ACCESS = {
   modules: { anyRoles: [Role.EDITOR] },
   trainees: { anyRoles: [Role.CLIENT_MANAGER] },
   reports: { anyRoles: [Role.CLIENT_MANAGER] },
+  store: { anyRoles: [Role.CLIENT_MANAGER, Role.EDITOR] },
   tenants: { superAdminOnly: true },
 } as const satisfies Record<string, AccessRule>;

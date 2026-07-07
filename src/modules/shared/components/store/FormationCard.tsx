@@ -80,7 +80,9 @@ export function FormationCard({
         <div className="flex items-center gap-4 pb-1">
           <div className="flex items-center gap-1.5 text-blue-500">
             <BookOpen className="size-3 shrink-0" />
-            <span className="font-medium">{moduleCount} module{moduleCount !== 1 ? 's' : ''}</span>
+            <span className="font-medium">
+              {moduleCount} module{moduleCount !== 1 ? 's' : ''}
+            </span>
           </div>
           <div className="flex items-center gap-1.5 text-amber-600">
             <ClipboardList className="size-3 shrink-0" />
@@ -96,18 +98,20 @@ export function FormationCard({
           <span>Mis à jour le {formatDate(updatedAt)}</span>
         </div>
         <div className="flex items-center justify-between gap-1.5text-xs text-muted-foreground">
-          <div className='flex gap-1.5 items-center'>
+          <div className="flex gap-1.5 items-center">
             <Building2 className="size-3 shrink-0" />
             <span>
-                {enrolledCompanies} membre{enrolledCompanies !== 1 ? 's' : ''} inscrit
-                {enrolledCompanies !== 1 ? 's' : ''}
+              {enrolledCompanies} membre{enrolledCompanies !== 1 ? 's' : ''} inscrit
+              {enrolledCompanies !== 1 ? 's' : ''}
             </span>
           </div>
           <div>
             {isFree ? (
-              <span className='text-green-500 font-medium'>Gratuit</span>
+              <span className="text-green-500 font-medium">Gratuit</span>
             ) : (
-              <span className="bg-background/90 text-lg text-black font-medium">{formatPrice(price)}</span>
+              <span className="bg-background/90 text-lg text-black font-medium">
+                {formatPrice(price)}
+              </span>
             )}
           </div>
         </div>

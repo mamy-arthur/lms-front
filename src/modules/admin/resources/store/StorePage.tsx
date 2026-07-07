@@ -1,28 +1,15 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { Search, X } from 'lucide-react';
 import { FormationCard } from '@/modules/shared/components/store/FormationCard';
 import { MOCK_STORE_FORMATIONS, MOCK_STORE_CATEGORIES } from '@/shared/mocks/store.mock';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from '@/components/ui/pagination';
+import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
 
-const PAGE_SIZE = 8;
-const ALL_CATEGORIES = 'all';
+const PAGE_SIZE = 12;
 
 function FormationCardSkeleton() {
   return (
@@ -40,30 +27,42 @@ function FormationCardSkeleton() {
 }
 
 export function StorePage() {
-  const [selectedCategory, setSelectedCategory] = useState<string>(ALL_CATEGORIES);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [search, setSearch] = useState('');
+  const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [isLoading] = useState(false);
 
-  const filtered = useMemo(
-    () =>
-      selectedCategory === ALL_CATEGORIES
-        ? MOCK_STORE_FORMATIONS
-        : MOCK_STORE_FORMATIONS.filter((f) => f.categoryId === selectedCategory),
-    [selectedCategory],
-  );
+  const hasFilters = search.trim() !== '' || selectedCategories.size > 0;
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const safePage = Math.min(currentPage, totalPages);
-  const paginated = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return MOCK_STORE_FORMATIONS.filter((f) => {
+      const matchSearch = q === '' || f.title.toLowerCase().includes(q);
+      const matchCategory = selectedCategories.size === 0 || selectedCategories.has(f.categoryId);
+      return matchSearch && matchCategory;
+    });
+  }, [search, selectedCategories]);
 
-  const handleCategoryChange = (value: string) => {
-    setSelectedCategory(value);
-    setCurrentPage(1);
+  const visible = filtered.slice(0, visibleCount);
+  const hasMore = visibleCount < filtered.length;
+
+  const toggleCategory = (id: string) => {
+    setSelectedCategories((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+    setVisibleCount(PAGE_SIZE);
   };
 
   const handleReset = () => {
-    setSelectedCategory(ALL_CATEGORIES);
-    setCurrentPage(1);
+    setSearch('');
+    setSelectedCategories(new Set());
+    setVisibleCount(PAGE_SIZE);
   };
 
   return (
@@ -78,26 +77,49 @@ export function StorePage() {
       </header>
 
       {/* Filtres */}
-      <div className="mb-6 flex flex-wrap items-center gap-2">
-        <Select value={selectedCategory} onValueChange={handleCategoryChange}>
-          <SelectTrigger className="w-56">
-            <SelectValue placeholder="Toutes les catégories" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL_CATEGORIES}>Toutes les catégories</SelectItem>
-            {MOCK_STORE_CATEGORIES.map((cat) => (
-              <SelectItem key={cat.id} value={cat.id}>
-                {cat.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <div className="mb-6 flex flex-col gap-3">
+        {/* Barre de recherche */}
+        <div className="relative max-w-sm">
+          <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+          <Input
+            placeholder="Rechercher une formation..."
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setVisibleCount(PAGE_SIZE);
+            }}
+            className="pl-8"
+          />
+        </div>
 
-        {selectedCategory !== ALL_CATEGORIES && (
-          <Button variant="ghost" size="sm" onClick={handleReset}>
-            Réinitialiser
-          </Button>
-        )}
+        {/* Badges catégories */}
+        <div className="flex flex-wrap items-center gap-2">
+          {MOCK_STORE_CATEGORIES.map((cat) => {
+            const active = selectedCategories.has(cat.id);
+            return (
+              <button
+                key={cat.id}
+                type="button"
+                onClick={() => toggleCategory(cat.id)}
+                className={cn(
+                  'inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium transition-colors',
+                  active
+                    ? 'border-(--color-primary) bg-(--color-primary) text-white'
+                    : 'border-border bg-muted text-muted-foreground hover:border-primary/50 hover:text-foreground',
+                )}
+              >
+                {cat.name}
+              </button>
+            );
+          })}
+
+          {hasFilters && (
+            <Button variant="ghost" size="sm" onClick={handleReset} className="gap-1">
+              <X className="size-3" />
+              Réinitialiser
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Grille */}
@@ -107,66 +129,40 @@ export function StorePage() {
             <FormationCardSkeleton key={i} />
           ))}
         </div>
-      ) : paginated.length === 0 ? (
+      ) : visible.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 text-center text-muted-foreground">
-          <p className="text-sm">Aucune formation disponible pour cette catégorie.</p>
+          <p className="text-sm">Aucune formation ne correspond à votre recherche.</p>
           <Button variant="link" size="sm" onClick={handleReset} className="mt-2">
             Voir toutes les formations
           </Button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {paginated.map((formation) => (
-            <FormationCard
-              key={formation.id}
-              title={formation.title}
-              author={formation.author}
-              category={formation.category}
-              coverImage={formation.coverImage}
-              price={formation.price}
-              updatedAt={formation.updatedAt}
-              enrolledCompanies={formation.enrolledCompanies}
-              moduleCount={formation.moduleCount}
-              evaluationCount={formation.evaluationCount}
-            />
-          ))}
-        </div>
-      )}
+        <>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {visible.map((formation) => (
+              <FormationCard
+                key={formation.id}
+                title={formation.title}
+                author={formation.author}
+                category={formation.category}
+                coverImage={formation.coverImage}
+                price={formation.price}
+                updatedAt={formation.updatedAt}
+                enrolledCompanies={formation.enrolledCompanies}
+                moduleCount={formation.moduleCount}
+                evaluationCount={formation.evaluationCount}
+              />
+            ))}
+          </div>
 
-      {/* Pagination */}
-      {!isLoading && totalPages > 1 && (
-        <div className="mt-6">
-          <Pagination>
-            <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious
-                  text="Précédent"
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  aria-disabled={safePage === 1}
-                  className={safePage === 1 ? 'pointer-events-none opacity-50' : ''}
-                />
-              </PaginationItem>
-              {Array.from({ length: totalPages }).map((_, i) => (
-                <PaginationItem key={i}>
-                  <PaginationLink
-                    isActive={safePage === i + 1}
-                    onClick={() => setCurrentPage(i + 1)}
-                  >
-                    {i + 1}
-                  </PaginationLink>
-                </PaginationItem>
-              ))}
-              <PaginationItem>
-                <PaginationNext
-                  text="Suivant"
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  aria-disabled={safePage === totalPages}
-                  className={safePage === totalPages ? 'pointer-events-none opacity-50' : ''}
-                />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
-        </div>
+          {hasMore && (
+            <div className="mt-8 flex justify-center">
+              <Button variant="outline" onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}>
+                Voir plus ({filtered.length - visibleCount} restantes)
+              </Button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
