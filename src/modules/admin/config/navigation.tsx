@@ -7,6 +7,7 @@ import {
   Building2,
   LucideIcon,
   Store,
+  LayoutTemplate,
 } from 'lucide-react';
 import { ROUTES } from '@/shared/constants/routes';
 import { ACCESS } from '@/shared/auth/permissions';
@@ -52,6 +53,17 @@ export const ADMIN_NAV: AdminNavItem[] = [
       { title: 'Catégories', url: ROUTES.admin.category },
       { title: 'Modules', url: ROUTES.admin.modules },
       { title: 'Quiz', url: ROUTES.admin.quizzes },
+      // { title: "Attestation", url: ROUTES.admin.certificate},
+    ],
+  },
+  {
+    url: ROUTES.admin.certificate,
+    title: 'Templates',
+    icon: LayoutTemplate,
+    access: ACCESS.templates,
+    items: [
+      { title: 'Attestations', url: ROUTES.admin.certificate },
+      { title: 'Templates mail', url: ROUTES.admin.mailTemplates },
     ],
   },
   {

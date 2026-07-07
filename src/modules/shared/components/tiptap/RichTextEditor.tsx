@@ -1,13 +1,24 @@
+import { useState, useEffect, type ReactNode } from 'react';
 import { useEditor, useEditorState, EditorContent, type Editor } from '@tiptap/react';
+import { DOMParser as PmDOMParser } from '@tiptap/pm/model';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
+import Image from '@tiptap/extension-image';
 import Placeholder from '@tiptap/extension-placeholder';
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Markdown } from 'tiptap-markdown';
 import {
   Bold,
   Italic,
   Strikethrough,
   Code,
+  Code2,
   Heading1,
   Heading2,
   Heading3,
@@ -19,6 +30,8 @@ import {
   Undo,
   Redo,
   Minus,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -30,12 +43,62 @@ declare module '@tiptap/core' {
     };
   }
 }
+const ALIGN_STYLES: Record<string, string> = {
+  left: 'float: left; margin: 0 1em 0.5em 0;',
+  center: 'display: block; margin: 0 auto 0.5em; clear: both;',
+  right: 'float: right; margin: 0 0 0.5em 1em;',
+};
+
+const ExtendedImage = Image.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      width: {
+        default: null,
+        parseHTML: (element: HTMLElement) => element.getAttribute('width') ?? null,
+        renderHTML: (attrs) => (attrs.width ? { width: String(attrs.width) } : {}),
+      },
+      height: {
+        default: null,
+        parseHTML: (element: HTMLElement) => element.getAttribute('height') ?? null,
+        renderHTML: (attrs) => (attrs.height ? { height: String(attrs.height) } : {}),
+      },
+      align: {
+        default: 'left',
+        parseHTML: (element: HTMLElement) => {
+          const style = element.getAttribute('style') ?? '';
+          if (style.includes('float: right') || style.includes('float:right')) return 'right';
+          if (style.includes('margin: 0 auto') || style.includes('margin:0 auto')) return 'center';
+          return 'left';
+        },
+        renderHTML: (attrs) => ({
+          style: ALIGN_STYLES[attrs.align as string] ?? ALIGN_STYLES.left,
+        }),
+      },
+      dataMediaId: {
+        default: null,
+        parseHTML: (element: HTMLElement) => element.getAttribute('data-media-id') ?? null,
+        renderHTML: (attrs: Record<string, unknown>) =>
+          attrs.dataMediaId ? { 'data-media-id': String(attrs.dataMediaId) } : {},
+      },
+    };
+  },
+});
 
 type Props = {
   value: string;
-  onChange: (markdown: string) => void;
+  onChange: (value: string) => void;
   placeholder?: string;
   className?: string;
+  expandable?: boolean;
+  /**
+   * Format de sortie émis dans `onChange`.
+   * - `'markdown'` (défaut) : texte Markdown
+   * - `'html'` : HTML brut (pour attestations et templates mail)
+   */
+  outputFormat?: 'markdown' | 'html';
+  /** Boutons optionnels ajoutés à la fin de la toolbar. Reçoit l'instance editor. */
+  toolbarExtras?: (editor: Editor) => ReactNode;
 };
 
 function ToolbarButton({
@@ -71,7 +134,21 @@ function Separator() {
   return <div className="mx-1 h-6 w-px self-center bg-border" />;
 }
 
-function Toolbar({ editor }: { editor: Editor }) {
+function Toolbar({
+  editor,
+  extras,
+  onExpand,
+  onMinimize,
+  onToggleSource,
+  sourceMode,
+}: {
+  editor: Editor;
+  extras?: (editor: Editor) => ReactNode;
+  onExpand?: () => void;
+  onMinimize?: () => void;
+  onToggleSource?: () => void;
+  sourceMode?: boolean;
+}) {
   const setLink = () => {
     const previousUrl = editor.getAttributes('link').href as string | undefined;
     const url = window.prompt('URL du lien', previousUrl ?? '');
@@ -221,11 +298,58 @@ function Toolbar({ editor }: { editor: Editor }) {
       >
         <Redo className="size-4" />
       </ToolbarButton>
+
+      {extras && (
+        <>
+          <Separator />
+          {extras(editor)}
+        </>
+      )}
+
+      {onExpand && (
+        <>
+          <Separator />
+          <ToolbarButton label="Agrandir" onClick={onExpand}>
+            <Maximize2 className="size-4" />
+          </ToolbarButton>
+        </>
+      )}
+
+      {onMinimize && (
+        <>
+          <Separator />
+          <ToolbarButton label="Réduire" onClick={onMinimize}>
+            <Minimize2 className="size-4" />
+          </ToolbarButton>
+        </>
+      )}
+
+      {onToggleSource && (
+        <>
+          <Separator />
+          <ToolbarButton label="Source HTML" active={sourceMode} onClick={onToggleSource}>
+            <Code2 className="size-4" />
+          </ToolbarButton>
+        </>
+      )}
     </div>
   );
 }
 
-export function RichTextEditor({ value, onChange, placeholder, className }: Props) {
+export function RichTextEditor({
+  value,
+  onChange,
+  placeholder,
+  className,
+  expandable = true,
+  outputFormat = 'markdown',
+  toolbarExtras,
+}: Props) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [expandedContent, setExpandedContent] = useState('');
+  const [sourceMode, setSourceMode] = useState(false);
+  const [sourceValue, setSourceValue] = useState('');
+
   const editor = useEditor({
     extensions: [
       StarterKit,
@@ -233,14 +357,22 @@ export function RichTextEditor({ value, onChange, placeholder, className }: Prop
         openOnClick: false,
         autolink: true,
       }),
+      ExtendedImage.configure({
+        inline: true,
+        allowBase64: true,
+      }),
       Placeholder.configure({
         placeholder: placeholder ?? 'Décrivez le cours…',
       }),
-      Markdown.configure({
-        html: false,
-        tightLists: true,
-        transformPastedText: true,
-      }),
+      ...(outputFormat === 'markdown'
+        ? [
+            Markdown.configure({
+              html: false,
+              tightLists: true,
+              transformPastedText: true,
+            }),
+          ]
+        : []),
     ],
     content: value,
     editorProps: {
@@ -251,23 +383,142 @@ export function RichTextEditor({ value, onChange, placeholder, className }: Prop
           'prose prose-sm max-w-none dark:prose-invert',
           '[&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_h1]:mb-2 [&_h1]:mt-3 [&_h2]:mb-2 [&_h2]:mt-3 [&_h3]:mb-1 [&_h3]:mt-2',
           '[&_blockquote]:border-l-2 [&_blockquote]:border-muted-foreground/30 [&_blockquote]:pl-3 [&_blockquote]:italic',
-          '[&_code]:rounded [&_code]:bg-muted [&_code]:px-1 [&_code]:py-0.5 [&_code]:text-xs',
-          '[&_pre]:rounded [&_pre]:bg-muted [&_pre]:p-2 [&_pre]:text-xs',
+          '[&_code]:rounded [&_code]:bg-[#1e1e1e] [&_code]:text-[#d4d4d4] [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:text-xs [&_code]:font-mono',
+          '[&_pre]:rounded [&_pre]:bg-[#1e1e1e] [&_pre]:text-[#d4d4d4] [&_pre]:p-4 [&_pre]:text-xs [&_pre]:font-mono [&_pre]:overflow-x-auto',
+          '[&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_pre_code]:text-inherit',
           '[&_a]:text-primary [&_a]:underline',
+          // overflow-hidden crée un BFC : le texte ne passe pas sous le float
+          '[&_p]:overflow-hidden',
         ),
       },
+      // Mode HTML : on intercepte TOUJOURS le coller si le text/plain contient
+      // des balises HTML — que le navigateur fournisse ou non un text/html
+      // (ex : copie depuis VS Code qui ajoute du text/html avec coloration).
+      handlePaste:
+        outputFormat === 'html'
+          ? (view, event) => {
+              const plain = event.clipboardData?.getData('text/plain') ?? '';
+              if (!/<[a-z][^>]*>/i.test(plain)) return false;
+              event.preventDefault();
+              const dom = new window.DOMParser().parseFromString(plain, 'text/html');
+              const parser = PmDOMParser.fromSchema(view.state.schema);
+              const slice = parser.parseSlice(dom.body);
+              view.dispatch(view.state.tr.replaceSelection(slice));
+              return true;
+            }
+          : undefined,
     },
     onUpdate: ({ editor }) => {
-      onChange(editor.storage.markdown.getMarkdown());
+      onChange(outputFormat === 'html' ? editor.getHTML() : editor.storage.markdown.getMarkdown());
     },
   });
 
+  // Synchronise les changements externes de `value` vers l'éditeur
+  // (ex : form.reset lors de l'ouverture du drawer en mode édition)
+  useEffect(() => {
+    if (!editor) return;
+    const current =
+      outputFormat === 'html' ? editor.getHTML() : editor.storage.markdown.getMarkdown();
+    if (current !== value) {
+      editor.commands.setContent(value ?? '', { emitUpdate: false });
+    }
+    // biome-ignore lint/correctness/useExhaustiveDependencies: outputFormat is a stable prop
+  }, [value, editor]);
+
   if (!editor) return null;
 
+  const handleToggleSource = () => {
+    if (!sourceMode) {
+      // Passe en mode source : exporte le HTML actuel dans la textarea
+      setSourceValue(editor.getHTML());
+      setSourceMode(true);
+    } else {
+      // Revient en mode WYSIWYG : parse le HTML de la textarea
+      editor.commands.setContent(sourceValue, { emitUpdate: false });
+      onChange(editor.getHTML());
+      setSourceMode(false);
+    }
+  };
+
+  const handleExpand = () => {
+    setExpandedContent(
+      outputFormat === 'html' ? editor.getHTML() : editor.storage.markdown.getMarkdown(),
+    );
+    setIsExpanded(true);
+  };
+
+  const handleApply = () => {
+    onChange(expandedContent);
+    editor.commands.setContent(expandedContent);
+    setIsExpanded(false);
+  };
+
+  const handleCancel = () => {
+    setIsExpanded(false);
+  };
+
   return (
-    <div className={cn('flex flex-col', className)}>
-      <Toolbar editor={editor} />
-      <EditorContent editor={editor} />
-    </div>
+    <>
+      <div className={cn('flex flex-col', className)}>
+        <Toolbar
+          editor={editor}
+          extras={toolbarExtras}
+          onExpand={expandable ? handleExpand : undefined}
+          onToggleSource={outputFormat === 'html' ? handleToggleSource : undefined}
+          sourceMode={sourceMode}
+        />
+        {sourceMode ? (
+          <textarea
+            className="min-h-32 w-full rounded-b-md border bg-[#1e1e1e] text-[#d4d4d4] font-mono text-xs px-3 py-2 resize-y focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            value={sourceValue}
+            onChange={(e) => {
+              setSourceValue(e.target.value);
+              onChange(e.target.value);
+            }}
+            spellCheck={false}
+          />
+        ) : (
+          <EditorContent editor={editor} />
+        )}
+      </div>
+
+      <Dialog open={isExpanded} onOpenChange={(open) => !open && handleCancel()}>
+        <DialogContent
+          className="flex flex-col gap-0 p-0 w-full max-w-[calc(100%-2rem)] sm:max-w-2xl md:max-w-4xl lg:max-w-6xl h-[90vh] sm:h-[85vh]"
+          onInteractOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
+        >
+          <DialogHeader className="border-b px-4 py-3 shrink-0">
+            <DialogTitle className="text-sm font-medium">Édition</DialogTitle>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto p-4">
+            <RichTextEditor
+              value={expandedContent}
+              onChange={setExpandedContent}
+              placeholder={placeholder}
+              expandable={false}
+              outputFormat={outputFormat}
+              toolbarExtras={toolbarExtras}
+              className="h-full [&_.tiptap]:min-h-[55vh]"
+            />
+          </div>
+
+          <DialogFooter className="border-t px-4 py-3 shrink-0">
+            <Button type="button" variant="outline" onClick={handleCancel}>
+              <Minimize2 className="mr-2 size-4" />
+              Annuler
+            </Button>
+            <Button
+              type="button"
+              onClick={handleApply}
+              className="bg-(--color-primary) hover:bg-primary/80 text-primary-foreground"
+            >
+              Appliquer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

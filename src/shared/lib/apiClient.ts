@@ -75,8 +75,16 @@ export const httpClient = async (
   return { status: res.status, headers: res.headers, body, json };
 };
 
-export async function apiGet<T>(path: string): Promise<T> {
-  const { json } = await httpClient(`/api/v1/${path.replace(/^\/+/, '')}`);
+export async function apiGet<T>(path: string, params?: Record<string, unknown>): Promise<T> {
+  let url = `/api/v1/${path.replace(/^\/+/, '')}`;
+  if (params) {
+    const qs = Object.entries(params)
+      .filter(([, v]) => v !== undefined && v !== null && v !== '')
+      .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`)
+      .join('&');
+    if (qs) url += `?${qs}`;
+  }
+  const { json } = await httpClient(url);
   return json as T;
 }
 
@@ -106,4 +114,34 @@ export async function apiPatch<T, B = unknown>(path: string, body?: B): Promise<
 
 export async function apiDelete(path: string): Promise<void> {
   await httpClient(`/api/v1/${path.replace(/^\/+/, '')}`, { method: 'DELETE' });
+}
+
+/** Upload multipart/form-data (ne pose pas Content-Type: application/json). */
+export async function apiUpload<T>(path: string, body: FormData): Promise<T> {
+  const url = `/api/v1/${path.replace(/^\/+/, '')}`;
+  const tenant = useTenantStore.getState().tenant;
+  const headers = new Headers();
+  headers.set('Accept', 'application/json');
+  if (tenant) headers.set('X-Tenant-ID', tenant.id);
+  // Pas de Content-Type : le navigateur le génère automatiquement avec le boundary
+
+  const res = await fetch(url, { method: 'POST', headers, credentials: 'include', body });
+  const text = await res.text();
+  let json: unknown;
+  try {
+    json = JSON.parse(text);
+  } catch {
+    json = text;
+  }
+
+  if (!res.ok) {
+    if (res.status === 401) {
+      useAuthStore.getState().clearAuth();
+      if (typeof window !== 'undefined') {
+        window.location.replace(resolveLoginPath(window.location.pathname));
+      }
+    }
+    throw Object.assign(new Error(res.statusText), { status: res.status, json });
+  }
+  return json as T;
 }
