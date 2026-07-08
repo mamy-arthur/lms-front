@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { Download, CircleAlert, CircleCheck, CircleX, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   DataTable,
   type DataTableColumn,
@@ -40,24 +41,35 @@ export function InvoicesTable<T extends InvoiceBase>({
 
   const statusIcons: Record<RequestStatus, React.ReactNode> = {
     pending: (
-      <CircleAlert
-        className={`size-3.5 mr-1.5 shrink-0 ${REQUEST_STATUS_CONFIG.pending.iconColor}`}
-      />
+      <CircleAlert className={`size-3.5 shrink-0 ${REQUEST_STATUS_CONFIG.pending.iconColor}`} />
     ),
     accepted: (
-      <CircleCheck
-        className={`size-3.5 mr-1.5 shrink-0 ${REQUEST_STATUS_CONFIG.accepted.iconColor}`}
-      />
+      <CircleCheck className={`size-3.5 shrink-0 ${REQUEST_STATUS_CONFIG.accepted.iconColor}`} />
     ),
     rejected: (
-      <CircleX className={`size-3.5 mr-1.5 shrink-0 ${REQUEST_STATUS_CONFIG.rejected.iconColor}`} />
+      <CircleX className={`size-3.5 shrink-0 ${REQUEST_STATUS_CONFIG.rejected.iconColor}`} />
     ),
   };
 
-  const statusIcon = (ref: string) => {
+  const statusTooltipByRequest: Record<RequestStatus, string> = {
+    pending: 'Demande en attente',
+    accepted: 'Demande acceptée',
+    rejected: 'Demande refusée',
+  };
+
+  const statusMeta = (ref: string) => {
     const req = requests?.[ref];
-    if (!req) return <FileText className={`size-3.5 mr-1.5 shrink-0 text-muted-foreground`} />;
-    return statusIcons[req.status];
+    if (!req) {
+      return {
+        icon: <FileText className="size-3.5 shrink-0 text-muted-foreground" />,
+        tooltip: 'Facture',
+      };
+    }
+
+    return {
+      icon: statusIcons[req.status],
+      tooltip: statusTooltipByRequest[req.status],
+    };
   };
 
   const columns: DataTableColumn<T>[] = [
@@ -65,12 +77,23 @@ export function InvoicesTable<T extends InvoiceBase>({
       key: 'ref',
       label: 'Réf.',
       sortable: true,
-      render: (row) => (
-        <div className="text-xs font-medium text-foreground inline-flex items-center">
-          {statusIcon(row.ref)}
-          {row.ref}
-        </div>
-      ),
+      render: (row) => {
+        const status = statusMeta(row.ref);
+
+        return (
+          <div className="text-xs font-medium text-foreground inline-flex items-center gap-1.5">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="inline-flex items-center">{status.icon}</span>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{status.tooltip}</p>
+              </TooltipContent>
+            </Tooltip>
+            {row.ref}
+          </div>
+        );
+      },
     },
     {
       key: 'date',

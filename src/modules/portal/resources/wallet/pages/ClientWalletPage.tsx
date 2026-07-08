@@ -92,7 +92,7 @@ export function ClientWalletPage() {
         {activeTab === 'wallet' ? (
           <>
             <div className="space-y-4">
-              <div className="min-h-112.5 space-y-3">
+              <div className="min-h-112.5 space-y-3  px-4  sm:px-6">
                 <div className="-mx-1 overflow-x-auto px-1 pb-1">
                   <div className="flex min-w-max flex-col items-start gap-2 sm:min-w-0 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                     <div className="shrink-0">
@@ -131,7 +131,7 @@ export function ClientWalletPage() {
             </div>
           </>
         ) : (
-          <div className="min-h-112.5 space-y-3">
+          <div className="min-h-112.5 space-y-3  px-4  sm:px-6">
             <div className="flex flex-row items-center justify-between pb-2">
               <div>
                 <h2 className="text-base font-semibold">Factures</h2>
