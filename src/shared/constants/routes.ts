@@ -23,6 +23,7 @@ export const ROUTES = {
     quizQuestions: (quizId: string) => `/admin/quizzes/${quizId}/questions`,
     certificate: '/admin/certificates',
     mailTemplates: '/admin/mail-templates',
+    contentTypes: '/admin/content-types',
   },
   portal: {
     dashboard: '/dashboard',

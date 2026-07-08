@@ -35,4 +35,5 @@ export const ACCESS = {
   store: { anyRoles: [Role.CLIENT_MANAGER, Role.EDITOR] },
   tenants: { superAdminOnly: true },
   templates: { anyRoles: [Role.EDITOR, Role.SUPER_ADMIN, Role.CLIENT_MANAGER] },
+  contentTypes: { superAdminOnly: true },
 } as const satisfies Record<string, AccessRule>;
