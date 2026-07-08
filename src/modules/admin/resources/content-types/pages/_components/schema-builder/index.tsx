@@ -88,11 +88,7 @@ export function SchemaBuilder({ control, existingFieldCount = 0 }: SchemaBuilder
 
       {/* Field list */}
       {fieldCount > 0 ? (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
-        >
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext
             items={fields.map((f) => f._rhfId)}
             strategy={verticalListSortingStrategy}

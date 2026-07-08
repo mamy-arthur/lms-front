@@ -10,7 +10,10 @@ export const contentTypeApi = {
     apiPost<{ data: ContentType }, CreateContentTypePayload>('platform/content-types', payload),
 
   update: (id: string, payload: UpdateContentTypePayload) =>
-    apiPut<{ data: ContentType }, UpdateContentTypePayload>(`platform/content-types/${id}`, payload),
+    apiPut<{ data: ContentType }, UpdateContentTypePayload>(
+      `platform/content-types/${id}`,
+      payload,
+    ),
 
   getFieldTypes: () => apiGet<{ data: string[] }>('platform/field-types'),
 

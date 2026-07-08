@@ -51,7 +51,7 @@ export function ContentTypesPage() {
         </div>
         <Button onClick={handleCreate} size="lg">
           <Plus className="size-4" />
-          Nouveau Content Type
+          Nouveau type de contenu
         </Button>
       </header>
 

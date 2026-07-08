@@ -2,11 +2,7 @@
 
 import { Button } from '@/components/ui/button';
 import { Trash2, Archive, ArchiveRestore } from 'lucide-react';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface FieldActionsProps {
   isNew: boolean;
@@ -50,11 +46,7 @@ export function FieldActions({ isNew, isArchived, onRemove, onToggleArchive }: F
           }
           onClick={onToggleArchive}
         >
-          {isArchived ? (
-            <ArchiveRestore className="size-4" />
-          ) : (
-            <Archive className="size-4" />
-          )}
+          {isArchived ? <ArchiveRestore className="size-4" /> : <Archive className="size-4" />}
           <span className="sr-only">{isArchived ? 'Désarchiver' : 'Archiver'}</span>
         </Button>
       </TooltipTrigger>

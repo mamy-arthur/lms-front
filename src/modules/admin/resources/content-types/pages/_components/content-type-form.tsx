@@ -135,14 +135,9 @@ export function ContentTypeForm({ open, onOpenChange, contentType }: ContentType
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="right"
-        className="w-full sm:max-w-2xl p-0 flex flex-col"
-      >
+      <SheetContent side="right" className="w-full sm:max-w-2xl p-0 flex flex-col">
         <SheetHeader className="px-6 py-5 border-b shrink-0">
-          <SheetTitle>
-            {isEdit ? 'Modifier le Content Type' : 'Créer un Content Type'}
-          </SheetTitle>
+          <SheetTitle>{isEdit ? 'Modifier le Content Type' : 'Créer un Content Type'}</SheetTitle>
           <SheetDescription>
             {isEdit
               ? 'Modifiez les informations et le schéma de champs.'
@@ -238,10 +233,7 @@ export function ContentTypeForm({ open, onOpenChange, contentType }: ContentType
 
                 {/* ── Schema Builder ───────────────────────────────────── */}
                 <section>
-                  <SchemaBuilder
-                    control={form.control}
-                    existingFieldCount={existingFieldCount}
-                  />
+                  <SchemaBuilder control={form.control} existingFieldCount={existingFieldCount} />
                 </section>
               </div>
             </ScrollArea>

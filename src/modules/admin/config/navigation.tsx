@@ -90,7 +90,7 @@ export const ADMIN_NAV: AdminNavItem[] = [
   },
   {
     url: ROUTES.admin.contentTypes,
-    title: 'Content Types',
+    title: 'Types de contenu',
     icon: Layers,
     access: ACCESS.contentTypes,
     items: [],

@@ -77,10 +77,7 @@ export function MediaOptions({ index, control }: MediaOptionsProps) {
       {/* Max size */}
       <div className="flex items-center gap-3">
         <div className="space-y-1.5 flex-1 max-w-[160px]">
-          <label
-            htmlFor={`field-max-size-${index}`}
-            className="text-sm font-medium"
-          >
+          <label htmlFor={`field-max-size-${index}`} className="text-sm font-medium">
             Taille maximale (Mo)
           </label>
           <Input
@@ -103,10 +100,7 @@ export function MediaOptions({ index, control }: MediaOptionsProps) {
           checked={multipleField.value ?? false}
           onCheckedChange={multipleField.onChange}
         />
-        <label
-          htmlFor={`field-multiple-${index}`}
-          className="text-sm font-medium cursor-pointer"
-        >
+        <label htmlFor={`field-multiple-${index}`} className="text-sm font-medium cursor-pointer">
           Autoriser l&apos;upload multiple
         </label>
       </div>

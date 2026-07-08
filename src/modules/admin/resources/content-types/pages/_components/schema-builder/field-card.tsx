@@ -3,18 +3,8 @@
 import { type Control, useWatch } from 'react-hook-form';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible';
-import {
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
@@ -109,9 +99,7 @@ export function FieldCard({ id, index, control, isNew, onRemove }: FieldCardProp
           {/* Name / label summary */}
           <div className="flex-1 min-w-0">
             <p className="truncate text-sm font-medium leading-snug">
-              {fieldLabel || (
-                <span className="italic text-muted-foreground">Sans label</span>
-              )}
+              {fieldLabel || <span className="italic text-muted-foreground">Sans label</span>}
             </p>
             {fieldName && (
               <p className="truncate font-mono text-xs text-muted-foreground leading-snug">
