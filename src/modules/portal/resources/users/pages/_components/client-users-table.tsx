@@ -1,14 +1,14 @@
 'use client';
 
 import { UsersContentTable, type UsersTableSort } from '@modules/shared/components/users';
-import type { TenantUser } from '../../types';
+import type { ClientUser } from '../../types';
 
 export type SortColumn =
   'username' | 'email' | 'role' | 'city' | 'country' | 'lastLogin' | 'createdAt';
 export type SortConfig = UsersTableSort;
 
-interface TenantUsersTableProps {
-  users: TenantUser[];
+interface ClientUsersTableProps {
+  users: ClientUser[];
   isLoading?: boolean;
   hasQuery?: boolean;
   page: number;
@@ -18,13 +18,13 @@ interface TenantUsersTableProps {
   onSort?: (column: string) => void;
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
-  onView: (user: TenantUser) => void;
-  onEdit: (user: TenantUser) => void;
-  onToggleActive: (user: TenantUser) => void;
-  onDelete: (user: TenantUser) => void;
+  onView: (user: ClientUser) => void;
+  onEdit: (user: ClientUser) => void;
+  onToggleActive: (user: ClientUser) => void;
+  onDelete: (user: ClientUser) => void;
 }
 
-export function TenantUsersTable({
+export function ClientUsersTable({
   users,
   isLoading = false,
   hasQuery = false,
@@ -39,7 +39,7 @@ export function TenantUsersTable({
   onEdit,
   onToggleActive,
   onDelete,
-}: TenantUsersTableProps) {
+}: ClientUsersTableProps) {
   return (
     <UsersContentTable
       users={users}

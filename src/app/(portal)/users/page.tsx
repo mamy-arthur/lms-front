@@ -1,5 +1,5 @@
-import { TenantUsersList } from '@/modules/portal/resources/users';
+import { ClientUserList } from '@/modules/portal/resources/users';
 
 export default function UsersPage() {
-  return <TenantUsersList />;
+  return <ClientUserList />;
 }

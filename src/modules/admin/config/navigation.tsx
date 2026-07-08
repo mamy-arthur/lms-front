@@ -8,6 +8,7 @@ import {
   LucideIcon,
   Store,
   LayoutTemplate,
+  Wallet,
 } from 'lucide-react';
 import { ROUTES } from '@/shared/constants/routes';
 import { ACCESS } from '@/shared/auth/permissions';
@@ -33,6 +34,12 @@ export const ADMIN_NAV: AdminNavItem[] = [
     title: 'Boutique',
     access: ACCESS.store,
     icon: Store,
+    items: [],
+  },
+  {
+    url: ROUTES.admin.wallet,
+    title: 'Portefeuille',
+    icon: Wallet,
     items: [],
   },
   {
