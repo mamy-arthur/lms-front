@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ImageInsertDialog } from '@modules/shared/components/tiptap/ImageInsertDialog';
+import { ALIGN_STYLES } from '@modules/shared/components/tiptap/RichTextEditor';
 import { useTemplateVariablesQuery } from '@/modules/shared/hooks/useTemplateVariablesQuery';
 
 /** Labels affichés pour chaque catégorie de variable. */
@@ -27,9 +28,11 @@ const CATEGORY_LABELS: Record<string, string> = {
 function MailTemplateToolbarExtrasComponent({
   editor,
   apiPath,
+  insertHtml,
 }: {
   editor: Editor;
   apiPath: string;
+  insertHtml?: (html: string) => void;
 }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const { data } = useTemplateVariablesQuery(apiPath, 'mail');
@@ -58,6 +61,13 @@ function MailTemplateToolbarExtrasComponent({
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
         onConfirm={({ src, alt, width, height, align }) => {
+          if (insertHtml) {
+            const style = ALIGN_STYLES[align] ?? ALIGN_STYLES.left;
+            const widthAttr = width ? ` width="${width}"` : '';
+            const heightAttr = height ? ` height="${height}"` : '';
+            insertHtml(`<img src="${src}" alt="${alt}"${widthAttr}${heightAttr} style="${style}">`);
+            return;
+          }
           (
             editor.chain().focus() as unknown as {
               setImage: (attrs: {
@@ -104,9 +114,13 @@ function MailTemplateToolbarExtrasComponent({
  */
 export function makeMailTemplateToolbarExtras(
   apiPath = 'template-variables',
-): (editor: Editor) => ReactNode {
-  return (editor: Editor) => (
-    <MailTemplateToolbarExtrasComponent editor={editor} apiPath={apiPath} />
+): (editor: Editor, ctx?: { insertHtml: (html: string) => void }) => ReactNode {
+  return (editor: Editor, ctx?: { insertHtml: (html: string) => void }) => (
+    <MailTemplateToolbarExtrasComponent
+      editor={editor}
+      apiPath={apiPath}
+      insertHtml={ctx?.insertHtml}
+    />
   );
 }
 

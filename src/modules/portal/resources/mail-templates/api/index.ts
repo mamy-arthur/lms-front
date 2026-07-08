@@ -1,32 +1,25 @@
-import { apiGet } from '@/shared/lib/apiClient';
-import type { MailTemplate } from '../types';
-
-interface MailTemplateListParams {
-  page?: number;
-  limit?: number;
-  q?: string;
-  sort_by?: string;
-  sort_order?: 'asc' | 'desc';
-  status?: 'active' | 'inactive';
-}
+import { apiDelete, apiGet, apiPatch, apiPost } from '@/shared/lib/apiClient';
+import type { MailTemplate, CreateMailTemplatePayload, UpdateMailTemplatePayload } from '../types';
 
 interface MailTemplateListResponse {
-  items?: MailTemplate[];
-  data?: MailTemplate[];
+  data?: Record<string, unknown>[];
   total?: number;
 }
 
 export const portalMailTemplatesApi = {
-  list: (params: MailTemplateListParams) => {
-    const query = new URLSearchParams();
-    query.set('page', String(params.page ?? 1));
-    query.set('limit', String(params.limit ?? 25));
-    if (params.q) query.set('q', params.q);
-    if (params.sort_by) query.set('sort_by', params.sort_by);
-    if (params.sort_order) query.set('sort_order', params.sort_order);
-    if (params.status) query.set('status', params.status);
-    return apiGet<MailTemplateListResponse>(`mail-templates?${query.toString()}`);
-  },
+  list: (params?: Record<string, unknown>) =>
+    apiGet<MailTemplateListResponse>('template-mails', params),
 
-  getById: (id: string) => apiGet<MailTemplate>(`mail-templates/${id}`),
+  getById: (id: string) => apiGet<MailTemplate>(`template-mails/${id}`),
+
+  create: (data: CreateMailTemplatePayload) =>
+    apiPost<{ data: MailTemplate }>('template-mails', data),
+
+  update: (id: string, data: UpdateMailTemplatePayload) =>
+    apiPatch<{ data: MailTemplate }>(`template-mails/${id}`, data),
+
+  remove: (id: string) => apiDelete(`template-mails/${id}`),
+
+  duplicate: (id: string) =>
+    apiPost<{ data: Record<string, unknown> }>(`template-mails/${id}/duplicate`),
 };

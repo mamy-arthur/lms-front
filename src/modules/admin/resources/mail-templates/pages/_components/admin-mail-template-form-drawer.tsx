@@ -12,7 +12,6 @@ import {
 import { useFormDrawer } from '@/shared/components/form-drawer/use-form-drawer';
 import { MailTemplateForm } from '@modules/shared/components/mail-templates/mail-template-form';
 import { makeMailTemplateToolbarExtras } from '@modules/shared/components/mail-templates/mail-template-toolbar-extras';
-import { useTenant } from '@/shared/hooks/useTenant';
 import { useCreateMailTemplate } from '../../hooks/useCreateMailTemplate';
 import { useUpdateMailTemplate } from '../../hooks/useUpdateMailTemplate';
 import type {
@@ -54,8 +53,6 @@ function AdminMailTemplateFormDrawerBase({
   template,
 }: AdminMailTemplateFormDrawerProps) {
   const isEdit = !!template;
-  const { tenant } = useTenant();
-
   const createMutation = useCreateMailTemplate();
   const updateMutation = useUpdateMailTemplate();
 
@@ -91,16 +88,15 @@ function AdminMailTemplateFormDrawerBase({
     buildCreatePayload: (values): CreateMailTemplatePayload => ({
       name: values.name,
       subject: values.subject,
-      is_active: values.isActive,
+      status: values.isActive,
       body: values.body,
-      tenant_id: tenant?.id ?? '',
     }),
     buildUpdatePayload: (values, id): { id: string; data: UpdateMailTemplatePayload } => ({
       id,
       data: {
         name: values.name,
         subject: values.subject,
-        is_active: values.isActive,
+        status: values.isActive,
         body: values.body,
       },
     }),

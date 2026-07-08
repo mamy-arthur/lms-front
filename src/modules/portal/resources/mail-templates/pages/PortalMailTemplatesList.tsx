@@ -1,12 +1,13 @@
 'use client';
 
 import { Plus } from 'lucide-react';
-
 import { Button } from '@/components/ui/button';
 import { MailTemplateSearch } from '@modules/shared/components/mail-templates';
 import { useModuleListController } from '@/modules/shared/hooks/useModuleListController';
 import { usePortalMailTemplatesQuery } from '../hooks/usePortalMailTemplatesQuery';
+import { useDeletePortalMailTemplate } from '../hooks/useDeletePortalMailTemplate';
 import type { MailTemplate } from '../types';
+import { AdminMailTemplatesFilter } from '@/modules/admin/resources/mail-templates/pages/_components/admin-mail-templates-filter';
 import { PortalMailTemplateFormDrawer } from './_components/portal-mail-template-form-drawer';
 import { PortalMailTemplatesTable } from './_components/portal-mail-templates-table';
 
@@ -16,6 +17,7 @@ export function PortalMailTemplatesList() {
   });
 
   const { data, isLoading } = usePortalMailTemplatesQuery(ctrl.params);
+  const { mutate: deleteTemplate } = useDeletePortalMailTemplate();
 
   return (
     <div className="bg-background">
@@ -35,6 +37,15 @@ export function PortalMailTemplatesList() {
           onSearch={ctrl.handleSearch}
         />
         <div className="flex items-center gap-2 sm:ml-auto">
+          <AdminMailTemplatesFilter
+            statusFilter={ctrl.draftCategory[0] ?? 'all'}
+            tenantFilter="all"
+            onStatusFilterChange={(value) => ctrl.setDraftCategory([value])}
+            onTenantFilterChange={() => {}}
+            onSearch={ctrl.handleSearch}
+            tenants={[]}
+            showTenantFilter={false}
+          />
           <Button
             onClick={ctrl.handleOpenCreate}
             className="bg-(--color-primary) hover:bg-primary/80 text-primary-foreground shrink-0"
@@ -57,7 +68,7 @@ export function PortalMailTemplatesList() {
         onPageChange={ctrl.handlePageChange}
         onPageSizeChange={ctrl.handlePageSizeChange}
         onEdit={ctrl.handleEdit}
-        onDelete={() => {}}
+        onDelete={(tpl) => deleteTemplate(tpl.id)}
       />
 
       <PortalMailTemplateFormDrawer

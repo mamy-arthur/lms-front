@@ -17,6 +17,7 @@ import {
   ImageInsertDialog,
   type ImageConfirmAttrs,
 } from '@modules/shared/components/tiptap/ImageInsertDialog';
+import { ALIGN_STYLES } from '@modules/shared/components/tiptap/RichTextEditor';
 import { useTemplateVariablesQuery } from '@/modules/shared/hooks/useTemplateVariablesQuery';
 
 type UploadMediaFn = (file: File) => Promise<{ mediaId: string }>;
@@ -33,10 +34,12 @@ function CertificateToolbarExtrasComponent({
   editor,
   uploadMedia,
   apiPath,
+  insertHtml,
 }: {
   editor: Editor;
   uploadMedia?: UploadMediaFn;
   apiPath: string;
+  insertHtml?: (html: string) => void;
 }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const { data } = useTemplateVariablesQuery(apiPath, 'attestation');
@@ -48,6 +51,18 @@ function CertificateToolbarExtrasComponent({
   };
 
   const handleConfirm = ({ src, alt, width, height, align, mediaId }: ImageConfirmAttrs) => {
+    if (insertHtml) {
+      // Mode HTML brut : construire le tag <img> directement sans passer par ProseMirror.
+      const style = ALIGN_STYLES[align] ?? ALIGN_STYLES.left;
+      const widthAttr = width ? ` width="${width}"` : '';
+      const heightAttr = height ? ` height="${height}"` : '';
+      const mediaAttr = mediaId ? ` data-media-id="${mediaId}"` : '';
+      insertHtml(
+        `<img src="${src}" alt="${alt}"${widthAttr}${heightAttr} style="${style}"${mediaAttr}>`,
+      );
+      return;
+    }
+    // Mode markdown/TipTap normal.
     (
       editor.chain().focus() as unknown as {
         setImage: (attrs: {
@@ -121,11 +136,12 @@ export function makeCertificateToolbarExtras(options?: {
   apiPath?: string;
 }): (editor: Editor) => ReactNode {
   const { uploadMedia, apiPath = 'template-variables' } = options ?? {};
-  return (editor: Editor) => (
+  return (editor: Editor, ctx?: { insertHtml: (html: string) => void }) => (
     <CertificateToolbarExtrasComponent
       editor={editor}
       uploadMedia={uploadMedia}
       apiPath={apiPath}
+      insertHtml={ctx?.insertHtml}
     />
   );
 }

@@ -12,17 +12,15 @@ export interface MailTemplate {
 export interface CreateMailTemplatePayload {
   name: string;
   subject: string;
-  is_active?: boolean;
+  status?: boolean;
   body?: string;
-  tenant_id: string;
 }
 
 export interface UpdateMailTemplatePayload {
   name?: string;
   subject?: string;
-  is_active?: boolean;
+  status?: boolean;
   body?: string;
-  tenant_id?: string;
 }
 
 export interface MailTemplateSearchParams {
@@ -40,7 +38,7 @@ export function normalizeMailTemplate(raw: Record<string, unknown>): MailTemplat
     id: String(raw.id ?? raw._id ?? ''),
     name: String(raw.name ?? ''),
     subject: String(raw.subject ?? ''),
-    isActive: Boolean(raw.isActive ?? raw.is_active ?? false),
+    isActive: Boolean(raw.status ?? raw.isActive ?? raw.is_active ?? false),
     tenantId: String(raw.tenantId ?? raw.tenant_id ?? ''),
     body: String(raw.body ?? ''),
     createdAt: String(raw.createdAt ?? raw.created_at ?? ''),

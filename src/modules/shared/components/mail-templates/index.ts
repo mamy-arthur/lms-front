@@ -4,3 +4,5 @@ export { MailTemplateActions } from './mail-template-actions';
 export type { MailTemplateActionsProps } from './mail-template-actions';
 export { MailTemplateForm } from './mail-template-form';
 export type { MailTemplateFormProps } from './mail-template-form';
+export { MailTemplatePreviewDialog } from './mail-template-preview-dialog';
+export type { MailTemplatePreviewDialogProps } from './mail-template-preview-dialog';

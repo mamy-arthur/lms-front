@@ -1,14 +1,18 @@
 'use client';
 
 import { Mail, CheckCircle2, XCircle } from 'lucide-react';
+import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
-import { MailTemplateActions } from '@modules/shared/components/mail-templates';
+import {
+  MailTemplateActions,
+  MailTemplatePreviewDialog,
+} from '@modules/shared/components/mail-templates';
 import {
   DataTable,
   type DataTableColumn,
   type DataTableSort,
 } from '@/shared/components/ui/DataTable';
-
+import { useDuplicateMailTemplate } from '../../hooks/useDuplicateMailTemplate';
 import type { MailTemplate } from '../../types';
 
 export type SortConfig = DataTableSort;
@@ -42,7 +46,10 @@ export function AdminMailTemplatesTable({
   onPageSizeChange,
   onEdit,
   onDelete,
+  tenantNames,
 }: AdminMailTemplatesTableProps) {
+  const [previewTemplate, setPreviewTemplate] = useState<MailTemplate | null>(null);
+  const duplicateMutation = useDuplicateMailTemplate();
   const columns: DataTableColumn<MailTemplate>[] = [
     {
       key: 'name',
@@ -56,6 +63,16 @@ export function AdminMailTemplatesTable({
       sortable: false,
       render: (tpl) => (
         <span className="text-xs text-muted-foreground truncate max-w-xs block">{tpl.subject}</span>
+      ),
+    },
+    {
+      key: 'tenantId',
+      label: 'Tenant',
+      sortable: false,
+      render: (tpl) => (
+        <span className="text-xs text-muted-foreground">
+          {tenantNames[tpl.tenantId] ?? tpl.tenantId}
+        </span>
       ),
     },
     {
@@ -85,7 +102,9 @@ export function AdminMailTemplatesTable({
       render: (tpl) => (
         <MailTemplateActions
           templateLabel={tpl.name}
+          onPreview={() => setPreviewTemplate(tpl)}
           onEdit={() => onEdit(tpl)}
+          onDuplicate={() => duplicateMutation.mutate(tpl.id)}
           onDelete={() => onDelete?.(tpl)}
         />
       ),
@@ -93,23 +112,34 @@ export function AdminMailTemplatesTable({
   ];
 
   return (
-    <DataTable
-      data={templates}
-      columns={columns}
-      isLoading={isLoading}
-      hasQuery={hasQuery}
-      page={page}
-      pageSize={pageSize}
-      total={total}
-      sort={sort}
-      onSort={onSort}
-      onPageChange={onPageChange}
-      onPageSizeChange={onPageSizeChange}
-      emptyState={{
-        icon: <Mail className="size-8 text-muted-foreground" />,
-        title: 'Aucun template mail',
-        description: 'Créez votre premier template mail en cliquant sur « Nouveau template ».',
-      }}
-    />
+    <>
+      <DataTable
+        data={templates}
+        columns={columns}
+        isLoading={isLoading}
+        hasQuery={hasQuery}
+        page={page}
+        pageSize={pageSize}
+        total={total}
+        sort={sort}
+        onSort={onSort}
+        onPageChange={onPageChange}
+        onPageSizeChange={onPageSizeChange}
+        emptyState={{
+          icon: <Mail className="size-8 text-muted-foreground" />,
+          title: 'Aucun template mail',
+          description: 'Créez votre premier template mail en cliquant sur « Nouveau template ».',
+        }}
+      />
+
+      {previewTemplate && (
+        <MailTemplatePreviewDialog
+          open={!!previewTemplate}
+          onClose={() => setPreviewTemplate(null)}
+          name={previewTemplate.name}
+          body={previewTemplate.body}
+        />
+      )}
+    </>
   );
 }

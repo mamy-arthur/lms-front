@@ -7,6 +7,7 @@ import { MailTemplateSearch } from '@modules/shared/components/mail-templates';
 import { useAllTenantsQuery } from '@/modules/shared/hooks/useAllTenantsQuery';
 import { useModuleListController } from '@/modules/shared/hooks/useModuleListController';
 import { useMailTemplatesQuery } from '../hooks/useMailTemplatesQuery';
+import { useDeleteMailTemplate } from '../hooks/useDeleteMailTemplate';
 import type { MailTemplate } from '../types';
 import { AdminMailTemplateFormDrawer } from './_components/admin-mail-template-form-drawer';
 import { AdminMailTemplatesFilter } from './_components/admin-mail-templates-filter';
@@ -22,6 +23,7 @@ export function MailTemplatesList() {
   const tenants = tenantsData?.data ?? [];
 
   const { data, isLoading } = useMailTemplatesQuery(ctrl.params);
+  const { mutate: deleteTemplate } = useDeleteMailTemplate();
 
   const tenantNames = useMemo(() => {
     const map: Record<string, string> = {};
@@ -79,7 +81,7 @@ export function MailTemplatesList() {
         onPageChange={ctrl.handlePageChange}
         onPageSizeChange={ctrl.handlePageSizeChange}
         onEdit={ctrl.handleEdit}
-        onDelete={() => {}}
+        onDelete={(tpl) => deleteTemplate(tpl.id)}
         tenantNames={tenantNames}
       />
 

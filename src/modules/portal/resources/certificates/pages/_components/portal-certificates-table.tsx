@@ -12,7 +12,6 @@ import {
   type DataTableColumn,
   type DataTableSort,
 } from '@/shared/components/ui/DataTable';
-import { formatDate } from '@/shared/lib/date';
 import { useDuplicatePortalCertificate } from '../../hooks/useDuplicatePortalCertificate';
 import type { Certificate } from '../../types';
 
@@ -47,7 +46,6 @@ export function PortalCertificatesTable({
   onPageSizeChange,
   onEdit,
   onDelete,
-  tenantNames,
 }: PortalCertificatesTableProps) {
   const [previewCert, setPreviewCert] = useState<Certificate | null>(null);
   const duplicateMutation = useDuplicatePortalCertificate();
@@ -84,33 +82,16 @@ export function PortalCertificatesTable({
       sortable: false,
       render: (cert) =>
         cert.isDefaultTemplate ? (
-          <Badge variant="outline" className="gap-1 border-blue-200 bg-blue-50 text-blue-700">
+          <Badge
+            variant="outline"
+            className="gap-1 border-blue-200 bg-blue-50 text-blue-700 text-center"
+          >
             <CheckCircle2 className="size-3" />
             Oui
           </Badge>
         ) : (
-          <span className="text-xs text-muted-foreground">Non</span>
+          <span className="text-xs text-muted-foreground text-center">Non</span>
         ),
-    },
-    {
-      key: 'tenantId',
-      label: 'Tenant',
-      sortable: true,
-      render: (cert) => (
-        <span className="text-xs text-muted-foreground">
-          {tenantNames[cert.tenantId] || cert.tenantId || '—'}
-        </span>
-      ),
-    },
-    {
-      key: 'updatedAt',
-      label: 'Mis à jour',
-      sortable: true,
-      render: (cert) => (
-        <span className="text-xs text-muted-foreground tabular-nums">
-          {formatDate(cert.updatedAt)}
-        </span>
-      ),
     },
     {
       key: 'id',

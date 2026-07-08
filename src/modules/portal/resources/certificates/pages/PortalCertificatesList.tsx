@@ -58,6 +58,7 @@ export function PortalCertificatesList() {
             onTenantFilterChange={ctrl.setDraftTenant}
             onSearch={ctrl.handleSearch}
             tenants={tenants}
+            showTenantFilter={false}
           />
           <Button
             onClick={ctrl.handleOpenCreate}
