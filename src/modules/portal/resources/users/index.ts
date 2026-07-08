@@ -1,3 +1,3 @@
 export { UserFormDrawer } from './components/UserFormDrawer';
-export { TenantUsersList } from './pages/TenantUsersList';
-export type { CreateTenantUserPayload, TenantUser, UpdateTenantUserPayload } from './types';
+export { ClientUserList } from './pages/ClientUsersList';
+export type { CreateClientUserPayload, ClientUser, UpdateClientUserPayload } from './types';

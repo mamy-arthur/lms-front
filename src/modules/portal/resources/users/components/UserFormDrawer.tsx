@@ -12,9 +12,9 @@ import {
 import { useUserFormDrawer } from '@modules/shared/components/users/use-user-form-drawer';
 import { UserForm } from '@modules/shared/components/users/user-form';
 import { useTenantStore } from '@/shared/stores/tenant.store';
-import { useCreateTenantUser } from '../hooks/useCreateTenantUser';
-import { useUpdateTenantUser } from '../hooks/useUpdateTenantUser';
-import type { CreateTenantUserPayload, TenantUser, UpdateTenantUserPayload } from '../types';
+import { useCreateClientUser } from '../hooks/useCreateClientUsers';
+import { useUpdateClientUser } from '../hooks/useUpdateClientUsers';
+import type { CreateClientUserPayload, ClientUser, UpdateClientUserPayload } from '../types';
 
 const createSchema = z.object({
   first_name: z.string().min(1, 'Prénom requis').max(120),
@@ -58,19 +58,19 @@ export interface UserFormDrawerProps {
   open: boolean;
   onClose: () => void;
   onSuccess?: () => void;
-  user?: TenantUser;
+  user?: ClientUser;
 }
 
 function UserFormDrawerBase({ open, onClose, onSuccess, user }: UserFormDrawerProps) {
   const isEdit = !!user;
 
-  const createMutation = useCreateTenantUser();
-  const updateMutation = useUpdateTenantUser();
+  const createMutation = useCreateClientUser();
+  const updateMutation = useUpdateClientUser();
   const tenantId = useTenantStore((s) => s.tenant?.id ?? null);
 
   const schema = isEdit ? updateSchema : createSchema;
 
-  const buildDefaults = useCallback((u?: TenantUser) => {
+  const buildDefaults = useCallback((u?: ClientUser) => {
     if (u) {
       return {
         first_name: u.first_name,
@@ -104,24 +104,24 @@ function UserFormDrawerBase({ open, onClose, onSuccess, user }: UserFormDrawerPr
         last_name: values.last_name,
         email: values.email,
         password: values.password as string,
-        role: values.role as CreateTenantUserPayload['role'],
+        role: values.role as CreateClientUserPayload['role'],
         city: values.city ?? '',
         country: values.country ?? '',
         tenant_id: tenantId,
         ...(values.username ? { username: values.username } : {}),
-      }) as CreateTenantUserPayload,
+      }) as CreateClientUserPayload,
     buildUpdatePayload: (values, id) => ({
       id,
       data: {
         first_name: values.first_name,
         last_name: values.last_name,
         email: values.email,
-        role: values.role as UpdateTenantUserPayload['role'],
+        role: values.role as UpdateClientUserPayload['role'],
         city: values.city ?? '',
         country: values.country ?? '',
         ...(values.username ? { username: values.username } : {}),
         ...(values.password ? { password: values.password } : {}),
-      } as UpdateTenantUserPayload,
+      } as UpdateClientUserPayload,
     }),
   });
 

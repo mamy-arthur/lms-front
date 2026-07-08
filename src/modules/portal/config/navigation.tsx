@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { LayoutDashboard, GraduationCap, Users, LayoutTemplate } from 'lucide-react';
+import { LayoutDashboard, GraduationCap, Users, LayoutTemplate, Wallet } from 'lucide-react';
 import { ROUTES } from '@/shared/constants/routes';
 
 export interface PortalNavItem {
@@ -28,6 +28,12 @@ export const PORTAL_NAV: PortalNavItem[] = [
       // { title: "Quizzes", url: ROUTES.portal.quizzes },
       // { title: "Attestation", url: ROUTES.portal.certificate}
     ],
+  },
+  {
+    url: ROUTES.portal.wallet,
+    title: 'Portefeuille',
+    icon: Wallet,
+    items: [],
   },
   {
     url: ROUTES.portal.certificate,

@@ -1,14 +1,14 @@
 import { apiPost, apiPut } from '@/shared/lib/apiClient';
-import type { CreateTenantUserPayload, TenantUser, UpdateTenantUserPayload } from '../types';
+import type { CreateClientUserPayload, ClientUser, UpdateClientUserPayload } from '../types';
 
 interface CreateUserResponse {
-  data: TenantUser;
+  data: ClientUser;
 }
 
-export const tenantUsersApi = {
-  create: (data: CreateTenantUserPayload): Promise<CreateUserResponse> =>
+export const ClientUsersApi = {
+  create: (data: CreateClientUserPayload): Promise<CreateUserResponse> =>
     apiPost<CreateUserResponse>('users', data),
 
-  update: (id: string, data: UpdateTenantUserPayload): Promise<{ data: TenantUser }> =>
-    apiPut<{ data: TenantUser }>(`users/${id}`, data),
+  update: (id: string, data: UpdateClientUserPayload): Promise<{ data: ClientUser }> =>
+    apiPut<{ data: ClientUser }>(`users/${id}`, data),
 } as const;

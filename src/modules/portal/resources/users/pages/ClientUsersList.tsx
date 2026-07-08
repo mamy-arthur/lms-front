@@ -4,13 +4,13 @@ import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { UserSearch } from '@modules/shared/components/users';
 import { UserFormDrawer } from '../components/UserFormDrawer';
-import { useTenantUsersQuery } from '../hooks/useTenantUsersQuery';
-import type { TenantUser, TenantUserSearchParams } from '../types';
-import { TenantUsersFilter } from './_components/tenant-users-filters';
-import { TenantUsersTable } from './_components/tenant-users-table';
+import { useClientUsersQuery } from '../hooks/useClientUsersQuery';
+import type { ClientUser, ClientUserSearchParams } from '../types';
+import { ClientUsersFilter } from './_components/client-users-filters';
+import { ClientUsersTable } from './_components/client-users-table';
 import { useUsersListController } from '@/modules/shared/hooks/useUsersListController';
 
-export function TenantUsersList() {
+export function ClientUserList() {
   const {
     isDrawerOpen,
     editingUser,
@@ -33,9 +33,9 @@ export function TenantUsersList() {
     page,
     pageSize,
     hasQuery,
-  } = useUsersListController<TenantUser, TenantUserSearchParams>({ defaultPageSize: 12 });
+  } = useUsersListController<ClientUser, ClientUserSearchParams>({ defaultPageSize: 12 });
 
-  const { data: queryResult } = useTenantUsersQuery(params);
+  const { data: queryResult } = useClientUsersQuery(params);
 
   return (
     <div className="bg-background">
@@ -52,7 +52,7 @@ export function TenantUsersList() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <UserSearch value={draftSearch} onChange={setDraftSearch} onSearch={handleSearch} />
           <div className="flex items-center gap-2 sm:ml-auto">
-            <TenantUsersFilter
+            <ClientUsersFilter
               roleFilter={draftRole}
               statusFilter={draftStatus}
               onRoleFilterChange={setDraftRole}
@@ -69,7 +69,7 @@ export function TenantUsersList() {
           </div>
         </div>
 
-        <TenantUsersTable
+        <ClientUsersTable
           users={queryResult?.data ?? []}
           hasQuery={hasQuery}
           page={page}
