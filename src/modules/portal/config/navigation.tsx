@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { LayoutDashboard, GraduationCap, Users, LayoutTemplate } from 'lucide-react';
+import { LayoutDashboard, Users, LayoutTemplate, Wallet, Store } from 'lucide-react';
 import { ROUTES } from '@/shared/constants/routes';
 
 export interface PortalNavItem {
@@ -15,19 +15,31 @@ export const PORTAL_NAV: PortalNavItem[] = [
     url: ROUTES.portal.dashboard,
     title: 'Tableau de bord',
     icon: LayoutDashboard,
-    items: [{ title: 'Tableau de bord', url: ROUTES.portal.dashboard }],
+    items: [],
   },
   {
-    url: '#',
-    title: 'Mes formations',
-    icon: GraduationCap,
-    items: [
-      // { title: "Cours", url: ROUTES.portal.courses },
-      // { title: "Catégories", url: ROUTES.portal.category },
-      // { title: "Modules", url: ROUTES.portal.modules },
-      // { title: "Quizzes", url: ROUTES.portal.quizzes },
-      // { title: "Attestation", url: ROUTES.portal.certificate}
-    ],
+    url: ROUTES.portal.store,
+    title: 'Boutique',
+    icon: Store,
+    items: [],
+  },
+  // {
+  //   url: '#',
+  //   title: 'Mes formations',
+  //   icon: GraduationCap,
+  //   items: [
+  //     // { title: "Cours", url: ROUTES.portal.courses },
+  //     // { title: "Catégories", url: ROUTES.portal.category },
+  //     // { title: "Modules", url: ROUTES.portal.modules },
+  //     // { title: "Quizzes", url: ROUTES.portal.quizzes },
+  //     // { title: "Attestation", url: ROUTES.portal.certificate}
+  //   ],
+  // },
+  {
+    url: ROUTES.portal.wallet,
+    title: 'Portefeuille',
+    icon: Wallet,
+    items: [],
   },
   {
     url: ROUTES.portal.certificate,
@@ -48,7 +60,7 @@ export const PORTAL_NAV: PortalNavItem[] = [
     url: ROUTES.portal.users,
     title: 'Utilisateurs',
     icon: Users,
-    items: [{ title: 'Utilisateurs', url: ROUTES.portal.users }],
+    items: [],
   },
   // {
   //     url: ROUTES.portal.profile,
