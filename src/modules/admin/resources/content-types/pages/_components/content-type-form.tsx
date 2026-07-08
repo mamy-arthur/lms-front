@@ -56,9 +56,9 @@ function toFormValues(ct: ContentType): ContentTypeFormValues {
       label: f.label,
       required: f.required,
       is_archived: f.is_archived,
-      accept: f.accept,
-      max_size_mb: f.max_size_mb,
-      multiple: f.multiple,
+      accept: f.accept ?? undefined,
+      max_size_mb: f.max_size_mb ?? undefined,
+      multiple: f.multiple ?? undefined,
     })),
   };
 }

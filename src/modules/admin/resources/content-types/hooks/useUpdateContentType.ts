@@ -5,7 +5,6 @@ import type { UpdateContentTypePayload } from '../types';
 
 export const useUpdateContentType = () => {
   const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: ({ id, payload }: { id: string; payload: UpdateContentTypePayload }) =>
       contentTypeApi.update(id, payload),
