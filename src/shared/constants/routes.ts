@@ -26,6 +26,7 @@ export const ROUTES = {
   },
   portal: {
     dashboard: '/dashboard',
+    store: '/store',
     // courses: "/courses",
     // category: "/category",
     // course: (slug: string) => `/courses/${slug}`,
