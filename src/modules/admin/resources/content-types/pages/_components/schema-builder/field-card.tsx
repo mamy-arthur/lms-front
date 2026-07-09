@@ -156,7 +156,7 @@ export function FieldCard({ id, index, control, isNew, onRemove }: FieldCardProp
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 items-center">
               {/* Name */}
               <div className="space-y-2">
-                <Label htmlFor={`field-name-${index}`}>Attribut (snake_case)</Label>
+                <Label htmlFor={`field-name-${index}`}>Nom (snake_case)</Label>
                 <Input id={`field-name-${index}`} placeholder="mon_champ" {...nameField} />
                 {fieldErrors?.name?.message && (
                   <p className="text-xs text-destructive">{fieldErrors.name.message}</p>
