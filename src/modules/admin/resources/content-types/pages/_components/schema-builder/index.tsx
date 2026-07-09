@@ -29,6 +29,7 @@ interface SchemaBuilderProps {
    * Used to determine whether a field is "new" or pre-existing.
    */
   existingFieldCount?: number;
+  isModuleSelected: boolean;
 }
 
 const DEFAULT_NEW_FIELD = {
@@ -42,7 +43,11 @@ const DEFAULT_NEW_FIELD = {
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
-export function SchemaBuilder({ control, existingFieldCount = 0 }: SchemaBuilderProps) {
+export function SchemaBuilder({
+  control,
+  isModuleSelected,
+  existingFieldCount = 0,
+}: SchemaBuilderProps) {
   const { fields, append, remove, move } = useFieldArray({
     control,
     name: 'fields',
@@ -80,6 +85,7 @@ export function SchemaBuilder({ control, existingFieldCount = 0 }: SchemaBuilder
           variant="outline"
           size="sm"
           onClick={() => append({ ...DEFAULT_NEW_FIELD })}
+          disabled={!isModuleSelected}
         >
           <Plus className="size-4" />
           Ajouter un champ
@@ -122,6 +128,7 @@ export function SchemaBuilder({ control, existingFieldCount = 0 }: SchemaBuilder
             size="sm"
             className="mt-4"
             onClick={() => append({ ...DEFAULT_NEW_FIELD })}
+            disabled={!isModuleSelected}
           >
             <Plus className="size-4" />
             Ajouter un champ

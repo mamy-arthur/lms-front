@@ -19,6 +19,12 @@ export function ContentTypesPage() {
   const { data, isLoading } = useContentTypes();
   const contentTypes = data?.data ?? [];
 
+  // Module types already taken — exclude the currently-edited entry so its own type
+  // doesn't appear as "Déjà utilisé" while editing.
+  const usedModuleTypes = contentTypes
+    .filter((ct) => ct.id !== selectedContentType?.id)
+    .map((ct) => ct.module_type);
+
   const handleCreate = () => {
     setSelectedContentType(undefined);
     setFormOpen(true);
@@ -44,12 +50,12 @@ export function ContentTypesPage() {
       {/* Header */}
       <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Content Types</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Type de contenu</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Définissez les schémas de champs pour chaque module de cours.
           </p>
         </div>
-        <Button onClick={handleCreate} className='bg-(--color-primary)'>
+        <Button onClick={handleCreate} className='bg-(--color-primary) hover:bg-(--color-primary)/80'>
           <Plus className="size-4" />
           Nouveau type de contenu
         </Button>
@@ -68,6 +74,7 @@ export function ContentTypesPage() {
         open={formOpen}
         onOpenChange={handleFormClose}
         contentType={selectedContentType}
+        usedModuleTypes={usedModuleTypes}
       />
     </div>
   );

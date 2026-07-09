@@ -1,19 +1,20 @@
 'use client';
 
-import { type Control, useWatch } from 'react-hook-form';
+import { useState } from 'react';
+import { type Control, useController, useFormState } from 'react-hook-form';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 import { ChevronDown, GripVertical } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { FIELD_TYPES, type FieldType } from '../../../types';
 import type { ContentTypeFormValues } from '../../../validation';
-import { FieldTypeSelect } from './field-type-select';
+import { FieldTypePicker } from './field-type-picker';
 import { MediaOptions } from './media-options';
 import { FieldActions } from './field-actions';
 
@@ -50,12 +51,23 @@ export function FieldCard({ id, index, control, isNew, onRemove }: FieldCardProp
     id,
   });
 
-  const fieldType = useWatch({ control, name: `fields.${index}.type` }) as FieldType;
-  const fieldName = useWatch({ control, name: `fields.${index}.name` });
-  const fieldLabel = useWatch({ control, name: `fields.${index}.label` });
-  const isArchived = useWatch({ control, name: `fields.${index}.is_archived` }) ?? false;
+  const { field: typeField } = useController({ control, name: `fields.${index}.type` });
+  const { field: nameField } = useController({ control, name: `fields.${index}.name` });
+  const { field: labelField } = useController({ control, name: `fields.${index}.label` });
+  const { field: archivedField } = useController({ control, name: `fields.${index}.is_archived` });
+  const { field: requiredField } = useController({ control, name: `fields.${index}.required` });
+  const { errors } = useFormState({ control });
+
+  const fieldType = typeField.value as FieldType;
+  const fieldName = nameField.value as string;
+  const fieldLabel = labelField.value as string;
+  const isArchived = (archivedField.value ?? false) as boolean;
+
+  const [isOpen, setIsOpen] = useState(false);
 
   const fieldTypeLabel = FIELD_TYPES.find((ft) => ft.value === fieldType)?.label ?? fieldType;
+  const fieldErrors = errors.fields?.[index] as
+    Record<string, { message?: string } | undefined> | undefined;
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -72,7 +84,7 @@ export function FieldCard({ id, index, control, isNew, onRemove }: FieldCardProp
         isArchived && 'opacity-60',
       )}
     >
-      <Collapsible>
+      <Collapsible open={isOpen} onOpenChange={setIsOpen}>
         {/* ── Header row ─────────────────────────────────────────────────── */}
         <div className="flex items-center gap-2 px-3 py-2.5">
           {/* Drag handle */}
@@ -86,6 +98,20 @@ export function FieldCard({ id, index, control, isNew, onRemove }: FieldCardProp
             <GripVertical className="size-4" />
           </button>
 
+
+          {/* Name / label summary */}
+          <div className="flex-1 min-w-0">
+            <p className="truncate text-xs font-medium leading-snug">
+              {fieldLabel || <span className="text-xs text-muted-foreground">Sans label</span>}
+            </p>
+            {fieldName && (
+              <p className="truncate font-mono text-xs text-muted-foreground leading-snug">
+                {fieldName}
+              </p>
+            )}
+          </div>
+
+
           {/* Type badge */}
           <span
             className={cn(
@@ -96,18 +122,6 @@ export function FieldCard({ id, index, control, isNew, onRemove }: FieldCardProp
             {fieldTypeLabel}
           </span>
 
-          {/* Name / label summary */}
-          <div className="flex-1 min-w-0">
-            <p className="truncate text-sm font-medium leading-snug">
-              {fieldLabel || <span className="italic text-muted-foreground">Sans label</span>}
-            </p>
-            {fieldName && (
-              <p className="truncate font-mono text-xs text-muted-foreground leading-snug">
-                {fieldName}
-              </p>
-            )}
-          </div>
-
           {isArchived && (
             <Badge variant="secondary" className="shrink-0 text-xs">
               Archivé
@@ -115,17 +129,11 @@ export function FieldCard({ id, index, control, isNew, onRemove }: FieldCardProp
           )}
 
           {/* Archive / delete action */}
-          <FormField
-            control={control}
-            name={`fields.${index}.is_archived`}
-            render={({ field }) => (
-              <FieldActions
-                isNew={isNew}
-                isArchived={isArchived}
-                onRemove={onRemove}
-                onToggleArchive={() => field.onChange(!field.value)}
-              />
-            )}
+          <FieldActions
+            isNew={isNew}
+            isArchived={isArchived}
+            onRemove={onRemove}
+            onToggleArchive={() => archivedField.onChange(!archivedField.value)}
           />
 
           {/* Expand toggle */}
@@ -137,7 +145,9 @@ export function FieldCard({ id, index, control, isNew, onRemove }: FieldCardProp
               className="shrink-0"
               aria-label="Développer le champ"
             >
-              <ChevronDown className="size-4 transition-transform duration-200 [[data-state=open]_&]:rotate-180" />
+              <ChevronDown
+                className={cn('size-4 transition-transform duration-200', isOpen && 'rotate-180')}
+              />
             </Button>
           </CollapsibleTrigger>
         </div>
@@ -145,85 +155,53 @@ export function FieldCard({ id, index, control, isNew, onRemove }: FieldCardProp
         {/* ── Expanded body ──────────────────────────────────────────────── */}
         <CollapsibleContent>
           <div className="border-t px-4 pb-4 pt-4 space-y-4">
-            {/* Field type */}
-            <FormField
-              control={control}
-              name={`fields.${index}.type`}
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Type de champ</FormLabel>
-                  <FormControl>
-                    <FieldTypeSelect
-                      value={field.value as FieldType}
-                      onChange={field.onChange}
-                      disabled={!isNew}
-                    />
-                  </FormControl>
-                  {!isNew && (
-                    <p className="text-xs text-muted-foreground">
-                      Le type ne peut pas être modifié sur un champ existant.
-                    </p>
-                  )}
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 items-center">
               {/* Name */}
-              <FormField
-                control={control}
-                name={`fields.${index}.name`}
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nom (snake_case)</FormLabel>
-                    <FormControl>
-                      <Input placeholder="mon_champ" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
+              <div className="space-y-2">
+                <Label htmlFor={`field-name-${index}`}>Attribut (snake_case)</Label>
+                <Input id={`field-name-${index}`} placeholder="mon_champ" {...nameField} />
+                {fieldErrors?.name?.message && (
+                  <p className="text-xs text-destructive">{fieldErrors.name.message}</p>
                 )}
-              />
+              </div>
 
               {/* Label */}
-              <FormField
-                control={control}
-                name={`fields.${index}.label`}
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Label</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Mon champ" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
+              <div className="space-y-2">
+                <Label htmlFor={`field-label-${index}`}>Label</Label>
+                <Input id={`field-label-${index}`} placeholder="Mon champ" {...labelField} />
+                {fieldErrors?.label?.message && (
+                  <p className="text-xs text-destructive">{fieldErrors.label.message}</p>
                 )}
-              />
+              </div>
+              {/* Required */}
+              <div className="flex items-center gap-2 mt-5">
+                <Checkbox
+                  id={`field-required-${index}`}
+                  checked={requiredField.value as boolean}
+                  onCheckedChange={requiredField.onChange}
+                />
+                <Label htmlFor={`field-required-${index}`} className="font-normal cursor-pointer">
+                  Champ obligatoire
+                </Label>
+              </div>
             </div>
-
-            {/* Required */}
-            <FormField
-              control={control}
-              name={`fields.${index}.required`}
-              render={({ field }) => (
-                <FormItem className="flex items-center gap-2 space-y-0">
-                  <FormControl>
-                    <Checkbox
-                      id={`field-required-${index}`}
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                  <FormLabel
-                    htmlFor={`field-required-${index}`}
-                    className="font-normal cursor-pointer"
-                  >
-                    Champ obligatoire
-                  </FormLabel>
-                </FormItem>
+            {/* Field type */}
+            <div className="flex flex-col space-y-2">
+              <Label>Type de champ</Label>
+              <FieldTypePicker
+                value={typeField.value as FieldType}
+                onChange={(v) => typeField.onChange(v)}
+                disabled={!isNew}
+              />
+              {!isNew && (
+                <p className="text-xs text-muted-foreground">
+                  Le type ne peut pas être modifié sur un champ existant.
+                </p>
               )}
-            />
-
+              {fieldErrors?.type?.message && (
+                <p className="text-xs text-destructive">{fieldErrors.type.message}</p>
+              )}
+            </div>
             {/* Media-specific options */}
             {fieldType === 'media' && <MediaOptions index={index} control={control} />}
           </div>
