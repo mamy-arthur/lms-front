@@ -98,7 +98,6 @@ export function FieldCard({ id, index, control, isNew, onRemove }: FieldCardProp
             <GripVertical className="size-4" />
           </button>
 
-
           {/* Name / label summary */}
           <div className="flex-1 min-w-0">
             <p className="truncate text-xs font-medium leading-snug">
@@ -110,7 +109,6 @@ export function FieldCard({ id, index, control, isNew, onRemove }: FieldCardProp
               </p>
             )}
           </div>
-
 
           {/* Type badge */}
           <span

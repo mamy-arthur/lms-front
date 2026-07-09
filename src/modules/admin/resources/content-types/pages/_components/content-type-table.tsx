@@ -15,11 +15,11 @@ import {
   Folder,
   Layers,
   Link as LinkIcon,
-  MoreHorizontal,
   Package,
   Pencil,
   FileText,
   ImagePlay,
+  MoreVertical,
 } from 'lucide-react';
 import type { ContentType, ModuleType } from '../../types';
 
@@ -76,7 +76,11 @@ function StatusBadge({ status }: { status?: string }) {
   if (status === 'draft') {
     return <Badge variant="secondary">Brouillon</Badge>;
   }
-  return <Badge variant="default" className='bg-green-500'>Actif</Badge>;
+  return (
+    <Badge variant="default" className="bg-green-500">
+      Actif
+    </Badge>
+  );
 }
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -118,33 +122,31 @@ export function ContentTypeTable({
         return (
           <div
             key={ct.id}
-            className="group flex flex-col gap-3 rounded-xl border border-border bg-card p-4 transition-all hover:border-muted-foreground/30 hover:shadow-sm"
+            className="group flex flex-col rounded-xl border border-border bg-card p-4 transition-all hover:border-muted-foreground/30 hover:shadow-sm"
           >
-            {/* Icon + actions row */}
+            {/* Header */}
             <div className="flex items-start justify-between">
               <div
                 className={`flex h-10 w-10 items-center justify-center rounded-lg text-white ${meta.bgColor}`}
               >
                 <meta.Icon className="h-5 w-5" />
               </div>
+
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    aria-label="Actions"
-                    className="opacity-0 transition-opacity group-hover:opacity-100"
-                  >
-                    <MoreHorizontal className="size-4" />
+                  <Button variant="ghost" size="icon" aria-label="Actions" className="h-8 w-8">
+                    <MoreVertical className="size-4" />
                   </Button>
                 </DropdownMenuTrigger>
+
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={() => onView(ct)}>
-                    <Eye className="size-4 mr-2" />
+                    <Eye className="mr-2 size-4" />
                     Voir
                   </DropdownMenuItem>
+
                   <DropdownMenuItem onClick={() => onEdit(ct)}>
-                    <Pencil className="size-4 mr-2" />
+                    <Pencil className="mr-2 size-4" />
                     Modifier
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -152,18 +154,22 @@ export function ContentTypeTable({
             </div>
 
             {/* Content */}
-            <div className="flex-1 space-y-1">
-              <p className="text-xs font-semibold">{ct.title}</p>
+            <div className="mt-4 flex-1 space-y-2">
+              <h3 className="text-sm font-semibold leading-none">{ct.title}</h3>
+
               {ct.description && (
-                <p className="line-clamp-2 text-xs text-muted-foreground">{ct.description}</p>
+                <p className="line-clamp-2 text-xs leading-5 text-muted-foreground">
+                  {ct.description}
+                </p>
               )}
             </div>
 
             {/* Footer */}
-            <div className="flex items-center justify-between border-t pt-3">
-              <span className="text-xs text-muted-foreground">
-                {activeFieldCount} champ{activeFieldCount !== 1 ? 's' : ''}
+            <div className="mt-5 flex items-center justify-between text-xs">
+              <span className="text-muted-foreground">
+                {activeFieldCount} champ{activeFieldCount > 1 && 's'}
               </span>
+
               <StatusBadge status={ct.status} />
             </div>
           </div>

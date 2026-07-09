@@ -55,7 +55,10 @@ export function ContentTypesPage() {
             Définissez les schémas de champs pour chaque module de cours.
           </p>
         </div>
-        <Button onClick={handleCreate} className='bg-(--color-primary) hover:bg-(--color-primary)/80'>
+        <Button
+          onClick={handleCreate}
+          className="bg-(--color-primary) hover:bg-(--color-primary)/80"
+        >
           <Plus className="size-4" />
           Nouveau type de contenu
         </Button>
