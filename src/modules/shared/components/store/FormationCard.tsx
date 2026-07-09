@@ -1,9 +1,11 @@
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { BookOpen, Building2, CalendarDays, ClipboardList, User } from 'lucide-react';
+import { BookOpen, Building2, CalendarDays, ClipboardList, ShoppingCart, User } from 'lucide-react';
 
 export interface FormationCardProps {
+  id?: string;
   title: string;
   author: string;
   category: string;
@@ -14,6 +16,7 @@ export interface FormationCardProps {
   moduleCount: number;
   evaluationCount: number;
   className?: string;
+  onAddToCart?: (id: string) => void;
 }
 
 function formatDate(iso: string): string {
@@ -33,6 +36,7 @@ function formatPrice(price: number): string {
 }
 
 export function FormationCard({
+  id,
   title,
   author,
   category,
@@ -43,11 +47,12 @@ export function FormationCard({
   moduleCount,
   evaluationCount,
   className,
+  onAddToCart,
 }: FormationCardProps) {
   const isFree = price === 0;
 
   return (
-    <Card className={cn('overflow-hidden pt-0 cursor-pointer', className)}>
+    <Card className={cn('overflow-hidden pt-0 flex flex-col cursor-pointer', className)}>
       <div className="relative aspect-video w-full overflow-hidden bg-muted">
         {coverImage ? (
           <img src={coverImage} alt={title} className="h-full w-full object-cover" />
@@ -76,7 +81,7 @@ export function FormationCard({
       <CardHeader>
         <CardTitle className="line-clamp-2 text-sm leading-snug">{title}</CardTitle>
       </CardHeader>
-      <CardContent className="flex flex-col gap-2 text-xs text-muted-foreground">
+      <CardContent className="flex flex-1 flex-col gap-2 text-xs text-muted-foreground">
         <div className="flex items-center gap-4 pb-1">
           <div className="flex items-center gap-1.5 text-blue-500">
             <BookOpen className="size-3 shrink-0" />
@@ -115,6 +120,18 @@ export function FormationCard({
             )}
           </div>
         </div>
+
+        {onAddToCart && (
+          <div className="mt-auto pt-3">
+            <Button
+              className="w-full gap-1.5 bg-(--color-primary) hover:bg-(--color-primary)/80"
+              onClick={() => onAddToCart(id ?? '')}
+            >
+              <ShoppingCart className="size-3.5" />
+              Ajouter au panier
+            </Button>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

@@ -9,7 +9,7 @@ const ROLE_OPTIONS = [
 
 export { ROLE_OPTIONS as TENANT_ROLE_OPTIONS };
 
-interface TenantUsersFilterProps {
+interface ClientUsersFilterProps {
   roleFilter: string;
   statusFilter: string;
   onRoleFilterChange: (value: string) => void;
@@ -17,6 +17,6 @@ interface TenantUsersFilterProps {
   onSearch: () => void;
 }
 
-export function TenantUsersFilter(props: TenantUsersFilterProps) {
+export function ClientUsersFilter(props: ClientUsersFilterProps) {
   return <UsersFilter {...props} roleOptions={ROLE_OPTIONS} />;
 }

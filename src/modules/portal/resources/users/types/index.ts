@@ -1,6 +1,6 @@
 import { Role, TENANT_ROLES } from '@/shared/constants/roles';
 
-export interface TenantUser {
+export interface ClientUser {
   id: string;
   first_name: string;
   last_name: string;
@@ -14,7 +14,7 @@ export interface TenantUser {
   createdAt: string;
 }
 
-export interface CreateTenantUserPayload {
+export interface CreateClientUserPayload {
   first_name: string;
   last_name: string;
   username?: string;
@@ -27,7 +27,7 @@ export interface CreateTenantUserPayload {
   country?: string;
 }
 
-export interface UpdateTenantUserPayload {
+export interface UpdateClientUserPayload {
   first_name: string;
   last_name: string;
   username?: string;
@@ -41,7 +41,7 @@ export interface UpdateTenantUserPayload {
 
 export const TENANT_USER_ROLES: readonly Role[] = TENANT_ROLES;
 
-export interface TenantUserSearchParams {
+export interface ClientUserSearchParams {
   q?: string;
   role?: string;
   status?: 'active' | 'inactive';
@@ -51,7 +51,7 @@ export interface TenantUserSearchParams {
   page_size?: number;
 }
 
-export function normalizeTenantUser(raw: Record<string, unknown>): TenantUser {
+export function normalizeClientUser(raw: Record<string, unknown>): ClientUser {
   const first_name = String(raw.first_name ?? raw.firstName ?? '');
   const last_name = String(raw.last_name ?? raw.lastName ?? '');
   const username =

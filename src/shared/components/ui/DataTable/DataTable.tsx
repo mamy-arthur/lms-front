@@ -31,6 +31,7 @@ export interface DataTableColumn<T> {
   key: string;
   label: string;
   sortable?: boolean;
+  headerClassName?: string;
   render: (row: T) => React.ReactNode;
   skeleton?: React.ReactNode;
 }
@@ -166,6 +167,7 @@ export function DataTable<T extends { id: string | number }>({
                 className={cn(
                   'text-xs font-medium uppercase tracking-wide text-muted-foreground',
                   col.sortable && onSort && 'cursor-pointer select-none hover:text-foreground',
+                  col.headerClassName,
                 )}
                 onClick={() => {
                   if (col.sortable) onSort?.(col.key);
