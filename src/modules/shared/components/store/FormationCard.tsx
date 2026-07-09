@@ -82,14 +82,14 @@ export function FormationCard({
         <CardTitle className="line-clamp-2 text-sm leading-snug">{title}</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-1 flex-col gap-2 text-xs text-muted-foreground">
-        <div className="flex items-center gap-4 pb-1">
-          <div className="flex items-center gap-1.5 text-blue-500">
+        <div className="flex items-center gap-1 pb-1">
+          <div className="flex items-center gap-1.5 border p-1 rounded-md">
             <BookOpen className="size-3 shrink-0" />
             <span className="font-medium">
               {moduleCount} module{moduleCount !== 1 ? 's' : ''}
             </span>
           </div>
-          <div className="flex items-center gap-1.5 text-amber-600">
+          <div className="flex items-center gap-1.5 border p-1 rounded-md">
             <ClipboardList className="size-3 shrink-0" />
             <span className="font-medium">{evaluationCount} examens</span>
           </div>
@@ -110,28 +110,38 @@ export function FormationCard({
               {enrolledCompanies !== 1 ? 's' : ''}
             </span>
           </div>
+        </div>
+
+        <div className="flex w-full justify-between items-center mt-auto pt-3 gap-1">
           <div>
-            {isFree ? (
-              <span className="text-green-500 font-medium">Gratuit</span>
-            ) : (
-              <span className="bg-background/90 text-lg text-black font-medium">
-                {formatPrice(price)}
-              </span>
+            <div>
+              {isFree ? (
+                <span className="text-green-500 font-medium">Gratuit</span>
+              ) : (
+                <span className="bg-background/90 text-lg text-black font-medium">
+                  {formatPrice(price)}
+                </span>
+              )}
+            </div>
+          </div>
+          <div className='flex gap-1'>
+            <Button
+              className="gap-1.5"
+              variant="outline"
+              onClick={() => console.log('View details')}
+            >
+              Details
+            </Button>
+            {onAddToCart && (
+              <Button
+                className=" gap-1.5 bg-(--color-primary) hover:bg-(--color-primary)/80"
+                onClick={() => onAddToCart(id ?? '')}
+              >
+                <ShoppingCart className="size-3.5" />
+              </Button>
             )}
           </div>
         </div>
-
-        {onAddToCart && (
-          <div className="mt-auto pt-3">
-            <Button
-              className="w-full gap-1.5 bg-(--color-primary) hover:bg-(--color-primary)/80"
-              onClick={() => onAddToCart(id ?? '')}
-            >
-              <ShoppingCart className="size-3.5" />
-              Ajouter au panier
-            </Button>
-          </div>
-        )}
       </CardContent>
     </Card>
   );
