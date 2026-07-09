@@ -8,6 +8,7 @@ import {
   LucideIcon,
   Store,
   LayoutTemplate,
+  Layers,
   Wallet,
 } from 'lucide-react';
 import { ROUTES } from '@/shared/constants/routes';
@@ -93,5 +94,12 @@ export const ADMIN_NAV: AdminNavItem[] = [
     icon: Building2,
     access: ACCESS.tenants,
     items: [{ title: 'Tenants', url: ROUTES.admin.tenants }],
+  },
+  {
+    url: ROUTES.admin.contentTypes,
+    title: 'Types de contenu',
+    icon: Layers,
+    access: ACCESS.contentTypes,
+    items: [],
   },
 ];
