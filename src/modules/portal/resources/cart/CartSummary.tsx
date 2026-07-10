@@ -22,13 +22,20 @@ export function CartSummary({ onPaid }: CartSummaryProps) {
   };
 
   return (
-    <div className="space-y-3 border-t border-border pt-4">
-      <div className="flex items-center justify-between text-sm">
+    <div className="space-y-3 pt-4 bg-gray-50 p-4 rounded-lg">
+      <div className="flex  justify-between items-center gap-2 space-y-1">
+        <p className="text-sm font-semibold text-foreground">Resumé de la commande</p>
+        <p className="text-xs text-muted-foreground">
+          {cartCount} article{cartCount > 1 ? 's' : ''}
+        </p>
+      </div>
+
+      <div className="flex items-center justify-between text-xs">
         <span className="text-muted-foreground">Sous-total</span>
         <span className="font-medium">{formatCurrency(subtotal)}</span>
       </div>
 
-      <div className="flex items-center justify-between text-sm">
+      <div className="flex items-center justify-between text-xs">
         <span className="text-muted-foreground">Taxes (20%)</span>
         <span className="font-medium">{formatCurrency(taxes)}</span>
       </div>
@@ -47,7 +54,7 @@ export function CartSummary({ onPaid }: CartSummaryProps) {
 
       <Button
         type="button"
-        className="w-full bg-(--color-primary) hover:bg-(--color-primary)/80"
+        className="w-full bg-(--color-primary) hover:bg-primary/80"
         disabled={cartCount === 0}
         onClick={handleCheckout}
       >
