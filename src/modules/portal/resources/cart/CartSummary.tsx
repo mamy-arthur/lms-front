@@ -54,7 +54,7 @@ export function CartSummary({ onPaid }: CartSummaryProps) {
 
       <Button
         type="button"
-        className="w-full bg-(--color-primary) hover:bg-primary/80"
+        className="w-full bg-(--color-primary) hover:bg-(--color-primary)/80"
         disabled={cartCount === 0}
         onClick={handleCheckout}
       >
