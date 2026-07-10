@@ -158,7 +158,7 @@ export function FormationCard({
           <div className="col-span-2 flex gap-2">
             {onAddToCart && (
               <Button
-                className="w-full gap-1.5 p-4 bg-(--color-primary) hover:bg-primary/80"
+                className="w-full gap-1.5 p-4 bg-(--color-primary) hover:bg-(--color-primary)/80"
                 onClick={(event) => {
                   event.stopPropagation();
                   onAddToCart(id ?? '');

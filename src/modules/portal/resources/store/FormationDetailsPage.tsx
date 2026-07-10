@@ -12,10 +12,10 @@ import {
   GraduationCap,
   Layers,
   Lock,
+  ShoppingCart,
   Timer,
   User,
 } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
@@ -60,7 +60,7 @@ function ProgramModule({ step, stepIndex }: { step: StoreModuleStep; stepIndex: 
         <AccordionTrigger className="px-3 py-3 no-underline hover:no-underline">
           <div className="flex items-center gap-2 text-left">
             <BookOpen className="size-4 text-(--color-primary)" />
-            <span className="font-semibold text-sm">
+            <span className="font-semibold text-xs">
               Module {stepIndex + 1} - {step.title}
             </span>
           </div>
@@ -94,7 +94,7 @@ function ProgramEvaluation({ step, stepIndex }: { step: StoreEvaluationStep; ste
           <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
             Étape {stepIndex + 1}
           </p>
-          <p className="mt-1 flex items-center gap-2 text-sm font-semibold">
+          <p className="mt-1 flex items-center gap-2 text-xs font-semibold">
             <ClipboardCheck className="size-4 text-(--color-primary)" />
             {step.title}
           </p>
@@ -122,14 +122,14 @@ export function FormationDetailsPage({ formation }: FormationDetailsPageProps) {
 
   return (
     <div className="w-full space-y-6 pb-8">
-      <Card className="overflow-hidden border border-border/70">
-        <div className="grid gap-0 lg:grid-cols-[1.4fr_1fr]">
+      <div className="overflow-hidden">
+        <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
           <div className="relative min-h-64 bg-muted">
             {formation.coverImage ? (
               <img
                 src={formation.coverImage}
                 alt={formation.title}
-                className="h-full w-full object-cover"
+                className="h-full w-full object-cover rounded-xl"
               />
             ) : (
               <div className="flex h-full items-center justify-center text-muted-foreground">
@@ -138,16 +138,10 @@ export function FormationDetailsPage({ formation }: FormationDetailsPageProps) {
             )}
           </div>
 
-          <CardContent className="flex flex-col gap-4 p-5 sm:p-6">
-            <div className="flex flex-wrap gap-2">
-              <Badge variant="secondary">{formation.category}</Badge>
-              <Badge variant="outline">{formation.level}</Badge>
-              <Badge variant="outline">{formation.duration}</Badge>
-            </div>
-
+          <div className="flex flex-col gap-4">
             <div>
               <h1 className="text-xl font-semibold leading-tight sm:text-2xl">{formation.title}</h1>
-              <p className="mt-2 text-sm text-muted-foreground">{formation.shortDescription}</p>
+              <p className="mt-2 text-xs text-black">{formation.shortDescription}</p>
             </div>
 
             <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-3">
@@ -165,21 +159,22 @@ export function FormationDetailsPage({ formation }: FormationDetailsPageProps) {
               </div>
             </div>
 
-            <div className="flex items-center gap-2 text-sm">
+            <div className="flex items-center gap-2 text-xs">
               <User className="size-4 text-muted-foreground" />
               <span className="text-muted-foreground">Formateur :</span>
               <span className="font-medium">{formation.author}</span>
             </div>
 
             <div className="mt-auto flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-2xl font-semibold text-foreground">
+              <p className="text-3xl text-foreground">
                 {formatPrice(formation.price)}
               </p>
               <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
                 <Button
-                  className="bg-(--color-primary) hover:bg-primary/80"
+                  className="bg-(--color-primary) hover:bg-(--color-primary)/80"
                   onClick={() => addToCart(product)}
                 >
+                  <ShoppingCart />
                   Ajouter au panier
                 </Button>
                 <Button variant="outline" onClick={handleBuyNow}>
@@ -187,13 +182,13 @@ export function FormationDetailsPage({ formation }: FormationDetailsPageProps) {
                 </Button>
               </div>
             </div>
-          </CardContent>
+          </div>
         </div>
-      </Card>
+      </div>
 
       <div className="grid gap-6 lg:grid-cols-[1.4fr_0.9fr]">
         <div className="space-y-6">
-          <Card className="border border-border/70">
+          <Card>
             <CardHeader>
               <CardTitle>Description</CardTitle>
               <CardDescription>
@@ -201,11 +196,11 @@ export function FormationDetailsPage({ formation }: FormationDetailsPageProps) {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground">{formation.fullDescription}</p>
+              <p className="text-xs text-black">{formation.fullDescription}</p>
             </CardContent>
           </Card>
 
-          <Card className="border border-border/70">
+          <Card>
             <CardHeader>
               <CardTitle>Ce que vous apprendrez</CardTitle>
             </CardHeader>
@@ -224,7 +219,7 @@ export function FormationDetailsPage({ formation }: FormationDetailsPageProps) {
             </CardContent>
           </Card>
 
-          <Card className="border border-border/70">
+          <Card>
             <CardHeader>
               <CardTitle>Programme</CardTitle>
               <CardDescription>
@@ -247,7 +242,7 @@ export function FormationDetailsPage({ formation }: FormationDetailsPageProps) {
         </div>
 
         <div className="space-y-6 lg:sticky lg:top-4 lg:self-start">
-          <Card className="border border-border/70">
+          <Card>
             <CardHeader>
               <CardTitle>Informations</CardTitle>
             </CardHeader>
@@ -289,7 +284,7 @@ export function FormationDetailsPage({ formation }: FormationDetailsPageProps) {
             </CardContent>
           </Card>
 
-          <Card className="border border-amber-200 bg-amber-50/50">
+          <Card className="border-amber-200 bg-amber-50/50">
             <CardHeader>
               <CardTitle className="text-sm">Accès restreint avant achat</CardTitle>
               <CardDescription>
