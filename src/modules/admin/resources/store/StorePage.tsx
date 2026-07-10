@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { Search, X } from 'lucide-react';
 import { FormationCard } from '@/modules/shared/components/store/FormationCard';
 import { MOCK_STORE_FORMATIONS, MOCK_STORE_CATEGORIES } from '@/shared/mocks/store.mock';
@@ -29,6 +30,7 @@ function FormationCardSkeleton() {
 }
 
 export function StorePage() {
+  const router = useRouter();
   const addToCart = useCartStore((state) => state.addToCart);
   const [search, setSearch] = useState('');
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
@@ -82,6 +84,10 @@ export function StorePage() {
       price: formation.price,
       coverImage: formation.coverImage,
     });
+  };
+
+  const handleOpenDetails = (id: string) => {
+    router.push(`/admin/store/${id}`);
   };
 
   return (
@@ -172,6 +178,7 @@ export function StorePage() {
                 moduleCount={formation.moduleCount}
                 evaluationCount={formation.evaluationCount}
                 onAddToCart={handleAddToCart}
+                onOpenDetails={handleOpenDetails}
               />
             ))}
           </div>

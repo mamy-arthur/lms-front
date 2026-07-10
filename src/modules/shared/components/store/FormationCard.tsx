@@ -25,6 +25,7 @@ export interface FormationCardProps {
   evaluationCount: number;
   className?: string;
   onAddToCart?: (id: string) => void;
+  onOpenDetails?: (id: string) => void;
 }
 
 function formatDate(iso: string): string {
@@ -56,15 +57,39 @@ export function FormationCard({
   evaluationCount,
   className,
   onAddToCart,
+  onOpenDetails,
 }: FormationCardProps) {
   const isFree = price === 0;
+  const isClickable = Boolean(onOpenDetails && id);
+
+  const handleOpenDetails = () => {
+    if (!isClickable || !onOpenDetails) {
+      return;
+    }
+
+    onOpenDetails(id ?? '');
+  };
 
   return (
     <Card
       className={cn(
-        'flex flex-col overflow-hidden pt-0 transition-shadow hover:shadow-md cursor-pointer',
+        'flex flex-col overflow-hidden pt-0 transition-shadow hover:shadow-md',
+        isClickable && 'cursor-pointer',
         className,
       )}
+      role={isClickable ? 'button' : undefined}
+      tabIndex={isClickable ? 0 : undefined}
+      onClick={handleOpenDetails}
+      onKeyDown={(event) => {
+        if (!isClickable) {
+          return;
+        }
+
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          handleOpenDetails();
+        }
+      }}
     >
       <div className="relative aspect-video w-full overflow-hidden bg-muted">
         {coverImage ? (
@@ -133,8 +158,11 @@ export function FormationCard({
           <div className="col-span-2 flex gap-2">
             {onAddToCart && (
               <Button
-                className="w-full gap-1.5 p-4 bg-(--color-primary) hover:bg-(--color-primary)/80"
-                onClick={() => onAddToCart(id ?? '')}
+                className="w-full gap-1.5 p-4 bg-(--color-primary) hover:bg-primary/80"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onAddToCart(id ?? '');
+                }}
               >
                 <ShoppingCart className="size-3.5" />
                 Ajouter au panier
