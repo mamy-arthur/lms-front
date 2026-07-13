@@ -35,11 +35,13 @@ function CertificateToolbarExtrasComponent({
   uploadMedia,
   apiPath,
   insertHtml,
+  insertText,
 }: {
   editor: Editor;
   uploadMedia?: UploadMediaFn;
   apiPath: string;
   insertHtml?: (html: string) => void;
+  insertText?: (text: string) => void;
 }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const { data } = useTemplateVariablesQuery(apiPath, 'attestation');
@@ -47,6 +49,10 @@ function CertificateToolbarExtrasComponent({
 
   /** La clé du backend inclut déjà `{{…}}`, on l'insère directement. */
   const insertVariable = (key: string) => {
+    if (insertText) {
+      insertText(key);
+      return;
+    }
     editor.chain().focus().insertContent(key).run();
   };
 
@@ -134,17 +140,23 @@ function CertificateToolbarExtrasComponent({
 export function makeCertificateToolbarExtras(options?: {
   uploadMedia?: UploadMediaFn;
   apiPath?: string;
-}): (editor: Editor) => ReactNode {
+}): (
+  editor: Editor,
+  ctx?: { insertHtml: (html: string) => void; insertText: (text: string) => void },
+) => ReactNode {
   const { uploadMedia, apiPath = 'template-variables' } = options ?? {};
-  return (editor: Editor, ctx?: { insertHtml: (html: string) => void }) => (
+  return (
+    editor: Editor,
+    ctx?: { insertHtml: (html: string) => void; insertText: (text: string) => void },
+  ) => (
     <CertificateToolbarExtrasComponent
       editor={editor}
       uploadMedia={uploadMedia}
       apiPath={apiPath}
       insertHtml={ctx?.insertHtml}
+      insertText={ctx?.insertText}
     />
   );
 }
 
 /** Version portail (sans upload, route tenant). */
-export const certificateToolbarExtras = makeCertificateToolbarExtras();

@@ -9,8 +9,8 @@ export function useMailTemplatesQuery(params?: MailTemplateSearchParams) {
   return useQuery({
     queryKey: [...ADMIN_MAIL_TEMPLATES_QUERY_KEY, params],
     queryFn: async () => {
-      const { category, ...rest } = (params ?? {}) as Record<string, unknown>;
-      const apiParams = {
+      const { category, ...rest } = params ?? {};
+      const apiParams: Record<string, unknown> = {
         ...rest,
         ...(category !== undefined ? { status: category } : {}),
       };

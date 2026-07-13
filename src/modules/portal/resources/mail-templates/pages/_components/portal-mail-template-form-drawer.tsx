@@ -29,7 +29,6 @@ const baseSchema = {
 };
 
 const createSchema = z.object(baseSchema);
-const updateSchema = z.object(baseSchema);
 
 type FormValues = z.infer<typeof createSchema>;
 
@@ -61,7 +60,7 @@ function PortalMailTemplateFormDrawerBase({
 
   const toolbarExtras = useMemo(() => makeMailTemplateToolbarExtras('template-variables'), []);
 
-  const schema = isEdit ? updateSchema : createSchema;
+  const schema = createSchema;
 
   const defaultValues = useMemo<FormValues>(() => {
     if (template) {
@@ -106,7 +105,7 @@ function PortalMailTemplateFormDrawerBase({
   return (
     <Sheet open={open} onOpenChange={(nextOpen) => !nextOpen && formState.handleClose()}>
       <SheetContent
-        className="flex w-full flex-col gap-0 p-0 sm:max-w-2xl lg:max-w-4xl"
+        className="flex w-full flex-col gap-0 p-0 sm:max-w-150! lg:max-w-200!"
         showCloseButton={true}
         onInteractOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
@@ -124,6 +123,7 @@ function PortalMailTemplateFormDrawerBase({
           handleClose={formState.handleClose}
           onSubmit={formState.onSubmit}
           toolbarExtras={toolbarExtras}
+          reference={template?.reference}
         />
       </SheetContent>
     </Sheet>

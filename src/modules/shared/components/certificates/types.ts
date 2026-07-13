@@ -1,5 +1,6 @@
 export interface Certificate {
   id: string;
+  reference: string;
   name: string;
   isActive: boolean;
   isDefaultTemplate: boolean;
@@ -35,6 +36,7 @@ export interface CertificateSearchParams {
   q?: string;
   tenant_id?: string;
   status?: 'active' | 'inactive';
+  category?: string;
   sort_by?: string;
   sort_dir?: 'asc' | 'desc';
   page?: number;
@@ -44,6 +46,7 @@ export interface CertificateSearchParams {
 export function normalizeCertificate(raw: Record<string, unknown>): Certificate {
   return {
     id: String(raw.id ?? raw._id ?? ''),
+    reference: String(raw.reference ?? ''),
     name: String(raw.name ?? ''),
     isActive: Boolean(raw.isActive ?? raw.is_active ?? raw.status ?? false),
     isDefaultTemplate: Boolean(

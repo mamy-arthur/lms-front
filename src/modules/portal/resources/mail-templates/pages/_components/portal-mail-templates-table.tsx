@@ -1,12 +1,8 @@
 'use client';
 
 import { Mail, CheckCircle2, XCircle } from 'lucide-react';
-import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
-import {
-  MailTemplateActions,
-  MailTemplatePreviewDialog,
-} from '@modules/shared/components/mail-templates';
+import { MailTemplateActions } from '@modules/shared/components/mail-templates';
 import {
   DataTable,
   type DataTableColumn,
@@ -30,6 +26,7 @@ interface PortalMailTemplatesTableProps {
   onPageSizeChange: (pageSize: number) => void;
   onEdit: (template: MailTemplate) => void;
   onDelete?: (template: MailTemplate) => void;
+  onPreview: (template: MailTemplate) => void;
 }
 
 export function PortalMailTemplatesTable({
@@ -45,8 +42,8 @@ export function PortalMailTemplatesTable({
   onPageSizeChange,
   onEdit,
   onDelete,
+  onPreview,
 }: PortalMailTemplatesTableProps) {
-  const [previewTemplate, setPreviewTemplate] = useState<MailTemplate | null>(null);
   const duplicateMutation = useDuplicatePortalMailTemplate();
   const columns: DataTableColumn<MailTemplate>[] = [
     {
@@ -88,13 +85,15 @@ export function PortalMailTemplatesTable({
       label: 'Actions',
       sortable: false,
       render: (tpl) => (
-        <MailTemplateActions
-          templateLabel={tpl.name}
-          onPreview={() => setPreviewTemplate(tpl)}
-          onEdit={() => onEdit(tpl)}
-          onDuplicate={() => duplicateMutation.mutate(tpl.id)}
-          onDelete={() => onDelete?.(tpl)}
-        />
+        <div onClick={(e) => e.stopPropagation()}>
+          <MailTemplateActions
+            templateLabel={tpl.name}
+            onPreview={() => onPreview(tpl)}
+            onEdit={() => onEdit(tpl)}
+            onDuplicate={() => duplicateMutation.mutate(tpl.id)}
+            onDelete={() => onDelete?.(tpl)}
+          />
+        </div>
       ),
     },
   ];
@@ -113,21 +112,13 @@ export function PortalMailTemplatesTable({
         onSort={onSort}
         onPageChange={onPageChange}
         onPageSizeChange={onPageSizeChange}
+        onRowClick={(tpl) => onPreview(tpl)}
         emptyState={{
           icon: <Mail className="size-8 text-muted-foreground" />,
           title: 'Aucun template mail',
           description: 'Créez votre premier template mail en cliquant sur « Nouveau template ».',
         }}
       />
-
-      {previewTemplate && (
-        <MailTemplatePreviewDialog
-          open={!!previewTemplate}
-          onClose={() => setPreviewTemplate(null)}
-          name={previewTemplate.name}
-          body={previewTemplate.body}
-        />
-      )}
     </>
   );
 }

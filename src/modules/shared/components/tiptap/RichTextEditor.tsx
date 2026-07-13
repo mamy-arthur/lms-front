@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, type ReactNode } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef, useCallback, type ReactNode } from 'react';
 import { useEditor, useEditorState, EditorContent, type Editor } from '@tiptap/react';
 import { DOMParser as PmDOMParser } from '@tiptap/pm/model';
 import StarterKit from '@tiptap/starter-kit';
@@ -98,9 +98,13 @@ type Props = {
    */
   outputFormat?: 'markdown' | 'html';
   /** Boutons optionnels ajoutés à la fin de la toolbar. Reçoit l'instance editor.
-   * En mode `html`, un second argument `ctx.insertHtml` est fourni pour insérer
-   * du HTML brut dans le contenteditable sans passer par ProseMirror. */
-  toolbarExtras?: (editor: Editor, ctx?: { insertHtml: (html: string) => void }) => ReactNode;
+   * En mode `html`, un second argument `ctx` est fourni :
+   * - `ctx.insertHtml`  : insère du HTML brut dans le contenteditable
+   * - `ctx.insertText`  : insère du texte brut (variables) sans risque d'interprétation HTML */
+  toolbarExtras?: (
+    editor: Editor,
+    ctx?: { insertHtml: (html: string) => void; insertText: (text: string) => void },
+  ) => ReactNode;
 };
 
 function ToolbarButton({
@@ -430,10 +434,37 @@ export function RichTextEditor({
   }, [value, editor]);
 
   // Sync externe value → div contenteditable (mode HTML uniquement).
-  // On ne touche à innerHTML que si le div n'est pas en cours d'édition
-  // pour ne pas réinitialiser la position du curseur.
   const htmlPreviewRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
+  // Toujours à jour pendant le render : utilisé dans la callback ref ci-dessous.
+  const latestValueRef = useRef(value);
+  latestValueRef.current = value;
+
+  // Sauvegarde du dernier range de sélection dans le contenteditable.
+  // Nécessaire car l'ouverture du dialog image fait perdre le focus (et donc
+  // la sélection) avant qu'on appelle insertHtmlAtCursor.
+  const savedRangeRef = useRef<Range | null>(null);
+
+  const saveSelection = () => {
+    const sel = window.getSelection();
+    const el = htmlPreviewRef.current;
+    if (sel && sel.rangeCount > 0 && el && el.contains(sel.getRangeAt(0).commonAncestorContainer)) {
+      savedRangeRef.current = sel.getRangeAt(0).cloneRange();
+    }
+  };
+
+  // Callback ref : appelé immédiatement à chaque montage du div (même quand
+  // TipTap s'initialise en différé ou quand sourceMode bascule).
+  // Grâce à latestValueRef, la valeur est toujours celle du dernier render.
+  const htmlPreviewCallbackRef = useCallback((el: HTMLDivElement | null) => {
+    (htmlPreviewRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
+    if (el) {
+      el.innerHTML = latestValueRef.current ?? '';
+    }
+  }, []); // stable — latestValueRef mis à jour inline à chaque render
+
+  // Sync value → div quand la valeur change depuis le parent (ex : form.reset)
+  // mais que l'utilisateur n'est pas en train d'éditer.
+  useLayoutEffect(() => {
     if (outputFormat !== 'html' || sourceMode) return;
     const el = htmlPreviewRef.current;
     if (!el || document.activeElement === el) return;
@@ -444,28 +475,54 @@ export function RichTextEditor({
 
   if (!editor) return null;
 
-  // En mode HTML, insère du HTML à la position du curseur dans le contenteditable.
+  // En mode HTML, insère du HTML à la position sauvegardée dans le contenteditable.
   const insertHtmlAtCursor = (html: string) => {
     const el = htmlPreviewRef.current;
     if (!el) return;
     el.focus();
-    const sel = window.getSelection();
-    if (sel && sel.rangeCount > 0 && el.contains(sel.getRangeAt(0).commonAncestorContainer)) {
-      const range = sel.getRangeAt(0);
-      range.deleteContents();
+    const savedRange = savedRangeRef.current;
+    if (savedRange && el.contains(savedRange.commonAncestorContainer)) {
+      const sel = window.getSelection();
+      sel?.removeAllRanges();
+      sel?.addRange(savedRange);
+      savedRange.deleteContents();
       const frag = document.createRange().createContextualFragment(html);
-      range.insertNode(frag);
-      sel.collapseToEnd();
+      savedRange.insertNode(frag);
+      sel?.collapseToEnd();
+      savedRangeRef.current = null;
     } else {
       el.insertAdjacentHTML('beforeend', html);
     }
     onChange(el.innerHTML);
   };
 
-  // Wrapper pour toolbarExtras : en mode HTML, passe insertHtmlAtCursor en contexte.
+  // En mode HTML, insère du texte brut (pas parsé comme HTML) à la position sauvegardée.
+  // Utilisé pour les variables `{{user.name}}` qui ne doivent pas être interprétées.
+  const insertTextAtCursor = (text: string) => {
+    const el = htmlPreviewRef.current;
+    if (!el) return;
+    el.focus();
+    const savedRange = savedRangeRef.current;
+    const textNode = document.createTextNode(text);
+    if (savedRange && el.contains(savedRange.commonAncestorContainer)) {
+      const sel = window.getSelection();
+      sel?.removeAllRanges();
+      sel?.addRange(savedRange);
+      savedRange.deleteContents();
+      savedRange.insertNode(textNode);
+      sel?.collapseToEnd();
+      savedRangeRef.current = null;
+    } else {
+      el.appendChild(textNode);
+    }
+    onChange(el.innerHTML);
+  };
+
+  // Wrapper pour toolbarExtras : en mode HTML, passe les deux helpers en contexte.
   const wrappedToolbarExtras = toolbarExtras
     ? outputFormat === 'html'
-      ? (editor: Editor) => toolbarExtras(editor, { insertHtml: insertHtmlAtCursor })
+      ? (editor: Editor) =>
+          toolbarExtras(editor, { insertHtml: insertHtmlAtCursor, insertText: insertTextAtCursor })
       : toolbarExtras
     : undefined;
 
@@ -538,10 +595,13 @@ export function RichTextEditor({
           // La valeur initiale est injectée via ref/useEffect pour éviter
           // les conflits de cursor avec dangerouslySetInnerHTML.
           <div
-            ref={htmlPreviewRef}
+            ref={htmlPreviewCallbackRef}
             contentEditable
             suppressContentEditableWarning
             onInput={(e) => onChange((e.currentTarget as HTMLDivElement).innerHTML)}
+            onSelect={saveSelection}
+            onMouseUp={saveSelection}
+            onKeyUp={saveSelection}
             className={cn(
               'min-h-32 w-full rounded-b-md border bg-background px-3 py-2 text-sm overflow-auto',
               'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',

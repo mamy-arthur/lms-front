@@ -1,6 +1,6 @@
 'use client';
 
-import { Filter, Search } from 'lucide-react';
+import { Search, Settings2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -36,7 +36,7 @@ export function AdminMailTemplatesFilter({
     <Popover>
       <PopoverTrigger asChild>
         <Button variant="outline" size="sm">
-          <Filter className="size-4" />
+          <Settings2 className="size-4" />
           Filtres
         </Button>
       </PopoverTrigger>

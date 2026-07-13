@@ -1,5 +1,7 @@
 export { CertificateSearch } from './certificate-search';
 export type { CertificateSearchProps } from './certificate-search';
+export { CertificatesFilter } from './certificates-filter';
+export type { CertificatesFilterProps } from './certificates-filter';
 export { CertificateActions } from './certificate-actions';
 export type { CertificateActionsProps } from './certificate-actions';
 export { CertificateForm } from './certificate-form';

@@ -34,6 +34,8 @@ export interface CertificateFormProps {
   extraFields?: ReactNode;
   /** Boutons optionnels injectés à la fin de la toolbar TipTap. */
   toolbarExtras?: (editor: Editor) => ReactNode;
+  /** Référence de l'attestation (affichée en lecture seule en mode édition). */
+  reference?: string;
 }
 
 export function CertificateForm({
@@ -44,6 +46,7 @@ export function CertificateForm({
   onSubmit,
   extraFields,
   toolbarExtras,
+  reference,
 }: CertificateFormProps) {
   return (
     <Field {...form}>
@@ -82,6 +85,23 @@ export function CertificateForm({
               </FieldGroup>
             )}
           />
+
+          {/* Référence (lecture seule en mode édition) */}
+          {isEdit && reference && (
+            <div className="space-y-1">
+              <label htmlFor="field-reference" className="text-xs font-medium">
+                Référence
+              </label>
+              <Input
+                id="field-reference"
+                aria-label="Référence"
+                className="text-xs bg-muted"
+                value={reference}
+                disabled
+                readOnly
+              />
+            </div>
+          )}
 
           {/* Statut */}
           <FieldRoot

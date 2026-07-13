@@ -29,10 +29,12 @@ function MailTemplateToolbarExtrasComponent({
   editor,
   apiPath,
   insertHtml,
+  insertText,
 }: {
   editor: Editor;
   apiPath: string;
   insertHtml?: (html: string) => void;
+  insertText?: (text: string) => void;
 }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const { data } = useTemplateVariablesQuery(apiPath, 'mail');
@@ -40,6 +42,10 @@ function MailTemplateToolbarExtrasComponent({
 
   /** La clé du backend inclut déjà `{{…}}`, on l'insère directement. */
   const insertVariable = (key: string) => {
+    if (insertText) {
+      insertText(key);
+      return;
+    }
     editor.chain().focus().insertContent(key).run();
   };
 
@@ -114,12 +120,19 @@ function MailTemplateToolbarExtrasComponent({
  */
 export function makeMailTemplateToolbarExtras(
   apiPath = 'template-variables',
-): (editor: Editor, ctx?: { insertHtml: (html: string) => void }) => ReactNode {
-  return (editor: Editor, ctx?: { insertHtml: (html: string) => void }) => (
+): (
+  editor: Editor,
+  ctx?: { insertHtml: (html: string) => void; insertText: (text: string) => void },
+) => ReactNode {
+  return (
+    editor: Editor,
+    ctx?: { insertHtml: (html: string) => void; insertText: (text: string) => void },
+  ) => (
     <MailTemplateToolbarExtrasComponent
       editor={editor}
       apiPath={apiPath}
       insertHtml={ctx?.insertHtml}
+      insertText={ctx?.insertText}
     />
   );
 }

@@ -33,6 +33,8 @@ export interface MailTemplateFormProps {
   onSubmit: (values: FieldValues) => void;
   extraFields?: ReactNode;
   toolbarExtras?: (editor: Editor) => ReactNode;
+  /** Référence du template (affichée en lecture seule en mode édition). */
+  reference?: string;
 }
 
 export function MailTemplateForm({
@@ -43,6 +45,7 @@ export function MailTemplateForm({
   onSubmit,
   extraFields,
   toolbarExtras,
+  reference,
 }: MailTemplateFormProps) {
   return (
     <Field {...form}>
@@ -81,6 +84,23 @@ export function MailTemplateForm({
               </FieldGroup>
             )}
           />
+
+          {/* Référence (lecture seule en mode édition) */}
+          {isEdit && reference && (
+            <div className="space-y-1">
+              <label htmlFor="field-reference" className="text-xs font-medium">
+                Référence
+              </label>
+              <Input
+                id="field-reference"
+                aria-label="Référence"
+                className="text-xs bg-muted"
+                value={reference}
+                disabled
+                readOnly
+              />
+            </div>
+          )}
 
           {/* Sujet */}
           <FieldRoot

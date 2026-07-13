@@ -1,5 +1,6 @@
 export interface MailTemplate {
   id: string;
+  reference: string;
   name: string;
   subject: string;
   isActive: boolean;
@@ -27,6 +28,7 @@ export interface MailTemplateSearchParams {
   q?: string;
   tenant_id?: string;
   status?: 'active' | 'inactive';
+  category?: string;
   sort_by?: string;
   sort_dir?: 'asc' | 'desc';
   page?: number;
@@ -36,6 +38,7 @@ export interface MailTemplateSearchParams {
 export function normalizeMailTemplate(raw: Record<string, unknown>): MailTemplate {
   return {
     id: String(raw.id ?? raw._id ?? ''),
+    reference: String(raw.reference ?? ''),
     name: String(raw.name ?? ''),
     subject: String(raw.subject ?? ''),
     isActive: Boolean(raw.status ?? raw.isActive ?? raw.is_active ?? false),
