@@ -166,9 +166,7 @@ export function FormationDetailsPage({ formation }: FormationDetailsPageProps) {
             </div>
 
             <div className="mt-auto flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-3xl text-foreground">
-                {formatPrice(formation.price)}
-              </p>
+              <p className="text-3xl text-foreground">{formatPrice(formation.price)}</p>
               <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
                 <Button
                   className="bg-(--color-primary) hover:bg-(--color-primary)/80"
