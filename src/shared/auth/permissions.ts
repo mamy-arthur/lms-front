@@ -26,6 +26,7 @@ export function canAccess(permissions: PermissionSet | null, rule?: AccessRule):
 }
 
 export const ACCESS = {
+  dashboard: { anyRoles: [Role.CLIENT_MANAGER] },
   users: { anyRoles: [Role.SUPER_ADMIN, Role.CLIENT_MANAGER, Role.EDITOR] },
   courses: { anyRoles: [Role.EDITOR] },
   quizzes: { anyRoles: [Role.EDITOR] },
@@ -36,4 +37,5 @@ export const ACCESS = {
   tenants: { superAdminOnly: true },
   templates: { anyRoles: [Role.EDITOR, Role.SUPER_ADMIN, Role.CLIENT_MANAGER] },
   contentTypes: { superAdminOnly: true },
+  formationsManagement: { anyRoles: [Role.CLIENT_MANAGER] },
 } as const satisfies Record<string, AccessRule>;
