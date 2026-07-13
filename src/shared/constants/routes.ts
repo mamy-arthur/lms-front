@@ -29,6 +29,7 @@ export const ROUTES = {
   },
   portal: {
     dashboard: '/dashboard',
+    formations: '/formations',
     store: '/store',
     wallet: '/wallet',
     // courses: "/courses",

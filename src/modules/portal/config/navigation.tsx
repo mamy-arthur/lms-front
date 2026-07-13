@@ -1,12 +1,15 @@
 import type { LucideIcon } from 'lucide-react';
-import { LayoutDashboard, Users, LayoutTemplate, Wallet, Store } from 'lucide-react';
+import { LayoutDashboard, Users, LayoutTemplate, Wallet, Store, GraduationCap } from 'lucide-react';
 import { ROUTES } from '@/shared/constants/routes';
+import { ACCESS } from '@/shared/auth/permissions';
+import { AccessRule } from '@/shared/auth/permissions';
 
 export interface PortalNavItem {
   url: string;
   title: string;
   icon: LucideIcon;
   isActive?: boolean;
+    access?: AccessRule;
   items: { title: string; url: string }[];
 }
 
@@ -15,12 +18,21 @@ export const PORTAL_NAV: PortalNavItem[] = [
     url: ROUTES.portal.dashboard,
     title: 'Tableau de bord',
     icon: LayoutDashboard,
+    access : ACCESS.dashboard,
+    items: [],
+  },
+  {
+    url: ROUTES.portal.formations,
+    title: 'Formations',
+    icon: GraduationCap,
+    access: ACCESS.formationsManagement,
     items: [],
   },
   {
     url: ROUTES.portal.store,
     title: 'Boutique',
     icon: Store,
+    access: ACCESS.store,
     items: [],
   },
   // {
