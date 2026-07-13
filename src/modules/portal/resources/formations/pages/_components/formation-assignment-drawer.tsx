@@ -203,7 +203,10 @@ export function FormationAssignmentDrawer({
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-semibold">
                     Stagiaires
-                    <Badge variant="secondary" className="ml-2 bg-(--color-primary)/20 text-(--color-primary)">
+                    <Badge
+                      variant="secondary"
+                      className="ml-2 bg-(--color-primary)/20 text-(--color-primary)"
+                    >
                       {visibleEnrollments.length + pendingAddIds.size}
                     </Badge>
                   </h3>

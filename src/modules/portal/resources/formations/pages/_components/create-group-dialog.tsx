@@ -84,7 +84,9 @@ export function CreateGroupDialog({
       <DialogContent className="flex flex-col gap-0 p-0 sm:max-w-lg">
         <DialogHeader className="border-b px-5 py-4">
           <DialogTitle>Créer un groupe</DialogTitle>
-          <DialogDescription>Donnez un nom au groupe et sélectionnez ses membres.</DialogDescription>
+          <DialogDescription>
+            Donnez un nom au groupe et sélectionnez ses membres.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 px-5 pt-4 pb-2">

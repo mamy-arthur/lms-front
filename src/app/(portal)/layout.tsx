@@ -12,11 +12,10 @@ import { usePermissions } from '@/shared/hooks/usePermissions';
 function PortalLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
-    const { can } = usePermissions();
+  const { can } = usePermissions();
   const { logoUrl, tenantName } = useTenant();
-  
 
-    const navItems = PORTAL_NAV.filter((item) => !item.access || can(item.access));
+  const navItems = PORTAL_NAV.filter((item) => !item.access || can(item.access));
 
   const handleLogout = async () => {
     try {

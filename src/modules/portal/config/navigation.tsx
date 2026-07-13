@@ -9,7 +9,7 @@ export interface PortalNavItem {
   title: string;
   icon: LucideIcon;
   isActive?: boolean;
-    access?: AccessRule;
+  access?: AccessRule;
   items: { title: string; url: string }[];
 }
 
@@ -18,7 +18,7 @@ export const PORTAL_NAV: PortalNavItem[] = [
     url: ROUTES.portal.dashboard,
     title: 'Tableau de bord',
     icon: LayoutDashboard,
-    access : ACCESS.dashboard,
+    access: ACCESS.dashboard,
     items: [],
   },
   {

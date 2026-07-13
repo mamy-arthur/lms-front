@@ -84,7 +84,9 @@ export function FormationStatsUsersDrawer({
                       <TableCell>{formatDate(user.completedAt ?? '')}</TableCell>
                       <TableCell>{user.plannedDurationDays} jours</TableCell>
                       <TableCell>
-                        {user.actualDurationDays !== null ? `${user.actualDurationDays} jours` : '—'}
+                        {user.actualDurationDays !== null
+                          ? `${user.actualDurationDays} jours`
+                          : '—'}
                       </TableCell>
                     </TableRow>
                   ))

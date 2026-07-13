@@ -21,11 +21,15 @@ function isCurrentMonth(dateIso: string) {
 
 function buildFormationStats(formation: PurchasedFormation): FormationStats {
   const cumulative = formation.enrollments.length;
-  const month = formation.enrollments.filter((enrollment) => isCurrentMonth(enrollment.enrolledAt)).length;
+  const month = formation.enrollments.filter((enrollment) =>
+    isCurrentMonth(enrollment.enrolledAt),
+  ).length;
   const inProgress = formation.enrollments.filter(
     (enrollment) => enrollment.startedAt !== null && enrollment.completedAt === null,
   ).length;
-  const notStarted = formation.enrollments.filter((enrollment) => enrollment.startedAt === null).length;
+  const notStarted = formation.enrollments.filter(
+    (enrollment) => enrollment.startedAt === null,
+  ).length;
   const active = inProgress + notStarted;
 
   return {
@@ -142,7 +146,9 @@ export function useFormationManagementController({
             return formation;
           }
 
-          const existingUserIds = new Set(formation.enrollments.map((enrollment) => enrollment.userId));
+          const existingUserIds = new Set(
+            formation.enrollments.map((enrollment) => enrollment.userId),
+          );
 
           const newEnrollments = userIds
             .filter((userId) => !existingUserIds.has(userId))
@@ -186,7 +192,9 @@ export function useFormationManagementController({
             return formation;
           }
 
-          const existingUserIds = new Set(formation.enrollments.map((enrollment) => enrollment.userId));
+          const existingUserIds = new Set(
+            formation.enrollments.map((enrollment) => enrollment.userId),
+          );
 
           const newEnrollments = group.userIds
             .filter((userId) => !existingUserIds.has(userId))

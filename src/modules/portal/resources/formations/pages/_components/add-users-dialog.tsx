@@ -128,7 +128,11 @@ export function AddUsersDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Annuler
           </Button>
-          <Button onClick={handleConfirm} disabled={selectedIds.size === 0} className="gap-1.5 bg-(--color-primary) hover:bg-(--color-primary)/50 text-white">
+          <Button
+            onClick={handleConfirm}
+            disabled={selectedIds.size === 0}
+            className="gap-1.5 bg-(--color-primary) hover:bg-(--color-primary)/50 text-white"
+          >
             <UserPlus className="size-4" />
             Ajouter{selectedIds.size > 0 ? ` (${selectedIds.size})` : ''}
           </Button>
