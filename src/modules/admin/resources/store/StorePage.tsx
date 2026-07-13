@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { Search, X } from 'lucide-react';
 import { FormationCard } from '@/modules/shared/components/store/FormationCard';
 import { MOCK_STORE_FORMATIONS, MOCK_STORE_CATEGORIES } from '@/shared/mocks/store.mock';
@@ -27,6 +28,7 @@ function FormationCardSkeleton() {
 }
 
 export function StorePage() {
+  const router = useRouter();
   const [search, setSearch] = useState('');
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
@@ -63,6 +65,10 @@ export function StorePage() {
     setSearch('');
     setSelectedCategories(new Set());
     setVisibleCount(PAGE_SIZE);
+  };
+
+  const handleOpenDetails = (id: string) => {
+    router.push(`/admin/store/${id}`);
   };
 
   return (
@@ -142,6 +148,7 @@ export function StorePage() {
             {visible.map((formation) => (
               <FormationCard
                 key={formation.id}
+                id={formation.id}
                 title={formation.title}
                 author={formation.author}
                 category={formation.category}
@@ -151,6 +158,7 @@ export function StorePage() {
                 enrolledCompanies={formation.enrolledCompanies}
                 moduleCount={formation.moduleCount}
                 evaluationCount={formation.evaluationCount}
+                onOpenDetails={handleOpenDetails}
               />
             ))}
           </div>

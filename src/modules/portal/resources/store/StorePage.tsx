@@ -1,12 +1,15 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { Search, X } from 'lucide-react';
 import { FormationCard } from '@/modules/shared/components/store/FormationCard';
 import { MOCK_STORE_FORMATIONS, MOCK_STORE_CATEGORIES } from '@/shared/mocks/store.mock';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useCartStore } from '@/modules/portal/resources/cart/CartStore';
+import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
 const PAGE_SIZE = 12;
@@ -28,6 +31,8 @@ function FormationCardSkeleton() {
 }
 
 export function StorePage() {
+  const router = useRouter();
+  const addToCart = useCartStore((state) => state.addToCart);
   const [search, setSearch] = useState('');
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
@@ -67,8 +72,23 @@ export function StorePage() {
   };
 
   const handleAddToCart = (id: string) => {
-    // TODO: integrate with cart logic
-    console.log('Add to cart:', id);
+    const formation = MOCK_STORE_FORMATIONS.find((item) => item.id === id);
+
+    if (!formation) {
+      toast.error('Formation introuvable.');
+      return;
+    }
+
+    addToCart({
+      id: formation.id,
+      title: formation.title,
+      price: formation.price,
+      coverImage: formation.coverImage,
+    });
+  };
+
+  const handleOpenDetails = (id: string) => {
+    router.push(`/store/${id}`);
   };
 
   return (
@@ -159,6 +179,7 @@ export function StorePage() {
                 moduleCount={formation.moduleCount}
                 evaluationCount={formation.evaluationCount}
                 onAddToCart={handleAddToCart}
+                onOpenDetails={handleOpenDetails}
               />
             ))}
           </div>
