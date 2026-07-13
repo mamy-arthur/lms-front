@@ -22,13 +22,6 @@ export const PORTAL_NAV: PortalNavItem[] = [
     items: [],
   },
   {
-    url: ROUTES.portal.formations,
-    title: 'Formations',
-    icon: GraduationCap,
-    access: ACCESS.formationsManagement,
-    items: [],
-  },
-  {
     url: ROUTES.portal.store,
     title: 'Boutique',
     icon: Store,
@@ -51,6 +44,13 @@ export const PORTAL_NAV: PortalNavItem[] = [
     url: ROUTES.portal.wallet,
     title: 'Portefeuille',
     icon: Wallet,
+    items: [],
+  },
+  {
+    url: ROUTES.portal.formations,
+    title: 'Formations',
+    icon: GraduationCap,
+    access: ACCESS.formationsManagement,
     items: [],
   },
   {
