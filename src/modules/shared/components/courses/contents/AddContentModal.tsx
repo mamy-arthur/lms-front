@@ -6,24 +6,24 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { ContentTypePicker } from './ContentTypePicker';
-import { ContentType } from '../types';
+import type { ContentTypeResource } from '@/shared/types/content-type.types';
 import { useCourseStore } from '../hooks/useCouseContentStore';
 
 export function AddContentModal({
   open,
   onOpenChange,
   sectionId,
-  setType,
+  onSelect,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   sectionId: string;
-  setType: (type: ContentType) => void;
+  onSelect: (contentType: ContentTypeResource) => void;
 }) {
   const cours = useCourseStore();
-  const handleSelect = (type: ContentType) => {
-    setType(type);
-    cours.addContent(sectionId, type, '');
+  const handleSelect = (ct: ContentTypeResource) => {
+    cours.addContent(sectionId, ct.module_type, '', undefined, ct);
+    onSelect(ct);
     onOpenChange(false);
   };
 

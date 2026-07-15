@@ -22,9 +22,10 @@ export type ContentType = 'folder' | 'file' | 'page' | 'scorm' | 'survey' | 'url
 export interface CourseContent {
   id: string;
   sectionId: string;
-  type: ContentType;
+  type: string;
   title: string;
   data?: Record<string, unknown>;
+  contentTypeResource?: import('@/shared/types/content-type.types').ContentTypeResource;
 }
 
 export interface CourseSection {

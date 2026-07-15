@@ -13,6 +13,8 @@ import {
   Link as LinkIcon,
   BarChart3,
   Type as TypeIcon,
+  Image,
+  Box,
   ChevronRight,
 } from 'lucide-react';
 
@@ -36,10 +38,10 @@ import { Label } from '@/components/ui/label';
 import { AddContentModal } from './AddContentModal';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
-import { ContentType, CourseSection, CourseContent } from '../types';
+import { CourseSection, CourseContent } from '../types';
 import { useCourseStore } from '../hooks/useCouseContentStore';
 
-const ICONS: Record<ContentType, typeof FileText> = {
+const ICONS: Record<string, React.ElementType> = {
   page: FileText,
   file: FileIcon,
   folder: Folder,
@@ -47,6 +49,7 @@ const ICONS: Record<ContentType, typeof FileText> = {
   url: LinkIcon,
   survey: BarChart3,
   'text-media': TypeIcon,
+  media: Image,
 };
 
 interface Props {
@@ -65,8 +68,6 @@ export function SectionCard({ section, selectedContentId, onSelectContent }: Pro
 
   const updateSection = useCourseStore((s) => s.updateSection);
   const removeSection = useCourseStore((s) => s.removeSection);
-
-  const [, setType] = useState<ContentType | null>(null);
 
   const save = () => {
     updateSection(section.id, {
@@ -115,7 +116,7 @@ export function SectionCard({ section, selectedContentId, onSelectContent }: Pro
       <CollapsibleContent>
         <div className="space-y-1 px-2 pb-2">
           {section.contents.map((content) => {
-            const Icon = ICONS[content.type];
+            const Icon = ICONS[content.type] ?? Box;
 
             return (
               <button
@@ -150,7 +151,7 @@ export function SectionCard({ section, selectedContentId, onSelectContent }: Pro
           open={addOpen}
           onOpenChange={setAddOpen}
           sectionId={section.id}
-          setType={setType}
+          onSelect={() => {}}
         />
       </CollapsibleContent>
 

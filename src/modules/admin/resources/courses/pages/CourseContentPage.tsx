@@ -72,8 +72,7 @@ export function CourseContentPage() {
               <SectionContent
                 key={selectedContent.id}
                 sectionId={selectedContent.sectionId}
-                contentId={selectedContent.id}
-                type={selectedContent.type}
+                content={selectedContent}
               />
             ) : (
               <div className="flex h-full items-center justify-center text-center">

@@ -23,3 +23,9 @@ export const courseKeys = {
   list: (filters: object) => [...courseKeys.lists(), filters] as const,
   detail: (slug: string) => [...courseKeys.all, 'detail', slug] as const,
 };
+
+export const contentTypeKeys = {
+  all: ['content-types'] as const,
+  lists: () => [...contentTypeKeys.all, 'list'] as const,
+  detail: (id: string) => [...contentTypeKeys.all, 'detail', id] as const,
+};
