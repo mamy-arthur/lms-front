@@ -7,11 +7,15 @@ import { useAuthStore } from '@/shared/stores/auth.store';
 import { useTenant } from '@/shared/hooks/useTenant';
 import { authApi } from '@/shared/api/auth.api';
 import { ROUTES } from '@/shared/constants/routes';
+import { usePermissions } from '@/shared/hooks/usePermissions';
 
 function PortalLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
+  const { can } = usePermissions();
   const { logoUrl, tenantName } = useTenant();
+
+  const navItems = PORTAL_NAV.filter((item) => !item.access || can(item.access));
 
   const handleLogout = async () => {
     try {
@@ -24,7 +28,7 @@ function PortalLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <LayoutSideBar
-      navItems={PORTAL_NAV}
+      navItems={navItems}
       user={user}
       logoUrl={logoUrl}
       tenantName={tenantName}

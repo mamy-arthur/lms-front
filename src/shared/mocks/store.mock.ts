@@ -12,6 +12,35 @@ export interface StoreFormation {
   evaluationCount: number;
 }
 
+export type StoreFormationLevel = 'Débutant' | 'Intermédiaire' | 'Avancé';
+
+export interface StoreModuleStep {
+  id: string;
+  type: 'module';
+  title: string;
+  lessons: string[];
+}
+
+export interface StoreEvaluationStep {
+  id: string;
+  type: 'evaluation';
+  title: string;
+}
+
+export type StoreProgramStep = StoreModuleStep | StoreEvaluationStep;
+
+export interface StoreFormationDetails extends StoreFormation {
+  shortDescription: string;
+  fullDescription: string;
+  level: StoreFormationLevel;
+  duration: string;
+  language: string;
+  certificate: boolean;
+  learningObjectives: string[];
+  programSteps: StoreProgramStep[];
+  courseCount: number;
+}
+
 export const MOCK_STORE_CATEGORIES = [
   { id: 'cat-frontend', name: 'Développement Frontend' },
   { id: 'cat-backend', name: 'Développement Backend' },
@@ -183,3 +212,87 @@ export const MOCK_STORE_FORMATIONS: StoreFormation[] = [
     evaluationCount: 2,
   },
 ];
+
+function buildProgramSteps(formation: StoreFormation): StoreProgramStep[] {
+  return [
+    {
+      id: `${formation.id}-step-1`,
+      type: 'module',
+      title: 'Les fondamentaux',
+      lessons: ['Introduction', "Prise en main de l'environnement", 'Bonnes pratiques'],
+    },
+    {
+      id: `${formation.id}-step-2`,
+      type: 'evaluation',
+      title: 'Validation des fondamentaux',
+    },
+    {
+      id: `${formation.id}-step-3`,
+      type: 'module',
+      title: 'Mise en pratique',
+      lessons: ['Cas concret 1', 'Cas concret 2', 'Atelier guidé'],
+    },
+    {
+      id: `${formation.id}-step-4`,
+      type: 'module',
+      title: 'Approfondissement',
+      lessons: ['Méthodes avancées', 'Optimisation', 'Industrialisation'],
+    },
+    {
+      id: `${formation.id}-step-5`,
+      type: 'evaluation',
+      title: 'Évaluation finale',
+    },
+  ];
+}
+
+function countByType(programSteps: StoreProgramStep[], type: StoreProgramStep['type']) {
+  return programSteps.filter((step) => step.type === type).length;
+}
+
+function countCourses(programSteps: StoreProgramStep[]) {
+  return programSteps.reduce((sum, step) => {
+    if (step.type !== 'module') {
+      return sum;
+    }
+    return sum + step.lessons.length;
+  }, 0);
+}
+
+function buildFormationDetails(formation: StoreFormation, index: number): StoreFormationDetails {
+  const levels: StoreFormationLevel[] = ['Débutant', 'Intermédiaire', 'Avancé'];
+  const programSteps = buildProgramSteps(formation);
+  const moduleCount = countByType(programSteps, 'module');
+  const evaluationCount = countByType(programSteps, 'evaluation');
+  const courseCount = countCourses(programSteps);
+
+  return {
+    ...formation,
+    moduleCount,
+    evaluationCount,
+    courseCount,
+    shortDescription: `Maîtrisez ${formation.title} pour déployer des parcours de formation performants dans votre organisation.`,
+    fullDescription:
+      `Cette formation a été conçue pour des clients B2B souhaitant acquérir des licences et structurer la montée en compétences de leurs équipes. ` +
+      `Vous visualisez ici l'architecture complète du parcours (modules et évaluations) sans accès au contenu pédagogique avant l'achat.`,
+    level: levels[index % levels.length],
+    duration: `${10 + index}h`,
+    language: 'Français',
+    certificate: true,
+    learningObjectives: [
+      'Comprendre la structure du parcours et ses étapes clés',
+      'Identifier les compétences opérationnelles couvertes',
+      'Évaluer la charge de travail et le niveau attendu',
+      'Préparer le déploiement des licences pour vos apprenants',
+    ],
+    programSteps,
+  };
+}
+
+export const MOCK_STORE_FORMATION_DETAILS: StoreFormationDetails[] = MOCK_STORE_FORMATIONS.map(
+  (formation, index) => buildFormationDetails(formation, index),
+);
+
+export function getStoreFormationDetailsById(formationId: string) {
+  return MOCK_STORE_FORMATION_DETAILS.find((formation) => formation.id === formationId);
+}
