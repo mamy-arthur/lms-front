@@ -1,3 +1,5 @@
+import { ContentTypeResource } from "@/shared/types/content-type.types";
+
 export type Category = {
   id: string;
   name: string;
@@ -25,7 +27,7 @@ export interface CourseContent {
   type: string;
   title: string;
   data?: Record<string, unknown>;
-  contentTypeResource?: import('@/shared/types/content-type.types').ContentTypeResource;
+  contentTypeResource?: ContentTypeResource;
 }
 
 export interface CourseSection {

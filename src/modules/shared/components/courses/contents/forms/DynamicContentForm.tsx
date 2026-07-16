@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -15,7 +14,7 @@ import type { ContentTypeResource, ContentTypeField } from '@/shared/types/conte
 
 interface DynamicContentFormProps {
   contentType: ContentTypeResource;
-  onSubmit: (title: string, data: Record<string, unknown>) => void;
+  onSubmit: (data: Record<string, unknown>) => void;
   onCancel: () => void;
 }
 
@@ -144,10 +143,6 @@ function DynamicField({
 }
 
 export function DynamicContentForm({ contentType, onSubmit, onCancel }: DynamicContentFormProps) {
-  const { register, handleSubmit, formState } = useForm<{ title: string }>({
-    defaultValues: { title: '' },
-  });
-
   const activeFields = contentType.fields.filter((f) => !f.is_archived);
   const [fieldValues, setFieldValues] = useState<Record<string, unknown>>(() =>
     Object.fromEntries(activeFields.map((f) => [f.name, ''])),
@@ -157,25 +152,14 @@ export function DynamicContentForm({ contentType, onSubmit, onCancel }: DynamicC
     setFieldValues((prev) => ({ ...prev, [name]: val }));
   };
 
-  const handleFormSubmit = handleSubmit(({ title }) => {
-    onSubmit(title, fieldValues);
-  });
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSubmit(fieldValues);
+  };
 
   return (
     <form onSubmit={handleFormSubmit} className="space-y-4">
       <MainBlock>
-        {/* Title is always required */}
-        <div className="space-y-2">
-          <Label>Nom</Label>
-          <Input
-            {...register('title', { required: 'Le nom est obligatoire' })}
-            placeholder={`Titre du ${contentType.title}`}
-          />
-          {formState.errors.title && (
-            <p className="text-xs text-destructive">{formState.errors.title.message}</p>
-          )}
-        </div>
-
         {/* Dynamic fields from content type definition */}
         {activeFields.map((field) => (
           <div key={field.field_id} className="space-y-2">

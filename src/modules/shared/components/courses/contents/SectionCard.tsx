@@ -56,9 +56,10 @@ interface Props {
   section: CourseSection;
   selectedContentId?: string;
   onSelectContent: (content: CourseContent) => void;
+  onContentDeleted?: (contentId: string) => void;
 }
 
-export function SectionCard({ section, selectedContentId, onSelectContent }: Props) {
+export function SectionCard({ section, selectedContentId, onSelectContent, onContentDeleted }: Props) {
   const [addOpen, setAddOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [isOpen, setIsOpen] = useState(true);
@@ -68,6 +69,7 @@ export function SectionCard({ section, selectedContentId, onSelectContent }: Pro
 
   const updateSection = useCourseStore((s) => s.updateSection);
   const removeSection = useCourseStore((s) => s.removeSection);
+  const removeContent = useCourseStore((s) => s.removeContent);
 
   const save = () => {
     updateSection(section.id, {
@@ -117,22 +119,33 @@ export function SectionCard({ section, selectedContentId, onSelectContent }: Pro
         <div className="space-y-1 px-2 pb-2">
           {section.contents.map((content) => {
             const Icon = ICONS[content.type] ?? Box;
+            const isSelected = selectedContentId === content.id;
 
             return (
-              <button
+              <div
                 key={content.id}
-                onClick={() => onSelectContent(content)}
-                className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors
-                                ${
-                                  selectedContentId === content.id
-                                    ? 'bg-(--color-primary)/90 text-white'
-                                    : 'hover:bg-muted'
-                                }`}
+                className={`group flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors
+                  ${isSelected ? 'bg-(--color-primary)/90 text-white' : 'hover:bg-muted'}`}
               >
-                <Icon className="size-4 shrink-0" />
-
-                <span className="truncate text-xs">{content.title || 'Nouveau contenu'}</span>
-              </button>
+                <button
+                  onClick={() => onSelectContent(content)}
+                  className="flex min-w-0 flex-1 items-center gap-2"
+                >
+                  <Icon className="size-4 shrink-0" />
+                  <span className="truncate text-xs">{content.title || 'Nouveau contenu'}</span>
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removeContent(section.id, content.id);
+                    onContentDeleted?.(content.id);
+                  }}
+                  className={`shrink-00 cursor-pointer rounded p-0.5 opacity-0 transition-opacity group-hover:opacity-100
+                    ${isSelected ? 'hover:bg-destructive/70 text-white' : 'hover:bg-destructive/10 text-destructive'}`}
+                >
+                  <Trash2 className="size-3" />
+                </button>
+              </div>
             );
           })}
 

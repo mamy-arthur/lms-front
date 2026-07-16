@@ -50,6 +50,9 @@ export function CourseContentPage() {
                 section={section}
                 selectedContentId={selectedContent?.id}
                 onSelectContent={setSelectedContent}
+                onContentDeleted={(id) => {
+                  if (selectedContent?.id === id) setSelectedContent(null);
+                }}
               />
             ))}
             <Button
@@ -73,6 +76,7 @@ export function CourseContentPage() {
                 key={selectedContent.id}
                 sectionId={selectedContent.sectionId}
                 content={selectedContent}
+                onDeselect={() => setSelectedContent(null)}
               />
             ) : (
               <div className="flex h-full items-center justify-center text-center">
