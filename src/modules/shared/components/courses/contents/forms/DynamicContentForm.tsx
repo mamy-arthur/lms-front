@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { Loader2, AlertCircle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Loader2, AlertCircle, FileArchive, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -11,8 +11,20 @@ import { RichTextEditor } from '@/modules/shared/components/tiptap/RichTextEdito
 import { FileUploadField } from '@/modules/shared/components/input-upload/FileUploadField';
 import { MultiFileUploadField } from '@/modules/shared/components/input-upload/MultiFileUploadField';
 import { MainBlock } from './SharedBlocks';
-import { mediaApi } from '@/shared/api/media.api';
+import { mediaApi, type ApiMedia } from '@/shared/api/media.api';
 import type { ContentTypeResource, ContentTypeField } from '@/shared/types/content-type.types';
+
+// The backend stores media IDs as plain strings but expands them to
+// { id, url, mime_type } objects on read. These two helpers let us work with
+// both shapes so we always submit plain UUID strings to the SchemaValidator.
+function isMediaObject(v: unknown): v is { id: string } {
+  return !!v && typeof v === 'object' && 'id' in v;
+}
+function extractMediaId(v: unknown): string | null {
+  if (typeof v === 'string' && v) return v;
+  if (isMediaObject(v)) return v.id;
+  return null;
+}
 
 interface DynamicContentFormProps {
   contentType: ContentTypeResource;
@@ -33,14 +45,40 @@ function DynamicField({
   onChange: (val: unknown) => void;
   contentTypeId: string;
 }) {
-  const [files, setFiles] = useState<File[]>([]);
-  // key = `${name}-${size}`, value = media id
-  const [uploadedIds, setUploadedIds] = useState<Map<string, string>>(new Map());
-  const [singleFileName, setSingleFileName] = useState<string | undefined>(undefined);
+  // ── Media display state ───────────────────────────────────────────────────
+  // Single file: full ApiMedia so we can show original_name
+  const [mediaInfo, setMediaInfo] = useState<ApiMedia | null>(null);
+  // Multiple files
+  const [mediaList, setMediaList] = useState<ApiMedia[]>([]);
+  const [isLoadingMedia, setIsLoadingMedia] = useState(false);
+  // ── Upload states ─────────────────────────────────────────────────────────
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
-  const fileKey = (f: File) => `${f.name}-${f.size}`;
+  // Fetch metadata for already-associated media files on mount (edit mode).
+  useEffect(() => {
+    if (field.type !== 'media') return;
+    if (field.multiple) {
+      const ids = (Array.isArray(value) ? value : [])
+        .map(extractMediaId)
+        .filter((id): id is string => !!id);
+      if (!ids.length) return;
+      setIsLoadingMedia(true);
+      Promise.all(ids.map((id) => mediaApi.get(id)))
+        .then((rs) => setMediaList(rs.map((r) => r.data)))
+        .catch(() => {})
+        .finally(() => setIsLoadingMedia(false));
+    } else {
+      const id = extractMediaId(value);
+      if (!id) return;
+      setIsLoadingMedia(true);
+      mediaApi
+        .get(id)
+        .then((r) => setMediaInfo(r.data))
+        .catch(() => {})
+        .finally(() => setIsLoadingMedia(false));
+    }
+  }, []);
 
   const extractMessage = (err: unknown): string => {
     if (err && typeof err === 'object') {
@@ -51,60 +89,54 @@ function DynamicField({
       }
       if (typeof e.message === 'string') return e.message;
     }
-    return 'Échec de l\'upload';
+    return "Échec de l'upload";
   };
 
   const uploadSingle = async (file: File) => {
     setIsUploading(true);
     setUploadError(null);
     try {
+      // The backend forbids uploading to a single-file field that already has
+      // an attachment. Delete the existing media first so the slot is free.
+      if (mediaInfo) {
+        await mediaApi.delete(mediaInfo.id);
+        setMediaInfo(null);
+      }
       const res = await mediaApi.upload(file, contentTypeId, field.field_id);
-      setSingleFileName(file.name);
-      onChange(res.data.id);
+      setMediaInfo(res.data);
+      onChange(res.data.id); // SchemaValidator expects a plain UUID string
     } catch (err) {
       setUploadError(extractMessage(err));
-      setSingleFileName(undefined);
-      onChange(null);
     } finally {
       setIsUploading(false);
     }
   };
 
-  const uploadMultiple = async (nextFiles: File[]) => {
-    // Only upload files not already uploaded
-    const toUpload = nextFiles.filter((f) => !uploadedIds.has(fileKey(f)));
-    if (toUpload.length === 0) {
-      // Files were only removed — recompute ids from remaining files
-      const remaining = new Map(
-        nextFiles
-          .filter((f) => uploadedIds.has(fileKey(f)))
-          .map((f) => [fileKey(f), uploadedIds.get(fileKey(f))!]),
-      );
-      setFiles(nextFiles);
-      setUploadedIds(remaining);
-      onChange([...remaining.values()]);
-      return;
-    }
+  // MultiFileUploadField receives files=[] so onFilesChange delivers only
+  // the *newly* selected files — no re-uploading of already-uploaded ones.
+  const uploadMultiple = async (newFiles: File[]) => {
+    if (!newFiles.length) return;
     setIsUploading(true);
     setUploadError(null);
     try {
       const results = await Promise.all(
-        toUpload.map((f) => mediaApi.upload(f, contentTypeId, field.field_id)),
+        newFiles.map((f) => mediaApi.upload(f, contentTypeId, field.field_id)),
       );
-      const updated = new Map(uploadedIds);
-      toUpload.forEach((f, i) => updated.set(fileKey(f), results[i].data.id));
-      // Build ids preserving order of nextFiles
-      const ids = nextFiles
-        .filter((f) => updated.has(fileKey(f)))
-        .map((f) => updated.get(fileKey(f))!);
-      setFiles(nextFiles);
-      setUploadedIds(updated);
-      onChange(ids);
+      const updated = [...mediaList, ...results.map((r) => r.data)];
+      setMediaList(updated);
+      onChange(updated.map((m) => m.id)); // SchemaValidator expects string[]
     } catch (err) {
       setUploadError(extractMessage(err));
     } finally {
       setIsUploading(false);
     }
+  };
+
+  const removeFromList = (id: string) => {
+    mediaApi.delete(id).catch(() => {});
+    const updated = mediaList.filter((m) => m.id !== id);
+    setMediaList(updated);
+    onChange(updated.length ? updated.map((m) => m.id) : null);
   };
 
   switch (field.type) {
@@ -176,8 +208,31 @@ function DynamicField({
       if (field.multiple) {
         return (
           <div className="space-y-2">
+            {isLoadingMedia && (
+              <p className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Loader2 className="size-3 animate-spin" /> Chargement…
+              </p>
+            )}
+            {mediaList.map((media) => (
+              <div
+                key={media.id}
+                className="flex items-center gap-3 w-full rounded-md border bg-background px-3 py-2"
+              >
+                <FileArchive className="h-5 w-5 text-muted-foreground shrink-0" />
+                <span className="truncate text-xs flex-1 text-left">{media.original_name}</span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 shrink-0"
+                  onClick={() => removeFromList(media.id)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
             <MultiFileUploadField
-              files={files}
+              files={[]}
               accept={field.accept.join(',')}
               hint={field.accept.join(', ')}
               onFilesChange={uploadMultiple}
@@ -197,13 +252,19 @@ function DynamicField({
       }
       return (
         <div className="space-y-2">
+          {isLoadingMedia && (
+            <p className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Loader2 className="size-3 animate-spin" /> Chargement…
+            </p>
+          )}
           <FileUploadField
-            fileName={singleFileName}
+            fileName={mediaInfo?.original_name}
             accept={field.accept.join(',')}
             hint={field.accept.join(', ')}
             onFileSelect={uploadSingle}
             onRemove={() => {
-              setSingleFileName(undefined);
+              if (mediaInfo) mediaApi.delete(mediaInfo.id).catch(() => {});
+              setMediaInfo(null);
               onChange(null);
             }}
           />
@@ -237,11 +298,28 @@ function DynamicField({
   }
 }
 
-export function DynamicContentForm({ contentType, initialData, onSubmit, onCancel, isSubmitting = false }: DynamicContentFormProps) {
+export function DynamicContentForm({
+  contentType,
+  initialData,
+  onSubmit,
+  onCancel,
+  isSubmitting = false,
+}: DynamicContentFormProps) {
   const activeFields = contentType.fields.filter((f) => !f.is_archived);
+
+  // Normalise media field values from the API's read format { id, url, … }
+  // back to plain UUID strings that the SchemaValidator accepts on write.
+  const normaliseMediaValue = (f: (typeof activeFields)[number], raw: unknown): unknown => {
+    if (f.type !== 'media') return raw ?? '';
+    if (f.multiple) {
+      return (Array.isArray(raw) ? raw : []).map(extractMediaId).filter(Boolean);
+    }
+    return extractMediaId(raw) ?? null;
+  };
+
   const [fieldValues, setFieldValues] = useState<Record<string, unknown>>(() =>
     Object.fromEntries(
-      activeFields.map((f) => [f.name, initialData?.[f.name] ?? '']),
+      activeFields.map((f) => [f.name, normaliseMediaValue(f, initialData?.[f.name])]),
     ),
   );
 

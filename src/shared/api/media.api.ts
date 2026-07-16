@@ -1,4 +1,4 @@
-import { apiUpload } from '@/shared/lib/apiClient';
+import { apiGet, apiDelete, apiUpload } from '@/shared/lib/apiClient';
 
 export interface ApiMedia {
   id: string;
@@ -17,4 +17,9 @@ export const mediaApi = {
     form.append('field_id', fieldId);
     return apiUpload<{ data: ApiMedia }>('platform/media', form);
   },
+  get: (id: string): Promise<{ data: ApiMedia }> =>
+    apiGet<{ data: ApiMedia }>(`platform/media/${id}`),
+
+  delete: (id: string): Promise<void> =>
+    apiDelete(`platform/media/${id}`),
 };
