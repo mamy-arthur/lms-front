@@ -1,21 +1,29 @@
 import { useQuery } from '@tanstack/react-query';
-import { adminCoursesApi } from '../../../../admin/resources/courses/api';
+import { coursesApi } from '@/shared/api/courses.api';
+import { mapApiCourse } from '../lib/course-store';
+import { courseKeys } from '@/shared/queries/keys';
 
 interface Params {
-  page: number;
-  perPage: number;
+  page?: number;
+  perPage?: number;
   q?: string;
 }
 
-export function useCoursesQuery({ page, perPage, q }: Params) {
+export function useCoursesQuery({ q }: Params = {}) {
   return useQuery({
-    queryKey: ['admin', 'courses', { page, perPage, q }],
+    queryKey: courseKeys.lists(),
     queryFn: async () => {
-      const resp = await adminCoursesApi.list({ page, limit: perPage, q });
-      const raw = resp.items ?? resp.data ?? [];
+      const res = await coursesApi.list();
+      const courses = res.data.map(mapApiCourse);
       return {
-        data: raw,
-        total: resp.total ?? raw.length,
+        data: q
+          ? courses.filter(
+              (c) =>
+                c.fullName.toLowerCase().includes(q.toLowerCase()) ||
+                c.shortName.toLowerCase().includes(q.toLowerCase()),
+            )
+          : courses,
+        total: res.data.length,
       };
     },
   });

@@ -1,36 +1,32 @@
-import { useCourseStore } from '../hooks/useCouseContentStore';
-import { CONTENT_TYPE_META, ContentType, CourseContent } from '../types';
+import { useUpdateEntry } from '../hooks/useCourseContentApi';
+import type { ApiContentEntry } from '../hooks/useCourseContentApi';
+import type { ContentTypeResource } from '@/shared/types/content-type.types';
 import { DynamicContentForm } from './forms/DynamicContentForm';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { toast } from 'sonner';
 
 export function SectionContent({
   sectionId,
-  content,
+  entry,
+  contentType,
   onDeselect,
 }: {
   sectionId: string;
-  content: CourseContent;
+  entry: ApiContentEntry;
+  contentType: ContentTypeResource;
   onDeselect: () => void;
 }) {
-  const update = useCourseStore((s) => s.updateContent);
-  const { type, id: contentId, contentTypeResource } = content;
+  const updateEntry = useUpdateEntry();
 
-  const handleSave = (titleOrData: string | Record<string, unknown>, data?: Record<string, unknown>) => {
-    const title = typeof titleOrData === 'string' ? titleOrData : (titleOrData.title as string ?? '');
-    const resolvedData = typeof titleOrData === 'string' ? (data ?? {}) : titleOrData;
-    update(sectionId, contentId, {
-      title,
-      sectionId,
-      type,
-      id: contentId,
-      data: resolvedData,
-    });
+  const handleSave = async (data: Record<string, unknown>) => {
+    try {
+      await updateEntry.mutateAsync({ entryId: entry.id, sectionId, data });
+      toast.success('Contenu enregistré');
+    } catch {
+      toast.error('Erreur lors de la sauvegarde');
+    }
   };
-
-  const typeMeta = CONTENT_TYPE_META[type as ContentType];
-  const badgeColor = typeMeta?.bgColor ?? 'bg-gray-400';
-  const badgeLabel = contentTypeResource?.title ?? typeMeta?.label ?? type;
 
   return (
     <div className="flex flex-col space">
@@ -40,19 +36,17 @@ export function SectionContent({
           <p className="text-xs text-muted-foreground">Renseignez les informations du contenu.</p>
         </div>
         <div className="flex items-center gap-2">
-          <Badge className={badgeColor}>{badgeLabel}</Badge>
+          <Badge className="bg-blue-400">{contentType.title}</Badge>
         </div>
       </div>
       <Separator />
       <main className="mt-5">
-        {/* Dynamic form from DB schema takes priority */}
-        {contentTypeResource ? (
-          <DynamicContentForm
-            contentType={contentTypeResource}
-            onCancel={onDeselect}
-            onSubmit={handleSave}
-          />
-        ) : null }
+        <DynamicContentForm
+          contentType={contentType}
+          initialData={entry.data}
+          onCancel={onDeselect}
+          onSubmit={handleSave}
+        />
       </main>
     </div>
   );

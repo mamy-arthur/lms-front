@@ -1,216 +1,213 @@
-import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useContext, useMemo, type ReactNode } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { Category, Course } from '../types/index';
+import type { ApiCourse, ApiCourseCategory } from '@/shared/types/course.types';
+import { coursesApi, courseCategoriesApi } from '@/shared/api/courses.api';
+import { courseKeys, courseCategoryKeys } from '@/shared/queries/keys';
 
-const uid = () => Math.random().toString(36).slice(2, 10);
+// --- Mapping helpers ---------------------------------------------------------
 
-const initialCategories: Category[] = [
-  {
-    id: 'c1',
-    name: 'Développement',
-    identifier: 'DEV',
-    parentId: null,
-    visible: true,
-    description: 'Tous les cours liés au développement.',
-  },
-  {
-    id: 'c2',
-    name: 'Frontend',
-    identifier: 'DEV-FE',
-    parentId: 'c1',
-    visible: true,
-  },
-  {
-    id: 'c3',
-    name: 'Backend',
-    identifier: 'DEV-BE',
-    parentId: 'c1',
-    visible: true,
-  },
-  {
-    id: 'c4',
-    name: 'Design',
-    identifier: 'DSN',
-    parentId: null,
-    visible: true,
-  },
-  {
-    id: 'c5',
-    name: 'UX Research',
-    identifier: 'DSN-UX',
-    parentId: 'c4',
-    visible: false,
-  },
-];
+function mapApiCategory(api: ApiCourseCategory): Category {
+  return {
+    id: api.id,
+    name: api.name,
+    parentId: api.parent_id,
+    description: api.description ?? undefined,
+    children: api.children?.map(mapApiCategory),
+  };
+}
 
-const initialCourses: Course[] = [
-  {
-    id: 'co1',
-    fullName: 'Introduction à React 19',
-    shortName: 'REACT19',
-    categoryId: 'c2',
-    identifier: 'FE-101',
-    visible: true,
-    description: 'Les fondamentaux de React 19.',
-  },
-  {
-    id: 'co2',
-    fullName: 'API REST avec Node.js',
-    shortName: 'NODE-API',
-    categoryId: 'c3',
-    identifier: 'BE-201',
-    visible: true,
-  },
-  {
-    id: 'co3',
-    fullName: 'Design Systems avancés',
-    shortName: 'DS-ADV',
-    categoryId: 'c4',
-    identifier: 'DSN-301',
-    visible: false,
-  },
-  {
-    id: 'co4',
-    fullName: 'TypeScript avancé pour développeurs React',
-    shortName: 'TS-ADV',
-    categoryId: 'c2',
-    identifier: 'FE-102',
-    visible: true,
-    description: 'Maîtriser TypeScript dans un contexte React moderne.',
-  },
-  {
-    id: 'co5',
-    fullName: 'Architecture backend avec NestJS',
-    shortName: 'NEST-ARCH',
-    categoryId: 'c3',
-    identifier: 'BE-202',
-    visible: true,
-    description: 'Structurer une application backend scalable avec NestJS.',
-  },
-  {
-    id: 'co6',
-    fullName: 'UI/UX Design fundamentals',
-    shortName: 'UIUX-101',
-    categoryId: 'c4',
-    identifier: 'DSN-302',
-    visible: true,
-    description: 'Principes essentiels du design d’interface et expérience utilisateur.',
-  },
-  {
-    id: 'co7',
-    fullName: 'Gestion d’état avec Redux Toolkit',
-    shortName: 'REDUX-RTK',
-    categoryId: 'c2',
-    identifier: 'FE-103',
-    visible: false,
-    description: 'Simplifier la gestion d’état global dans les applications React.',
-  },
-  {
-    id: 'co8',
-    fullName: 'Docker pour développeurs web',
-    shortName: 'DOCKER-WEB',
-    categoryId: 'c3',
-    identifier: 'DEVOPS-101',
-    visible: true,
-    description: 'Conteneurisation des applications web avec Docker.',
-  },
-  {
-    id: 'co9',
-    fullName: 'Bases de données relationnelles avec PostgreSQL',
-    shortName: 'POSTGRES-101',
-    categoryId: 'c3',
-    identifier: 'DB-101',
-    visible: true,
-    description: 'Comprendre et utiliser PostgreSQL efficacement.',
-  },
-  {
-    id: 'co10',
-    fullName: 'Next.js 15 pour applications modernes',
-    shortName: 'NEXT15',
-    categoryId: 'c2',
-    identifier: 'FE-104',
-    visible: true,
-    description: 'Construire des applications performantes avec Next.js 15.',
-  },
-  {
-    id: 'co11',
-    fullName: 'Méthodologies Agile et Scrum',
-    shortName: 'AGILE-SCRUM',
-    categoryId: 'c1',
-    identifier: 'PM-101',
-    visible: true,
-    description: 'Introduction aux pratiques Agile et Scrum en équipe.',
-  },
-  {
-    id: 'co12',
-    fullName: 'Sécurité des applications web',
-    shortName: 'WEB-SEC',
-    categoryId: 'c3',
-    identifier: 'SEC-101',
-    visible: false,
-    description: 'Bonnes pratiques pour sécuriser une application web moderne.',
-  },
-];
+function flattenCategories(roots: ApiCourseCategory[]): Category[] {
+  const result: Category[] = [];
+  const walk = (cats: ApiCourseCategory[]) => {
+    for (const cat of cats) {
+      result.push(mapApiCategory(cat));
+      if (cat.children?.length) walk(cat.children);
+    }
+  };
+  walk(roots);
+  return result;
+}
+
+export function mapApiCourse(api: ApiCourse): Course {
+  return {
+    id: api.id,
+    fullName: api.full_name,
+    shortName: api.short_name,
+    categoryId: api.category_id,
+    identifier: api.id_number,
+    visible: api.visibility === 'PUBLISHED',
+    visibility: api.visibility,
+    description: api.description ?? undefined,
+  };
+}
+
+// --- Context types -----------------------------------------------------------
+
+type UpsertCourseInput = {
+  id?: string;
+  fullName: string;
+  shortName: string;
+  categoryId: string | null;
+  visible: boolean;
+  description?: string;
+};
+
+type UpsertCategoryInput = {
+  id?: string;
+  name: string;
+  description?: string;
+  parentId?: string | null;
+};
 
 type Ctx = {
   courses: Course[];
   categories: Category[];
   loading: boolean;
-  upsertCourse: (c: Omit<Course, 'id'> & { id?: string }) => Course;
-  deleteCourse: (id: string) => void;
+  upsertCourse: (c: UpsertCourseInput) => Promise<Course>;
+  deleteCourse: (id: string) => Promise<void>;
   toggleCourseVisibility: (id: string) => void;
-  upsertCategory: (c: Omit<Category, 'id'> & { id?: string }) => Category;
-  deleteCategory: (id: string) => void;
-  toggleCategoryVisibility: (id: string) => void;
+  upsertCategory: (c: UpsertCategoryInput) => Promise<Category>;
+  deleteCategory: (id: string) => Promise<void>;
 };
 
 const CoursesCtx = createContext<Ctx | null>(null);
 
+// --- Provider ----------------------------------------------------------------
+
 export function CoursesProvider({ children }: { children: ReactNode }) {
-  const [courses, setCourses] = useState<Course[]>(initialCourses);
-  const [categories, setCategories] = useState<Category[]>(initialCategories);
+  const queryClient = useQueryClient();
+
+  const { data: courses = [], isLoading: coursesLoading } = useQuery({
+    queryKey: courseKeys.lists(),
+    queryFn: async () => {
+      const res = await coursesApi.list();
+      return res.data.map(mapApiCourse);
+    },
+  });
+
+  const { data: categories = [], isLoading: categoriesLoading } = useQuery({
+    queryKey: courseCategoryKeys.lists(),
+    queryFn: async () => {
+      const res = await courseCategoriesApi.list();
+      return flattenCategories(res.data);
+    },
+  });
+
+  const createCourseMutation = useMutation({
+    mutationFn: (payload: Parameters<typeof coursesApi.create>[0]) =>
+      coursesApi.create(payload),
+    onSuccess: ({ data }) => {
+      const created = mapApiCourse(data);
+      queryClient.setQueryData<Course[]>(courseKeys.lists(), (prev = []) => [created, ...prev]);
+    },
+  });
+
+  const updateCourseMutation = useMutation({
+    mutationFn: ({ id, ...payload }: { id: string } & Parameters<typeof coursesApi.update>[1]) =>
+      coursesApi.update(id, payload),
+    onSuccess: ({ data }) => {
+      const updated = mapApiCourse(data);
+      queryClient.setQueryData<Course[]>(courseKeys.lists(), (prev = []) =>
+        prev.map((c) => (c.id === updated.id ? updated : c)),
+      );
+    },
+  });
+
+  const deleteCourseMutation = useMutation({
+    mutationFn: (id: string) => coursesApi.remove(id),
+    onSuccess: (_, id) => {
+      queryClient.setQueryData<Course[]>(courseKeys.lists(), (prev = []) =>
+        prev.filter((c) => c.id !== id),
+      );
+    },
+  });
+
+  const createCategoryMutation = useMutation({
+    mutationFn: (payload: Parameters<typeof courseCategoriesApi.create>[0]) =>
+      courseCategoriesApi.create(payload),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: courseCategoryKeys.lists() }),
+  });
+
+  const updateCategoryMutation = useMutation({
+    mutationFn: ({
+      id,
+      ...payload
+    }: { id: string } & Parameters<typeof courseCategoriesApi.update>[1]) =>
+      courseCategoriesApi.update(id, payload),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: courseCategoryKeys.lists() }),
+  });
+
+  const deleteCategoryMutation = useMutation({
+    mutationFn: (id: string) => courseCategoriesApi.remove(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: courseCategoryKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: courseKeys.lists() });
+    },
+  });
 
   const value = useMemo<Ctx>(
     () => ({
       courses,
       categories,
-      loading: false,
-      upsertCourse: (c) => {
+      loading: coursesLoading || categoriesLoading,
+
+      upsertCourse: async (c) => {
+        const payload = {
+          full_name: c.fullName,
+          short_name: c.shortName,
+          category_id: c.categoryId,
+          visibility: (c.visible ? 'PUBLISHED' : 'DRAFT') as 'PUBLISHED' | 'DRAFT',
+          description: c.description ?? null,
+        };
         if (c.id) {
-          const updated = { ...c, id: c.id } as Course;
-          setCourses((prev) => prev.map((x) => (x.id === c.id ? updated : x)));
-          return updated;
+          const { data } = await updateCourseMutation.mutateAsync({ id: c.id, ...payload });
+          return mapApiCourse(data);
         }
-        const created: Course = { ...c, id: uid() };
-        setCourses((prev) => [created, ...prev]);
-        return created;
+        const { data } = await createCourseMutation.mutateAsync(payload);
+        return mapApiCourse(data);
       },
-      deleteCourse: (id) => setCourses((prev) => prev.filter((c) => c.id !== id)),
-      toggleCourseVisibility: (id) =>
-        setCourses((prev) => prev.map((c) => (c.id === id ? { ...c, visible: !c.visible } : c))),
-      upsertCategory: (c) => {
+
+      deleteCourse: (id) => deleteCourseMutation.mutateAsync(id),
+
+      toggleCourseVisibility: (id) => {
+        const current = courses.find((c) => c.id === id);
+        const newVisibility =
+          current?.visibility === 'PUBLISHED' ? ('DRAFT' as const) : ('PUBLISHED' as const);
+        updateCourseMutation.mutate({ id, visibility: newVisibility });
+      },
+
+      upsertCategory: async (c) => {
         if (c.id) {
-          const updated = { ...c, id: c.id } as Category;
-          setCategories((prev) => prev.map((x) => (x.id === c.id ? updated : x)));
-          return updated;
+          const { data } = await updateCategoryMutation.mutateAsync({
+            id: c.id,
+            name: c.name,
+            description: c.description ?? null,
+          });
+          return mapApiCategory(data);
         }
-        const created: Category = { ...c, id: uid() };
-        setCategories((prev) => [...prev, created]);
-        return created;
+        const { data } = await createCategoryMutation.mutateAsync({
+          name: c.name,
+          description: c.description ?? null,
+          parent_id: c.parentId ?? null,
+        });
+        return mapApiCategory(data);
       },
-      deleteCategory: (id) => {
-        setCategories((prev) =>
-          prev
-            .filter((c) => c.id !== id)
-            .map((c) => (c.parentId === id ? { ...c, parentId: null } : c)),
-        );
-        setCourses((prev) =>
-          prev.map((c) => (c.categoryId === id ? { ...c, categoryId: null } : c)),
-        );
-      },
-      toggleCategoryVisibility: (id) =>
-        setCategories((prev) => prev.map((c) => (c.id === id ? { ...c, visible: !c.visible } : c))),
+
+      deleteCategory: (id) => deleteCategoryMutation.mutateAsync(id),
     }),
-    [courses, categories],
+    [
+      courses,
+      categories,
+      coursesLoading,
+      categoriesLoading,
+      createCourseMutation,
+      updateCourseMutation,
+      deleteCourseMutation,
+      createCategoryMutation,
+      updateCategoryMutation,
+      deleteCategoryMutation,
+    ],
   );
 
   return <CoursesCtx.Provider value={value}>{children}</CoursesCtx.Provider>;
@@ -221,6 +218,8 @@ export function useCoursesStore() {
   if (!ctx) throw new Error('useCoursesStore must be used within CoursesProvider');
   return ctx;
 }
+
+// --- Utilities ---------------------------------------------------------------
 
 export function buildCategoryTree(categories: Category[]) {
   const byParent = new Map<string | null, Category[]>();

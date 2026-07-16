@@ -35,7 +35,6 @@ const schema = z.object({
   fullName: z.string().min(2, 'Nom requis (min 2 caractères)'),
   shortName: z.string().min(1, 'Nom abrégé requis'),
   categoryId: z.string().nullable(),
-  identifier: z.string().min(1, 'Identifiant requis'),
   visible: z.boolean(),
   description: z.string().optional(),
 });
@@ -48,22 +47,11 @@ type Props = {
   course?: Course | null;
 };
 
-function genIdentifier(name: string) {
-  const slug = name
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-zA-Z0-9]+/g, '-')
-    .replace(/^-|-$/g, '')
-    .toUpperCase()
-    .slice(0, 20);
-  const rand = Math.floor(100 + Math.random() * 900);
-  return slug ? `${slug}-${rand}` : `COURS-${rand}`;
-}
-
 export function CourseDrawer({ open, onOpenChange, course }: Props) {
   const { categories, upsertCourse, upsertCategory } = useCoursesStore();
   const [catOpen, setCatOpen] = useState(false);
   const [newCatName, setNewCatName] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
 
   const defaults = useMemo<FormValues>(
@@ -71,7 +59,6 @@ export function CourseDrawer({ open, onOpenChange, course }: Props) {
       fullName: course?.fullName ?? '',
       shortName: course?.shortName ?? '',
       categoryId: course?.categoryId ?? null,
-      identifier: course?.identifier ?? '',
       visible: course?.visible ?? true,
       description: course?.description ?? '',
     }),
@@ -87,18 +74,25 @@ export function CourseDrawer({ open, onOpenChange, course }: Props) {
     if (open) form.reset(defaults);
   }, [open, defaults, form]);
 
-  const fullName = form.watch('fullName');
-  const identifier = form.watch('identifier');
   const categoryId = form.watch('categoryId');
   const visible = form.watch('visible');
 
   const selectedCategory = categories.find((c) => c.id === categoryId);
 
-  const onSubmit = (values: FormValues) => {
-    upsertCourse({ ...values, id: course?.id });
-    toast.success(course ? 'Cours mis à jour' : 'Cours créé');
-    onOpenChange(false);
-    router.push('/admin/courses/4545454');
+  const onSubmit = async (values: FormValues) => {
+    try {
+      setIsSubmitting(true);
+      const saved = await upsertCourse({ ...values, id: course?.id });
+      toast.success(course ? 'Cours mis à jour' : 'Cours créé');
+      onOpenChange(false);
+      if (!course) {
+        router.push(`/admin/courses/${saved.id}`);
+      }
+    } catch {
+      toast.error('Une erreur est survenue');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -127,40 +121,14 @@ export function CourseDrawer({ open, onOpenChange, course }: Props) {
               )}
             </div>
 
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="shortName">Nom abrégé</Label>
-                <Input id="shortName" placeholder="REACT19" {...form.register('shortName')} />
-                {form.formState.errors.shortName && (
-                  <p className="text-xs text-destructive">
-                    {form.formState.errors.shortName.message}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="identifier">Identifiant</Label>
-                <div className="flex gap-2">
-                  <Input id="identifier" placeholder="FE-101" {...form.register('identifier')} />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
-                      form.setValue('identifier', genIdentifier(fullName), {
-                        shouldValidate: true,
-                      })
-                    }
-                  >
-                    Auto
-                  </Button>
-                </div>
-                {identifier && (
-                  <p className="text-xs text-muted-foreground">
-                    Slug : <code className="rounded bg-muted px-1">{identifier.toLowerCase()}</code>
-                  </p>
-                )}
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="shortName">Nom abrégé</Label>
+              <Input id="shortName" placeholder="REACT19" {...form.register('shortName')} />
+              {form.formState.errors.shortName && (
+                <p className="text-xs text-destructive">
+                  {form.formState.errors.shortName.message}
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -193,9 +161,7 @@ export function CourseDrawer({ open, onOpenChange, course }: Props) {
                             key={cat.id}
                             value={getCategoryPath(categories, cat.id)}
                             onSelect={() => {
-                              form.setValue('categoryId', cat.id, {
-                                shouldValidate: true,
-                              });
+                              form.setValue('categoryId', cat.id, { shouldValidate: true });
                               setCatOpen(false);
                             }}
                           >
@@ -214,19 +180,21 @@ export function CourseDrawer({ open, onOpenChange, course }: Props) {
                           <CommandSeparator />
                           <CommandGroup>
                             <CommandItem
-                              onSelect={() => {
-                                const created = upsertCategory({
-                                  name: newCatName.trim(),
-                                  identifier: genIdentifier(newCatName),
-                                  parentId: null,
-                                  visible: true,
-                                });
-                                form.setValue('categoryId', created.id, {
-                                  shouldValidate: true,
-                                });
-                                setNewCatName('');
-                                setCatOpen(false);
-                                toast.success('Catégorie créée');
+                              onSelect={async () => {
+                                try {
+                                  const created = await upsertCategory({
+                                    name: newCatName.trim(),
+                                    parentId: null,
+                                  });
+                                  form.setValue('categoryId', created.id, {
+                                    shouldValidate: true,
+                                  });
+                                  setNewCatName('');
+                                  setCatOpen(false);
+                                  toast.success('Catégorie créée');
+                                } catch {
+                                  toast.error('Erreur lors de la création de la catégorie');
+                                }
                               }}
                             >
                               <Plus className="mr-2 size-4" />
@@ -245,7 +213,7 @@ export function CourseDrawer({ open, onOpenChange, course }: Props) {
               <div className="space-y-0.5">
                 <Label htmlFor="visible">Visibilité</Label>
                 <p className="text-xs text-muted-foreground">
-                  {visible ? 'Visible' : 'Masqué pour le moment'}
+                  {visible ? 'Publié' : 'Brouillon (masqué)'}
                 </p>
               </div>
               <Switch
@@ -268,11 +236,20 @@ export function CourseDrawer({ open, onOpenChange, course }: Props) {
           </div>
 
           <div className="sticky bottom-0 flex items-center justify-end gap-2 border-t bg-background px-6 py-4">
-            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => onOpenChange(false)}
+              disabled={isSubmitting}
+            >
               Annuler
             </Button>
-            <Button type="submit" className="bg-(--color-primary) hover:bg-(--color-primary)/80">
-              Sauvegarder
+            <Button
+              type="submit"
+              className="bg-(--color-primary) hover:bg-(--color-primary)/80"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? 'Enregistrement…' : 'Sauvegarder'}
             </Button>
           </div>
         </form>

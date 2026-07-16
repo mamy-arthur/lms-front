@@ -34,8 +34,10 @@ const MODULE_TYPE_FALLBACK_COLOR = 'bg-gray-400';
 
 export function ContentTypePicker({
   onSelect,
+  disabled = false,
 }: {
   onSelect: (contentType: ContentTypeResource) => void;
+  disabled?: boolean;
 }) {
   const { data: contentTypes, isLoading, isError } = useContentTypesQuery();
 
@@ -69,7 +71,8 @@ export function ContentTypePicker({
             key={ct.id}
             type="button"
             onClick={() => onSelect(ct)}
-            className="group flex flex-col items-start gap-2 rounded-xl border border-border p-4 text-left transition-all hover:border-gray-600/50 hover:shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer bg-card"
+            disabled={disabled}
+            className="group flex flex-col items-start gap-2 rounded-xl border border-border p-4 text-left transition-all hover:border-gray-600/50 hover:shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer bg-card disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <div
               className={`flex h-10 w-10 items-center justify-center rounded-lg text-white ${bgColor}`}

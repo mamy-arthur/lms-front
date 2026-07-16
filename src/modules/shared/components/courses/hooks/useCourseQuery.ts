@@ -1,12 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
-import { adminCoursesApi } from '../../../../admin/resources/courses/api';
+import { coursesApi } from '@/shared/api/courses.api';
+import { mapApiCourse } from '../lib/course-store';
+import { courseKeys } from '@/shared/queries/keys';
 
 export function useCourseQuery(id: string) {
   return useQuery({
-    queryKey: ['admin', 'courses', id],
+    queryKey: courseKeys.detail(id),
     queryFn: async () => {
-      await adminCoursesApi.getById(id);
-      return [];
+      const res = await coursesApi.get(id);
+      return mapApiCourse(res.data);
     },
     enabled: !!id,
   });
