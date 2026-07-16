@@ -27,6 +27,7 @@ import {
 } from '@/components/ui/command';
 import { useCoursesStore, getCategoryPath } from '../lib/course-store';
 import type { Course } from '../types/index';
+import { courseSectionsApi } from '@/shared/api/courses.api';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
@@ -83,6 +84,9 @@ export function CourseDrawer({ open, onOpenChange, course }: Props) {
     try {
       setIsSubmitting(true);
       const saved = await upsertCourse({ ...values, id: course?.id });
+      if (!course) {
+        await courseSectionsApi.create(saved.id, { name: 'Introduction' });
+      }
       toast.success(course ? 'Cours mis à jour' : 'Cours créé');
       onOpenChange(false);
       if (!course) {
