@@ -1,9 +1,13 @@
-import { apiDelete, apiGet, apiPatch, apiPost } from '@/shared/lib/apiClient';
+import { apiDelete, apiGet, apiPatch, apiPost, apiUpload } from '@/shared/lib/apiClient';
 import type { MailTemplate, CreateMailTemplatePayload, UpdateMailTemplatePayload } from '../types';
 
 interface MailTemplateListResponse {
   data?: Record<string, unknown>[];
   total?: number;
+}
+
+interface MailTemplateMediaResponse {
+  data: { id: string; url: string; mime_type: string; original_name: string };
 }
 
 export const adminMailTemplatesApi = {
@@ -22,4 +26,10 @@ export const adminMailTemplatesApi = {
 
   duplicate: (id: string) =>
     apiPost<{ data: Record<string, unknown> }>(`platform/template-mails/${id}/duplicate`),
+
+  uploadMedia: (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return apiUpload<MailTemplateMediaResponse>(`platform/template-mails/media`, formData);
+  },
 };

@@ -13,9 +13,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ImageInsertDialog } from '@modules/shared/components/tiptap/ImageInsertDialog';
+import {
+  ImageInsertDialog,
+  type ImageConfirmAttrs,
+} from '@modules/shared/components/tiptap/ImageInsertDialog';
 import { ALIGN_STYLES } from '@modules/shared/components/tiptap/RichTextEditor';
 import { useTemplateVariablesQuery } from '@/modules/shared/hooks/useTemplateVariablesQuery';
+
+type UploadMediaFn = (file: File) => Promise<{ mediaId: string }>;
 
 /** Labels affichés pour chaque catégorie de variable. */
 const CATEGORY_LABELS: Record<string, string> = {
@@ -28,11 +33,13 @@ const CATEGORY_LABELS: Record<string, string> = {
 function MailTemplateToolbarExtrasComponent({
   editor,
   apiPath,
+  uploadMedia,
   insertHtml,
   insertText,
 }: {
   editor: Editor;
   apiPath: string;
+  uploadMedia?: UploadMediaFn;
   insertHtml?: (html: string) => void;
   insertText?: (text: string) => void;
 }) {
@@ -40,13 +47,39 @@ function MailTemplateToolbarExtrasComponent({
   const { data } = useTemplateVariablesQuery(apiPath, 'mail');
   const grouped = data?.data ?? {};
 
-  /** La clé du backend inclut déjà `{{…}}`, on l'insère directement. */
   const insertVariable = (key: string) => {
     if (insertText) {
       insertText(key);
       return;
     }
     editor.chain().focus().insertContent(key).run();
+  };
+
+  const handleConfirm = ({ src, alt, width, height, align, mediaId }: ImageConfirmAttrs) => {
+    if (insertHtml) {
+      const style = ALIGN_STYLES[align] ?? ALIGN_STYLES.left;
+      const widthAttr = width ? ` width="${width}"` : '';
+      const heightAttr = height ? ` height="${height}"` : '';
+      const mediaAttr = mediaId ? ` data-media-id="${mediaId}"` : '';
+      insertHtml(
+        `<img src="${src}" alt="${alt}"${widthAttr}${heightAttr} style="${style}"${mediaAttr}>`,
+      );
+      return;
+    }
+    (
+      editor.chain().focus() as unknown as {
+        setImage: (attrs: {
+          src: string;
+          alt: string;
+          width: number | null;
+          height: number | null;
+          align: string;
+          dataMediaId?: string;
+        }) => { run(): boolean };
+      }
+    )
+      .setImage({ src, alt, width, height, align, ...(mediaId ? { dataMediaId: mediaId } : {}) })
+      .run();
   };
 
   return (
@@ -66,28 +99,8 @@ function MailTemplateToolbarExtrasComponent({
       <ImageInsertDialog
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
-        onConfirm={({ src, alt, width, height, align }) => {
-          if (insertHtml) {
-            const style = ALIGN_STYLES[align] ?? ALIGN_STYLES.left;
-            const widthAttr = width ? ` width="${width}"` : '';
-            const heightAttr = height ? ` height="${height}"` : '';
-            insertHtml(`<img src="${src}" alt="${alt}"${widthAttr}${heightAttr} style="${style}">`);
-            return;
-          }
-          (
-            editor.chain().focus() as unknown as {
-              setImage: (attrs: {
-                src: string;
-                alt: string;
-                width: number | null;
-                height: number | null;
-                align: string;
-              }) => { run(): boolean };
-            }
-          )
-            .setImage({ src, alt, width, height, align })
-            .run();
-        }}
+        onFileUpload={uploadMedia}
+        onConfirm={handleConfirm}
       />
 
       <Select onValueChange={insertVariable}>
@@ -116,10 +129,12 @@ function MailTemplateToolbarExtrasComponent({
 /**
  * Crée la fonction `toolbarExtras` pour les templates mail.
  *
- * @param apiPath  `'platform/template-variables'` (admin) ou `'template-variables'` (portail).
+ * @param apiPath     `'platform/template-variables'` (admin) ou `'template-variables'` (portail).
+ * @param uploadMedia Fonction d'upload image (admin uniquement).
  */
 export function makeMailTemplateToolbarExtras(
   apiPath = 'template-variables',
+  uploadMedia?: UploadMediaFn,
 ): (
   editor: Editor,
   ctx?: { insertHtml: (html: string) => void; insertText: (text: string) => void },
@@ -131,6 +146,7 @@ export function makeMailTemplateToolbarExtras(
     <MailTemplateToolbarExtrasComponent
       editor={editor}
       apiPath={apiPath}
+      uploadMedia={uploadMedia}
       insertHtml={ctx?.insertHtml}
       insertText={ctx?.insertText}
     />

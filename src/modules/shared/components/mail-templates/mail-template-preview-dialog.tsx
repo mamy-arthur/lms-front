@@ -41,7 +41,7 @@ export function MailTemplatePreviewDialog({
             className="prose prose-sm max-w-none dark:prose-invert [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6 [&_li]:my-0.5 [&_img]:max-w-full [&_img]:h-auto [&_table]:w-full [&_table]:table-fixed [&_td]:wrap-break-word [&_th]:wrap-break-word **:max-w-full [&_*]:!height-auto"
             dangerouslySetInnerHTML={{
               __html: DOMPurify.sanitize(body, {
-                USE_PROFILES: { html: true },
+                USE_PROFILES: { html: true, svg: true, svgFilters: true },
                 ADD_ATTR: ['style', 'width', 'height', 'data-media-id'],
               }),
             }}

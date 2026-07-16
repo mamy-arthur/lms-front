@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useMemo } from 'react';
+import { memo, useMemo, useCallback } from 'react';
 import { z } from 'zod';
 import {
   Sheet,
@@ -14,6 +14,7 @@ import { MailTemplateForm } from '@modules/shared/components/mail-templates/mail
 import { makeMailTemplateToolbarExtras } from '@modules/shared/components/mail-templates/mail-template-toolbar-extras';
 import { useCreateMailTemplate } from '../../hooks/useCreateMailTemplate';
 import { useUpdateMailTemplate } from '../../hooks/useUpdateMailTemplate';
+import { useUploadMailTemplateMedia } from '../../hooks/useUploadMailTemplateMedia';
 import type {
   MailTemplate,
   CreateMailTemplatePayload,
@@ -54,10 +55,19 @@ function AdminMailTemplateFormDrawerBase({
   const isEdit = !!template;
   const createMutation = useCreateMailTemplate();
   const updateMutation = useUpdateMailTemplate();
+  const uploadMedia = useUploadMailTemplateMedia();
+
+  const uploadFn = useCallback(
+    async (file: File) => {
+      const { data } = await uploadMedia.mutateAsync(file);
+      return { mediaId: data.id };
+    },
+    [uploadMedia.mutateAsync],
+  );
 
   const toolbarExtras = useMemo(
-    () => makeMailTemplateToolbarExtras('platform/template-variables'),
-    [],
+    () => makeMailTemplateToolbarExtras('platform/template-variables', uploadFn),
+    [uploadFn],
   );
 
   const schema = createSchema;

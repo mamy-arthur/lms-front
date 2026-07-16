@@ -45,7 +45,7 @@ declare module '@tiptap/core' {
 }
 export const ALIGN_STYLES: Record<string, string> = {
   left: 'float: left; margin: 0 1em 0.5em 0;',
-  center: 'display: block; margin: 0 auto 0.5em; clear: both;',
+  center: 'display: block; margin: 0 auto 1em; float: none;',
   right: 'float: right; margin: 0 0 0.5em 1em;',
 };
 
@@ -393,8 +393,6 @@ export function RichTextEditor({
           '[&_pre]:rounded [&_pre]:bg-[#1e1e1e] [&_pre]:text-[#d4d4d4] [&_pre]:p-4 [&_pre]:text-xs [&_pre]:font-mono [&_pre]:overflow-x-auto',
           '[&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_pre_code]:text-inherit',
           '[&_a]:text-primary [&_a]:underline',
-          // overflow-hidden crée un BFC : le texte ne passe pas sous le float
-          '[&_p]:overflow-hidden',
         ),
       },
       // Mode HTML : on intercepte TOUJOURS le coller si le text/plain contient
@@ -435,6 +433,8 @@ export function RichTextEditor({
 
   // Sync externe value → div contenteditable (mode HTML uniquement).
   const htmlPreviewRef = useRef<HTMLDivElement>(null);
+  // Ref pour la textarea en mode source.
+  const sourceTextareaRef = useRef<HTMLTextAreaElement>(null);
   // Toujours à jour pendant le render : utilisé dans la callback ref ci-dessous.
   const latestValueRef = useRef(value);
   latestValueRef.current = value;
@@ -518,11 +518,30 @@ export function RichTextEditor({
     onChange(el.innerHTML);
   };
 
+  // En mode source, insère du texte (HTML ou variable) à la position du curseur dans la textarea.
+  const insertIntoSource = (text: string) => {
+    const el = sourceTextareaRef.current;
+    if (!el) return;
+    const start = el.selectionStart ?? sourceValue.length;
+    const end = el.selectionEnd ?? start;
+    const next = sourceValue.slice(0, start) + text + sourceValue.slice(end);
+    setSourceValue(next);
+    onChange(next);
+    // Repositionne le curseur après le texte inséré.
+    requestAnimationFrame(() => {
+      el.focus();
+      el.setSelectionRange(start + text.length, start + text.length);
+    });
+  };
+
   // Wrapper pour toolbarExtras : en mode HTML, passe les deux helpers en contexte.
   const wrappedToolbarExtras = toolbarExtras
     ? outputFormat === 'html'
       ? (editor: Editor) =>
-          toolbarExtras(editor, { insertHtml: insertHtmlAtCursor, insertText: insertTextAtCursor })
+          toolbarExtras(editor, {
+            insertHtml: sourceMode ? insertIntoSource : insertHtmlAtCursor,
+            insertText: sourceMode ? insertIntoSource : insertTextAtCursor,
+          })
       : toolbarExtras
     : undefined;
 
@@ -580,6 +599,7 @@ export function RichTextEditor({
         />
         {sourceMode ? (
           <textarea
+            ref={sourceTextareaRef}
             className="min-h-32 w-full rounded-b-md border bg-[#1e1e1e] text-[#d4d4d4] font-mono text-xs px-3 py-2 resize-y focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             value={sourceValue}
             onChange={(e) => {

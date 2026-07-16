@@ -57,6 +57,7 @@ export const PORTAL_NAV: PortalNavItem[] = [
     url: ROUTES.portal.certificate,
     title: 'Templates',
     icon: LayoutTemplate,
+    access: ACCESS.templates,
     items: [
       { title: 'Attestations', url: ROUTES.portal.certificate },
       { title: 'Templates mail', url: ROUTES.portal.mailTemplates },
