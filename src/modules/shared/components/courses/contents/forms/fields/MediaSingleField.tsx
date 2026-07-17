@@ -1,11 +1,20 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Loader2, AlertCircle } from 'lucide-react';
+import { Loader2, AlertCircle, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { FileUploadField } from '@/modules/shared/components/input-upload/FileUploadField';
 import { mediaApi, type ApiMedia } from '@/shared/api/media.api';
 import type { ContentTypeField } from '@/shared/types/content-type.types';
-import { extractMediaId, extractErrorMessage } from './media-utils';
+import {
+  extractMediaId,
+  extractErrorMessage,
+  isPreviewable,
+  downloadFile,
+  formatFileSize,
+} from './media-utils';
+import { MediaThumbnail } from './MediaThumbnail';
+import { MediaPreviewModal } from './MediaPreviewModal';
 
 interface MediaSingleFieldProps {
   field: ContentTypeField;
@@ -19,6 +28,7 @@ export function MediaSingleField({ field, value, onChange, contentTypeId }: Medi
   const [isLoadingMedia, setIsLoadingMedia] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [previewMedia, setPreviewMedia] = useState<ApiMedia | null>(null);
 
   useEffect(() => {
     const id = extractMediaId(value);
@@ -30,6 +40,14 @@ export function MediaSingleField({ field, value, onChange, contentTypeId }: Medi
       .catch(() => {})
       .finally(() => setIsLoadingMedia(false));
   }, []);
+
+  const handleCardClick = (media: ApiMedia) => {
+    if (isPreviewable(media.mime_type)) {
+      setPreviewMedia(media);
+    } else {
+      downloadFile(media.url, media.original_name);
+    }
+  };
 
   const uploadSingle = async (file: File) => {
     setIsUploading(true);
@@ -49,6 +67,12 @@ export function MediaSingleField({ field, value, onChange, contentTypeId }: Medi
     }
   };
 
+  const handleRemove = () => {
+    if (mediaInfo) mediaApi.delete(mediaInfo.id).catch(() => {});
+    setMediaInfo(null);
+    onChange(null);
+  };
+
   return (
     <div className="space-y-2">
       {isLoadingMedia && (
@@ -56,17 +80,45 @@ export function MediaSingleField({ field, value, onChange, contentTypeId }: Medi
           <Loader2 className="size-3 animate-spin" /> Chargement…
         </p>
       )}
-      <FileUploadField
-        fileName={mediaInfo?.original_name}
-        accept={field.accept.join(',')}
-        hint={field.accept.join(', ')}
-        onFileSelect={uploadSingle}
-        onRemove={() => {
-          if (mediaInfo) mediaApi.delete(mediaInfo.id).catch(() => {});
-          setMediaInfo(null);
-          onChange(null);
-        }}
-      />
+
+      {mediaInfo ? (
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => handleCardClick(mediaInfo)}
+          onKeyDown={(e) => e.key === 'Enter' && handleCardClick(mediaInfo)}
+          className="relative flex items-center gap-3 w-full rounded-lg border border-border bg-card shadow-sm cursor-pointer hover:bg-accent/50 transition-colors p-2"
+        >
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="z-50 absolute top-2 right-2 h-5 w-5 rounded-md bg-destructive/80 hover:bg-destructive text-white p-1"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleRemove();
+            }}
+          >
+            <X className="h-3 w-3" />
+          </Button>
+
+          <MediaThumbnail media={mediaInfo} />
+
+          <div className="flex-1 min-w-0 pr-7">
+            <span className="block truncate text-xs font-medium">{mediaInfo.original_name}</span>
+            <span className="text-xs text-muted-foreground">{formatFileSize(mediaInfo.size_bytes)}</span>
+          </div>
+        </div>
+      ) : (
+        <FileUploadField
+          fileName={undefined}
+          accept={field.accept.join(',')}
+          hint={field.accept.join(', ')}
+          onFileSelect={uploadSingle}
+          onRemove={() => {}}
+        />
+      )}
+
       {isUploading && (
         <p className="flex items-center gap-1 text-xs text-muted-foreground">
           <Loader2 className="size-3 animate-spin" /> Upload en cours…
@@ -77,6 +129,8 @@ export function MediaSingleField({ field, value, onChange, contentTypeId }: Medi
           <AlertCircle className="size-3" /> {uploadError}
         </p>
       )}
+
+      <MediaPreviewModal media={previewMedia} onClose={() => setPreviewMedia(null)} />
     </div>
   );
 }
