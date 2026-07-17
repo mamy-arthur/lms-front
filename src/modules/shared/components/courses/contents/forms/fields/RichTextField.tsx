@@ -24,9 +24,9 @@ function RichtextImageToolbarExtra({
 }: RichtextImageToolbarExtraProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  const uploadImage = async (file: File): Promise<{ mediaId: string }> => {
+  const uploadImage = async (file: File): Promise<{ mediaId: string; src: string }> => {
     const res = await mediaApi.uploadInline(file, contentTypeId, fieldId);
-    return { mediaId: res.data.id };
+    return { mediaId: res.data.id, src: res.data.url };
   };
 
   const handleConfirm = ({ src, alt, width, height, align, mediaId }: ImageConfirmAttrs) => {

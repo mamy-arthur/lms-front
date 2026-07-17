@@ -6,17 +6,9 @@ import {
   Plus,
   Pencil,
   Trash2,
-  FileText,
-  File as FileIcon,
-  Folder,
-  Package,
-  Link as LinkIcon,
-  BarChart3,
-  Type as TypeIcon,
-  Image,
-  Box,
   ChevronRight,
   X,
+  BookOpen,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -47,17 +39,6 @@ import {
   useRemoveEntry,
 } from '../hooks/useCourseContentApi';
 import { AddContentModal } from './AddContentModal';
-
-const ICONS: Record<string, React.ElementType> = {
-  page: FileText,
-  file: FileIcon,
-  folder: Folder,
-  scorm: Package,
-  url: LinkIcon,
-  survey: BarChart3,
-  'text-media': TypeIcon,
-  media: Image,
-};
 
 /** A pending (unsaved) entry shown locally before the user clicks "Enregistrer". */
 export interface PendingEntryInfo {
@@ -108,7 +89,10 @@ export function SectionCard({
 
   const save = async () => {
     try {
-      await updateSection.mutateAsync({ sectionId: section.id, name: title.trim() || section.name });
+      await updateSection.mutateAsync({
+        sectionId: section.id,
+        name: title.trim() || section.name,
+      });
       setEditOpen(false);
     } catch {
       toast.error('Erreur lors de la mise à jour de la section');
@@ -156,7 +140,6 @@ export function SectionCard({
         <div className="space-y-1 px-2 pb-2">
           {/* Saved entries */}
           {entries.map((entry) => {
-            const Icon = ICONS[entry.data?.module_type as string] ?? Box;
             const isSelected = selectedEntryId === entry.id;
             const label =
               typeof entry.data?.title === 'string'
@@ -166,19 +149,18 @@ export function SectionCard({
             return (
               <div
                 key={entry.id}
-                className={`group flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors
-                  ${isSelected ? 'bg-(--color-primary)/90 text-white' : 'hover:bg-muted'}`}
+                onClick={() => onSelectEntry(entry)}
+                className={`group flex w-full cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors
+    ${isSelected ? 'bg-(--color-primary)/90 text-white' : 'hover:bg-muted'}`}
               >
-                <button
-                  onClick={() => onSelectEntry(entry)}
-                  className="flex min-w-0 flex-1 items-center gap-2"
-                >
-                  <Icon className="size-4 shrink-0" />
+                <div className="flex min-w-0 flex-1 items-center gap-2">
+                  <BookOpen className="size-4 shrink-0" />
                   <span className="truncate text-xs">{label || 'Nouveau contenu'}</span>
-                </button>
+                </div>
+
                 <button
                   onClick={async (e) => {
-                    e.stopPropagation();
+                    e.stopPropagation(); // Empêche de sélectionner lors de la suppression
                     try {
                       await removeEntry.mutateAsync(entry.id);
                       onEntryDeleted?.(entry.id);
@@ -187,7 +169,11 @@ export function SectionCard({
                     }
                   }}
                   className={`shrink-0 cursor-pointer rounded p-0.5 opacity-0 transition-opacity group-hover:opacity-100
-                    ${isSelected ? 'hover:bg-destructive/70 text-white' : 'hover:bg-destructive/10 text-destructive'}`}
+      ${
+        isSelected
+          ? 'hover:bg-destructive/70 text-white'
+          : 'hover:bg-destructive/10 text-destructive'
+      }`}
                 >
                   <Trash2 className="size-3" />
                 </button>
@@ -206,13 +192,12 @@ export function SectionCard({
                 className="flex min-w-0 flex-1 items-center gap-2"
               >
                 {(() => {
-                  const Icon = ICONS[pendingEntry.moduleType] ?? Box;
-                  return <Icon className="size-4 shrink-0 opacity-60" />;
+                  return <BookOpen className="size-4 shrink-0 opacity-60" />;
                 })()}
-                <span className="truncate text-xs italic">
-                  {pendingEntry.title}
-                </span>
-                <span className={`ml-1 shrink-0 text-[10px] ${pendingEntrySelected ? 'text-white/70' : 'text-muted-foreground'}`}>
+                <span className="truncate text-xs italic">{pendingEntry.title}</span>
+                <span
+                  className={`ml-1 shrink-0 text-[10px] ${pendingEntrySelected ? 'text-white/70' : 'text-muted-foreground'}`}
+                >
                   (brouillon)
                 </span>
               </button>
@@ -275,5 +260,3 @@ export function SectionCard({
     </Collapsible>
   );
 }
-
-

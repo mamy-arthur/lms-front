@@ -89,36 +89,40 @@ export function MediaMultiField({ field, value, onChange, contentTypeId }: Media
         onFilesChange={uploadMultiple}
       />
 
-      {mediaList.map((media) => (
-        <div
-          key={media.id}
-          role="button"
-          tabIndex={0}
-          onClick={() => handleItemClick(media)}
-          onKeyDown={(e) => e.key === 'Enter' && handleItemClick(media)}
-          className="flex items-center gap-3 w-full rounded-md border bg-background px-3 py-2 cursor-pointer hover:bg-muted/50 transition-colors"
-        >
-          <MediaThumbnail media={media} />
-          <div className="flex-1 min-w-0">
-            <span className="block truncate text-xs">{media.original_name}</span>
-            <span className="text-[10px] text-muted-foreground">
-              {formatFileSize(media.size_bytes)}
-            </span>
-          </div>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6 shrink-0"
-            onClick={(e) => {
-              e.stopPropagation();
-              removeFromList(media.id);
-            }}
+      <div className="grid grid-cols-3 gap-4">
+        {mediaList.map((media) => (
+          <div
+            key={media.id}
+            role="button"
+            tabIndex={0}
+            onClick={() => handleItemClick(media)}
+            onKeyDown={(e) => e.key === 'Enter' && handleItemClick(media)}
+            className="relative flex flex-col gap-3 w-full rounded-md  bg-gray-50 cursor-pointer hover:bg-muted/50 transition-colors"
           >
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
-      ))}
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="z-50 absolute rounded-lg top-2 p-1 right-2 h-5 w-5 bg-red-300 text-white"
+              onClick={(e) => {
+                e.stopPropagation();
+                removeFromList(media.id);
+              }}
+            >
+              <X className="h-3 w-3" />
+            </Button>
+
+            <MediaThumbnail media={media} />
+
+            <div className="flex-1 min-w-0 px-2 py-1">
+              <span className="block truncate text-xs">{media.original_name}</span>
+              <span className="text-xs text-muted-foreground">
+                {formatFileSize(media.size_bytes)}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
 
       {isUploading && (
         <p className="flex items-center gap-1 text-xs text-muted-foreground">
