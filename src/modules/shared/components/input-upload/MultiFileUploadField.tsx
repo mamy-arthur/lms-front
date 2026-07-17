@@ -19,7 +19,7 @@ function formatSize(bytes: number): string {
 }
 
 export function MultiFileUploadField({
-  label = 'Fichiers',
+  // label = 'Fichiers',
   files,
   accept,
   hint,
@@ -56,7 +56,6 @@ export function MultiFileUploadField({
   return (
     <div className="space-y-2 w-full">
       <Label>
-        {label}
         {maxFiles ? ` (${files.length}/${maxFiles})` : ''}
       </Label>
 

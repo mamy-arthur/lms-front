@@ -1,12 +1,20 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Loader2, AlertCircle, FileArchive, X } from 'lucide-react';
+import { Loader2, AlertCircle, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { MultiFileUploadField } from '@/modules/shared/components/input-upload/MultiFileUploadField';
 import { mediaApi, type ApiMedia } from '@/shared/api/media.api';
 import type { ContentTypeField } from '@/shared/types/content-type.types';
-import { extractMediaId, extractErrorMessage } from './media-utils';
+import {
+  extractMediaId,
+  extractErrorMessage,
+  isPreviewable,
+  downloadFile,
+  formatFileSize,
+} from './media-utils';
+import { MediaThumbnail } from './MediaThumbnail';
+import { MediaPreviewModal } from './MediaPreviewModal';
 
 interface MediaMultiFieldProps {
   field: ContentTypeField;
@@ -20,6 +28,15 @@ export function MediaMultiField({ field, value, onChange, contentTypeId }: Media
   const [isLoadingMedia, setIsLoadingMedia] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [previewMedia, setPreviewMedia] = useState<ApiMedia | null>(null);
+
+  const handleItemClick = (media: ApiMedia) => {
+    if (isPreviewable(media.mime_type)) {
+      setPreviewMedia(media);
+    } else {
+      downloadFile(media.url, media.original_name);
+    }
+  };
 
   useEffect(() => {
     const ids = (Array.isArray(value) ? value : [])
@@ -65,30 +82,44 @@ export function MediaMultiField({ field, value, onChange, contentTypeId }: Media
           <Loader2 className="size-3 animate-spin" /> Chargement…
         </p>
       )}
-      {mediaList.map((media) => (
-        <div
-          key={media.id}
-          className="flex items-center gap-3 w-full rounded-md border bg-background px-3 py-2"
-        >
-          <FileArchive className="h-5 w-5 text-muted-foreground shrink-0" />
-          <span className="truncate text-xs flex-1 text-left">{media.original_name}</span>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6 shrink-0"
-            onClick={() => removeFromList(media.id)}
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
-      ))}
       <MultiFileUploadField
         files={[]}
         accept={field.accept.join(',')}
         hint={field.accept.join(', ')}
         onFilesChange={uploadMultiple}
       />
+
+      {mediaList.map((media) => (
+        <div
+          key={media.id}
+          role="button"
+          tabIndex={0}
+          onClick={() => handleItemClick(media)}
+          onKeyDown={(e) => e.key === 'Enter' && handleItemClick(media)}
+          className="flex items-center gap-3 w-full rounded-md border bg-background px-3 py-2 cursor-pointer hover:bg-muted/50 transition-colors"
+        >
+          <MediaThumbnail media={media} />
+          <div className="flex-1 min-w-0">
+            <span className="block truncate text-xs">{media.original_name}</span>
+            <span className="text-[10px] text-muted-foreground">
+              {formatFileSize(media.size_bytes)}
+            </span>
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 shrink-0"
+            onClick={(e) => {
+              e.stopPropagation();
+              removeFromList(media.id);
+            }}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      ))}
+
       {isUploading && (
         <p className="flex items-center gap-1 text-xs text-muted-foreground">
           <Loader2 className="size-3 animate-spin" /> Upload en cours…
@@ -99,6 +130,8 @@ export function MediaMultiField({ field, value, onChange, contentTypeId }: Media
           <AlertCircle className="size-3" /> {uploadError}
         </p>
       )}
+
+      <MediaPreviewModal media={previewMedia} onClose={() => setPreviewMedia(null)} />
     </div>
   );
 }
