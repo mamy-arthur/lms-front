@@ -1,8 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { ProgramFormValues } from '../components/ProgramFormPanel';
-import type { StoredFlowData, StoredProgram } from '../types';
+import type { ProgramFormValues, StoredFlowData, StoredProgram } from '../types';
 import { MOCK_PROGRAMS } from '../mock/programs.mock';
 
 let _idCounter = MOCK_PROGRAMS.length;
