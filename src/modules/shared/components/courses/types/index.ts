@@ -1,5 +1,5 @@
-import { ContentTypeResource } from "@/shared/types/content-type.types";
-import type { CourseVisibility } from "@/shared/types/course.types";
+import { ContentTypeResource } from '@/shared/types/content-type.types';
+import type { CourseVisibility } from '@/shared/types/course.types';
 
 export type Category = {
   id: string;

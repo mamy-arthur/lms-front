@@ -171,8 +171,8 @@ export function CourseContentPage({ courseId }: Props) {
                 />
               )}
 
-              {selection?.kind === 'existing' && (
-                ctLoading ? (
+              {selection?.kind === 'existing' &&
+                (ctLoading ? (
                   <div className="flex h-full items-center justify-center py-16">
                     <Loader2 className="size-5 animate-spin text-muted-foreground" />
                   </div>
@@ -193,8 +193,7 @@ export function CourseContentPage({ courseId }: Props) {
                       </p>
                     </div>
                   </div>
-                )
-              )}
+                ))}
             </main>
           </div>
         )}

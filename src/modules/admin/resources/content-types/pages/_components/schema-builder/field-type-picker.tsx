@@ -179,14 +179,7 @@ const CONFIGS: Record<FieldType, FieldTypeConfig> = {
 };
 
 // Preserve canonical ordering from FIELD_TYPES
-const FIELD_TYPE_ORDER: FieldType[] = [
-  'text',
-  'textarea',
-  'richtext',
-  'number',
-  'date',
-  'media',
-];
+const FIELD_TYPE_ORDER: FieldType[] = ['text', 'textarea', 'richtext', 'number', 'date', 'media'];
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 

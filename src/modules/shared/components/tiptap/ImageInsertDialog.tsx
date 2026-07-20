@@ -49,7 +49,7 @@ interface ImageInsertDialogProps {
   onConfirm: (attrs: ImageConfirmAttrs) => void;
   /** Si fourni, les fichiers sélectionnés sont uploadés via cette fonction.
    *  Retourne le mediaId et l'URL serveur permanente de l'image. */
-  onFileUpload?: (file: File) => Promise<{ mediaId: string; src: string }>
+  onFileUpload?: (file: File) => Promise<{ mediaId: string; src: string }>;
 }
 
 export function ImageInsertDialog({

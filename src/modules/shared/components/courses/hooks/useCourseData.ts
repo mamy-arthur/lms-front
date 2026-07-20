@@ -16,8 +16,7 @@ export function useCourseData() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (payload: Parameters<typeof coursesApi.create>[0]) =>
-      coursesApi.create(payload),
+    mutationFn: (payload: Parameters<typeof coursesApi.create>[0]) => coursesApi.create(payload),
     onSuccess: ({ data }) => {
       const created = mapApiCourse(data);
       queryClient.setQueryData<Course[]>(courseKeys.lists(), (prev = []) => [created, ...prev]);

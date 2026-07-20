@@ -16,13 +16,7 @@ function PreviewContent({ media }: { media: ApiMedia }) {
   }
 
   if (category === 'video') {
-    return (
-      <video
-        src={media.url}
-        controls
-        className="max-h-[75vh] w-full rounded bg-black"
-      />
-    );
+    return <video src={media.url} controls className="max-h-[75vh] w-full rounded bg-black" />;
   }
 
   if (category === 'pdf') {
@@ -45,7 +39,12 @@ interface MediaPreviewModalProps {
 
 export function MediaPreviewModal({ media, onClose }: MediaPreviewModalProps) {
   return (
-    <Dialog open={!!media} onOpenChange={(open) => { if (!open) onClose(); }}>
+    <Dialog
+      open={!!media}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+    >
       {media && (
         <DialogContent className="sm:max-w-4xl gap-3 p-4">
           <DialogHeader>

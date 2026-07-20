@@ -190,9 +190,7 @@ describe('RichTextField', () => {
       const toolbar = screen.getByTestId('toolbar');
       expect(toolbar).toBeInTheDocument();
       // Le bouton est identifiable par son aria-label
-      expect(
-        screen.getByRole('button', { name: /insérer une image/i }),
-      ).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /insérer une image/i })).toBeInTheDocument();
     });
 
     it('le dialog est fermé au chargement initial', () => {
@@ -203,7 +201,7 @@ describe('RichTextField', () => {
 
   // ── 2. Dialog ────────────────────────────────────────────────────────────
 
-  describe('Dialog d\'insertion', () => {
+  describe("Dialog d'insertion", () => {
     it('ouvre le dialog au clic sur le bouton image', async () => {
       const user = userEvent.setup();
       renderRichTextField();
@@ -301,7 +299,5 @@ describe('RichTextField', () => {
         );
       });
     });
-
-
   });
 });

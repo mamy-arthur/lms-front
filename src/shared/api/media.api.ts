@@ -17,7 +17,11 @@ export const mediaApi = {
     form.append('field_id', fieldId);
     return apiUpload<{ data: ApiMedia }>('platform/media', form);
   },
-  uploadInline: (file: File, contentTypeId: string, fieldId: string): Promise<{ data: ApiMedia }> => {
+  uploadInline: (
+    file: File,
+    contentTypeId: string,
+    fieldId: string,
+  ): Promise<{ data: ApiMedia }> => {
     const form = new FormData();
     form.append('file', file);
     form.append('content_type_id', contentTypeId);
@@ -27,6 +31,5 @@ export const mediaApi = {
   get: (id: string): Promise<{ data: ApiMedia }> =>
     apiGet<{ data: ApiMedia }>(`platform/media/${id}`),
 
-  delete: (id: string): Promise<void> =>
-    apiDelete(`platform/media/${id}`),
+  delete: (id: string): Promise<void> => apiDelete(`platform/media/${id}`),
 };

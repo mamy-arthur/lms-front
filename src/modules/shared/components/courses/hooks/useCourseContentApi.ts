@@ -22,9 +22,8 @@ export function useAddSection(courseId: string) {
   return useMutation({
     mutationFn: (name: string) => courseSectionsApi.create(courseId, { name }),
     onSuccess: ({ data }) => {
-      queryClient.setQueryData<ApiCourseSection[]>(
-        courseSectionKeys.list(courseId),
-        (prev = []) => [...prev, data].sort((a, b) => a.rank - b.rank),
+      queryClient.setQueryData<ApiCourseSection[]>(courseSectionKeys.list(courseId), (prev = []) =>
+        [...prev, data].sort((a, b) => a.rank - b.rank),
       );
     },
   });
@@ -36,9 +35,8 @@ export function useUpdateSection(courseId: string) {
     mutationFn: ({ sectionId, name }: { sectionId: string; name: string }) =>
       courseSectionsApi.update(courseId, sectionId, { name }),
     onSuccess: ({ data }) => {
-      queryClient.setQueryData<ApiCourseSection[]>(
-        courseSectionKeys.list(courseId),
-        (prev = []) => prev.map((s) => (s.id === data.id ? data : s)),
+      queryClient.setQueryData<ApiCourseSection[]>(courseSectionKeys.list(courseId), (prev = []) =>
+        prev.map((s) => (s.id === data.id ? data : s)),
       );
     },
   });
@@ -49,9 +47,8 @@ export function useRemoveSection(courseId: string) {
   return useMutation({
     mutationFn: (sectionId: string) => courseSectionsApi.remove(courseId, sectionId),
     onSuccess: (_, sectionId) => {
-      queryClient.setQueryData<ApiCourseSection[]>(
-        courseSectionKeys.list(courseId),
-        (prev = []) => prev.filter((s) => s.id !== sectionId),
+      queryClient.setQueryData<ApiCourseSection[]>(courseSectionKeys.list(courseId), (prev = []) =>
+        prev.filter((s) => s.id !== sectionId),
       );
     },
   });
@@ -78,8 +75,7 @@ export function useReorderSections(courseId: string) {
 export function useEntries(sectionId: string) {
   return useQuery({
     queryKey: contentEntryKeys.list(sectionId),
-    queryFn: () =>
-      contentEntriesApi.list(sectionId).then((r) => r.data),
+    queryFn: () => contentEntriesApi.list(sectionId).then((r) => r.data),
     enabled: !!sectionId,
   });
 }
@@ -95,10 +91,10 @@ export function useAddEntry(sectionId: string) {
       data: Record<string, unknown>;
     }) => contentEntriesApi.create(sectionId, { content_type_id: contentTypeId, data }),
     onSuccess: ({ data: entry }) => {
-      queryClient.setQueryData<ApiContentEntry[]>(
-        contentEntryKeys.list(sectionId),
-        (prev = []) => [...prev, entry],
-      );
+      queryClient.setQueryData<ApiContentEntry[]>(contentEntryKeys.list(sectionId), (prev = []) => [
+        ...prev,
+        entry,
+      ]);
     },
   });
 }
@@ -121,9 +117,8 @@ export function useUpdateEntry() {
         ...(isPublished !== undefined ? { is_published: isPublished } : {}),
       }),
     onSuccess: ({ data: entry }, { sectionId }) => {
-      queryClient.setQueryData<ApiContentEntry[]>(
-        contentEntryKeys.list(sectionId),
-        (prev = []) => prev.map((e) => (e.id === entry.id ? entry : e)),
+      queryClient.setQueryData<ApiContentEntry[]>(contentEntryKeys.list(sectionId), (prev = []) =>
+        prev.map((e) => (e.id === entry.id ? entry : e)),
       );
     },
   });
@@ -134,9 +129,8 @@ export function useRemoveEntry(sectionId: string) {
   return useMutation({
     mutationFn: (entryId: string) => contentEntriesApi.remove(entryId),
     onSuccess: (_, entryId) => {
-      queryClient.setQueryData<ApiContentEntry[]>(
-        contentEntryKeys.list(sectionId),
-        (prev = []) => prev.filter((e) => e.id !== entryId),
+      queryClient.setQueryData<ApiContentEntry[]>(contentEntryKeys.list(sectionId), (prev = []) =>
+        prev.filter((e) => e.id !== entryId),
       );
     },
   });

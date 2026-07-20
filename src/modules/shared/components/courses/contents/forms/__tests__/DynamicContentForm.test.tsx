@@ -43,26 +43,23 @@ jest.mock('@/shared/api/media.api', () => ({
 }));
 
 // RichTextField — testé séparément ; ici on le réduit à une simple textarea
-jest.mock(
-  '@/modules/shared/components/courses/contents/forms/fields/RichTextField',
-  () => ({
-    RichTextField: ({
-      value,
-      onChange,
-      label,
-    }: {
-      value: unknown;
-      onChange: (v: unknown) => void;
-      label: string;
-    }) => (
-      <textarea
-        aria-label={label}
-        value={(value as string) ?? ''}
-        onChange={(e: { target: { value: string } }) => onChange(e.target.value)}
-      />
-    ),
-  }),
-);
+jest.mock('@/modules/shared/components/courses/contents/forms/fields/RichTextField', () => ({
+  RichTextField: ({
+    value,
+    onChange,
+    label,
+  }: {
+    value: unknown;
+    onChange: (v: unknown) => void;
+    label: string;
+  }) => (
+    <textarea
+      aria-label={label}
+      value={(value as string) ?? ''}
+      onChange={(e: { target: { value: string } }) => onChange(e.target.value)}
+    />
+  ),
+}));
 
 // FileUploadField — simplifié : bouton "Choisir" + bouton "Supprimer"
 jest.mock('@/modules/shared/components/input-upload/FileUploadField', () => ({
@@ -92,11 +89,7 @@ jest.mock('@/modules/shared/components/input-upload/FileUploadField', () => ({
 
 // MultiFileUploadField — simplifié : un seul bouton "Ajouter"
 jest.mock('@/modules/shared/components/input-upload/MultiFileUploadField', () => ({
-  MultiFileUploadField: ({
-    onFilesChange,
-  }: {
-    onFilesChange: (files: File[]) => void;
-  }) => (
+  MultiFileUploadField: ({ onFilesChange }: { onFilesChange: (files: File[]) => void }) => (
     <button
       type="button"
       data-testid="multi-upload-btn"
@@ -264,12 +257,14 @@ const CONTENT_TYPE: ContentTypeResource = {
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
 
-function renderForm(options: {
-  initialData?: Record<string, unknown>;
-  isSubmitting?: boolean;
-  onSubmit?: jest.Mock;
-  onCancel?: jest.Mock;
-} = {}) {
+function renderForm(
+  options: {
+    initialData?: Record<string, unknown>;
+    isSubmitting?: boolean;
+    onSubmit?: jest.Mock;
+    onCancel?: jest.Mock;
+  } = {},
+) {
   const onSubmit = options.onSubmit ?? jest.fn();
   const onCancel = options.onCancel ?? jest.fn();
   const result = render(
@@ -386,9 +381,7 @@ describe('DynamicContentForm', () => {
       await user.type(numberInput, '45');
       await user.click(screen.getByRole('button', { name: /enregistrer/i }));
 
-      expect(onSubmit).toHaveBeenCalledWith(
-        expect.objectContaining({ duree: 45 }),
-      );
+      expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ duree: 45 }));
     });
 
     it('date : la valeur date est transmise à onSubmit', async () => {
@@ -400,9 +393,7 @@ describe('DynamicContentForm', () => {
       await user.type(dateInput, '2024-09-01');
       await user.click(screen.getByRole('button', { name: /enregistrer/i }));
 
-      expect(onSubmit).toHaveBeenCalledWith(
-        expect.objectContaining({ date_debut: '2024-09-01' }),
-      );
+      expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ date_debut: '2024-09-01' }));
     });
 
     it('checkbox : le clic transmet true à onSubmit', async () => {
@@ -412,9 +403,7 @@ describe('DynamicContentForm', () => {
       await user.click(screen.getByRole('checkbox'));
       await user.click(screen.getByRole('button', { name: /enregistrer/i }));
 
-      expect(onSubmit).toHaveBeenCalledWith(
-        expect.objectContaining({ actif: true }),
-      );
+      expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ actif: true }));
     });
   });
 
@@ -429,11 +418,7 @@ describe('DynamicContentForm', () => {
       await user.click(screen.getByText('Choisir un fichier'));
 
       await waitFor(() => {
-        expect(mockMediaApi.upload).toHaveBeenCalledWith(
-          expect.any(File),
-          'ct-test',
-          'f7',
-        );
+        expect(mockMediaApi.upload).toHaveBeenCalledWith(expect.any(File), 'ct-test', 'f7');
       });
     });
 
@@ -447,9 +432,7 @@ describe('DynamicContentForm', () => {
 
       await user.click(screen.getByRole('button', { name: /enregistrer/i }));
 
-      expect(onSubmit).toHaveBeenCalledWith(
-        expect.objectContaining({ fichier: 'media-001' }),
-      );
+      expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ fichier: 'media-001' }));
     });
   });
 
@@ -464,11 +447,7 @@ describe('DynamicContentForm', () => {
       await user.click(screen.getByTestId('multi-upload-btn'));
 
       await waitFor(() => {
-        expect(mockMediaApi.upload).toHaveBeenCalledWith(
-          expect.any(File),
-          'ct-test',
-          'f8',
-        );
+        expect(mockMediaApi.upload).toHaveBeenCalledWith(expect.any(File), 'ct-test', 'f8');
       });
     });
 
@@ -615,7 +594,7 @@ describe('DynamicContentForm', () => {
       expect(screen.getByLabelText('Contenu')).toHaveValue('Contenu existant en markdown');
     });
 
-    it("charge le média existant via mediaApi.get au montage", async () => {
+    it('charge le média existant via mediaApi.get au montage', async () => {
       mockMediaApi.get.mockResolvedValue({ data: EXISTING_MEDIA });
 
       renderForm({
@@ -639,9 +618,7 @@ describe('DynamicContentForm', () => {
 
       await user.click(screen.getByRole('button', { name: /enregistrer/i }));
 
-      expect(onSubmit).toHaveBeenCalledWith(
-        expect.objectContaining({ fichier: 'media-expanded' }),
-      );
+      expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ fichier: 'media-expanded' }));
     });
   });
 });

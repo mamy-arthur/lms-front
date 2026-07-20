@@ -1,15 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import {
-  MoreVertical,
-  Plus,
-  Pencil,
-  Trash2,
-  ChevronRight,
-  X,
-  BookOpen,
-} from 'lucide-react';
+import { MoreVertical, Plus, Pencil, Trash2, ChevronRight, X, BookOpen } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import {

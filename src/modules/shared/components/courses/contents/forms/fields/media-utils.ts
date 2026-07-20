@@ -21,22 +21,14 @@ export function extractErrorMessage(err: unknown): string {
 }
 
 export type MediaCategory =
-  | 'image'
-  | 'video'
-  | 'audio'
-  | 'pdf'
-  | 'document'
-  | 'spreadsheet'
-  | 'presentation'
-  | 'other';
+  'image' | 'video' | 'audio' | 'pdf' | 'document' | 'spreadsheet' | 'presentation' | 'other';
 
 export function getMediaCategory(mimeType: string): MediaCategory {
   if (mimeType.startsWith('image/')) return 'image';
   if (mimeType.startsWith('video/')) return 'video';
   if (mimeType.startsWith('audio/')) return 'audio';
   if (mimeType === 'application/pdf') return 'pdf';
-  if (mimeType === 'application/msword' || mimeType.includes('wordprocessingml'))
-    return 'document';
+  if (mimeType === 'application/msword' || mimeType.includes('wordprocessingml')) return 'document';
   if (mimeType === 'application/vnd.ms-excel' || mimeType.includes('spreadsheetml'))
     return 'spreadsheet';
   if (mimeType === 'application/vnd.ms-powerpoint' || mimeType.includes('presentationml'))

@@ -38,16 +38,13 @@ Object.defineProperty(window, 'matchMedia', {
 
 // ContentTypesQuery — liste utilisée par ContentTypePicker
 const mockContentTypesList = jest.fn();
-jest.mock(
-  '@/modules/shared/components/courses/hooks/useContentTypesQuery',
-  () => ({
-    useContentTypesQuery: () => ({
-      data: mockContentTypesList(),
-      isLoading: false,
-      isError: false,
-    }),
+jest.mock('@/modules/shared/components/courses/hooks/useContentTypesQuery', () => ({
+  useContentTypesQuery: () => ({
+    data: mockContentTypesList(),
+    isLoading: false,
+    isError: false,
   }),
-);
+}));
 
 // ─── Imports ──────────────────────────────────────────────────────────────────
 
@@ -73,10 +70,7 @@ const MOCK_CONTENT_TYPE: ContentTypeResource = {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function renderModal(
-  onContentTypeSelected = jest.fn(),
-  onOpenChange = jest.fn(),
-) {
+function renderModal(onContentTypeSelected = jest.fn(), onOpenChange = jest.fn()) {
   return render(
     <AddContentModal
       open={true}

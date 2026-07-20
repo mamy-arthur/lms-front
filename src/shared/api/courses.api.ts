@@ -14,8 +14,7 @@ export const coursesApi = {
 
   get: (id: string) => apiGet<{ data: ApiCourse }>(`platform/courses/${id}`),
 
-  create: (data: CreateCoursePayload) =>
-    apiPost<{ data: ApiCourse }>('platform/courses', data),
+  create: (data: CreateCoursePayload) => apiPost<{ data: ApiCourse }>('platform/courses', data),
 
   update: (id: string, data: UpdateCoursePayload) =>
     apiPatch<{ data: ApiCourse }>(`platform/courses/${id}`, data),
@@ -26,8 +25,7 @@ export const coursesApi = {
 export const courseCategoriesApi = {
   list: () => apiGet<{ data: ApiCourseCategory[] }>('platform/course-categories'),
 
-  get: (id: string) =>
-    apiGet<{ data: ApiCourseCategory }>(`platform/course-categories/${id}`),
+  get: (id: string) => apiGet<{ data: ApiCourseCategory }>(`platform/course-categories/${id}`),
 
   create: (data: CreateCourseCategoryPayload) =>
     apiPost<{ data: ApiCourseCategory }>('platform/course-categories', data),
@@ -43,15 +41,10 @@ export const courseSectionsApi = {
     apiGet<{ data: ApiCourseSection[] }>(`platform/courses/${courseId}/sections`),
 
   get: (courseId: string, sectionId: string) =>
-    apiGet<{ data: ApiCourseSection }>(
-      `platform/courses/${courseId}/sections/${sectionId}`,
-    ),
+    apiGet<{ data: ApiCourseSection }>(`platform/courses/${courseId}/sections/${sectionId}`),
 
   create: (courseId: string, data: { name: string }) =>
-    apiPost<{ data: ApiCourseSection }>(
-      `platform/courses/${courseId}/sections`,
-      data,
-    ),
+    apiPost<{ data: ApiCourseSection }>(`platform/courses/${courseId}/sections`, data),
 
   update: (courseId: string, sectionId: string, data: { name?: string }) =>
     apiPatch<{ data: ApiCourseSection }>(

@@ -55,9 +55,7 @@ export function MultiFileUploadField({
 
   return (
     <div className="space-y-2 w-full">
-      <Label>
-        {maxFiles ? ` (${files.length}/${maxFiles})` : ''}
-      </Label>
+      <Label>{maxFiles ? ` (${files.length}/${maxFiles})` : ''}</Label>
 
       {!isFull && (
         <div

@@ -161,10 +161,9 @@ describe('contentEntriesApi', () => {
 
       await contentEntriesApi.update(ENTRY_ID, { is_published: true });
 
-      expect(mockApiPut).toHaveBeenCalledWith(
-        `platform/entries/${ENTRY_ID}`,
-        { is_published: true },
-      );
+      expect(mockApiPut).toHaveBeenCalledWith(`platform/entries/${ENTRY_ID}`, {
+        is_published: true,
+      });
     });
 
     it('propage les erreurs API', async () => {

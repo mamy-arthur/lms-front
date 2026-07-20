@@ -1,12 +1,5 @@
 import { memo, useCallback, useMemo, useState } from 'react';
-import {
-  MoreHorizontal,
-  Pencil,
-  Trash2,
-  Plus,
-  FolderTree,
-  Search,
-} from 'lucide-react';
+import { MoreHorizontal, Pencil, Trash2, Plus, FolderTree, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,

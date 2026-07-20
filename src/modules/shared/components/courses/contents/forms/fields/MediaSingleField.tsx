@@ -106,7 +106,9 @@ export function MediaSingleField({ field, value, onChange, contentTypeId }: Medi
 
           <div className="flex-1 min-w-0 pr-7">
             <span className="block truncate text-xs font-medium">{mediaInfo.original_name}</span>
-            <span className="text-xs text-muted-foreground">{formatFileSize(mediaInfo.size_bytes)}</span>
+            <span className="text-xs text-muted-foreground">
+              {formatFileSize(mediaInfo.size_bytes)}
+            </span>
           </div>
         </div>
       ) : (
