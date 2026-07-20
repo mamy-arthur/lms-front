@@ -74,61 +74,64 @@ Chaque ressource dans `modules/{area}/resources/{resource}/` suit cette structur
 
 ## Où créer les fichiers
 
-| Type de fichier | Emplacement |
-|---|---|
-| Composant UI générique (shadcn) | `src/components/ui/` — généré via CLI shadcn |
-| Composant partagé cross-domaine | `src/modules/shared/components/{domain}/` |
-| Composant partagé infrastructure | `src/shared/components/` |
-| Composant local à une page | `src/modules/{area}/resources/{resource}/pages/_components/` |
-| Hook métier partagé | `src/modules/shared/hooks/` |
-| Hook infrastructure partagé | `src/shared/hooks/` |
-| Service API d'un module | `src/modules/{area}/resources/{resource}/api/index.ts` |
-| Service API partagé (multi-modules) | `src/shared/api/{domain}.api.ts` |
-| Type API brut (backend) | `src/shared/types/{domain}.types.ts` |
-| Type local à un module | `src/modules/{area}/resources/{resource}/types/index.ts` |
-| Schéma Zod d'auth | `src/shared/schemas/auth.schema.ts` |
-| Schéma Zod d'un module | Co-localisé dans le module (ex: `types/index.ts`) |
-| Store Zustand | `src/shared/stores/{domain}.store.ts` |
-| Query keys partagées | `src/shared/queries/keys.ts` |
-| Constantes globales | `src/shared/constants/` |
-| Tests | `__tests__/` co-localisé avec le fichier testé |
-| Mocks de test | `src/shared/mocks/{domain}.mock.ts` |
+| Type de fichier                     | Emplacement                                                  |
+| ----------------------------------- | ------------------------------------------------------------ |
+| Composant UI générique (shadcn)     | `src/components/ui/` — généré via CLI shadcn                 |
+| Composant partagé cross-domaine     | `src/modules/shared/components/{domain}/`                    |
+| Composant partagé infrastructure    | `src/shared/components/`                                     |
+| Composant local à une page          | `src/modules/{area}/resources/{resource}/pages/_components/` |
+| Hook métier partagé                 | `src/modules/shared/hooks/`                                  |
+| Hook infrastructure partagé         | `src/shared/hooks/`                                          |
+| Service API d'un module             | `src/modules/{area}/resources/{resource}/api/index.ts`       |
+| Service API partagé (multi-modules) | `src/shared/api/{domain}.api.ts`                             |
+| Type API brut (backend)             | `src/shared/types/{domain}.types.ts`                         |
+| Type local à un module              | `src/modules/{area}/resources/{resource}/types/index.ts`     |
+| Schéma Zod d'auth                   | `src/shared/schemas/auth.schema.ts`                          |
+| Schéma Zod d'un module              | Co-localisé dans le module (ex: `types/index.ts`)            |
+| Store Zustand                       | `src/shared/stores/{domain}.store.ts`                        |
+| Query keys partagées                | `src/shared/queries/keys.ts`                                 |
+| Constantes globales                 | `src/shared/constants/`                                      |
+| Tests                               | `__tests__/` co-localisé avec le fichier testé               |
+| Mocks de test                       | `src/shared/mocks/{domain}.mock.ts`                          |
 
 ---
 
 ## Conventions de nommage
 
-| Élément | Convention | Exemple |
-|---|---|---|
-| Composants React | PascalCase | `AdminUsersTable`, `UserFormDrawer` |
-| Hooks | camelCase préfixé `use` | `useUsersQuery`, `useCreateUser`, `useFormDrawer` |
-| Fichiers hooks | camelCase | `useUsersQuery.ts`, `useCreateUser.ts` |
-| Fichiers composants | kebab-case | `admin-users-table.tsx`, `user-form-drawer.tsx` |
-| Fichiers pages | PascalCase | `UsersList.tsx` |
-| Objets API | camelCase suffixé `Api` | `adminUsersApi`, `coursesApi` |
-| Types API bruts | PascalCase préfixé `Api` | `ApiCourse`, `ApiCourseSection`, `ApiUser` |
-| Types domaine | PascalCase | `Course`, `User`, `Module` |
-| Fonctions normalize | camelCase `normalize{Resource}` | `normalizeUser()`, `normalizeModule()` |
-| Constantes | SCREAMING_SNAKE_CASE | `ADMIN_NAV`, `PLATFORM_ROLES`, `ROUTES` |
-| Stores Zustand | camelCase suffixé `Store` | `useAuthStore`, `useTenantStore` |
-| Dossiers composants locaux | préfixé `_` | `_components/` |
-| Barrel exports | `index.ts` à la racine du module | `modules/quizzes/index.ts` |
+| Élément                    | Convention                       | Exemple                                           |
+| -------------------------- | -------------------------------- | ------------------------------------------------- |
+| Composants React           | PascalCase                       | `AdminUsersTable`, `UserFormDrawer`               |
+| Hooks                      | camelCase préfixé `use`          | `useUsersQuery`, `useCreateUser`, `useFormDrawer` |
+| Fichiers hooks             | camelCase                        | `useUsersQuery.ts`, `useCreateUser.ts`            |
+| Fichiers composants        | kebab-case                       | `admin-users-table.tsx`, `user-form-drawer.tsx`   |
+| Fichiers pages             | PascalCase                       | `UsersList.tsx`                                   |
+| Objets API                 | camelCase suffixé `Api`          | `adminUsersApi`, `coursesApi`                     |
+| Types API bruts            | PascalCase préfixé `Api`         | `ApiCourse`, `ApiCourseSection`, `ApiUser`        |
+| Types domaine              | PascalCase                       | `Course`, `User`, `Module`                        |
+| Fonctions normalize        | camelCase `normalize{Resource}`  | `normalizeUser()`, `normalizeModule()`            |
+| Constantes                 | SCREAMING_SNAKE_CASE             | `ADMIN_NAV`, `PLATFORM_ROLES`, `ROUTES`           |
+| Stores Zustand             | camelCase suffixé `Store`        | `useAuthStore`, `useTenantStore`                  |
+| Dossiers composants locaux | préfixé `_`                      | `_components/`                                    |
+| Barrel exports             | `index.ts` à la racine du module | `modules/quizzes/index.ts`                        |
 
 ---
 
 ## Règles de composants React
 
 ### `use client` obligatoire pour
+
 - Tout composant utilisant `useState`, `useEffect`, `useRef`, `useContext`
 - Tout composant utilisant des hooks TanStack Query ou Zustand
 - Tout composant avec des event handlers (`onClick`, `onChange`, etc.)
 - Les layouts avec guards d'authentification
 
 ### Server Components par défaut pour
+
 - Les layouts sans interactivité
 - Les pages qui délèguent le rendu à un composant client enfant
 
 ### Pattern de page standard
+
 ```tsx
 // src/modules/{area}/resources/{resource}/pages/ResourceList.tsx
 'use client';
@@ -144,22 +147,20 @@ export function ResourceList() {
 ## Règles API
 
 ### Créer un objet API de module
+
 ```ts
 // src/modules/{area}/resources/{resource}/api/index.ts
 import { apiGet, apiPost, apiPut, apiDelete } from '@shared/lib/apiClient';
 import type { ApiResource, CreateResourcePayload } from '../types';
 
 export const adminResourceApi = {
-  list: (params?: Record<string, unknown>) =>
-    apiGet<ApiResource[]>('/admin/resources', { params }),
-  getById: (id: string) =>
-    apiGet<ApiResource>(`/admin/resources/${id}`),
+  list: (params?: Record<string, unknown>) => apiGet<ApiResource[]>('/admin/resources', { params }),
+  getById: (id: string) => apiGet<ApiResource>(`/admin/resources/${id}`),
   create: (payload: CreateResourcePayload) =>
     apiPost<ApiResource, CreateResourcePayload>('/admin/resources', payload),
   update: (id: string, payload: Partial<CreateResourcePayload>) =>
     apiPut<ApiResource, Partial<CreateResourcePayload>>(`/admin/resources/${id}`, payload),
-  delete: (id: string) =>
-    apiDelete(`/admin/resources/${id}`),
+  delete: (id: string) => apiDelete(`/admin/resources/${id}`),
 };
 ```
 
@@ -170,6 +171,7 @@ Ne jamais appeler `fetch` directement. Toujours utiliser les helpers `apiGet`, `
 ## Règles TanStack Query
 
 ### Hook de liste
+
 ```ts
 // use{Resource}Query.ts
 import { useQuery } from '@tanstack/react-query';
@@ -186,6 +188,7 @@ export function useResourceQuery(params?: ResourceParams) {
 ```
 
 ### Hook de mutation
+
 ```ts
 // useCreate{Resource}.ts
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -211,6 +214,7 @@ export function useCreateResource() {
 ## Règles Formulaires
 
 ### Pattern standard react-hook-form + zod
+
 ```tsx
 'use client';
 import { useForm } from 'react-hook-form';
@@ -223,18 +227,19 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 export function ResourceForm({ onSubmit }: { onSubmit: (data: FormValues) => void }) {
-  const { register, handleSubmit, formState: { errors } } = useForm<FormValues>({
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<FormValues>({
     resolver: zodResolver(schema),
   });
-  return (
-    <form onSubmit={handleSubmit(onSubmit)}>
-      {/* ... */}
-    </form>
-  );
+  return <form onSubmit={handleSubmit(onSubmit)}>{/* ... */}</form>;
 }
 ```
 
 ### Form Drawer
+
 Pour les formulaires de création/édition dans un drawer latéral, utiliser le hook `useFormDrawer` depuis `@shared/components/form-drawer/use-form-drawer`.
 
 ---
@@ -260,6 +265,7 @@ Pour les formulaires de création/édition dans un drawer latéral, utiliser le 
 ## Règles de tests
 
 ### Fichier de test standard
+
 ```ts
 // __tests__/myFunction.test.ts
 import { myFunction } from '../myFunction';
@@ -304,7 +310,9 @@ describe('myFunction', () => {
   ```tsx
   // src/app/(portal)/ma-nouvelle-route/page.tsx
   import { MaNouvellePage } from '@modules/portal/resources/ma-ressource';
-  export default function Page() { return <MaNouvellePage />; }
+  export default function Page() {
+    return <MaNouvellePage />;
+  }
   ```
 
 ---
@@ -333,7 +341,7 @@ const columns: DataTableColumn<User>[] = [
   total={total}
   onPageChange={setPage}
   onPageSizeChange={setPageSize}
-/>
+/>;
 ```
 
 ---

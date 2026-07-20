@@ -53,23 +53,23 @@ L'identification du tenant est réalisée via le sous-domaine (`tenant.learneo.a
 
 ## 2. Stack technique
 
-| Couche | Technologie | Version |
-|---|---|---|
-| Framework | Next.js (App Router, standalone) | 16.x |
-| UI | React + React Compiler | 19.x |
-| Typage | TypeScript strict | 5.x |
-| Style | Tailwind CSS v4 + shadcn/ui | 4.x |
-| Data fetching | TanStack Query | v5 |
-| État client | Zustand | v5 |
-| Formulaires | react-hook-form + zod | 7.x / 4.x |
-| HTTP | Fetch natif (via `apiClient`) | — |
-| Icônes | lucide-react + @hugeicons/react | — |
-| Notifications | Sonner | — |
-| Rich text | Tiptap | — |
-| Flow diagram | @xyflow/react | — |
-| Drag & Drop | @dnd-kit | — |
-| Linter/Formatter | Biome 2 | 2.x |
-| Tests | Jest 30 + Testing Library | 30.x / 16.x |
+| Couche           | Technologie                      | Version     |
+| ---------------- | -------------------------------- | ----------- |
+| Framework        | Next.js (App Router, standalone) | 16.x        |
+| UI               | React + React Compiler           | 19.x        |
+| Typage           | TypeScript strict                | 5.x         |
+| Style            | Tailwind CSS v4 + shadcn/ui      | 4.x         |
+| Data fetching    | TanStack Query                   | v5          |
+| État client      | Zustand                          | v5          |
+| Formulaires      | react-hook-form + zod            | 7.x / 4.x   |
+| HTTP             | Fetch natif (via `apiClient`)    | —           |
+| Icônes           | lucide-react + @hugeicons/react  | —           |
+| Notifications    | Sonner                           | —           |
+| Rich text        | Tiptap                           | —           |
+| Flow diagram     | @xyflow/react                    | —           |
+| Drag & Drop      | @dnd-kit                         | —           |
+| Linter/Formatter | Biome 2                          | 2.x         |
+| Tests            | Jest 30 + Testing Library        | 30.x / 16.x |
 
 ---
 
@@ -113,10 +113,10 @@ src/
 
 ### Règle fondamentale : deux niveaux de "shared"
 
-| Dossier | Niveau | Contenu |
-|---|---|---|
-| `src/shared/` | **Infrastructure** | `apiClient`, stores Zustand, types API bruts, constantes globales, schémas auth |
-| `src/modules/shared/` | **Domaine** | Composants UI réutilisables entre modules (`UserSelector`, `CourseCard`…), hooks de contrôleur partagés |
+| Dossier               | Niveau             | Contenu                                                                                                 |
+| --------------------- | ------------------ | ------------------------------------------------------------------------------------------------------- |
+| `src/shared/`         | **Infrastructure** | `apiClient`, stores Zustand, types API bruts, constantes globales, schémas auth                         |
+| `src/modules/shared/` | **Domaine**        | Composants UI réutilisables entre modules (`UserSelector`, `CourseCard`…), hooks de contrôleur partagés |
 
 Ne pas mélanger les deux. Si un composant contient de la logique métier, il appartient à `modules/shared/`. S'il appartient à l'infrastructure technique, il va dans `shared/`.
 
@@ -170,11 +170,11 @@ admin/resources/users/
 
 ### Groupes de routes
 
-| Groupe | Path préfixe | Guard | Layout |
-|---|---|---|---|
-| `(admin)` | `/admin/**` | `AdminAuthGuard` (PLATFORM_ROLES) | `AdminLayout` |
-| `(auth)` | `/login`, `/forgot-password`… | Aucun | Centré plein écran |
-| `(portal)` | `/dashboard`, `/formations`… | `AuthGuard` | `LayoutSideBar` |
+| Groupe     | Path préfixe                  | Guard                             | Layout             |
+| ---------- | ----------------------------- | --------------------------------- | ------------------ |
+| `(admin)`  | `/admin/**`                   | `AdminAuthGuard` (PLATFORM_ROLES) | `AdminLayout`      |
+| `(auth)`   | `/login`, `/forgot-password`… | Aucun                             | Centré plein écran |
+| `(portal)` | `/dashboard`, `/formations`…  | `AuthGuard`                       | `LayoutSideBar`    |
 
 ### Convention pour les `page.tsx`
 
@@ -183,7 +183,9 @@ Les fichiers `page.tsx` sont de purs wrappers. Toute la logique est dans le modu
 ```tsx
 // src/app/(portal)/formations/page.tsx
 import { FormationsList } from '@modules/portal/resources/formations';
-export default function Page() { return <FormationsList />; }
+export default function Page() {
+  return <FormationsList />;
+}
 ```
 
 ### Ajouter une nouvelle route
@@ -202,6 +204,7 @@ export default function Page() { return <FormationsList />; }
 Tous les appels HTTP passent par `src/shared/lib/apiClient.ts`. Ne jamais appeler `fetch` directement.
 
 **Comportement automatique :**
+
 - Préfixe `/api/v1/` sur toutes les URLs
 - `credentials: 'include'` (cookie HttpOnly)
 - Injection header `X-Tenant-ID` depuis `useTenantStore`
@@ -241,7 +244,8 @@ import type { ApiUser, CreateUserPayload } from '../types';
 export const adminUsersApi = {
   list: (params?: UsersParams) => apiGet<ApiUser[]>('/admin/users', { params }),
   getById: (id: string) => apiGet<ApiUser>(`/admin/users/${id}`),
-  create: (payload: CreateUserPayload) => apiPost<ApiUser, CreateUserPayload>('/admin/users', payload),
+  create: (payload: CreateUserPayload) =>
+    apiPost<ApiUser, CreateUserPayload>('/admin/users', payload),
   update: (id: string, payload: Partial<CreateUserPayload>) =>
     apiPut<ApiUser, Partial<CreateUserPayload>>(`/admin/users/${id}`, payload),
   delete: (id: string) => apiDelete(`/admin/users/${id}`),
@@ -257,11 +261,13 @@ export const adminUsersApi = {
 Toutes les données provenant du backend sont gérées par TanStack Query.
 
 **Configuration** (`src/shared/lib/query-client.ts`) :
+
 - `staleTime: 60 000` ms
 - `retry: 1`
 - `refetchOnWindowFocus: false`
 
 **Query keys** :
+
 - Keys locales à un module : tableau de strings dans le hook (`['admin', 'users']`)
 - Keys partagées entre modules : ajouter dans `src/shared/queries/keys.ts` via le pattern factory
 
@@ -279,11 +285,11 @@ export const courseKeys = {
 
 Trois stores globaux dans `src/shared/stores/` :
 
-| Store | Persistance | Contenu |
-|---|---|---|
-| `auth.store.ts` | localStorage (`auth-store`) | `user: AuthUser \| null`, `role: Role \| null` |
-| `tenant.store.ts` | Non | `tenant: Tenant \| null`, `resolutionStatus` |
-| `ui.store.ts` | Non | `sidebarOpen: boolean` |
+| Store             | Persistance                 | Contenu                                        |
+| ----------------- | --------------------------- | ---------------------------------------------- |
+| `auth.store.ts`   | localStorage (`auth-store`) | `user: AuthUser \| null`, `role: Role \| null` |
+| `tenant.store.ts` | Non                         | `tenant: Tenant \| null`, `resolutionStatus`   |
+| `ui.store.ts`     | Non                         | `sidebarOpen: boolean`                         |
 
 **Règles d'accès :**
 
@@ -305,10 +311,10 @@ Ne jamais créer un nouveau store sans l'ajouter dans `src/shared/stores/`.
 
 L'application supporte deux flux d'authentification via la même interface :
 
-| Flux | Endpoint | Rôles |
-|---|---|---|
-| Tenant | `POST /api/v1/auth/login` | `CLIENT_MANAGER`, `TRAINEE` |
-| Plateforme | `POST /api/v1/platform/auth/login` | `SUPER_ADMIN`, `EDITOR` |
+| Flux       | Endpoint                           | Rôles                       |
+| ---------- | ---------------------------------- | --------------------------- |
+| Tenant     | `POST /api/v1/auth/login`          | `CLIENT_MANAGER`, `TRAINEE` |
+| Plateforme | `POST /api/v1/platform/auth/login` | `SUPER_ADMIN`, `EDITOR`     |
 
 **Sécurité** : le token JWT est exclusivement stocké en cookie HttpOnly par le backend. Il n'est jamais accessible depuis JavaScript.
 
@@ -330,7 +336,7 @@ Ne pas créer de nouvelle logique de guard. Utiliser les guards existants dans l
 // src/shared/auth/permissions.ts
 export const ACCESS = {
   manageUsers: { anyRoles: [SUPER_ADMIN, CLIENT_MANAGER] },
-  viewReports:  { superAdminOnly: true },
+  viewReports: { superAdminOnly: true },
   // ...
 };
 
@@ -343,10 +349,10 @@ if (!canAccess(ACCESS.manageUsers)) return null;
 
 ```ts
 // src/shared/constants/roles.ts
-SUPER_ADMIN | EDITOR | CLIENT_MANAGER | TRAINEE
+SUPER_ADMIN | EDITOR | CLIENT_MANAGER | TRAINEE;
 
-PLATFORM_ROLES = [SUPER_ADMIN, EDITOR]   // Accès /admin
-TENANT_ROLES   = [CLIENT_MANAGER, TRAINEE] // Accès portail
+PLATFORM_ROLES = [SUPER_ADMIN, EDITOR]; // Accès /admin
+TENANT_ROLES = [CLIENT_MANAGER, TRAINEE]; // Accès portail
 ```
 
 ---
@@ -362,13 +368,17 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 
 const schema = z.object({
-  name:  z.string().min(1, 'Le nom est requis'),
+  name: z.string().min(1, 'Le nom est requis'),
   email: z.string().email('Email invalide'),
 });
 type FormValues = z.infer<typeof schema>;
 
 export function UserForm({ onSubmit }: { onSubmit: (data: FormValues) => void }) {
-  const { register, handleSubmit, formState: { errors } } = useForm<FormValues>({
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<FormValues>({
     resolver: zodResolver(schema),
   });
 
@@ -389,7 +399,7 @@ Pour les formulaires dans un drawer latéral, utiliser `useFormDrawer` :
 // src/shared/components/form-drawer/use-form-drawer.ts
 const drawer = useFormDrawer({
   open,
-  entity,                   // null = création, objet = édition
+  entity, // null = création, objet = édition
   createMutation,
   updateMutation,
   schema,
@@ -401,10 +411,10 @@ const drawer = useFormDrawer({
 
 ### Où placer les schémas Zod
 
-| Schéma | Emplacement |
-|---|---|
-| Auth (login, reset-password) | `src/shared/schemas/auth.schema.ts` |
-| Module spécifique | `src/modules/{area}/resources/{resource}/types/index.ts` |
+| Schéma                       | Emplacement                                              |
+| ---------------------------- | -------------------------------------------------------- |
+| Auth (login, reset-password) | `src/shared/schemas/auth.schema.ts`                      |
+| Module spécifique            | `src/modules/{area}/resources/{resource}/types/index.ts` |
 
 ---
 
@@ -454,10 +464,11 @@ const columns: DataTableColumn<User>[] = [
   onPageSizeChange={setPageSize}
   onSort={handleSort}
   sort={sort}
-/>
+/>;
 ```
 
 **Fonctionnalités intégrées :**
+
 - Lignes squelettes pendant le chargement (via prop `skeleton` par colonne)
 - Tri côté serveur (prop `sort` + `onSort`)
 - Pagination (tailles : 25 / 50 / 100)
@@ -479,11 +490,11 @@ Avant de créer un composant, poser la question suivante :
 
 > **"Ce composant dépend-il du contexte métier d'une fonctionnalité précise ?"**
 
-| Réponse | Emplacement | Raison |
-|---|---|---|
-| **Oui** — il manipule un type métier spécifique | `src/modules/{area}/resources/{resource}/pages/_components/` | Encapsulation dans le module concerné |
-| **Non, mais** il est réutilisé entre plusieurs modules | `src/modules/shared/components/{domain}/` | Partagé au niveau domaine |
-| **Non** — il est totalement indépendant du métier | `src/shared/components/` | Infrastructure réutilisable partout |
+| Réponse                                                | Emplacement                                                  | Raison                                |
+| ------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------- |
+| **Oui** — il manipule un type métier spécifique        | `src/modules/{area}/resources/{resource}/pages/_components/` | Encapsulation dans le module concerné |
+| **Non, mais** il est réutilisé entre plusieurs modules | `src/modules/shared/components/{domain}/`                    | Partagé au niveau domaine             |
+| **Non** — il est totalement indépendant du métier      | `src/shared/components/`                                     | Infrastructure réutilisable partout   |
 
 **Règle détaillée :**
 
@@ -492,17 +503,17 @@ Avant de créer un composant, poser la question suivante :
 
 **Exemples concrets :**
 
-| Composant | Contexte métier ? | Emplacement |
-|---|---|---|
-| `ReportStatusBadge` — badge coloré selon le statut d'un rapport | Oui | `modules/admin/resources/reports/pages/_components/` |
-| `UserRoleSelect` — dropdown limité aux rôles de l'application | Oui | `modules/admin/resources/users/pages/_components/` |
-| `ProductPricingCard` — carte affichant le prix d'un produit | Oui | `modules/portal/resources/store/pages/_components/` |
-| `UserAvatar` — avatar réutilisé dans portail ET admin | Oui (domaine) | `modules/shared/components/users/` |
-| `CourseCard` — carte formation réutilisée dans plusieurs pages | Oui (domaine) | `modules/shared/components/courses/` |
-| `ConfirmDialog` — modale de confirmation générique | Non | `src/shared/components/confirm-dialog/` |
-| `DataTable` — tableau paginé et triable générique | Non | `src/shared/components/ui/DataTable/` |
-| `SearchInput` — champ de recherche avec debounce | Non | `src/shared/components/ui/` |
-| `FormDrawer` — drawer latéral pour formulaires | Non | `src/shared/components/form-drawer/` |
+| Composant                                                       | Contexte métier ? | Emplacement                                          |
+| --------------------------------------------------------------- | ----------------- | ---------------------------------------------------- |
+| `ReportStatusBadge` — badge coloré selon le statut d'un rapport | Oui               | `modules/admin/resources/reports/pages/_components/` |
+| `UserRoleSelect` — dropdown limité aux rôles de l'application   | Oui               | `modules/admin/resources/users/pages/_components/`   |
+| `ProductPricingCard` — carte affichant le prix d'un produit     | Oui               | `modules/portal/resources/store/pages/_components/`  |
+| `UserAvatar` — avatar réutilisé dans portail ET admin           | Oui (domaine)     | `modules/shared/components/users/`                   |
+| `CourseCard` — carte formation réutilisée dans plusieurs pages  | Oui (domaine)     | `modules/shared/components/courses/`                 |
+| `ConfirmDialog` — modale de confirmation générique              | Non               | `src/shared/components/confirm-dialog/`              |
+| `DataTable` — tableau paginé et triable générique               | Non               | `src/shared/components/ui/DataTable/`                |
+| `SearchInput` — champ de recherche avec debounce                | Non               | `src/shared/components/ui/`                          |
+| `FormDrawer` — drawer latéral pour formulaires                  | Non               | `src/shared/components/form-drawer/`                 |
 
 **Illustration par arborescence :**
 
@@ -546,12 +557,12 @@ Backend (snake_case)   →   ApiXxx (src/shared/types/)   →   Xxx (types/index
 
 ### Convention de nommage
 
-| Type | Préfixe | Emplacement |
-|---|---|---|
-| Type brut backend | `Api*` (ex: `ApiUser`) | `src/shared/types/{domain}.types.ts` |
-| Type domaine normalisé | Aucun (ex: `User`) | `modules/{area}/resources/{resource}/types/index.ts` |
-| Type de payload création | `Create{Resource}Payload` | idem |
-| Type inféré de schéma Zod | Via `z.infer<typeof schema>` | co-localisé avec le schéma |
+| Type                      | Préfixe                      | Emplacement                                          |
+| ------------------------- | ---------------------------- | ---------------------------------------------------- |
+| Type brut backend         | `Api*` (ex: `ApiUser`)       | `src/shared/types/{domain}.types.ts`                 |
+| Type domaine normalisé    | Aucun (ex: `User`)           | `modules/{area}/resources/{resource}/types/index.ts` |
+| Type de payload création  | `Create{Resource}Payload`    | idem                                                 |
+| Type inféré de schéma Zod | Via `z.infer<typeof schema>` | co-localisé avec le schéma                           |
 
 ### Pattern de normalisation
 
@@ -636,6 +647,7 @@ describe('adminUsersApi', () => {
 ```
 
 **Règles :**
+
 - Labels `describe`/`it` **en français**
 - `jest.mocked()` pour les mocks typés
 - `beforeEach(() => jest.clearAllMocks())`
@@ -704,14 +716,14 @@ describe('adminUsersApi', () => {
 
 ### État actuel des incohérences
 
-| # | Problème | Fichiers concernés | Priorité |
-|---|---|---|---|
-| 1 | **Mock data dans les hooks** : `useUsersQuery` retourne des données mock au lieu d'appeler `adminUsersApi.list()` | `modules/admin/resources/users/hooks/` | Haute |
-| 2 | **Formations non connectées au backend** : `ClientFormationManagementApi.getAll()` retourne des mocks | `modules/portal/resources/formations/` | Haute |
-| 3 | **Stratégie query keys divisée** : certains modules utilisent des constantes locales (`ADMIN_USERS_QUERY_KEY`), d'autres le pattern factory de `keys.ts` | `shared/queries/keys.ts` vs. modules | Moyenne |
-| 4 | **Double `cn()` utility** : `src/lib/utils.ts` (pour shadcn) ET `src/shared/lib/cn.ts` (métier) | Les deux sont identiques | Faible |
-| 5 | **Casing de fichiers inconsistant** : hooks en camelCase (`useUsersQuery.ts`) vs. composants en kebab-case (`admin-users-table.tsx`) | Tous les modules | Faible |
-| 6 | **ESLint + Biome en parallèle** : les deux sont configurés, ce qui peut créer des conflits | `biome.json`, `eslint.config.mts` | Faible |
+| #   | Problème                                                                                                                                                 | Fichiers concernés                     | Priorité |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- | -------- |
+| 1   | **Mock data dans les hooks** : `useUsersQuery` retourne des données mock au lieu d'appeler `adminUsersApi.list()`                                        | `modules/admin/resources/users/hooks/` | Haute    |
+| 2   | **Formations non connectées au backend** : `ClientFormationManagementApi.getAll()` retourne des mocks                                                    | `modules/portal/resources/formations/` | Haute    |
+| 3   | **Stratégie query keys divisée** : certains modules utilisent des constantes locales (`ADMIN_USERS_QUERY_KEY`), d'autres le pattern factory de `keys.ts` | `shared/queries/keys.ts` vs. modules   | Moyenne  |
+| 4   | **Double `cn()` utility** : `src/lib/utils.ts` (pour shadcn) ET `src/shared/lib/cn.ts` (métier)                                                          | Les deux sont identiques               | Faible   |
+| 5   | **Casing de fichiers inconsistant** : hooks en camelCase (`useUsersQuery.ts`) vs. composants en kebab-case (`admin-users-table.tsx`)                     | Tous les modules                       | Faible   |
+| 6   | **ESLint + Biome en parallèle** : les deux sont configurés, ce qui peut créer des conflits                                                               | `biome.json`, `eslint.config.mts`      | Faible   |
 
 ### Plan de normalisation cible
 
@@ -732,7 +744,7 @@ export function useUsersQuery() {
 export function useUsersQuery(params?: UsersParams) {
   return useQuery({
     queryKey: [...ADMIN_USERS_QUERY_KEY, params],
-    queryFn: () => adminUsersApi.list(params),   // ✅
+    queryFn: () => adminUsersApi.list(params), // ✅
   });
 }
 ```
@@ -746,9 +758,9 @@ Adopter le pattern factory de `src/shared/queries/keys.ts` pour toutes les query
 ```ts
 // src/shared/queries/keys.ts
 export const adminUserKeys = {
-  all:    ['admin', 'users'] as const,
-  lists:  () => [...adminUserKeys.all, 'list'] as const,
-  list:   (p: UsersParams) => [...adminUserKeys.lists(), p] as const,
+  all: ['admin', 'users'] as const,
+  lists: () => [...adminUserKeys.all, 'list'] as const,
+  list: (p: UsersParams) => [...adminUserKeys.lists(), p] as const,
   detail: (id: string) => [...adminUserKeys.all, 'detail', id] as const,
 };
 ```
@@ -759,11 +771,11 @@ export const adminUserKeys = {
 
 Adopter une règle unique : **tous les fichiers de composants et hooks en kebab-case**.
 
-| Avant | Après |
-|---|---|
-| `useUsersQuery.ts` | `use-users-query.ts` |
-| `useCreateUser.ts` | `use-create-user.ts` |
-| `UsersList.tsx` | `users-list.tsx` (fichier) — composant reste `UsersList` |
+| Avant              | Après                                                    |
+| ------------------ | -------------------------------------------------------- |
+| `useUsersQuery.ts` | `use-users-query.ts`                                     |
+| `useCreateUser.ts` | `use-create-user.ts`                                     |
+| `UsersList.tsx`    | `users-list.tsx` (fichier) — composant reste `UsersList` |
 
 **6. Abandonner ESLint en faveur de Biome uniquement**
 
@@ -773,18 +785,18 @@ Biome 2 couvre désormais la majorité des règles ESLint utiles. Supprimer `esl
 
 ## Annexe : Conventions de nommage récapitulatives
 
-| Élément | Convention | Exemple |
-|---|---|---|
-| Composant React | PascalCase | `AdminUsersTable` |
-| Hook | camelCase + préfixe `use` | `useUsersQuery` |
-| Fichier composant | kebab-case | `admin-users-table.tsx` |
-| Fichier hook | camelCase | `useUsersQuery.ts` |
-| Fichier page | PascalCase | `UsersList.tsx` |
-| Objet API | camelCase + suffixe `Api` | `adminUsersApi` |
-| Type brut backend | PascalCase + préfixe `Api` | `ApiUser`, `ApiCourse` |
-| Type domaine | PascalCase | `User`, `Course` |
-| Fonction normalize | `normalize{Resource}` | `normalizeUser()` |
-| Constante | SCREAMING_SNAKE_CASE | `ADMIN_NAV`, `ROUTES` |
-| Store Zustand | `use{Domain}Store` | `useAuthStore` |
-| Dossier privé | préfixe `_` | `_components/` |
-| Chaînes UI | Français | `"Enregistrer"`, `"Annuler"` |
+| Élément            | Convention                 | Exemple                      |
+| ------------------ | -------------------------- | ---------------------------- |
+| Composant React    | PascalCase                 | `AdminUsersTable`            |
+| Hook               | camelCase + préfixe `use`  | `useUsersQuery`              |
+| Fichier composant  | kebab-case                 | `admin-users-table.tsx`      |
+| Fichier hook       | camelCase                  | `useUsersQuery.ts`           |
+| Fichier page       | PascalCase                 | `UsersList.tsx`              |
+| Objet API          | camelCase + suffixe `Api`  | `adminUsersApi`              |
+| Type brut backend  | PascalCase + préfixe `Api` | `ApiUser`, `ApiCourse`       |
+| Type domaine       | PascalCase                 | `User`, `Course`             |
+| Fonction normalize | `normalize{Resource}`      | `normalizeUser()`            |
+| Constante          | SCREAMING_SNAKE_CASE       | `ADMIN_NAV`, `ROUTES`        |
+| Store Zustand      | `use{Domain}Store`         | `useAuthStore`               |
+| Dossier privé      | préfixe `_`                | `_components/`               |
+| Chaînes UI         | Français                   | `"Enregistrer"`, `"Annuler"` |
