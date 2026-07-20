@@ -7,7 +7,7 @@ interface ResourceApi<TCreate, TUpdate> {
   duplicate: (id: string) => Promise<unknown>;
   uploadMedia: (
     file: File,
-  ) => Promise<{ data: { id: string; url?: string; mime_type: string; original_name: string } }>;
+  ) => Promise<{ data: { id: string; url: string; mime_type: string; original_name: string } }>;
 }
 
 /**

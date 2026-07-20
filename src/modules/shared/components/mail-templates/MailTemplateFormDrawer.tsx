@@ -56,7 +56,7 @@ export interface MailTemplateFormDrawerProps {
     error: unknown;
     reset: () => void;
   };
-  uploadMedia: { mutateAsync: (file: File) => Promise<{ data: { id: string } }> };
+  uploadMedia: { mutateAsync: (file: File) => Promise<{ data: { id: string; url: string } }> };
   /** Chemin API pour les variables disponibles dans le template. */
   variablesApiPath: string;
 }
@@ -76,7 +76,7 @@ function MailTemplateFormDrawerBase({
   const uploadFn = useCallback(
     async (file: File) => {
       const { data } = await uploadMedia.mutateAsync(file);
-      return { mediaId: data.id };
+      return { mediaId: data.id, src: data.url };
     },
     [uploadMedia.mutateAsync],
   );
