@@ -185,10 +185,7 @@ const FIELD_TYPE_ORDER: FieldType[] = [
   'richtext',
   'number',
   'date',
-  'select',
-  'checkbox',
   'media',
-  'relation',
 ];
 
 // ─── Props ────────────────────────────────────────────────────────────────────

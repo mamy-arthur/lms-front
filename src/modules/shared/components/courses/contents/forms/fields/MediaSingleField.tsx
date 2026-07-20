@@ -87,19 +87,19 @@ export function MediaSingleField({ field, value, onChange, contentTypeId }: Medi
           tabIndex={0}
           onClick={() => handleCardClick(mediaInfo)}
           onKeyDown={(e) => e.key === 'Enter' && handleCardClick(mediaInfo)}
-          className="relative flex items-center gap-3 w-full rounded-lg border border-border bg-card shadow-sm cursor-pointer hover:bg-accent/50 transition-colors p-2"
+          className="relative flex items-center gap-3 w-fit rounded-lg border border-border bg-card shadow-sm cursor-pointer hover:bg-accent/50 transition-colors p-2"
         >
           <Button
             type="button"
-            variant="ghost"
+            variant="outline"
             size="icon"
-            className="z-50 absolute top-2 right-2 h-5 w-5 rounded-md bg-destructive/80 hover:bg-destructive text-white p-1"
+            className="z-50 absolute top-2 right-2 h-3 w-3 text-black p-1"
             onClick={(e) => {
               e.stopPropagation();
               handleRemove();
             }}
           >
-            <X className="h-3 w-3" />
+            <X className="h-2 w-2" />
           </Button>
 
           <MediaThumbnail media={mediaInfo} />

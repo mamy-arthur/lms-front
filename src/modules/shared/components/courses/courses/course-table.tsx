@@ -110,7 +110,7 @@ export function CourseTable({ basePath }: Props) {
           </Select>
           <Button
             onClick={() => setCourseDrawer({ open: true, course: null })}
-            className="bg-(--color-primary) hover:bg-primary/80 text-primary-foreground"
+            className="bg-(--color-primary) hover:bg-(--color-primary)/80 text-primary-foreground"
           >
             <Plus className="mr-1 size-4" />
             Nouveau cours

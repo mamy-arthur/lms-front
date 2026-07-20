@@ -103,6 +103,7 @@ export function MediaMultiField({ field, value, onChange, contentTypeId }: Media
               type="button"
               variant="ghost"
               size="icon"
+              aria-label="Supprimer"
               className="z-50 absolute rounded-lg top-2 p-1 right-2 h-5 w-5 bg-red-300 text-white"
               onClick={(e) => {
                 e.stopPropagation();

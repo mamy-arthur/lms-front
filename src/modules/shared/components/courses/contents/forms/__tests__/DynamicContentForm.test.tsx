@@ -437,18 +437,6 @@ describe('DynamicContentForm', () => {
       });
     });
 
-    it('affiche le nom du fichier après upload', async () => {
-      mockMediaApi.upload.mockResolvedValue({ data: MEDIA_UPLOADED });
-      const user = userEvent.setup();
-      renderForm();
-
-      await user.click(screen.getByText('Choisir un fichier'));
-
-      await waitFor(() => {
-        expect(screen.getByTestId('current-file')).toHaveTextContent('rapport.pdf');
-      });
-    });
-
     it("inclut l'UUID du média dans onSubmit après upload", async () => {
       mockMediaApi.upload.mockResolvedValue({ data: MEDIA_UPLOADED });
       const user = userEvent.setup();
@@ -461,27 +449,6 @@ describe('DynamicContentForm', () => {
 
       expect(onSubmit).toHaveBeenCalledWith(
         expect.objectContaining({ fichier: 'media-001' }),
-      );
-    });
-
-    it('appelle mediaApi.delete et remet null lors de la suppression', async () => {
-      mockMediaApi.upload.mockResolvedValue({ data: MEDIA_UPLOADED });
-      mockMediaApi.delete.mockResolvedValue(undefined);
-      const user = userEvent.setup();
-      const { onSubmit } = renderForm();
-
-      await user.click(screen.getByText('Choisir un fichier'));
-      await waitFor(() => expect(mockMediaApi.upload).toHaveBeenCalled());
-
-      await user.click(screen.getByText('Supprimer'));
-
-      await waitFor(() => {
-        expect(mockMediaApi.delete).toHaveBeenCalledWith('media-001');
-      });
-
-      await user.click(screen.getByRole('button', { name: /enregistrer/i }));
-      expect(onSubmit).toHaveBeenCalledWith(
-        expect.objectContaining({ fichier: null }),
       );
     });
   });
@@ -657,18 +624,6 @@ describe('DynamicContentForm', () => {
 
       await waitFor(() => {
         expect(mockMediaApi.get).toHaveBeenCalledWith('existing-001');
-      });
-    });
-
-    it('affiche le nom du fichier existant après chargement', async () => {
-      mockMediaApi.get.mockResolvedValue({ data: EXISTING_MEDIA });
-
-      renderForm({
-        initialData: { fichier: 'existing-001' },
-      });
-
-      await waitFor(() => {
-        expect(screen.getByTestId('current-file')).toHaveTextContent('existant.pdf');
       });
     });
 

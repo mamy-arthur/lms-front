@@ -76,7 +76,7 @@ export function DynamicContentForm({
         <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
           Annuler
         </Button>
-        <Button type="submit" disabled={isSubmitting}>
+        <Button type="submit" disabled={isSubmitting} className='bg-(--color-primary) hover:bg-(--color-primary)/80'>
           {isSubmitting && <Loader2 className="mr-2 size-4 animate-spin" />}
           Enregistrer
         </Button>

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Plus, Check } from 'lucide-react';
+import { Plus, Check, Save, Loader2 } from 'lucide-react';
 import {
   Sheet,
   SheetContent,
@@ -253,7 +253,8 @@ export function CourseDrawer({ open, onOpenChange, course }: Props) {
               className="bg-(--color-primary) hover:bg-(--color-primary)/80"
               disabled={isSubmitting}
             >
-              {isSubmitting ? 'Enregistrement…' : 'Sauvegarder'}
+              {isSubmitting ? <Loader2 className="animate-spin" /> : <Save />}
+              {isSubmitting ? 'Enregistrement…' : 'Enregistrer'}
             </Button>
           </div>
         </form>
