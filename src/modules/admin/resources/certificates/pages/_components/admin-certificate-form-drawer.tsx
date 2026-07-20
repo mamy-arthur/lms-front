@@ -50,7 +50,7 @@ function AdminCertificateFormDrawerBase({
   certificate,
 }: AdminCertificateFormDrawerProps) {
   const isEdit = !!certificate;
-  const { tenant } = useTenant();
+  const { tenant, isLoading: isTenantLoading } = useTenant();
 
   const createMutation = useCreateCertificate();
   const updateMutation = useUpdateCertificate();
@@ -87,13 +87,21 @@ function AdminCertificateFormDrawerBase({
     return CREATE_DEFAULTS;
   }, [certificate]);
 
+  // Bloque la soumission tant que le tenant n'est pas résolu
+  const pendingMutation = isTenantLoading
+    ? { ...createMutation, isPending: true as const }
+    : createMutation;
+  const pendingUpdateMutation = isTenantLoading
+    ? { ...updateMutation, isPending: true as const }
+    : updateMutation;
+
   const formState = useFormDrawer({
     open,
     onClose,
     onSuccess,
     entity: certificate,
-    createMutation,
-    updateMutation,
+    createMutation: pendingMutation,
+    updateMutation: pendingUpdateMutation,
     schema,
     defaultValues,
     createDefaults: CREATE_DEFAULTS,
@@ -102,7 +110,7 @@ function AdminCertificateFormDrawerBase({
       status: Boolean(values.isActive),
       setasdefault: Boolean(values.isDefaultTemplate),
       body: values.body,
-      tenant_id: tenant?.id ?? '',
+      tenant_id: tenant!.id,
     }),
     buildUpdatePayload: (values, id): { id: string; data: UpdateCertificatePayload } => ({
       id,

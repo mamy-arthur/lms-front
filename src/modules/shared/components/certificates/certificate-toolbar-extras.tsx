@@ -59,7 +59,10 @@ function CertificateToolbarExtrasComponent({
   const handleConfirm = ({ src, alt, width, height, align, mediaId }: ImageConfirmAttrs) => {
     if (insertHtml) {
       // Mode HTML brut : construire le tag <img> directement sans passer par ProseMirror.
-      const style = ALIGN_STYLES[align] ?? ALIGN_STYLES.left;
+      const alignStyle = ALIGN_STYLES[align] ?? ALIGN_STYLES.left;
+      const sizeStyle =
+        `${width ? `width: ${width}px; ` : ''}${height ? `height: ${height}px;` : ''}`.trim();
+      const style = sizeStyle ? `${alignStyle} ${sizeStyle}` : alignStyle;
       const widthAttr = width ? ` width="${width}"` : '';
       const heightAttr = height ? ` height="${height}"` : '';
       const mediaAttr = mediaId ? ` data-media-id="${mediaId}"` : '';

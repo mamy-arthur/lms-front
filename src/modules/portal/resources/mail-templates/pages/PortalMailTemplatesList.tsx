@@ -11,7 +11,7 @@ import { useModuleListController } from '@/modules/shared/hooks/useModuleListCon
 import { usePortalMailTemplatesQuery } from '../hooks/usePortalMailTemplatesQuery';
 import { useDeletePortalMailTemplate } from '../hooks/useDeletePortalMailTemplate';
 import type { MailTemplate } from '../types';
-import { AdminMailTemplatesFilter } from '@/modules/admin/resources/mail-templates/pages/_components/admin-mail-templates-filter';
+import { MailTemplatesFilter } from '@modules/shared/components/mail-templates/mail-templates-filter';
 import { PortalMailTemplateFormDrawer } from './_components/portal-mail-template-form-drawer';
 import { PortalMailTemplatesTable } from './_components/portal-mail-templates-table';
 
@@ -42,7 +42,7 @@ export function PortalMailTemplatesList() {
           onSearch={ctrl.handleSearch}
         />
         <div className="flex items-center gap-2 sm:ml-auto">
-          <AdminMailTemplatesFilter
+          <MailTemplatesFilter
             statusFilter={ctrl.draftCategory[0] ?? 'all'}
             tenantFilter="all"
             onStatusFilterChange={(value) => ctrl.setDraftCategory([value])}

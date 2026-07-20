@@ -8,7 +8,6 @@ import {
   CertificatesFilter,
   CertificatePreviewDialog,
 } from '@modules/shared/components/certificates';
-import { useAllTenantsQuery } from '@/modules/shared/hooks/useAllTenantsQuery';
 import { useModuleListController } from '@/modules/shared/hooks/useModuleListController';
 import { usePortalCertificatesQuery } from '../hooks/usePortalCertificatesQuery';
 import { useDeletePortalCertificate } from '../hooks/useDeletePortalCertificate';
@@ -18,12 +17,8 @@ import { PortalCertificatesTable } from './_components/portal-certificates-table
 
 export function PortalCertificatesList() {
   const ctrl = useModuleListController<Certificate>({
-    includeTenantFilter: true,
     defaultPageSize: 25,
   });
-
-  const { data: tenantsData } = useAllTenantsQuery();
-  const tenants = tenantsData?.data ?? [];
 
   const { data, isLoading } = usePortalCertificatesQuery(ctrl.params);
   const deleteMutation = useDeletePortalCertificate();
@@ -49,11 +44,11 @@ export function PortalCertificatesList() {
         <div className="flex items-center gap-2 sm:ml-auto">
           <CertificatesFilter
             statusFilter={ctrl.draftCategory[0] ?? 'all'}
-            tenantFilter={ctrl.draftTenant}
+            tenantFilter="all"
             onStatusFilterChange={(v) => ctrl.setDraftCategory([v])}
-            onTenantFilterChange={ctrl.setDraftTenant}
+            onTenantFilterChange={() => {}}
             onSearch={ctrl.handleSearch}
-            tenants={tenants}
+            tenants={[]}
             showTenantFilter={false}
           />
           <Button

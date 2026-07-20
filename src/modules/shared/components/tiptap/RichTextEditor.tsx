@@ -71,9 +71,12 @@ const ExtendedImage = Image.extend({
           if (style.includes('margin: 0 auto') || style.includes('margin:0 auto')) return 'center';
           return 'left';
         },
-        renderHTML: (attrs) => ({
-          style: ALIGN_STYLES[attrs.align as string] ?? ALIGN_STYLES.left,
-        }),
+        renderHTML: (attrs) => {
+          const base = ALIGN_STYLES[attrs.align as string] ?? ALIGN_STYLES.left;
+          const w = attrs.width ? ` width: ${attrs.width}px;` : '';
+          const h = attrs.height ? ` height: ${attrs.height}px;` : '';
+          return { style: base + w + h };
+        },
       },
       dataMediaId: {
         default: null,

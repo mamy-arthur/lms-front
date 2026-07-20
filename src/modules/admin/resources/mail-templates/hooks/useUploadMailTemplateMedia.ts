@@ -1,8 +1,4 @@
-import { useMutation } from '@tanstack/react-query';
+import { makeUploadMediaMutation } from '@modules/shared/hooks/resourceMutations';
 import { adminMailTemplatesApi } from '../api';
 
-export function useUploadMailTemplateMedia() {
-  return useMutation({
-    mutationFn: (file: File) => adminMailTemplatesApi.uploadMedia(file),
-  });
-}
+export const useUploadMailTemplateMedia = makeUploadMediaMutation(adminMailTemplatesApi);
