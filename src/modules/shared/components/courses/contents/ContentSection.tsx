@@ -1,42 +1,33 @@
-import { useCourseStore } from '../hooks/useCouseContentStore';
-import { CONTENT_TYPE_META, ContentType } from '../types';
-import { PageForm } from './forms/PageForm';
-import { FileForm } from './forms/FileForm';
-import { FolderForm } from './forms/FolderForm';
-import { ScormForm } from './forms/ScormForm';
-import { UrlForm } from './forms/UrlForm';
-import { TextMediaForm } from './forms/TextMediaForm';
-import { SurveyForm } from './forms/SurveyForm';
+import { useUpdateEntry } from '../hooks/useCourseContentApi';
+import type { ApiContentEntry } from '../hooks/useCourseContentApi';
+import type { ContentTypeResource } from '@/shared/types/content-type.types';
+import { DynamicContentForm } from './forms/DynamicContentForm';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { toast } from 'sonner';
 
 export function SectionContent({
   sectionId,
-  type,
-  contentId,
+  entry,
+  contentType,
+  onDeselect,
 }: {
   sectionId: string;
-  type: ContentType;
-  contentId: string;
+  entry: ApiContentEntry;
+  contentType: ContentTypeResource;
+  onDeselect: () => void;
 }) {
-  const update = useCourseStore((s) => s.updateContent);
-  const remove = useCourseStore((s) => s.removeContent);
-  const ctype = type;
+  const updateEntry = useUpdateEntry();
 
-  const goBack = () => {
-    remove(sectionId, contentId);
+  const handleSave = async (data: Record<string, unknown>) => {
+    try {
+      await updateEntry.mutateAsync({ entryId: entry.id, sectionId, data });
+      toast.success('Contenu enregistré');
+    } catch {
+      toast.error('Erreur lors de la sauvegarde');
+    }
   };
 
-  const handleSave = (title: string, data: Record<string, unknown>) => {
-    update(sectionId, contentId, {
-      title,
-      sectionId,
-      type,
-      id: contentId,
-      data,
-    });
-  };
-  const typeMeta = CONTENT_TYPE_META[type ?? 'file'];
   return (
     <div className="flex flex-col space">
       <div className="mb-5 flex items-center justify-between">
@@ -44,30 +35,18 @@ export function SectionContent({
           <p className="text-sm font-medium">Configuration du contenu</p>
           <p className="text-xs text-muted-foreground">Renseignez les informations du contenu.</p>
         </div>
-        <Badge className={typeMeta.bgColor}>{typeMeta.label}</Badge>
+        <div className="flex items-center gap-2">
+          <Badge className="bg-blue-400">{contentType.title}</Badge>
+        </div>
       </div>
-
       <Separator />
       <main className="mt-5">
-        {ctype === 'page' && (
-          <PageForm onCancel={goBack} onSubmit={(v) => handleSave(v.title, v)} />
-        )}
-        {ctype === 'file' && (
-          <FileForm onCancel={goBack} onSubmit={(v) => handleSave(v.title, v)} />
-        )}
-        {ctype === 'folder' && (
-          <FolderForm onCancel={goBack} onSubmit={(v) => handleSave(v.title, v)} />
-        )}
-        {ctype === 'scorm' && (
-          <ScormForm onCancel={goBack} onSubmit={(v) => handleSave(v.title, v)} />
-        )}
-        {ctype === 'url' && <UrlForm onCancel={goBack} onSubmit={(v) => handleSave(v.title, v)} />}
-        {ctype === 'text-media' && (
-          <TextMediaForm onCancel={goBack} onSubmit={(v) => handleSave(v.title, v)} />
-        )}
-        {ctype === 'survey' && (
-          <SurveyForm onCancel={goBack} onSubmit={(v) => handleSave(v.title, v)} />
-        )}
+        <DynamicContentForm
+          contentType={contentType}
+          initialData={entry.data}
+          onCancel={onDeselect}
+          onSubmit={handleSave}
+        />
       </main>
     </div>
   );

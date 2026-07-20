@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { ContentType, CourseContent, CourseSection } from '../types';
+import type { ContentTypeResource } from '@/shared/types/content-type.types';
 
 function uid() {
   return Math.random().toString(36).slice(2, 10);
@@ -12,9 +13,10 @@ interface CourseState {
   removeSection: (id: string) => void;
   addContent: (
     sectionId: string,
-    type: ContentType,
+    type: ContentType | string,
     title: string,
     data?: Record<string, unknown>,
+    contentTypeResource?: ContentTypeResource,
   ) => CourseContent | undefined;
   updateContent: (sectionId: string, contentId: string, patch: Partial<CourseContent>) => void;
   removeContent: (sectionId: string, contentId: string) => void;
@@ -48,7 +50,7 @@ export const useCourseStore = create<CourseState>((set, get) => ({
       sections: s.sections.map((sec) => (sec.id === id ? { ...sec, ...patch } : sec)),
     })),
   removeSection: (id) => set((s) => ({ sections: s.sections.filter((sec) => sec.id !== id) })),
-  addContent: (sectionId, type, title, data) => {
+  addContent: (sectionId, type, title, data, contentTypeResource) => {
     const section = get().sections.find((s) => s.id === sectionId);
     if (!section) return undefined;
     const content: CourseContent = {
@@ -57,6 +59,7 @@ export const useCourseStore = create<CourseState>((set, get) => ({
       type,
       title,
       data,
+      contentTypeResource,
     };
     set((s) => ({
       sections: s.sections.map((sec) =>

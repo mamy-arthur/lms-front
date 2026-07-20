@@ -14,6 +14,7 @@ export interface InvoiceBase {
   paymentMethod: PaymentMethod;
   type: InvoiceType;
   pdfUrl: string;
+  linkedInvoiceRef?: string;
 }
 
 export interface InvoiceParty {
@@ -44,6 +45,21 @@ export interface InvoiceDetail extends Pick<
   buyer: InvoiceParty;
   items: InvoiceLineItem[];
   paymentMethods: InvoicePaymentMethod[];
+}
+
+export interface CreditNoteDetail {
+  id: string;
+  ref: string;
+  date: string;
+  linkedInvoiceRef?: string;
+  client: string;
+  seller: InvoiceParty;
+  buyer: InvoiceParty;
+  motif: string;
+  coursesCount: number;
+  amountEur: number;
+  type: 'Avoir';
+  pdfUrl: string;
 }
 
 export interface WalletRecipient {

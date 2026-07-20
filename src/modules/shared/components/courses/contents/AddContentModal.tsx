@@ -6,24 +6,22 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { ContentTypePicker } from './ContentTypePicker';
-import { ContentType } from '../types';
-import { useCourseStore } from '../hooks/useCouseContentStore';
+import type { ContentTypeResource } from '@/shared/types/content-type.types';
 
-export function AddContentModal({
-  open,
-  onOpenChange,
-  sectionId,
-  setType,
-}: {
+interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  sectionId: string;
-  setType: (type: ContentType) => void;
-}) {
-  const cours = useCourseStore();
-  const handleSelect = (type: ContentType) => {
-    setType(type);
-    cours.addContent(sectionId, type, '');
+  /**
+   * Called when the user picks a ContentType.
+   * No API call is made here — the parent is responsible for creating the entry
+   * only when the user explicitly clicks "Enregistrer" in the edit panel.
+   */
+  onContentTypeSelected: (ct: ContentTypeResource) => void;
+}
+
+export function AddContentModal({ open, onOpenChange, onContentTypeSelected }: Props) {
+  const handleSelect = (ct: ContentTypeResource) => {
+    onContentTypeSelected(ct);
     onOpenChange(false);
   };
 

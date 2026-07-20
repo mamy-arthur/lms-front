@@ -5,5 +5,5 @@ interface Props {
 
 export default async function CourseDetailPage({ params }: Props) {
   const { id } = await params;
-  return <CourseContentPage key={id} />;
+  return <CourseContentPage key={id} courseId={id} />;
 }

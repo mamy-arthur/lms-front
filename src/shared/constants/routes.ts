@@ -26,6 +26,7 @@ export const ROUTES = {
     certificate: '/admin/certificates',
     mailTemplates: '/admin/mail-templates',
     contentTypes: '/admin/content-types',
+    clientEvaluationNotes: '/admin/evaluation-notes',
   },
   portal: {
     dashboard: '/dashboard',
@@ -35,7 +36,8 @@ export const ROUTES = {
     // courses: "/courses",
     // category: "/category",
     // course: (slug: string) => `/courses/${slug}`,
-    lesson: (slug: string, lessonId: string) => `/courses/${slug}/${lessonId}`,
+    lesson: (slug: string, lessonId: string) => `/mes-formations/${slug}/${lessonId}`,
+    formationQuiz: (slug: string) => `/mes-formations/${slug}/quiz`,
     profile: '/profile',
     //certificates: "/certificates",
     users: '/users',
@@ -46,5 +48,8 @@ export const ROUTES = {
     quizQuestions: (quizId: string) => `/quizzes/${quizId}/questions`,
     certificate: '/certificates',
     mailTemplates: '/mail-templates',
+    evaluationNotes: '/evaluation-notes',
+    traineeDashboard: '/trainee',
+    traineeFormations: '/trainee/formations',
   },
 } as const;

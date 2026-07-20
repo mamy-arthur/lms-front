@@ -49,6 +49,7 @@ interface DataTableProps<T extends { id: string | number }> {
   columns: DataTableColumn<T>[];
   isLoading?: boolean;
   hasQuery?: boolean;
+  hidePaginationWhenSinglePage?: boolean;
   page: number;
   pageSize: number;
   total: number;
@@ -102,6 +103,7 @@ export function DataTable<T extends { id: string | number }>({
   columns,
   isLoading = false,
   hasQuery = false,
+  hidePaginationWhenSinglePage = false,
   page,
   pageSize,
   total,
@@ -167,14 +169,15 @@ export function DataTable<T extends { id: string | number }>({
                 className={cn(
                   'text-xs font-medium uppercase tracking-wide text-muted-foreground',
                   col.sortable && onSort && 'cursor-pointer select-none hover:text-foreground',
-                  col.headerClassName,
                 )}
                 onClick={() => {
                   if (col.sortable) onSort?.(col.key);
                 }}
               >
-                <span className="inline-flex items-center">
-                  {col.label}
+                <span className="inline-flex items-center gap-1">
+                  <span className={cn('block', col.headerClassName)} title={col.label}>
+                    {col.label}
+                  </span>
                   {col.sortable && <SortIcon column={col.key} sort={sort} />}
                 </span>
               </TableHead>
@@ -210,7 +213,7 @@ export function DataTable<T extends { id: string | number }>({
         </TableBody>
       </Table>
 
-      {!isLoading && total > 0 && (
+      {!isLoading && total > 0 && (!hidePaginationWhenSinglePage || pageCount > 1) && (
         <div className="flex items-center justify-between border-t border-border px-4 py-2.5">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <span>Lignes par page</span>

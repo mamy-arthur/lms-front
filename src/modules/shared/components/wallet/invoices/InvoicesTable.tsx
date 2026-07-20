@@ -120,13 +120,24 @@ export function InvoicesTable<T extends InvoiceBase>({
     {
       key: 'transactionFees',
       label: 'Frais de transaction',
-      headerClassName: 'max-w-25 whitespace-normal',
+      headerClassName: 'whitespace-normal',
       sortable: true,
       render: (row) => (
         <div className="text-xs text-muted-foreground">{formatCurrency(row.transactionFees)}</div>
       ),
     },
     clientColumn,
+    {
+      key: 'linkedInvoiceRef',
+      label: 'Facture liée',
+      sortable: false,
+      render: (row) =>
+        row.linkedInvoiceRef ? (
+          <div className="text-xs font-medium text-(--color-primary)">{row.linkedInvoiceRef}</div>
+        ) : (
+          <span className="text-xs text-muted-foreground">—</span>
+        ),
+    },
     {
       key: 'paymentMethod',
       label: 'Type de paiement',

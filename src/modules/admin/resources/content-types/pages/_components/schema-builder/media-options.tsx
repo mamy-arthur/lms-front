@@ -44,7 +44,7 @@ const MIME_GROUPS = [
     color: 'text-amber-500',
     types: [
       { value: 'audio/mpeg', label: 'MP3' },
-      { value: 'audio/wav', label: 'WAV' },
+      { value: 'audio/ogg', label: 'OGG' },
     ],
   },
   {

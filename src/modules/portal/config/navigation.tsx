@@ -1,5 +1,13 @@
 import type { LucideIcon } from 'lucide-react';
-import { LayoutDashboard, Users, LayoutTemplate, Wallet, Store, GraduationCap } from 'lucide-react';
+import {
+  LayoutDashboard,
+  Users,
+  LayoutTemplate,
+  Wallet,
+  Store,
+  GraduationCap,
+  ClipboardList,
+} from 'lucide-react';
 import { ROUTES } from '@/shared/constants/routes';
 import { ACCESS } from '@/shared/auth/permissions';
 import { AccessRule } from '@/shared/auth/permissions';
@@ -43,6 +51,7 @@ export const PORTAL_NAV: PortalNavItem[] = [
   {
     url: ROUTES.portal.wallet,
     title: 'Portefeuille',
+    access: ACCESS.wallet,
     icon: Wallet,
     items: [],
   },
@@ -70,11 +79,34 @@ export const PORTAL_NAV: PortalNavItem[] = [
   //     items: [],
   // },
   {
+    url: ROUTES.portal.evaluationNotes,
+    title: 'Notes des stagiaires',
+    access: ACCESS.notes,
+    icon: ClipboardList,
+    items: [],
+  },
+  {
     url: ROUTES.portal.users,
     title: 'Utilisateurs',
     icon: Users,
+    access: ACCESS.users,
     items: [],
   },
+  {
+    url: ROUTES.portal.traineeDashboard,
+    icon: LayoutDashboard,
+    title: 'Dashboard',
+    access: ACCESS.dashboardTrainee,
+    items: [],
+  },
+  {
+    url: ROUTES.portal.traineeFormations,
+    icon: GraduationCap,
+    title: 'Mes formations',
+    access: ACCESS.formationTrainee,
+    items: [],
+  },
+
   // {
   //     url: ROUTES.portal.profile,
   //     title: "Profil",

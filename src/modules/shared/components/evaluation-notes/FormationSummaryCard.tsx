@@ -1,0 +1,132 @@
+'use client';
+
+import { ChevronRight, GraduationCap } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import type { FormationSummary } from '@/modules/shared/lib/evaluation-notes';
+
+/**
+ * Minimum number of trainees required to display a semantic success color.
+ * Below this threshold the bar and percentage are shown in neutral gray,
+ * preventing a single-trainee result from reading like a meaningful aggregate.
+ */
+export const MIN_SAMPLE_FOR_COLOR = 2;
+
+// ─── Success bar color ────────────────────────────────────────────────────────
+
+interface SuccessStyle {
+  bar: string;
+  pct: string;
+  smallSample: boolean;
+}
+
+function getSuccessStyle(rate: number, traineeCount: number): SuccessStyle {
+  const smallSample = traineeCount < MIN_SAMPLE_FOR_COLOR;
+  if (smallSample) {
+    return { bar: 'bg-muted-foreground/25', pct: 'text-muted-foreground', smallSample: true };
+  }
+  if (rate >= 80) return { bar: 'bg-emerald-500', pct: 'text-emerald-600', smallSample: false };
+  if (rate >= 50) return { bar: 'bg-amber-500', pct: 'text-amber-600', smallSample: false };
+  return { bar: 'bg-rose-500', pct: 'text-rose-600', smallSample: false };
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
+
+export interface FormationSummaryCardProps {
+  formation: FormationSummary;
+  onClick: () => void;
+}
+
+export function FormationSummaryCard({ formation, onClick }: FormationSummaryCardProps) {
+  const success = getSuccessStyle(formation.successRate, formation.traineeCount);
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="group/card flex w-full cursor-pointer flex-col rounded-xl border border-border/60 bg-card text-left shadow-sm transition-all duration-200 hover:border-border hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
+      {/* ── Header ── */}
+      <div className="flex items-start gap-3 p-4">
+        {/* Cover thumbnail */}
+        <div className="size-10 shrink-0 overflow-hidden rounded-lg bg-muted">
+          {formation.coverImage ? (
+            <img
+              src={formation.coverImage}
+              alt={formation.name}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <div className="flex size-full items-center justify-center text-muted-foreground/40">
+              <GraduationCap className="size-5" />
+            </div>
+          )}
+        </div>
+
+        {/* Title + category */}
+        <div className="min-w-0 flex-1 space-y-0.5">
+          <p className="line-clamp-2 text-[14px] font-medium leading-snug text-foreground">
+            {formation.name}
+          </p>
+          {formation.category && (
+            <p className="text-[12px] text-muted-foreground">{formation.category}</p>
+          )}
+        </div>
+
+        <ChevronRight className="mt-0.5 size-4 shrink-0 text-muted-foreground/30 transition-colors group-hover/card:text-muted-foreground/70" />
+      </div>
+
+      {/* ── Success rate ── */}
+      <div className="px-4 pb-3.5 pt-0 mt-0.5 space-y-1.5">
+        <div className="flex items-baseline justify-between gap-2">
+          <span className="text-[12px] text-muted-foreground">Taux de réussite</span>
+          <span className={cn('text-[15px] font-medium tabular-nums leading-none', success.pct)}>
+            {formation.successRate}%
+            {success.smallSample && (
+              <span className="ml-1 text-[11px] font-normal text-muted-foreground">
+                · 1 stagiaire
+              </span>
+            )}
+          </span>
+        </div>
+        <div className="h-1 w-full overflow-hidden rounded-full bg-border/50">
+          <div
+            className={cn('h-full rounded-full transition-[width]', success.bar)}
+            style={{ width: `${formation.successRate}%` }}
+          />
+        </div>
+      </div>
+
+      {/* ── Secondary stats ── */}
+      <div className="flex border-t border-border/60">
+        <div className="flex flex-1 flex-col items-center gap-0.5 px-3 py-3">
+          <span className="text-[15px] font-medium tabular-nums text-foreground">
+            {formation.traineeCount}
+          </span>
+          <span className="text-[10px] text-muted-foreground">
+            stagiaire{formation.traineeCount !== 1 ? 's' : ''}
+          </span>
+        </div>
+
+        <div className="w-px self-stretch bg-border/60" />
+
+        <div className="flex flex-1 flex-col items-center gap-0.5 px-3 py-3">
+          <span className="text-[15px] font-medium tabular-nums text-foreground">
+            {formation.evaluationCount}
+          </span>
+          <span className="text-[10px] text-muted-foreground">
+            évaluation{formation.evaluationCount !== 1 ? 's' : ''}
+          </span>
+        </div>
+
+        <div className="w-px self-stretch bg-border/60" />
+
+        <div className="flex flex-1 flex-col items-center gap-0.5 px-3 py-3">
+          <span className="text-[15px] font-medium tabular-nums text-foreground">
+            {formation.avgScore}%
+          </span>
+          <span className="text-[10px] text-muted-foreground">score moyen</span>
+        </div>
+      </div>
+    </button>
+  );
+}

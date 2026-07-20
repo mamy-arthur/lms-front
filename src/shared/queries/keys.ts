@@ -21,5 +21,30 @@ export const courseKeys = {
   all: ['courses'] as const,
   lists: () => [...courseKeys.all, 'list'] as const,
   list: (filters: object) => [...courseKeys.lists(), filters] as const,
-  detail: (slug: string) => [...courseKeys.all, 'detail', slug] as const,
+  detail: (id: string) => [...courseKeys.all, 'detail', id] as const,
+};
+
+export const courseCategoryKeys = {
+  all: ['course-categories'] as const,
+  lists: () => [...courseCategoryKeys.all, 'list'] as const,
+  detail: (id: string) => [...courseCategoryKeys.all, 'detail', id] as const,
+};
+
+export const courseSectionKeys = {
+  all: ['course-sections'] as const,
+  list: (courseId: string) => [...courseSectionKeys.all, 'list', courseId] as const,
+  detail: (courseId: string, sectionId: string) =>
+    [...courseSectionKeys.all, 'detail', courseId, sectionId] as const,
+};
+
+export const contentEntryKeys = {
+  all: ['content-entries'] as const,
+  list: (sectionId: string) => [...contentEntryKeys.all, 'list', sectionId] as const,
+  detail: (id: string) => [...contentEntryKeys.all, 'detail', id] as const,
+};
+
+export const contentTypeKeys = {
+  all: ['content-types'] as const,
+  lists: () => [...contentTypeKeys.all, 'list'] as const,
+  detail: (id: string) => [...contentTypeKeys.all, 'detail', id] as const,
 };

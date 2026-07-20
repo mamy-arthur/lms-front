@@ -63,7 +63,7 @@ export function WalletTransactionsTable({
       key: 'type',
       label: 'Type de transaction',
       sortable: true,
-      headerClassName: 'max-w-25 whitespace-normal',
+      headerClassName: 'whitespace-normal',
       render: (row) => (
         <div className="py-1">
           <Badge
@@ -82,7 +82,7 @@ export function WalletTransactionsTable({
       render: (row) => (
         <div className={cellClassName}>
           {row.type === 'Crédit' ? '+' : '-'}
-          {Math.abs(row.amount)}
+          {Math.abs(row.amount)} pts
         </div>
       ),
     },
@@ -90,19 +90,19 @@ export function WalletTransactionsTable({
       key: 'balanceBefore',
       label: 'Solde avant',
       sortable: true,
-      render: (row) => <div className={cellClassName}>{row.balanceBefore}</div>,
+      render: (row) => <div className={cellClassName}>{row.balanceBefore} pts</div>,
     },
     {
       key: 'balanceAfter',
       label: 'Solde après',
       sortable: true,
-      render: (row) => <div className={cellClassName}>{row.balanceAfter}</div>,
+      render: (row) => <div className={cellClassName}>{row.balanceAfter} pts</div>,
     },
     {
       key: 'nonRefundable',
       label: 'Non remboursable',
       sortable: true,
-      headerClassName: 'max-w-25 whitespace-normal',
+      headerClassName: 'whitespace-normal',
       render: (row) => <div className={cellClassName}>{row.nonRefundable}</div>,
     },
     {

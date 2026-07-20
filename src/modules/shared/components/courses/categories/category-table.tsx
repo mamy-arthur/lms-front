@@ -1,16 +1,6 @@
 import { memo, useCallback, useMemo, useState } from 'react';
-import {
-  MoreHorizontal,
-  Pencil,
-  Eye,
-  EyeOff,
-  Trash2,
-  Plus,
-  FolderTree,
-  Search,
-} from 'lucide-react';
+import { MoreHorizontal, Pencil, Trash2, Plus, FolderTree, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,7 +33,7 @@ type Props = {
 };
 
 function CategoryTableBase({ onEdit, onAddChild }: Props) {
-  const { categories, deleteCategory, toggleCategoryVisibility } = useCoursesStore();
+  const { categories, deleteCategory } = useCoursesStore();
   const [confirmDelete, setConfirmDelete] = useState<Category | null>(null);
   const [categoryDrawerOpen, setCategoryDrawerOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -88,24 +78,6 @@ function CategoryTableBase({ onEdit, onAddChild }: Props) {
                 <Plus className="mr-2 size-4" />
                 Ajouter une sous-catégorie
               </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => {
-                  toggleCategoryVisibility(item.id);
-                  toast.success(item.visible ? 'Catégorie masquée' : 'Catégorie visible');
-                }}
-              >
-                {item.visible ? (
-                  <>
-                    <EyeOff className="mr-2 size-4" />
-                    Cacher
-                  </>
-                ) : (
-                  <>
-                    <Eye className="mr-2 size-4" />
-                    Afficher
-                  </>
-                )}
-              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="text-destructive focus:text-destructive"
@@ -119,7 +91,7 @@ function CategoryTableBase({ onEdit, onAddChild }: Props) {
         </div>
       );
     },
-    [onEdit, onAddChild, toggleCategoryVisibility],
+    [onEdit, onAddChild],
   );
 
   const columns: DataTableColumn<CategoryRow>[] = useMemo(
@@ -143,33 +115,14 @@ function CategoryTableBase({ onEdit, onAddChild }: Props) {
         ),
       },
       {
-        key: 'identifier',
-        label: 'Identifiant',
+        key: 'description',
+        label: 'Description',
         sortable: false,
         render: (row) => (
-          <code className="rounded bg-muted px-1.5 py-0.5 text-xs">{row.identifier}</code>
+          <span className="text-xs text-muted-foreground truncate max-w-xs">
+            {row.description ?? '—'}
+          </span>
         ),
-      },
-      {
-        key: 'visible',
-        label: 'Visibilité',
-        sortable: false,
-        render: (row) =>
-          row.visible ? (
-            <Badge
-              variant="outline"
-              className="gap-1 border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-50"
-            >
-              <Eye className="size-3" /> Visible
-            </Badge>
-          ) : (
-            <Badge
-              variant="outline"
-              className="gap-1 border-red-200 bg-red-50 text-red-700 hover:bg-red-50"
-            >
-              <EyeOff className="size-3" /> Caché
-            </Badge>
-          ),
       },
       {
         key: 'actions',
@@ -238,10 +191,21 @@ function CategoryTableBase({ onEdit, onAddChild }: Props) {
             <AlertDialogCancel>Annuler</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => {
+              onClick={async () => {
                 if (confirmDelete) {
-                  deleteCategory(confirmDelete.id);
-                  toast.success('Catégorie supprimée');
+                  try {
+                    await deleteCategory(confirmDelete.id);
+                    toast.success('Catégorie supprimée');
+                  } catch (err: unknown) {
+                    const msg =
+                      err instanceof Error &&
+                      (err as { json?: { message?: string } }).json?.message;
+                    toast.error(
+                      msg === 'course.category_has_courses'
+                        ? 'Des cours sont encore liés à cette catégorie'
+                        : 'Erreur lors de la suppression',
+                    );
+                  }
                 }
                 setConfirmDelete(null);
               }}
