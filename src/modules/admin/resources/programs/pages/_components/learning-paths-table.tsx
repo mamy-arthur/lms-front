@@ -56,11 +56,12 @@ type Props = {
   onNew?: () => void;
   onEdit?: (path: LearningPath) => void;
   onDelete?: (id: string) => void;
+  onManageCategories?: () => void;
 };
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-function LearningPathsTableBase({ learningPaths, categories, isLoading, onNew, onEdit, onDelete }: Props) {
+function LearningPathsTableBase({ learningPaths, categories, isLoading, onNew, onEdit, onDelete, onManageCategories }: Props) {
   const [search, setSearch] = useState('');
 
   const categoryById = useMemo(
@@ -113,12 +114,11 @@ function LearningPathsTableBase({ learningPaths, categories, isLoading, onNew, o
     () => [
       {
         key: 'name',
-        label: 'Nom',
+        label: 'Nom du parcours',
         sortable: true,
         render: (row) => (
           <div className="flex items-center gap-3">
             {row.image ? (
-              // biome-ignore lint/performance/noImgElement: thumbnail from backend, no Next/Image optimization needed
               <img
                 src={row.image.url}
                 alt={row.name}
@@ -194,7 +194,10 @@ function LearningPathsTableBase({ learningPaths, categories, isLoading, onNew, o
             className="h-8 text-sm"
           />
         </div>
-        <Button size="sm" onClick={onNew} className="ml-auto h-8 gap-1.5">
+        <Button size="sm" variant="outline" onClick={onManageCategories} className="h-8 gap-1.5">
+          Gérer les catégories
+        </Button>
+        <Button size="sm" onClick={onNew} className="h-8 gap-1.5">
           <Plus className="size-3.5" />
           Nouveau parcours
         </Button>

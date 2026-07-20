@@ -2,13 +2,12 @@
 
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { Separator } from '@/components/ui/separator';
 import { useLearningPathsQuery } from '../hooks/useLearningPathsQuery';
 import { useLearningPathCategoriesQuery } from '../hooks/useLearningPathCategoriesQuery';
 import { useDeleteLearningPath } from '../hooks/useDeleteLearningPath';
 import { LearningPathsTable } from './_components/learning-paths-table';
 import { LearningPathFormDrawer } from './_components/learning-path-form-drawer';
-import { LearningPathCategoriesSection } from './_components/learning-path-categories-section';
+import { LearningPathCategoriesDrawer } from './_components/learning-path-categories-drawer';
 import type { LearningPath } from '../types';
 
 export function ProgramsList() {
@@ -18,6 +17,7 @@ export function ProgramsList() {
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingPath, setEditingPath] = useState<LearningPath | undefined>(undefined);
+  const [categoriesDrawerOpen, setCategoriesDrawerOpen] = useState(false);
 
   const openNew = () => {
     setEditingPath(undefined);
@@ -59,13 +59,7 @@ export function ProgramsList() {
           onNew={openNew}
           onEdit={openEdit}
           onDelete={handleDelete}
-        />
-
-        <Separator />
-
-        <LearningPathCategoriesSection
-          categories={categoriesQuery.data ?? []}
-          isLoading={categoriesQuery.isLoading}
+          onManageCategories={() => setCategoriesDrawerOpen(true)}
         />
       </div>
 
@@ -74,6 +68,13 @@ export function ProgramsList() {
         onOpenChange={setDrawerOpen}
         learningPath={editingPath}
         categories={categoriesQuery.data ?? []}
+      />
+
+      <LearningPathCategoriesDrawer
+        open={categoriesDrawerOpen}
+        onOpenChange={setCategoriesDrawerOpen}
+        categories={categoriesQuery.data ?? []}
+        isLoading={categoriesQuery.isLoading}
       />
     </div>
   );
