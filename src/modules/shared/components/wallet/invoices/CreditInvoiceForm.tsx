@@ -1,118 +1,212 @@
 'use client';
 
+import { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import type { InvoiceDetail } from '@/modules/shared/lib/wallet-types';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import type { InvoiceParty } from '@/modules/shared/lib/wallet-types';
 
-interface CreditInvoiceFormProps {
-  detail: InvoiceDetail;
-  quantity: number;
-  onQuantityChange: (quantity: number) => void;
-  readonly?: boolean;
-  onCancel?: () => void;
-  onValidate?: () => void;
+export interface CreditNoteFormData {
+  ref: string;
+  date: string;
+  client: string;
+  motif: string;
+  coursesCount: number;
+  amountEur: number;
 }
 
-const formatPoints = (value: number) => new Intl.NumberFormat('fr-FR').format(value) + ' pts';
+interface CreditInvoiceFormProps {
+  invoiceRef: string;
+  seller: InvoiceParty;
+  buyer: InvoiceParty;
+  readonly?: boolean;
+  onCancel?: () => void;
+  onValidate?: (data: CreditNoteFormData) => void;
+  onViewLinkedInvoice?: (ref: string) => void;
+}
+
+const formatEur = (v: number) =>
+  new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(v);
+
+function generateAvoirRef() {
+  const year = new Date().getFullYear();
+  const seq = Math.floor(Math.random() * 900 + 100);
+  return `AVOIR-${year}-${seq}`;
+}
 
 export function CreditInvoiceForm({
-  detail,
-  quantity,
-  onQuantityChange,
+  invoiceRef,
+  seller,
+  buyer,
   readonly = false,
   onCancel,
   onValidate,
+  onViewLinkedInvoice,
 }: CreditInvoiceFormProps) {
-  const item = detail.items[0];
+  const today = new Date().toLocaleDateString('fr-FR');
+  const [ref] = useState(() => generateAvoirRef());
+  const [motif, setMotif] = useState('');
+  const [coursesCount, setCoursesCount] = useState(1);
+  const [amountEur, setAmountEur] = useState<number | ''>('');
+
+  const canValidate = motif.trim().length > 0 && coursesCount > 0 && Number(amountEur) > 0;
+
+  const handleValidate = () => {
+    if (!canValidate) return;
+    onValidate?.({
+      ref,
+      date: today,
+      client: buyer.name,
+      motif: motif.trim(),
+      coursesCount,
+      amountEur: Number(amountEur),
+    });
+  };
 
   return (
-    <div className="space-y-7">
+    <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-xs font-semibold text-(--color-primary)">Avoir</p>
-          <p className="mt-1 text-lg font-bold text-foreground">{detail.ref}</p>
+          <p className="text-xs font-semibold text-(--color-primary)">Création d'avoir</p>
+          <p className="mt-1 text-lg font-bold text-foreground">{ref}</p>
         </div>
-        <div className="space-y-1.5 text-right text-xs">
+        <div className="space-y-1 text-right text-xs text-muted-foreground">
           <p>
-            <span className="font-semibold">Date :</span> {detail.date}
+            <span className="font-semibold">Date d'émission :</span> {today}
+          </p>
+          <p>
+            <span className="font-semibold">Facture liée : </span>
+            {onViewLinkedInvoice ? (
+              <button
+                type="button"
+                onClick={() => onViewLinkedInvoice(invoiceRef)}
+                className="font-semibold text-(--color-primary) underline underline-offset-2 hover:opacity-75 transition-opacity"
+              >
+                {invoiceRef}
+              </button>
+            ) : (
+              <span className="font-semibold">{invoiceRef}</span>
+            )}
           </p>
         </div>
       </div>
 
       <Separator />
 
+      {/* Seller + Buyer */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-2.5 rounded-xl border border-border bg-muted/30 p-4 text-xs shadow-sm">
-          <p className="font-semibold text-xs">Société Vendeur</p>
+          <p className="font-semibold">Société Vendeur</p>
           <Separator />
           <p>
-            <span className="font-semibold">Nom :</span> {detail.seller.name}
+            <span className="font-semibold">Nom :</span> {seller.name}
           </p>
           <p>
-            <span className="font-semibold">Adresse :</span> {detail.seller.address}
+            <span className="font-semibold">Adresse :</span> {seller.address}
           </p>
           <p>
-            <span className="font-semibold">E-mail :</span> {detail.seller.email}
+            <span className="font-semibold">E-mail :</span> {seller.email}
           </p>
-          <p>
-            <span className="font-semibold">Téléphone :</span> {detail.seller.phone}
-          </p>
+          {seller.phone && (
+            <p>
+              <span className="font-semibold">Téléphone :</span> {seller.phone}
+            </p>
+          )}
         </div>
-
         <div className="space-y-2.5 rounded-xl border border-border bg-muted/30 p-4 text-xs shadow-sm">
-          <p className="font-semibold text-xs">Facturé à</p>
+          <p className="font-semibold">Facturé à</p>
           <Separator />
           <p>
-            <span className="font-semibold">Nom :</span> {detail.buyer.name}
+            <span className="font-semibold">Nom :</span> {buyer.name}
           </p>
           <p>
-            <span className="font-semibold">Adresse :</span> {detail.buyer.address}
+            <span className="font-semibold">Adresse :</span> {buyer.address}
           </p>
           <p>
-            <span className="font-semibold">E-mail :</span> {detail.buyer.email}
+            <span className="font-semibold">E-mail :</span> {buyer.email}
           </p>
-          <p>
-            <span className="font-semibold">Téléphone :</span> {detail.buyer.phone}
-          </p>
+          {buyer.phone && (
+            <p>
+              <span className="font-semibold">Téléphone :</span> {buyer.phone}
+            </p>
+          )}
         </div>
       </div>
 
-      <div className="space-y-3">
-        <p className="text-xs font-semibold">Détails de l'avoir</p>
-        <div className="rounded-xl border border-border bg-muted/30 p-4">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex-1">
-              <p className="text-xs font-medium text-foreground">{item.description}</p>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="text-right">
-                <p className="text-[10px] text-muted-foreground">Prix unitaire</p>
-                <p className="text-xs font-medium">{formatPoints(item.unitPrice)}</p>
-              </div>
-              <div className="text-right">
-                <p className="text-[10px] text-muted-foreground">Quantité</p>
-                {readonly ? (
-                  <p className="text-xs font-medium text-foreground">{quantity}</p>
-                ) : (
-                  <Input
-                    type="number"
-                    value={quantity}
-                    onChange={(e) => onQuantityChange(Number(e.target.value))}
-                    className="h-8 w-20 text-xs text-right"
-                  />
-                )}
-              </div>
-              <div className="w-24 text-right">
-                <p className="text-[10px] text-muted-foreground">Total</p>
-                <p className="text-xs font-semibold text-(--color-primary)">
-                  {formatPoints(item.unitPrice * quantity)}
-                </p>
-              </div>
-            </div>
+      {/* Motif */}
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold">
+          Motif de l'avoir <span className="text-red-500">*</span>
+        </Label>
+        {readonly ? (
+          <p className="text-xs text-muted-foreground">{motif}</p>
+        ) : (
+          <Textarea
+            value={motif}
+            onChange={(e) => setMotif(e.target.value)}
+            placeholder="Ex: Annulation partielle suite à désistement de stagiaires…"
+            rows={3}
+            className="text-xs"
+          />
+        )}
+      </div>
+
+      {/* Courses count + Amount */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label className="text-xs font-semibold">
+            Nombre de cours <span className="text-red-500">*</span>
+          </Label>
+          {readonly ? (
+            <p className="text-xs text-muted-foreground">{coursesCount}</p>
+          ) : (
+            <Input
+              type="number"
+              min={1}
+              value={coursesCount}
+              onChange={(e) => setCoursesCount(Math.max(1, Number(e.target.value)))}
+              className="h-8 text-xs"
+            />
+          )}
+        </div>
+        <div className="space-y-2">
+          <Label className="text-xs font-semibold">
+            Montant (€) <span className="text-red-500">*</span>
+          </Label>
+          {readonly ? (
+            <p className="text-xs font-semibold" style={{ color: 'var(--color-primary)' }}>
+              {formatEur(Number(amountEur))}
+            </p>
+          ) : (
+            <Input
+              type="number"
+              min={0}
+              step={0.01}
+              value={amountEur}
+              onChange={(e) => setAmountEur(e.target.value === '' ? '' : Number(e.target.value))}
+              placeholder="0.00"
+              className="h-8 text-xs"
+            />
+          )}
+        </div>
+      </div>
+
+      {/* Summary */}
+      {Number(amountEur) > 0 && (
+        <div className="flex justify-end">
+          <div className="rounded-xl border border-border bg-muted/30 px-4 py-3 text-right text-xs shadow-sm sm:min-w-52">
+            <p className="flex items-center justify-between gap-4">
+              <span className="text-muted-foreground">Montant total de l'avoir :</span>
+              <span className="text-base font-bold" style={{ color: 'var(--color-primary)' }}>
+                {formatEur(Number(amountEur))}
+              </span>
+            </p>
           </div>
         </div>
-      </div>
+      )}
 
       {!readonly && (
         <div className="flex justify-end gap-2">
@@ -120,10 +214,10 @@ export function CreditInvoiceForm({
             Annuler
           </Button>
           <Button
-            variant="default"
             size="sm"
             className="gap-1.5 bg-(--color-primary) text-primary-foreground hover:bg-(--color-primary)/90"
-            onClick={onValidate}
+            disabled={!canValidate}
+            onClick={handleValidate}
           >
             Valider l'avoir
           </Button>

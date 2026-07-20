@@ -15,7 +15,7 @@ export function WalletSummaryCards({
     <div className="flex items-center gap-2 sm:gap-3">
       <WalletIcon className="size-4 text-(--color-primary) sm:size-5" />
       <div>
-        <p className="text-sm font-semibold sm:text-base">{totalPoints}</p>
+        <p className="text-sm font-semibold sm:text-base">{totalPoints} pts</p>
         <p className="text-[10px] leading-tight text-muted-foreground sm:text-xs">
           Solde disponible
         </p>
@@ -23,7 +23,7 @@ export function WalletSummaryCards({
       <div className="ml-1 h-8 w-px bg-border sm:ml-2 sm:h-10" />
       <CoinsIcon className="size-4 text-blue-600 sm:size-5" />
       <div>
-        <p className="text-sm font-semibold sm:text-base">{principalBalance}</p>
+        <p className="text-sm font-semibold sm:text-base">{principalBalance} pts</p>
         <p className="text-[10px] leading-tight text-muted-foreground sm:text-xs">
           Solde principal
         </p>
@@ -31,7 +31,7 @@ export function WalletSummaryCards({
       <div className="ml-1 h-8 w-px bg-border sm:ml-2 sm:h-10" />
       <LockIcon className="size-4 text-green-600 sm:size-5" />
       <div>
-        <p className="text-sm font-semibold sm:text-base">{nonRefundableBalance}</p>
+        <p className="text-sm font-semibold sm:text-base">{nonRefundableBalance} pts</p>
         <p className="text-[10px] leading-tight text-muted-foreground sm:text-xs">
           Solde non remboursable
         </p>

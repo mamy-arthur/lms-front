@@ -61,6 +61,7 @@ export const ADMIN_NAV: AdminNavItem[] = [
       { title: 'Catégories', url: ROUTES.admin.category },
       { title: 'Modules', url: ROUTES.admin.modules },
       { title: 'Quiz', url: ROUTES.admin.quizzes },
+      { title: 'Notes', url: ROUTES.admin.clientEvaluationNotes },
       // { title: "Attestation", url: ROUTES.admin.certificate},
     ],
   },

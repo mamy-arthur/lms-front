@@ -1,4 +1,9 @@
-import type { InvoiceBase, InvoiceDetail, WalletTransaction } from './wallet-types';
+import type {
+  CreditNoteDetail,
+  InvoiceBase,
+  InvoiceDetail,
+  WalletTransaction,
+} from './wallet-types';
 
 export const transactions: WalletTransaction[] = [
   {
@@ -108,6 +113,7 @@ export const baseInvoices: InvoiceBase[] = [
     paymentMethod: 'Stripe',
     type: 'Avoir',
     pdfUrl: '#',
+    linkedInvoiceRef: 'FACT-2026-0001',
   },
   {
     id: 'inv-004',
@@ -164,44 +170,96 @@ export const mockCreditInvoiceDetail: InvoiceDetail = {
   },
   items: [
     {
-      description: 'Remise (quantité variable)',
-      quantity: 1,
-      unitPrice: 6000,
-      total: 6000,
+      description: 'Remise sur formations (3 cours)',
+      quantity: 3,
+      unitPrice: 500,
+      total: 1500,
     },
   ],
-  amountHT: 0,
-  amountTTC: 0,
-  paymentMethods: [{ label: 'Points', amount: 6000 }],
+  amountHT: 1250,
+  amountTTC: 1500,
+  paymentMethods: [{ label: 'Virement Bancaire', amount: 1500 }],
+};
+
+/** Détails d’avoir indexés par ref — utilisés par InvoicePreviewDrawer */
+export const creditNoteDetails: Record<string, CreditNoteDetail> = {
+  'AVOIR-2026-0001': {
+    id: 'cn-001',
+    ref: 'AVOIR-2026-0001',
+    date: '20/06/2026',
+    linkedInvoiceRef: 'FACT-2026-0001',
+    client: 'Client First',
+    seller: {
+      name: 'Excellence Academy',
+      address: '12 rue de la Paix, 75001 Paris',
+      email: 'excellence-academy@yopmail.com',
+      phone: '+33 1 23 45 67 89',
+    },
+    buyer: {
+      name: 'Client First',
+      address: '8 avenue Victor Hugo, 69002 Lyon',
+      email: 'excellence-academy-client1@yopmail.com',
+      phone: '+33 4 56 78 90 12',
+    },
+    motif: 'Annulation partielle de commande suite à désistement de stagiaires',
+    coursesCount: 3,
+    amountEur: 1800,
+    type: 'Avoir',
+    pdfUrl: '#',
+  },
+  'AVOIR-2026-0002': {
+    id: 'cn-002',
+    ref: 'AVOIR-2026-0002',
+    date: new Date().toLocaleDateString('fr-FR'),
+    linkedInvoiceRef: 'FACT-2026-0002',
+    client: 'Client First',
+    seller: {
+      name: 'Excellence Academy',
+      address: '12 rue de la Paix, 75001 Paris',
+      email: 'excellence-academy@yopmail.com',
+      phone: '+33 1 23 45 67 89',
+    },
+    buyer: {
+      name: 'Client First',
+      address: '8 avenue Victor Hugo, 69002 Lyon',
+      email: 'excellence-academy-client1@yopmail.com',
+      phone: '+33 4 56 78 90 12',
+    },
+    motif: 'Remise commerciale accordée suite à litige qualité',
+    coursesCount: 2,
+    amountEur: 1500,
+    type: 'Avoir',
+    pdfUrl: '#',
+  },
 };
 
 export const mockInvoiceDetail: InvoiceDetail = {
   id: 'inv-detail-001',
-  ref: 'INV19062619001',
-  date: '19/06/2026',
+  ref: 'FACT-2026-0001',
+  date: '29/06/2026',
   type: 'Facture',
   pdfUrl: '#',
   seller: {
     name: 'Excellence Academy',
-    address: 'France',
+    address: '12 rue de la Paix, 75001 Paris',
     email: 'excellence-academy@yopmail.com',
-    phone: '',
+    phone: '+33 1 23 45 67 89',
   },
   buyer: {
     name: 'Client First',
-    address: 'France',
+    address: '8 avenue Victor Hugo, 69002 Lyon',
     email: 'excellence-academy-client1@yopmail.com',
-    phone: '',
+    phone: '+33 4 56 78 90 12',
   },
   items: [
     {
-      description: 'Nouveau formation 2',
+      description: 'Formation React & TypeScript en entreprise – 5 stagiaires',
       quantity: 5,
-      unitPrice: 0,
-      total: 0,
+      unitPrice: 2000,
+      total: 10000,
     },
   ],
-  amountHT: 0,
-  amountTTC: 0,
-  paymentMethods: [{ label: 'Jeton', amount: 0 }],
+  amountHT: 10000,
+  amountTTC: 12000,
+  paymentMethods: [{ label: 'Stripe', amount: 12000 }],
 };

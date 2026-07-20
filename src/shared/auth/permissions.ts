@@ -38,4 +38,8 @@ export const ACCESS = {
   templates: { anyRoles: [Role.EDITOR, Role.SUPER_ADMIN, Role.CLIENT_MANAGER] },
   contentTypes: { superAdminOnly: true },
   formationsManagement: { anyRoles: [Role.CLIENT_MANAGER] },
+  wallet: { anyRoles: [Role.CLIENT_MANAGER, Role.EDITOR] },
+  notes: { anyRoles: [Role.CLIENT_MANAGER, Role.EDITOR] },
+  dashboardTrainee: { anyRoles: [Role.TRAINEE] },
+  formationTrainee: { anyRoles: [Role.TRAINEE] },
 } as const satisfies Record<string, AccessRule>;

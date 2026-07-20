@@ -8,9 +8,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/modules/shared/lib/wallet-utils';
-import type { InvoiceDetail, InvoiceRequest } from '@/modules/shared/lib/wallet-types';
+import type {
+  InvoiceDetail,
+  InvoiceRequest,
+  CreditNoteDetail,
+} from '@/modules/shared/lib/wallet-types';
 import { REQUEST_STATUS_CONFIG } from '@/modules/shared/lib/wallet-types';
-import { mockInvoiceDetail, mockCreditInvoiceDetail } from '@/modules/shared/lib/wallet-mock-data';
+import { mockInvoiceDetail, creditNoteDetails } from '@/modules/shared/lib/wallet-mock-data';
 import { InvoiceDetailsTable } from './InvoiceDetailsTable';
 import { CreditInvoiceForm } from './CreditInvoiceForm';
 import { useRequestStore } from '@/modules/shared/lib/request-store';
@@ -22,8 +26,123 @@ interface InvoicePreviewDrawerProps<T extends { ref?: string; pdfUrl?: string }>
   onOpenChange: (open: boolean) => void;
   request?: InvoiceRequest | null;
   readonly?: boolean;
+  onViewLinkedInvoice?: (ref: string) => void;
 }
 
+// ─── Credit note detail view ─────────────────────────────
+function CreditNoteDetailView({
+  cn,
+  onViewLinkedInvoice,
+}: {
+  cn: CreditNoteDetail;
+  onViewLinkedInvoice?: (ref: string) => void;
+}) {
+  const formatEur = (v: number) =>
+    new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(v);
+
+  return (
+    <div className="space-y-7">
+      {/* Header */}
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-xs font-semibold text-(--color-primary)">Avoir</p>
+          <p className="mt-1 text-lg font-bold text-foreground">{cn.ref}</p>
+        </div>
+        <div className="space-y-1.5 text-right text-xs">
+          <p>
+            <span className="font-semibold">Date d’émission :</span> {cn.date}
+          </p>{' '}
+          {cn.linkedInvoiceRef && (
+            <p>
+              <span className="font-semibold">Facture liée : </span>
+              {onViewLinkedInvoice ? (
+                <button
+                  type="button"
+                  onClick={() => onViewLinkedInvoice(cn.linkedInvoiceRef!)}
+                  className="font-semibold text-(--color-primary) underline underline-offset-2 hover:opacity-75 transition-opacity"
+                >
+                  {cn.linkedInvoiceRef}
+                </button>
+              ) : (
+                <span className="font-semibold">{cn.linkedInvoiceRef}</span>
+              )}
+            </p>
+          )}{' '}
+        </div>
+      </div>
+
+      <Separator />
+
+      {/* Seller + Buyer */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="space-y-2.5 rounded-xl border border-border bg-muted/30 p-4 text-xs shadow-sm">
+          <p className="font-semibold">Société Vendeur</p>
+          <Separator />
+          <p>
+            <span className="font-semibold">Nom :</span> {cn.seller.name}
+          </p>
+          <p>
+            <span className="font-semibold">Adresse :</span> {cn.seller.address}
+          </p>
+          <p>
+            <span className="font-semibold">E-mail :</span> {cn.seller.email}
+          </p>
+          {cn.seller.phone && (
+            <p>
+              <span className="font-semibold">Téléphone :</span> {cn.seller.phone}
+            </p>
+          )}
+        </div>
+        <div className="space-y-2.5 rounded-xl border border-border bg-muted/30 p-4 text-xs shadow-sm">
+          <p className="font-semibold">Facturé à</p>
+          <Separator />
+          <p>
+            <span className="font-semibold">Nom :</span> {cn.buyer.name}
+          </p>
+          <p>
+            <span className="font-semibold">Adresse :</span> {cn.buyer.address}
+          </p>
+          <p>
+            <span className="font-semibold">E-mail :</span> {cn.buyer.email}
+          </p>
+          {cn.buyer.phone && (
+            <p>
+              <span className="font-semibold">Téléphone :</span> {cn.buyer.phone}
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Motif */}
+      <div className="space-y-2.5 rounded-xl border border-border bg-muted/30 p-4 text-xs shadow-sm">
+        <p className="text-xs font-semibold">Motif de l’avoir</p>
+        <Separator />
+        <p className="leading-relaxed text-muted-foreground">{cn.motif}</p>
+      </div>
+
+      {/* Courses + Amount */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="space-y-2.5 rounded-xl border border-border bg-muted/30 p-4 text-xs shadow-sm">
+          <p className="font-semibold">Cours concernés</p>
+          <Separator />
+          <p className="text-muted-foreground">{cn.coursesCount} cours</p>
+        </div>
+        <div className="flex justify-end">
+          <div className="space-y-1.5 rounded-xl border border-border bg-muted/30 px-4 py-3 text-right text-xs shadow-sm w-full">
+            <p className="flex items-center justify-between gap-4">
+              <span className="text-muted-foreground">Montant total de l’avoir :</span>
+              <span className="text-base font-bold" style={{ color: 'var(--color-primary)' }}>
+                {formatEur(cn.amountEur)}
+              </span>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main drawer component ───────────────────────────────
 export function InvoicePreviewDrawer<T extends { ref?: string; pdfUrl?: string }>({
   invoice,
   detail,
@@ -31,22 +150,23 @@ export function InvoicePreviewDrawer<T extends { ref?: string; pdfUrl?: string }
   onOpenChange,
   request,
   readonly = false,
+  onViewLinkedInvoice,
 }: InvoicePreviewDrawerProps<T>) {
   const data = detail ?? mockInvoiceDetail;
+  const creditNote: CreditNoteDetail | null = invoice?.ref
+    ? (creditNoteDetails[invoice.ref] ?? null)
+    : null;
+  const isAvoir = creditNote !== null;
   const resolveRequest = useRequestStore((s) => s.resolveRequest);
   const requests = useRequestStore((s) => s.requests);
   const liveRequest = request ? (requests[request.invoiceRef] ?? null) : null;
   const [tenantResponse, setTenantResponse] = useState('');
   const [creditFormOpen, setCreditFormOpen] = useState(false);
-  const [creditQuantity, setCreditQuantity] = useState(1);
-
-  const creditDetail = mockCreditInvoiceDetail;
 
   useEffect(() => {
     if (open) {
       setTenantResponse('');
       setCreditFormOpen(false);
-      setCreditQuantity(1);
     }
   }, [open, request?.invoiceRef]);
 
@@ -80,7 +200,12 @@ export function InvoicePreviewDrawer<T extends { ref?: string; pdfUrl?: string }
         showCloseButton={true}
       >
         <SheetHeader className="shrink-0 border-b bg-muted/20 px-5 py-4 sm:px-6">
-          <SheetTitle className="text-sm font-semibold tracking-tight text-foreground">
+          <SheetTitle className="flex items-center gap-2.5 text-sm font-semibold tracking-tight text-foreground">
+            {isAvoir && (
+              <Badge className="shrink-0 bg-amber-100 text-amber-700 border-amber-200 text-[10px] font-semibold">
+                Avoir
+              </Badge>
+            )}
             {invoice?.ref ?? data.ref}
           </SheetTitle>
         </SheetHeader>
@@ -184,12 +309,15 @@ export function InvoicePreviewDrawer<T extends { ref?: string; pdfUrl?: string }
             <div className="space-y-7 p-5 sm:p-6 lg:p-8">
               {showCreditForm ? (
                 <CreditInvoiceForm
-                  detail={creditDetail}
-                  quantity={creditQuantity}
-                  onQuantityChange={setCreditQuantity}
+                  invoiceRef={invoice?.ref ?? data.ref}
+                  seller={data.seller}
+                  buyer={data.buyer}
                   readonly={readonly}
                   onCancel={() => setCreditFormOpen(false)}
+                  onViewLinkedInvoice={onViewLinkedInvoice}
                 />
+              ) : isAvoir && creditNote ? (
+                <CreditNoteDetailView cn={creditNote} onViewLinkedInvoice={onViewLinkedInvoice} />
               ) : (
                 <>
                   <div className="flex items-start justify-between gap-4">

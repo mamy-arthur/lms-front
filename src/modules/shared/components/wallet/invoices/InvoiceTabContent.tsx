@@ -28,6 +28,14 @@ export function InvoiceTabContent<T extends InvoiceBase>({
     setDrawerOpen(true);
   };
 
+  const handleViewLinkedInvoice = (ref: string) => {
+    const linked = invoices.find((inv) => inv.ref === ref);
+    if (linked) {
+      setPreviewInvoice(linked);
+      setDrawerOpen(true);
+    }
+  };
+
   const previewRequest = previewInvoice ? (getRequest(previewInvoice.ref) ?? null) : null;
 
   return (
@@ -44,6 +52,7 @@ export function InvoiceTabContent<T extends InvoiceBase>({
         onOpenChange={setDrawerOpen}
         request={previewRequest}
         readonly={readonly}
+        onViewLinkedInvoice={handleViewLinkedInvoice}
       />
     </div>
   );
