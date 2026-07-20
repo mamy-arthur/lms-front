@@ -19,7 +19,7 @@ import {
 } from '@modules/shared/components/tiptap/ImageInsertDialog';
 import { useTemplateVariablesQuery } from '@/modules/shared/hooks/useTemplateVariablesQuery';
 
-type UploadMediaFn = (file: File) => Promise<{ mediaId: string }>;
+type UploadMediaFn = (file: File) => Promise<{ mediaId: string; src: string }>;
 
 /** Labels affichés pour chaque catégorie de variable. */
 const CATEGORY_LABELS: Record<string, string> = {

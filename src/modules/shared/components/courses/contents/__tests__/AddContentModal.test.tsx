@@ -71,8 +71,6 @@ const MOCK_CONTENT_TYPE: ContentTypeResource = {
   updated_at: '2024-01-01T00:00:00Z',
 };
 
-const SECTION_ID = 'sec-abc';
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function renderModal(

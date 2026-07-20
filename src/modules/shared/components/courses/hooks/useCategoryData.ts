@@ -1,7 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { courseCategoriesApi } from '@/shared/api/courses.api';
 import { courseKeys, courseCategoryKeys } from '@/shared/queries/keys';
-import type { Category } from '../types/index';
 import { mapApiCategory, flattenCategories } from '../lib/course-mappers';
 
 export function useCategoryData() {
