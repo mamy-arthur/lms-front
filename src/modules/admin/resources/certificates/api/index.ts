@@ -1,45 +1,19 @@
-import { apiDelete, apiGet, apiPatch, apiPost, apiUpload } from '@/shared/lib/apiClient';
+import { apiPost } from '@/shared/lib/apiClient';
+import { createResourceApi } from '@modules/shared/lib/createResourceApi';
 import type {
-  // Certificate,
   CreateCertificatePayload,
   PreviewCertificatePayload,
   UpdateCertificatePayload,
 } from '../types';
 
-interface CertificateListResponse {
-  data?: Record<string, unknown>[];
-  total?: number;
-}
-
 interface CertificatePreviewResponse {
   data: { body: string; resolved: boolean };
 }
 
-interface CertificateMediaResponse {
-  data: { id: string; url: string; mime_type: string; original_name: string };
-}
-
 export const adminCertificatesApi = {
-  list: (params?: Record<string, unknown>) =>
-    apiGet<CertificateListResponse>('platform/certificates', params),
-
-  create: (data: CreateCertificatePayload) =>
-    apiPost<{ data: Record<string, unknown> }>(`platform/certificates`, data),
-
-  update: (id: string, data: UpdateCertificatePayload) =>
-    apiPatch<{ data: Record<string, unknown> }>(`platform/certificates/${id}`, data),
-
-  remove: (id: string) => apiDelete(`platform/certificates/${id}`),
-
+  ...createResourceApi<Record<string, unknown>, CreateCertificatePayload, UpdateCertificatePayload>(
+    'platform/certificates',
+  ),
   preview: (id: string, payload: PreviewCertificatePayload) =>
     apiPost<CertificatePreviewResponse>(`platform/certificates/${id}/preview`, payload),
-
-  duplicate: (id: string) =>
-    apiPost<{ data: Record<string, unknown> }>(`platform/certificates/${id}/duplicate`),
-
-  uploadMedia: (file: File) => {
-    const formData = new FormData();
-    formData.append('file', file);
-    return apiUpload<CertificateMediaResponse>(`platform/certificates/media`, formData);
-  },
 };

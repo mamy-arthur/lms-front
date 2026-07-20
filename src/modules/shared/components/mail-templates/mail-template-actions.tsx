@@ -1,6 +1,6 @@
 'use client';
 
-import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { Copy, Eye, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -14,9 +14,17 @@ export interface MailTemplateActionsProps {
   templateLabel: string;
   onEdit?: () => void;
   onDelete?: () => void;
+  onPreview?: () => void;
+  onDuplicate?: () => void;
 }
 
-export function MailTemplateActions({ templateLabel, onEdit, onDelete }: MailTemplateActionsProps) {
+export function MailTemplateActions({
+  templateLabel,
+  onEdit,
+  onDelete,
+  onPreview,
+  onDuplicate,
+}: MailTemplateActionsProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -30,9 +38,18 @@ export function MailTemplateActions({ templateLabel, onEdit, onDelete }: MailTem
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-44">
+        <DropdownMenuItem onClick={() => onPreview?.()}>
+          <Eye className="mr-2 size-3.5 text-muted-foreground" />
+          Aperçu
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
         <DropdownMenuItem onClick={() => onEdit?.()}>
           <Pencil className="mr-2 size-3.5 text-muted-foreground" />
           Modifier
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onDuplicate?.()}>
+          <Copy className="mr-2 size-3.5 text-muted-foreground" />
+          Dupliquer
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem

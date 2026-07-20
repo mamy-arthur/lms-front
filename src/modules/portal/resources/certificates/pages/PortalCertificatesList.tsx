@@ -1,37 +1,28 @@
 'use client';
 
 import { Plus } from 'lucide-react';
-import { useMemo } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { CertificateSearch } from '@modules/shared/components/certificates';
-import { useAllTenantsQuery } from '@/modules/shared/hooks/useAllTenantsQuery';
+import {
+  CertificateSearch,
+  CertificatesFilter,
+  CertificatePreviewDialog,
+} from '@modules/shared/components/certificates';
 import { useModuleListController } from '@/modules/shared/hooks/useModuleListController';
 import { usePortalCertificatesQuery } from '../hooks/usePortalCertificatesQuery';
 import { useDeletePortalCertificate } from '../hooks/useDeletePortalCertificate';
 import type { Certificate } from '../types';
-import { AdminCertificatesFilter } from '@/modules/admin/resources/certificates/pages/_components/admin-certificates-filter';
 import { PortalCertificateFormDrawer } from './_components/portal-certificate-form-drawer';
 import { PortalCertificatesTable } from './_components/portal-certificates-table';
 
 export function PortalCertificatesList() {
   const ctrl = useModuleListController<Certificate>({
-    includeTenantFilter: true,
     defaultPageSize: 25,
   });
 
-  const { data: tenantsData } = useAllTenantsQuery();
-  const tenants = tenantsData?.data ?? [];
-
   const { data, isLoading } = usePortalCertificatesQuery(ctrl.params);
   const deleteMutation = useDeletePortalCertificate();
-
-  const tenantNames = useMemo(() => {
-    const map: Record<string, string> = {};
-    for (const t of tenants) {
-      map[String(t.id)] = t.name;
-    }
-    return map;
-  }, [tenants]);
+  const [previewCert, setPreviewCert] = useState<Certificate | null>(null);
 
   return (
     <div className="bg-background">
@@ -51,17 +42,18 @@ export function PortalCertificatesList() {
           onSearch={ctrl.handleSearch}
         />
         <div className="flex items-center gap-2 sm:ml-auto">
-          <AdminCertificatesFilter
+          <CertificatesFilter
             statusFilter={ctrl.draftCategory[0] ?? 'all'}
-            tenantFilter={ctrl.draftTenant}
+            tenantFilter="all"
             onStatusFilterChange={(v) => ctrl.setDraftCategory([v])}
-            onTenantFilterChange={ctrl.setDraftTenant}
+            onTenantFilterChange={() => {}}
             onSearch={ctrl.handleSearch}
-            tenants={tenants}
+            tenants={[]}
+            showTenantFilter={false}
           />
           <Button
             onClick={ctrl.handleOpenCreate}
-            className="bg-(--color-primary) hover:bg-primary/80 text-primary-foreground shrink-0"
+            className="bg-(--color-primary) hover:bg-(--color-primary)/80 text-primary-foreground shrink-0"
           >
             <Plus className="size-4" />
             Nouvelle attestation
@@ -82,7 +74,7 @@ export function PortalCertificatesList() {
         onPageSizeChange={ctrl.handlePageSizeChange}
         onEdit={ctrl.handleEdit}
         onDelete={(cert) => deleteMutation.mutate(cert.id)}
-        tenantNames={tenantNames}
+        onPreview={setPreviewCert}
       />
 
       <PortalCertificateFormDrawer
@@ -91,6 +83,16 @@ export function PortalCertificatesList() {
         onSuccess={ctrl.handleSuccess}
         certificate={ctrl.editingModule as Certificate | undefined}
       />
+
+      {previewCert && (
+        <CertificatePreviewDialog
+          open={!!previewCert}
+          onClose={() => setPreviewCert(null)}
+          name={previewCert.name}
+          reference={previewCert.reference}
+          body={previewCert.body}
+        />
+      )}
     </div>
   );
 }

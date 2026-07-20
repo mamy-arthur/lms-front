@@ -1,12 +1,8 @@
 'use client';
 
 import { Award, CheckCircle2, XCircle } from 'lucide-react';
-import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
-import {
-  CertificateActions,
-  CertificatePreviewDialog,
-} from '@modules/shared/components/certificates';
+import { CertificateActions } from '@modules/shared/components/certificates';
 import {
   DataTable,
   type DataTableColumn,
@@ -31,6 +27,7 @@ interface AdminCertificatesTableProps {
   onPageSizeChange: (pageSize: number) => void;
   onEdit: (certificate: Certificate) => void;
   onDelete?: (certificate: Certificate) => void;
+  onPreview: (certificate: Certificate) => void;
   tenantNames: Record<string, string>;
 }
 
@@ -47,9 +44,9 @@ export function AdminCertificatesTable({
   onPageSizeChange,
   onEdit,
   onDelete,
+  onPreview,
   tenantNames,
 }: AdminCertificatesTableProps) {
-  const [previewCert, setPreviewCert] = useState<Certificate | null>(null);
   const duplicateMutation = useDuplicateCertificate();
   const columns: DataTableColumn<Certificate>[] = [
     {
@@ -117,13 +114,15 @@ export function AdminCertificatesTable({
       label: 'Actions',
       sortable: false,
       render: (cert) => (
-        <CertificateActions
-          certificateLabel={cert.name}
-          onPreview={() => setPreviewCert(cert)}
-          onEdit={() => onEdit(cert)}
-          onDuplicate={() => duplicateMutation.mutate(cert.id)}
-          onDelete={() => onDelete?.(cert)}
-        />
+        <div onClick={(e) => e.stopPropagation()}>
+          <CertificateActions
+            certificateLabel={cert.name}
+            onPreview={() => onPreview(cert)}
+            onEdit={() => onEdit(cert)}
+            onDuplicate={() => duplicateMutation.mutate(cert.id)}
+            onDelete={() => onDelete?.(cert)}
+          />
+        </div>
       ),
     },
   ];
@@ -142,6 +141,7 @@ export function AdminCertificatesTable({
         onSort={onSort}
         onPageChange={onPageChange}
         onPageSizeChange={onPageSizeChange}
+        onRowClick={(cert) => onPreview(cert)}
         emptyState={{
           icon: <Award className="size-8 text-muted-foreground" />,
           title: 'Aucune attestation',
@@ -149,15 +149,6 @@ export function AdminCertificatesTable({
             'Créez votre première attestation en cliquant sur \u00ab Nouvelle attestation \u00bb.',
         }}
       />
-
-      {previewCert && (
-        <CertificatePreviewDialog
-          open={!!previewCert}
-          onClose={() => setPreviewCert(null)}
-          name={previewCert.name}
-          body={previewCert.body}
-        />
-      )}
     </>
   );
 }

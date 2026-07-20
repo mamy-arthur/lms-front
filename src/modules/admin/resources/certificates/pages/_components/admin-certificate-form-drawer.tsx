@@ -26,7 +26,6 @@ const baseSchema = {
 };
 
 const createSchema = z.object(baseSchema);
-const updateSchema = z.object(baseSchema);
 
 type FormValues = z.infer<typeof createSchema>;
 
@@ -51,7 +50,7 @@ function AdminCertificateFormDrawerBase({
   certificate,
 }: AdminCertificateFormDrawerProps) {
   const isEdit = !!certificate;
-  const { tenant } = useTenant();
+  const { tenant, isLoading: isTenantLoading } = useTenant();
 
   const createMutation = useCreateCertificate();
   const updateMutation = useUpdateCertificate();
@@ -74,7 +73,7 @@ function AdminCertificateFormDrawerBase({
     [uploadFn],
   );
 
-  const schema = isEdit ? updateSchema : createSchema;
+  const schema = createSchema;
 
   const defaultValues = useMemo<FormValues>(() => {
     if (certificate) {
@@ -88,13 +87,21 @@ function AdminCertificateFormDrawerBase({
     return CREATE_DEFAULTS;
   }, [certificate]);
 
+  // Bloque la soumission tant que le tenant n'est pas résolu
+  const pendingMutation = isTenantLoading
+    ? { ...createMutation, isPending: true as const }
+    : createMutation;
+  const pendingUpdateMutation = isTenantLoading
+    ? { ...updateMutation, isPending: true as const }
+    : updateMutation;
+
   const formState = useFormDrawer({
     open,
     onClose,
     onSuccess,
     entity: certificate,
-    createMutation,
-    updateMutation,
+    createMutation: pendingMutation,
+    updateMutation: pendingUpdateMutation,
     schema,
     defaultValues,
     createDefaults: CREATE_DEFAULTS,
@@ -103,7 +110,7 @@ function AdminCertificateFormDrawerBase({
       status: Boolean(values.isActive),
       setasdefault: Boolean(values.isDefaultTemplate),
       body: values.body,
-      tenant_id: tenant?.id ?? '',
+      tenant_id: tenant!.id,
     }),
     buildUpdatePayload: (values, id): { id: string; data: UpdateCertificatePayload } => ({
       id,
@@ -119,7 +126,7 @@ function AdminCertificateFormDrawerBase({
   return (
     <Sheet open={open} onOpenChange={(nextOpen) => !nextOpen && formState.handleClose()}>
       <SheetContent
-        className="flex w-full flex-col gap-0 p-0 sm:max-w-2xl lg:max-w-4xl"
+        className="flex w-full flex-col gap-0 p-0 sm:max-w-150! lg:max-w-200!"
         showCloseButton={true}
         onInteractOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
@@ -135,6 +142,7 @@ function AdminCertificateFormDrawerBase({
           handleClose={formState.handleClose}
           onSubmit={formState.onSubmit}
           toolbarExtras={toolbarExtras}
+          reference={certificate?.reference}
         />
       </SheetContent>
     </Sheet>

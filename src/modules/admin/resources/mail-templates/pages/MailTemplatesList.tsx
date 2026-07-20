@@ -1,12 +1,16 @@
 'use client';
 
 import { Plus } from 'lucide-react';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { MailTemplateSearch } from '@modules/shared/components/mail-templates';
+import {
+  MailTemplateSearch,
+  MailTemplatePreviewDialog,
+} from '@modules/shared/components/mail-templates';
 import { useAllTenantsQuery } from '@/modules/shared/hooks/useAllTenantsQuery';
 import { useModuleListController } from '@/modules/shared/hooks/useModuleListController';
 import { useMailTemplatesQuery } from '../hooks/useMailTemplatesQuery';
+import { useDeleteMailTemplate } from '../hooks/useDeleteMailTemplate';
 import type { MailTemplate } from '../types';
 import { AdminMailTemplateFormDrawer } from './_components/admin-mail-template-form-drawer';
 import { AdminMailTemplatesFilter } from './_components/admin-mail-templates-filter';
@@ -22,6 +26,8 @@ export function MailTemplatesList() {
   const tenants = tenantsData?.data ?? [];
 
   const { data, isLoading } = useMailTemplatesQuery(ctrl.params);
+  const { mutate: deleteTemplate } = useDeleteMailTemplate();
+  const [previewTemplate, setPreviewTemplate] = useState<MailTemplate | null>(null);
 
   const tenantNames = useMemo(() => {
     const map: Record<string, string> = {};
@@ -59,7 +65,7 @@ export function MailTemplatesList() {
           />
           <Button
             onClick={ctrl.handleOpenCreate}
-            className="bg-(--color-primary) hover:bg-primary/80 text-primary-foreground shrink-0"
+            className="bg-(--color-primary) hover:bg-(--color-primary)/80 text-primary-foreground shrink-0"
           >
             <Plus className="size-4" />
             Nouveau template
@@ -79,7 +85,8 @@ export function MailTemplatesList() {
         onPageChange={ctrl.handlePageChange}
         onPageSizeChange={ctrl.handlePageSizeChange}
         onEdit={ctrl.handleEdit}
-        onDelete={() => {}}
+        onDelete={(tpl) => deleteTemplate(tpl.id)}
+        onPreview={setPreviewTemplate}
         tenantNames={tenantNames}
       />
 
@@ -89,6 +96,16 @@ export function MailTemplatesList() {
         onSuccess={ctrl.handleSuccess}
         template={ctrl.editingModule as MailTemplate | undefined}
       />
+
+      {previewTemplate && (
+        <MailTemplatePreviewDialog
+          open={!!previewTemplate}
+          onClose={() => setPreviewTemplate(null)}
+          name={previewTemplate.name}
+          reference={previewTemplate.reference}
+          body={previewTemplate.body}
+        />
+      )}
     </div>
   );
 }

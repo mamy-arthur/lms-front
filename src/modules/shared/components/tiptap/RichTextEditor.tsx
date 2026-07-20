@@ -1,4 +1,4 @@
-import { useState, useEffect, type ReactNode } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef, useCallback, type ReactNode } from 'react';
 import { useEditor, useEditorState, EditorContent, type Editor } from '@tiptap/react';
 import { DOMParser as PmDOMParser } from '@tiptap/pm/model';
 import StarterKit from '@tiptap/starter-kit';
@@ -43,9 +43,9 @@ declare module '@tiptap/core' {
     };
   }
 }
-const ALIGN_STYLES: Record<string, string> = {
+export const ALIGN_STYLES: Record<string, string> = {
   left: 'float: left; margin: 0 1em 0.5em 0;',
-  center: 'display: block; margin: 0 auto 0.5em; clear: both;',
+  center: 'display: block; margin: 0 auto 1em; float: none;',
   right: 'float: right; margin: 0 0 0.5em 1em;',
 };
 
@@ -71,9 +71,12 @@ const ExtendedImage = Image.extend({
           if (style.includes('margin: 0 auto') || style.includes('margin:0 auto')) return 'center';
           return 'left';
         },
-        renderHTML: (attrs) => ({
-          style: ALIGN_STYLES[attrs.align as string] ?? ALIGN_STYLES.left,
-        }),
+        renderHTML: (attrs) => {
+          const base = ALIGN_STYLES[attrs.align as string] ?? ALIGN_STYLES.left;
+          const w = attrs.width ? ` width: ${attrs.width}px;` : '';
+          const h = attrs.height ? ` height: ${attrs.height}px;` : '';
+          return { style: base + w + h };
+        },
       },
       dataMediaId: {
         default: null,
@@ -97,8 +100,14 @@ type Props = {
    * - `'html'` : HTML brut (pour attestations et templates mail)
    */
   outputFormat?: 'markdown' | 'html';
-  /** Boutons optionnels ajoutés à la fin de la toolbar. Reçoit l'instance editor. */
-  toolbarExtras?: (editor: Editor) => ReactNode;
+  /** Boutons optionnels ajoutés à la fin de la toolbar. Reçoit l'instance editor.
+   * En mode `html`, un second argument `ctx` est fourni :
+   * - `ctx.insertHtml`  : insère du HTML brut dans le contenteditable
+   * - `ctx.insertText`  : insère du texte brut (variables) sans risque d'interprétation HTML */
+  toolbarExtras?: (
+    editor: Editor,
+    ctx?: { insertHtml: (html: string) => void; insertText: (text: string) => void },
+  ) => ReactNode;
 };
 
 function ToolbarButton({
@@ -387,8 +396,6 @@ export function RichTextEditor({
           '[&_pre]:rounded [&_pre]:bg-[#1e1e1e] [&_pre]:text-[#d4d4d4] [&_pre]:p-4 [&_pre]:text-xs [&_pre]:font-mono [&_pre]:overflow-x-auto',
           '[&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_pre_code]:text-inherit',
           '[&_a]:text-primary [&_a]:underline',
-          // overflow-hidden crée un BFC : le texte ne passe pas sous le float
-          '[&_p]:overflow-hidden',
         ),
       },
       // Mode HTML : on intercepte TOUJOURS le coller si le text/plain contient
@@ -409,47 +416,173 @@ export function RichTextEditor({
           : undefined,
     },
     onUpdate: ({ editor }) => {
-      onChange(outputFormat === 'html' ? editor.getHTML() : editor.storage.markdown.getMarkdown());
+      // En mode HTML le contenu est géré via le div contenteditable, pas TipTap.
+      if (outputFormat === 'html') return;
+      onChange(editor.storage.markdown.getMarkdown());
     },
   });
 
-  // Synchronise les changements externes de `value` vers l'éditeur
-  // (ex : form.reset lors de l'ouverture du drawer en mode édition)
+  // Synchronise les changements externes de `value` vers l'éditeur markdown.
+  // En mode HTML, TipTap n'est pas affiché : on ne passe jamais par setContent
+  // pour éviter que le schéma ProseMirror ne dénature les styles/divs custom.
   useEffect(() => {
-    if (!editor) return;
-    const current =
-      outputFormat === 'html' ? editor.getHTML() : editor.storage.markdown.getMarkdown();
+    if (!editor || outputFormat === 'html') return;
+    const current = editor.storage.markdown.getMarkdown();
     if (current !== value) {
       editor.commands.setContent(value ?? '', { emitUpdate: false });
     }
     // biome-ignore lint/correctness/useExhaustiveDependencies: outputFormat is a stable prop
   }, [value, editor]);
 
+  // Sync externe value → div contenteditable (mode HTML uniquement).
+  const htmlPreviewRef = useRef<HTMLDivElement>(null);
+  // Ref pour la textarea en mode source.
+  const sourceTextareaRef = useRef<HTMLTextAreaElement>(null);
+  // Toujours à jour pendant le render : utilisé dans la callback ref ci-dessous.
+  const latestValueRef = useRef(value);
+  latestValueRef.current = value;
+
+  // Sauvegarde du dernier range de sélection dans le contenteditable.
+  // Nécessaire car l'ouverture du dialog image fait perdre le focus (et donc
+  // la sélection) avant qu'on appelle insertHtmlAtCursor.
+  const savedRangeRef = useRef<Range | null>(null);
+
+  const saveSelection = () => {
+    const sel = window.getSelection();
+    const el = htmlPreviewRef.current;
+    if (sel && sel.rangeCount > 0 && el && el.contains(sel.getRangeAt(0).commonAncestorContainer)) {
+      savedRangeRef.current = sel.getRangeAt(0).cloneRange();
+    }
+  };
+
+  // Callback ref : appelé immédiatement à chaque montage du div (même quand
+  // TipTap s'initialise en différé ou quand sourceMode bascule).
+  // Grâce à latestValueRef, la valeur est toujours celle du dernier render.
+  const htmlPreviewCallbackRef = useCallback((el: HTMLDivElement | null) => {
+    (htmlPreviewRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
+    if (el) {
+      el.innerHTML = latestValueRef.current ?? '';
+    }
+  }, []); // stable — latestValueRef mis à jour inline à chaque render
+
+  // Sync value → div quand la valeur change depuis le parent (ex : form.reset)
+  // mais que l'utilisateur n'est pas en train d'éditer.
+  useLayoutEffect(() => {
+    if (outputFormat !== 'html' || sourceMode) return;
+    const el = htmlPreviewRef.current;
+    if (!el || document.activeElement === el) return;
+    if (el.innerHTML !== value) {
+      el.innerHTML = value ?? '';
+    }
+  }, [value, outputFormat, sourceMode]);
+
   if (!editor) return null;
+
+  // En mode HTML, insère du HTML à la position sauvegardée dans le contenteditable.
+  const insertHtmlAtCursor = (html: string) => {
+    const el = htmlPreviewRef.current;
+    if (!el) return;
+    el.focus();
+    const savedRange = savedRangeRef.current;
+    if (savedRange && el.contains(savedRange.commonAncestorContainer)) {
+      const sel = window.getSelection();
+      sel?.removeAllRanges();
+      sel?.addRange(savedRange);
+      savedRange.deleteContents();
+      const frag = document.createRange().createContextualFragment(html);
+      savedRange.insertNode(frag);
+      sel?.collapseToEnd();
+      savedRangeRef.current = null;
+    } else {
+      el.insertAdjacentHTML('beforeend', html);
+    }
+    onChange(el.innerHTML);
+  };
+
+  // En mode HTML, insère du texte brut (pas parsé comme HTML) à la position sauvegardée.
+  // Utilisé pour les variables `{{user.name}}` qui ne doivent pas être interprétées.
+  const insertTextAtCursor = (text: string) => {
+    const el = htmlPreviewRef.current;
+    if (!el) return;
+    el.focus();
+    const savedRange = savedRangeRef.current;
+    const textNode = document.createTextNode(text);
+    if (savedRange && el.contains(savedRange.commonAncestorContainer)) {
+      const sel = window.getSelection();
+      sel?.removeAllRanges();
+      sel?.addRange(savedRange);
+      savedRange.deleteContents();
+      savedRange.insertNode(textNode);
+      sel?.collapseToEnd();
+      savedRangeRef.current = null;
+    } else {
+      el.appendChild(textNode);
+    }
+    onChange(el.innerHTML);
+  };
+
+  // En mode source, insère du texte (HTML ou variable) à la position du curseur dans la textarea.
+  const insertIntoSource = (text: string) => {
+    const el = sourceTextareaRef.current;
+    if (!el) return;
+    const start = el.selectionStart ?? sourceValue.length;
+    const end = el.selectionEnd ?? start;
+    const next = sourceValue.slice(0, start) + text + sourceValue.slice(end);
+    setSourceValue(next);
+    onChange(next);
+    // Repositionne le curseur après le texte inséré.
+    requestAnimationFrame(() => {
+      el.focus();
+      el.setSelectionRange(start + text.length, start + text.length);
+    });
+  };
+
+  // Wrapper pour toolbarExtras : en mode HTML, passe les deux helpers en contexte.
+  const wrappedToolbarExtras = toolbarExtras
+    ? outputFormat === 'html'
+      ? (editor: Editor) =>
+          toolbarExtras(editor, {
+            insertHtml: sourceMode ? insertIntoSource : insertHtmlAtCursor,
+            insertText: sourceMode ? insertIntoSource : insertTextAtCursor,
+          })
+      : toolbarExtras
+    : undefined;
 
   const handleToggleSource = () => {
     if (!sourceMode) {
-      // Passe en mode source : exporte le HTML actuel dans la textarea
-      setSourceValue(editor.getHTML());
+      // Passe en mode source : pour le mode HTML on utilise `value` directement
+      // (évite que getHTML() retourne un HTML dénaturé par le schéma ProseMirror).
+      setSourceValue(outputFormat === 'html' ? value : editor.getHTML());
       setSourceMode(true);
     } else {
-      // Revient en mode WYSIWYG : parse le HTML de la textarea
-      editor.commands.setContent(sourceValue, { emitUpdate: false });
-      onChange(editor.getHTML());
+      if (outputFormat === 'html') {
+        // Mode HTML : on NE repasse PAS par TipTap (son schéma ProseMirror supprime
+        // les styles, divs arbitraires, etc.). On appelle simplement onChange et on
+        // affiche un preview via dangerouslySetInnerHTML.
+        onChange(sourceValue);
+      } else {
+        // Mode markdown : repasse dans TipTap WYSIWYG normalement.
+        editor.commands.setContent(sourceValue, { emitUpdate: false });
+        onChange(editor.getHTML());
+      }
       setSourceMode(false);
     }
   };
 
   const handleExpand = () => {
-    setExpandedContent(
-      outputFormat === 'html' ? editor.getHTML() : editor.storage.markdown.getMarkdown(),
-    );
+    // En mode HTML, utiliser `value` directement pour ne pas passer
+    // par editor.getHTML() qui dégraderait le HTML via ProseMirror.
+    setExpandedContent(outputFormat === 'html' ? value : editor.storage.markdown.getMarkdown());
     setIsExpanded(true);
   };
 
   const handleApply = () => {
     onChange(expandedContent);
-    editor.commands.setContent(expandedContent);
+    // En mode HTML, ne pas repasser par setContent (ProseMirror supprimerait
+    // les styles/divs custom). Le useEffect de sync htmlPreviewRef s'en charge.
+    if (outputFormat !== 'html') {
+      editor.commands.setContent(expandedContent);
+    }
     setIsExpanded(false);
   };
 
@@ -462,13 +595,14 @@ export function RichTextEditor({
       <div className={cn('flex flex-col', className)}>
         <Toolbar
           editor={editor}
-          extras={toolbarExtras}
+          extras={wrappedToolbarExtras}
           onExpand={expandable ? handleExpand : undefined}
           onToggleSource={outputFormat === 'html' ? handleToggleSource : undefined}
           sourceMode={sourceMode}
         />
         {sourceMode ? (
           <textarea
+            ref={sourceTextareaRef}
             className="min-h-32 w-full rounded-b-md border bg-[#1e1e1e] text-[#d4d4d4] font-mono text-xs px-3 py-2 resize-y focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             value={sourceValue}
             onChange={(e) => {
@@ -476,6 +610,25 @@ export function RichTextEditor({
               onChange(e.target.value);
             }}
             spellCheck={false}
+          />
+        ) : outputFormat === 'html' ? (
+          // Contenteditable brut : le navigateur conserve le HTML tel quel
+          // (styles inline, divs arbitraires, position:absolute…) sans jamais
+          // passer par le schéma ProseMirror qui supprimerait tout cela.
+          // La valeur initiale est injectée via ref/useEffect pour éviter
+          // les conflits de cursor avec dangerouslySetInnerHTML.
+          <div
+            ref={htmlPreviewCallbackRef}
+            contentEditable
+            suppressContentEditableWarning
+            onInput={(e) => onChange((e.currentTarget as HTMLDivElement).innerHTML)}
+            onSelect={saveSelection}
+            onMouseUp={saveSelection}
+            onKeyUp={saveSelection}
+            className={cn(
+              'min-h-32 w-full rounded-b-md border bg-background px-3 py-2 text-sm overflow-auto',
+              'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
+            )}
           />
         ) : (
           <EditorContent editor={editor} />

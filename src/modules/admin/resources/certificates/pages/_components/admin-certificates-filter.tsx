@@ -1,6 +1,6 @@
 'use client';
 
-import { Filter, Search } from 'lucide-react';
+import { Search, Settings2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -20,6 +20,7 @@ interface AdminCertificatesFilterProps {
   onTenantFilterChange: (value: string) => void;
   onSearch: () => void;
   tenants: Tenant[];
+  showTenantFilter?: boolean;
 }
 
 export function AdminCertificatesFilter({
@@ -29,12 +30,13 @@ export function AdminCertificatesFilter({
   onTenantFilterChange,
   onSearch,
   tenants,
+  showTenantFilter = true,
 }: AdminCertificatesFilterProps) {
   return (
     <Popover>
       <PopoverTrigger asChild>
         <Button variant="outline" size="sm">
-          <Filter className="size-4" />
+          <Settings2 className="size-4" />
           Filtres
         </Button>
       </PopoverTrigger>
@@ -54,22 +56,24 @@ export function AdminCertificatesFilter({
             </Select>
           </div>
 
-          <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground">Tenant</Label>
-            <Select value={tenantFilter} onValueChange={onTenantFilterChange}>
-              <SelectTrigger aria-label="Filtrer par tenant" className="w-full">
-                <SelectValue placeholder="Tous les tenants" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tous</SelectItem>
-                {tenants.map((t) => (
-                  <SelectItem key={t.id} value={t.id}>
-                    {t.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {showTenantFilter && (
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Tenant</Label>
+              <Select value={tenantFilter} onValueChange={onTenantFilterChange}>
+                <SelectTrigger aria-label="Filtrer par tenant" className="w-full">
+                  <SelectValue placeholder="Tous les tenants" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tous</SelectItem>
+                  {tenants.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>
+                      {t.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <Button size="sm" className="w-full" onClick={onSearch}>
             <Search className="mr-2 size-3.5" />

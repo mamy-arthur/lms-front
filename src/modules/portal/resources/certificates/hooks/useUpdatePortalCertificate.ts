@@ -1,16 +1,9 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { makeUpdateMutation } from '@modules/shared/hooks/resourceMutations';
 import { portalCertificatesApi } from '../api';
 import type { UpdateCertificatePayload } from '../types';
 import { PORTAL_CERTIFICATES_QUERY_KEY } from './usePortalCertificatesQuery';
 
-export function useUpdatePortalCertificate() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: UpdateCertificatePayload }) =>
-      portalCertificatesApi.update(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: PORTAL_CERTIFICATES_QUERY_KEY });
-    },
-  });
-}
+export const useUpdatePortalCertificate = makeUpdateMutation<UpdateCertificatePayload>(
+  portalCertificatesApi,
+  PORTAL_CERTIFICATES_QUERY_KEY,
+);

@@ -1,18 +1,13 @@
 'use client';
 
 import { Award, CheckCircle2, XCircle } from 'lucide-react';
-import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
-import {
-  CertificateActions,
-  CertificatePreviewDialog,
-} from '@modules/shared/components/certificates';
+import { CertificateActions } from '@modules/shared/components/certificates';
 import {
   DataTable,
   type DataTableColumn,
   type DataTableSort,
 } from '@/shared/components/ui/DataTable';
-import { formatDate } from '@/shared/lib/date';
 import { useDuplicatePortalCertificate } from '../../hooks/useDuplicatePortalCertificate';
 import type { Certificate } from '../../types';
 
@@ -31,7 +26,7 @@ interface PortalCertificatesTableProps {
   onPageSizeChange: (pageSize: number) => void;
   onEdit: (certificate: Certificate) => void;
   onDelete?: (certificate: Certificate) => void;
-  tenantNames: Record<string, string>;
+  onPreview: (certificate: Certificate) => void;
 }
 
 export function PortalCertificatesTable({
@@ -47,9 +42,8 @@ export function PortalCertificatesTable({
   onPageSizeChange,
   onEdit,
   onDelete,
-  tenantNames,
+  onPreview,
 }: PortalCertificatesTableProps) {
-  const [previewCert, setPreviewCert] = useState<Certificate | null>(null);
   const duplicateMutation = useDuplicatePortalCertificate();
   const columns: DataTableColumn<Certificate>[] = [
     {
@@ -84,46 +78,31 @@ export function PortalCertificatesTable({
       sortable: false,
       render: (cert) =>
         cert.isDefaultTemplate ? (
-          <Badge variant="outline" className="gap-1 border-blue-200 bg-blue-50 text-blue-700">
+          <Badge
+            variant="outline"
+            className="gap-1 border-blue-200 bg-blue-50 text-blue-700 text-center"
+          >
             <CheckCircle2 className="size-3" />
             Oui
           </Badge>
         ) : (
-          <span className="text-xs text-muted-foreground">Non</span>
+          <span className="text-xs text-muted-foreground text-center">Non</span>
         ),
-    },
-    {
-      key: 'tenantId',
-      label: 'Tenant',
-      sortable: true,
-      render: (cert) => (
-        <span className="text-xs text-muted-foreground">
-          {tenantNames[cert.tenantId] || cert.tenantId || '—'}
-        </span>
-      ),
-    },
-    {
-      key: 'updatedAt',
-      label: 'Mis à jour',
-      sortable: true,
-      render: (cert) => (
-        <span className="text-xs text-muted-foreground tabular-nums">
-          {formatDate(cert.updatedAt)}
-        </span>
-      ),
     },
     {
       key: 'id',
       label: 'Actions',
       sortable: false,
       render: (cert) => (
-        <CertificateActions
-          certificateLabel={cert.name}
-          onPreview={() => setPreviewCert(cert)}
-          onEdit={() => onEdit(cert)}
-          onDuplicate={() => duplicateMutation.mutate(cert.id)}
-          onDelete={() => onDelete?.(cert)}
-        />
+        <div onClick={(e) => e.stopPropagation()}>
+          <CertificateActions
+            certificateLabel={cert.name}
+            onPreview={() => onPreview(cert)}
+            onEdit={() => onEdit(cert)}
+            onDuplicate={() => duplicateMutation.mutate(cert.id)}
+            onDelete={() => onDelete?.(cert)}
+          />
+        </div>
       ),
     },
   ];
@@ -142,21 +121,13 @@ export function PortalCertificatesTable({
         onSort={onSort}
         onPageChange={onPageChange}
         onPageSizeChange={onPageSizeChange}
+        onRowClick={(cert) => onPreview(cert)}
         emptyState={{
           icon: <Award className="size-8 text-muted-foreground" />,
           title: 'Aucune attestation',
           description: "Vous n'avez pas encore d'attestation disponible.",
         }}
       />
-
-      {previewCert && (
-        <CertificatePreviewDialog
-          open={!!previewCert}
-          onClose={() => setPreviewCert(null)}
-          name={previewCert.name}
-          body={previewCert.body}
-        />
-      )}
     </>
   );
 }

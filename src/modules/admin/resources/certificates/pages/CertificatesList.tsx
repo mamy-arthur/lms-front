@@ -1,16 +1,19 @@
 'use client';
 
 import { Plus } from 'lucide-react';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { CertificateSearch } from '@modules/shared/components/certificates';
+import {
+  CertificateSearch,
+  CertificatesFilter,
+  CertificatePreviewDialog,
+} from '@modules/shared/components/certificates';
 import { useAllTenantsQuery } from '@/modules/shared/hooks/useAllTenantsQuery';
 import { useModuleListController } from '@/modules/shared/hooks/useModuleListController';
 import { useCertificatesQuery } from '../hooks/useCertificatesQuery';
 import { useDeleteCertificate } from '../hooks/useDeleteCertificate';
 import type { Certificate } from '../types';
 import { AdminCertificateFormDrawer } from './_components/admin-certificate-form-drawer';
-import { AdminCertificatesFilter } from './_components/admin-certificates-filter';
 import { AdminCertificatesTable } from './_components/admin-certificates-table';
 
 export function CertificatesList() {
@@ -24,6 +27,7 @@ export function CertificatesList() {
 
   const { data, isLoading } = useCertificatesQuery(ctrl.params);
   const deleteMutation = useDeleteCertificate();
+  const [previewCert, setPreviewCert] = useState<Certificate | null>(null);
 
   const tenantNames = useMemo(() => {
     const map: Record<string, string> = {};
@@ -51,7 +55,7 @@ export function CertificatesList() {
           onSearch={ctrl.handleSearch}
         />
         <div className="flex items-center gap-2 sm:ml-auto">
-          <AdminCertificatesFilter
+          <CertificatesFilter
             statusFilter={ctrl.draftCategory[0] ?? 'all'}
             tenantFilter={ctrl.draftTenant}
             onStatusFilterChange={(v) => ctrl.setDraftCategory([v])}
@@ -61,7 +65,7 @@ export function CertificatesList() {
           />
           <Button
             onClick={ctrl.handleOpenCreate}
-            className="bg-(--color-primary) hover:bg-primary/80 text-primary-foreground shrink-0"
+            className="bg-(--color-primary) hover:bg-(--color-primary)/80 text-primary-foreground shrink-0"
           >
             <Plus className="size-4" />
             Nouvelle attestation
@@ -82,6 +86,7 @@ export function CertificatesList() {
         onPageSizeChange={ctrl.handlePageSizeChange}
         onEdit={ctrl.handleEdit}
         onDelete={(cert) => deleteMutation.mutate(cert.id)}
+        onPreview={setPreviewCert}
         tenantNames={tenantNames}
       />
 
@@ -91,6 +96,16 @@ export function CertificatesList() {
         onSuccess={ctrl.handleSuccess}
         certificate={ctrl.editingModule as Certificate | undefined}
       />
+
+      {previewCert && (
+        <CertificatePreviewDialog
+          open={!!previewCert}
+          onClose={() => setPreviewCert(null)}
+          name={previewCert.name}
+          reference={previewCert.reference}
+          body={previewCert.body}
+        />
+      )}
     </div>
   );
 }

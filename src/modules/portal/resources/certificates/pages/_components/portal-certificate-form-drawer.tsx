@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useMemo } from 'react';
+import { memo, useCallback, useMemo } from 'react';
 import { z } from 'zod';
 import {
   Sheet,
@@ -15,6 +15,7 @@ import { makeCertificateToolbarExtras } from '@modules/shared/components/certifi
 import { useTenant } from '@/shared/hooks/useTenant';
 import { useCreatePortalCertificate } from '../../hooks/useCreatePortalCertificate';
 import { useUpdatePortalCertificate } from '../../hooks/useUpdatePortalCertificate';
+import { useUploadPortalCertificateMedia } from '../../hooks/useUploadPortalCertificateMedia';
 import type { Certificate, CreateCertificatePayload, UpdateCertificatePayload } from '../../types';
 
 const baseSchema = {
@@ -25,7 +26,6 @@ const baseSchema = {
 };
 
 const createSchema = z.object(baseSchema);
-const updateSchema = z.object(baseSchema);
 
 type FormValues = z.infer<typeof createSchema>;
 
@@ -50,17 +50,26 @@ function PortalCertificateFormDrawerBase({
   certificate,
 }: PortalCertificateFormDrawerProps) {
   const isEdit = !!certificate;
-  const { tenant } = useTenant();
+  const { tenant, isLoading: isTenantLoading } = useTenant();
 
   const createMutation = useCreatePortalCertificate();
   const updateMutation = useUpdatePortalCertificate();
+  const uploadMedia = useUploadPortalCertificateMedia();
 
-  const toolbarExtras = useMemo(
-    () => makeCertificateToolbarExtras({ apiPath: 'template-variables' }),
-    [],
+  const uploadFn = useCallback(
+    async (file: File) => {
+      const { data } = await uploadMedia.mutateAsync(file);
+      return { mediaId: data.id, src: data.url };
+    },
+    [uploadMedia.mutateAsync],
   );
 
-  const schema = isEdit ? updateSchema : createSchema;
+  const toolbarExtras = useMemo(
+    () => makeCertificateToolbarExtras({ uploadMedia: uploadFn, apiPath: 'template-variables' }),
+    [uploadFn],
+  );
+
+  const schema = createSchema;
 
   const defaultValues = useMemo<FormValues>(() => {
     if (certificate) {
@@ -74,13 +83,21 @@ function PortalCertificateFormDrawerBase({
     return CREATE_DEFAULTS;
   }, [certificate]);
 
+  // Bloque la soumission tant que le tenant n'est pas résolu
+  const pendingMutation = isTenantLoading
+    ? { ...createMutation, isPending: true as const }
+    : createMutation;
+  const pendingUpdateMutation = isTenantLoading
+    ? { ...updateMutation, isPending: true as const }
+    : updateMutation;
+
   const formState = useFormDrawer({
     open,
     onClose,
     onSuccess,
     entity: certificate,
-    createMutation,
-    updateMutation,
+    createMutation: pendingMutation,
+    updateMutation: pendingUpdateMutation,
     schema,
     defaultValues,
     createDefaults: CREATE_DEFAULTS,
@@ -89,7 +106,7 @@ function PortalCertificateFormDrawerBase({
       status: Boolean(values.isActive),
       setasdefault: Boolean(values.isDefaultTemplate),
       body: values.body,
-      tenant_id: tenant?.id ?? '',
+      tenant_id: tenant!.id,
     }),
     buildUpdatePayload: (values, id): { id: string; data: UpdateCertificatePayload } => ({
       id,
@@ -105,7 +122,7 @@ function PortalCertificateFormDrawerBase({
   return (
     <Sheet open={open} onOpenChange={(nextOpen) => !nextOpen && formState.handleClose()}>
       <SheetContent
-        className="flex w-full flex-col gap-0 p-0 sm:max-w-2xl lg:max-w-4xl"
+        className="flex w-full flex-col gap-0 p-0 sm:max-w-150! lg:max-w-200!"
         showCloseButton={true}
         onInteractOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
@@ -121,6 +138,7 @@ function PortalCertificateFormDrawerBase({
           handleClose={formState.handleClose}
           onSubmit={formState.onSubmit}
           toolbarExtras={toolbarExtras}
+          reference={certificate?.reference}
         />
       </SheetContent>
     </Sheet>

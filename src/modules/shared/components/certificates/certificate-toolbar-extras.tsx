@@ -17,6 +17,7 @@ import {
   ImageInsertDialog,
   type ImageConfirmAttrs,
 } from '@modules/shared/components/tiptap/ImageInsertDialog';
+import { ALIGN_STYLES } from '@modules/shared/components/tiptap/RichTextEditor';
 import { useTemplateVariablesQuery } from '@/modules/shared/hooks/useTemplateVariablesQuery';
 
 type UploadMediaFn = (file: File) => Promise<{ mediaId: string; src: string }>;
@@ -33,10 +34,14 @@ function CertificateToolbarExtrasComponent({
   editor,
   uploadMedia,
   apiPath,
+  insertHtml,
+  insertText,
 }: {
   editor: Editor;
   uploadMedia?: UploadMediaFn;
   apiPath: string;
+  insertHtml?: (html: string) => void;
+  insertText?: (text: string) => void;
 }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const { data } = useTemplateVariablesQuery(apiPath, 'attestation');
@@ -44,10 +49,29 @@ function CertificateToolbarExtrasComponent({
 
   /** La clé du backend inclut déjà `{{…}}`, on l'insère directement. */
   const insertVariable = (key: string) => {
+    if (insertText) {
+      insertText(key);
+      return;
+    }
     editor.chain().focus().insertContent(key).run();
   };
 
   const handleConfirm = ({ src, alt, width, height, align, mediaId }: ImageConfirmAttrs) => {
+    if (insertHtml) {
+      // Mode HTML brut : construire le tag <img> directement sans passer par ProseMirror.
+      const alignStyle = ALIGN_STYLES[align] ?? ALIGN_STYLES.left;
+      const sizeStyle =
+        `${width ? `width: ${width}px; ` : ''}${height ? `height: ${height}px;` : ''}`.trim();
+      const style = sizeStyle ? `${alignStyle} ${sizeStyle}` : alignStyle;
+      const widthAttr = width ? ` width="${width}"` : '';
+      const heightAttr = height ? ` height="${height}"` : '';
+      const mediaAttr = mediaId ? ` data-media-id="${mediaId}"` : '';
+      insertHtml(
+        `<img src="${src}" alt="${alt}"${widthAttr}${heightAttr} style="${style}"${mediaAttr}>`,
+      );
+      return;
+    }
+    // Mode markdown/TipTap normal.
     (
       editor.chain().focus() as unknown as {
         setImage: (attrs: {
@@ -119,16 +143,23 @@ function CertificateToolbarExtrasComponent({
 export function makeCertificateToolbarExtras(options?: {
   uploadMedia?: UploadMediaFn;
   apiPath?: string;
-}): (editor: Editor) => ReactNode {
+}): (
+  editor: Editor,
+  ctx?: { insertHtml: (html: string) => void; insertText: (text: string) => void },
+) => ReactNode {
   const { uploadMedia, apiPath = 'template-variables' } = options ?? {};
-  return (editor: Editor) => (
+  return (
+    editor: Editor,
+    ctx?: { insertHtml: (html: string) => void; insertText: (text: string) => void },
+  ) => (
     <CertificateToolbarExtrasComponent
       editor={editor}
       uploadMedia={uploadMedia}
       apiPath={apiPath}
+      insertHtml={ctx?.insertHtml}
+      insertText={ctx?.insertText}
     />
   );
 }
 
 /** Version portail (sans upload, route tenant). */
-export const certificateToolbarExtras = makeCertificateToolbarExtras();

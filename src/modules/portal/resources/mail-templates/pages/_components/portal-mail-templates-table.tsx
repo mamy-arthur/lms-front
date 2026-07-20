@@ -8,7 +8,7 @@ import {
   type DataTableColumn,
   type DataTableSort,
 } from '@/shared/components/ui/DataTable';
-
+import { useDuplicatePortalMailTemplate } from '../../hooks/useDuplicatePortalMailTemplate';
 import type { MailTemplate } from '../../types';
 
 export type SortConfig = DataTableSort;
@@ -26,6 +26,7 @@ interface PortalMailTemplatesTableProps {
   onPageSizeChange: (pageSize: number) => void;
   onEdit: (template: MailTemplate) => void;
   onDelete?: (template: MailTemplate) => void;
+  onPreview: (template: MailTemplate) => void;
 }
 
 export function PortalMailTemplatesTable({
@@ -41,7 +42,9 @@ export function PortalMailTemplatesTable({
   onPageSizeChange,
   onEdit,
   onDelete,
+  onPreview,
 }: PortalMailTemplatesTableProps) {
+  const duplicateMutation = useDuplicatePortalMailTemplate();
   const columns: DataTableColumn<MailTemplate>[] = [
     {
       key: 'name',
@@ -82,33 +85,40 @@ export function PortalMailTemplatesTable({
       label: 'Actions',
       sortable: false,
       render: (tpl) => (
-        <MailTemplateActions
-          templateLabel={tpl.name}
-          onEdit={() => onEdit(tpl)}
-          onDelete={() => onDelete?.(tpl)}
-        />
+        <div onClick={(e) => e.stopPropagation()}>
+          <MailTemplateActions
+            templateLabel={tpl.name}
+            onPreview={() => onPreview(tpl)}
+            onEdit={() => onEdit(tpl)}
+            onDuplicate={() => duplicateMutation.mutate(tpl.id)}
+            onDelete={() => onDelete?.(tpl)}
+          />
+        </div>
       ),
     },
   ];
 
   return (
-    <DataTable
-      data={templates}
-      columns={columns}
-      isLoading={isLoading}
-      hasQuery={hasQuery}
-      page={page}
-      pageSize={pageSize}
-      total={total}
-      sort={sort}
-      onSort={onSort}
-      onPageChange={onPageChange}
-      onPageSizeChange={onPageSizeChange}
-      emptyState={{
-        icon: <Mail className="size-8 text-muted-foreground" />,
-        title: 'Aucun template mail',
-        description: 'Créez votre premier template mail en cliquant sur « Nouveau template ».',
-      }}
-    />
+    <>
+      <DataTable
+        data={templates}
+        columns={columns}
+        isLoading={isLoading}
+        hasQuery={hasQuery}
+        page={page}
+        pageSize={pageSize}
+        total={total}
+        sort={sort}
+        onSort={onSort}
+        onPageChange={onPageChange}
+        onPageSizeChange={onPageSizeChange}
+        onRowClick={(tpl) => onPreview(tpl)}
+        emptyState={{
+          icon: <Mail className="size-8 text-muted-foreground" />,
+          title: 'Aucun template mail',
+          description: 'Créez votre premier template mail en cliquant sur « Nouveau template ».',
+        }}
+      />
+    </>
   );
 }

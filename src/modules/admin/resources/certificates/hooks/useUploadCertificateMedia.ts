@@ -1,8 +1,4 @@
-import { useMutation } from '@tanstack/react-query';
+import { makeUploadMediaMutation } from '@modules/shared/hooks/resourceMutations';
 import { adminCertificatesApi } from '../api';
 
-export function useUploadCertificateMedia() {
-  return useMutation({
-    mutationFn: (file: File) => adminCertificatesApi.uploadMedia(file),
-  });
-}
+export const useUploadCertificateMedia = makeUploadMediaMutation(adminCertificatesApi);
