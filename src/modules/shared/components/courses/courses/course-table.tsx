@@ -57,7 +57,7 @@ export function CourseTable({ basePath }: Props) {
       return (
         c.fullName.toLowerCase().includes(q) ||
         c.shortName.toLowerCase().includes(q) ||
-        c.identifier.toLowerCase().includes(q)
+        (c.identifier ?? '').toLowerCase().includes(q)
       );
     });
   }, [courses, query, categoryFilter]);
@@ -110,7 +110,7 @@ export function CourseTable({ basePath }: Props) {
           </Select>
           <Button
             onClick={() => setCourseDrawer({ open: true, course: null })}
-            className="bg-(--color-primary) hover:bg-primary/80 text-primary-foreground"
+            className="bg-(--color-primary) hover:bg-(--color-primary)/80 text-primary-foreground"
           >
             <Plus className="mr-1 size-4" />
             Nouveau cours
@@ -197,10 +197,14 @@ export function CourseTable({ basePath }: Props) {
             <AlertDialogCancel>Annuler</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => {
+              onClick={async () => {
                 if (confirmDelete) {
-                  deleteCourse(confirmDelete.id);
-                  toast.success('Cours supprimé');
+                  try {
+                    await deleteCourse(confirmDelete.id);
+                    toast.success('Cours supprimé');
+                  } catch {
+                    toast.error('Erreur lors de la suppression');
+                  }
                 }
                 setConfirmDelete(null);
               }}

@@ -60,7 +60,7 @@ function AdminCertificateFormDrawerBase({
   const uploadFn = useCallback(
     async (file: File) => {
       const { data } = await uploadMedia.mutateAsync(file);
-      return { mediaId: data.id };
+      return { mediaId: data.id, src: data.url };
     },
     [uploadMedia.mutateAsync],
   );

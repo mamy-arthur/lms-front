@@ -16,7 +16,7 @@ interface CertificatePreviewResponse {
 }
 
 interface CertificateMediaResponse {
-  data: { id: string; mime_type: string; original_name: string };
+  data: { id: string; url: string; mime_type: string; original_name: string };
 }
 
 export const adminCertificatesApi = {

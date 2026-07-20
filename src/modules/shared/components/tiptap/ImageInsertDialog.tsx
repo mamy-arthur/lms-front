@@ -48,8 +48,8 @@ interface ImageInsertDialogProps {
   onClose: () => void;
   onConfirm: (attrs: ImageConfirmAttrs) => void;
   /** Si fourni, les fichiers sélectionnés sont uploadés via cette fonction.
-   *  Retourne le mediaId à stocker en data-media-id. */
-  onFileUpload?: (file: File) => Promise<{ mediaId: string }>;
+   *  Retourne le mediaId et l'URL serveur permanente de l'image. */
+  onFileUpload?: (file: File) => Promise<{ mediaId: string; src: string }>;
 }
 
 export function ImageInsertDialog({
@@ -114,8 +114,9 @@ export function ImageInsertDialog({
     if (pendingFile && onFileUpload) {
       setIsUploading(true);
       try {
-        const { mediaId } = await onFileUpload(pendingFile);
+        const { mediaId, src } = await onFileUpload(pendingFile);
         finalAttrs.mediaId = mediaId;
+        finalAttrs.src = src; // remplace le blob URL temporaire par l'URL serveur persistante
       } finally {
         setIsUploading(false);
       }
