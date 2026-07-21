@@ -100,7 +100,7 @@ function CategoryFormDialog({ open, onOpenChange, category }: CategoryFormDialog
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>{isEdit ? 'Modifier la catégorie' : 'Nouvelle catégorie'}</DialogTitle>
           <DialogDescription>
@@ -187,7 +187,7 @@ export function LearningPathCategoriesDrawer({ open, onOpenChange, categories, i
   return (
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent side="right" className="flex flex-col sm:max-w-md">
+        <SheetContent className="flex flex-col gap-0 p-0 max-w-187.5!">
           <SheetHeader className="border-b pb-4">
             <SheetTitle>Gérer les catégories</SheetTitle>
             <SheetDescription>
@@ -200,7 +200,7 @@ export function LearningPathCategoriesDrawer({ open, onOpenChange, categories, i
               <span className="text-xs text-muted-foreground">
                 {categories.length} catégorie{categories.length !== 1 ? 's' : ''}
               </span>
-              <Button size="sm" variant="outline" onClick={openNew} className="h-7 gap-1 text-xs">
+              <Button size="sm" variant="outline" onClick={openNew} className="gap-1 text-xs">
                 <Plus className="size-3" />
                 Ajouter
               </Button>

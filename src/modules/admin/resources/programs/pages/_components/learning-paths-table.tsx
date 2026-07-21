@@ -176,7 +176,7 @@ function LearningPathsTableBase({
         sortable: true,
         render: (row) => (
           <span className="text-xs text-muted-foreground tabular-nums">
-            {row.publishedAt ? formatDate(row.publishedAt.split('T')[0]) : '—'}
+            {row.publishedAt ? formatDate(row.publishedAt) : '—'}
           </span>
         ),
         skeleton: <Skeleton className="h-4 w-28" />,
@@ -204,14 +204,13 @@ function LearningPathsTableBase({
           />
         </div>
         <div className="flex gap-2">
-          <Button size="sm" variant="outline" onClick={onManageCategories} className="h-8 gap-1.5">
+          <Button variant="outline" onClick={onManageCategories} className="h-8 gap-1.5">
             <Settings2 />
             Gérer les catégories
           </Button>
           <Button
-            size="sm"
             onClick={onNew}
-            className="h-8 gap-1.5 bg-(--color-primary) hover:bg-(--color-primary)/80"
+            className="gap-1.5 bg-(--color-primary) hover:bg-(--color-primary)/80"
           >
             <Plus className="size-3.5" />
             Nouveau parcours

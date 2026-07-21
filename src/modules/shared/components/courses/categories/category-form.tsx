@@ -17,6 +17,7 @@ import {
 import { toast } from 'sonner';
 import { getCategoryPath, useCoursesStore } from '../lib/course-store';
 import { Category } from '../types';
+import { Loader2, Save } from 'lucide-react';
 
 const schema = z.object({
   name: z.string().min(2, 'Nom requis'),
@@ -74,7 +75,7 @@ export function CategoryForm({ category, defaultParentId = null, onDone }: Props
 
   return (
     <form onSubmit={form.handleSubmit(onSubmit)} className="flex min-h-0 flex-1 flex-col">
-      <div className="flex-1 space-y-5 overflow-y-auto px-4 py-6">
+      <div className="flex-1 space-y-5 overflow-y-auto px-4 py-2">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label>Catégorie supérieure</Label>
@@ -120,7 +121,8 @@ export function CategoryForm({ category, defaultParentId = null, onDone }: Props
           className="bg-(--color-primary) hover:bg-(--color-primary)/80"
           disabled={isSubmitting}
         >
-          {isSubmitting ? 'Enregistrement…' : category ? 'Sauvegarder' : 'Créer la catégorie'}
+          {isSubmitting ? <Loader2 className="animate-spin" /> : <Save />}
+          Enregistrer
         </Button>
       </div>
     </form>

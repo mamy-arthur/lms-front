@@ -1,13 +1,5 @@
 import { memo, useCallback, useMemo, useState } from 'react';
-import {
-  MoreHorizontal,
-  Pencil,
-  Trash2,
-  Plus,
-  FolderTree,
-  Search,
-  ChevronRight,
-} from 'lucide-react';
+import { Pencil, Trash2, Plus, FolderTree, MoreVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -29,7 +21,6 @@ import {
 import { buildCategoryTree, useCoursesStore } from '../lib/course-store';
 import type { Category } from '../types/index';
 import { toast } from 'sonner';
-import { Input } from '@/components/ui/input';
 import { CategoryFormDialog } from './category-form-dialog';
 
 type CategoryRow = Category & { depth: number };
@@ -42,7 +33,7 @@ function CategoryTableBase() {
     category: Category | null;
     defaultParentId: string | null;
   }>({ open: false, category: null, defaultParentId: null });
-  const [search, setSearch] = useState('');
+  // const [search, setSearch] = useState('');
 
   const rows: CategoryRow[] = useMemo(() => {
     const tree = buildCategoryTree(categories);
@@ -50,10 +41,11 @@ function CategoryTableBase() {
       ...category,
       depth,
     }));
-    if (!search.trim()) return flat;
-    const lower = search.toLowerCase();
-    return flat.filter((r) => r.name.toLowerCase().includes(lower));
-  }, [categories, search]);
+    return flat;
+    // if (!search.trim()) return flat;
+    // const lower = search.toLowerCase();
+    // return flat.filter((r) => r.name.toLowerCase().includes(lower));
+  }, [categories]);
 
   const parentName = useCallback(
     (id: string | null) => (id ? (categories.find((c) => c.id === id)?.name ?? null) : null),
@@ -64,17 +56,19 @@ function CategoryTableBase() {
     function CategoryCard({ item }: { item: CategoryRow }) {
       const parent = parentName(item.parentId);
       return (
-        <div className="group relative flex flex-col gap-2 rounded-lg border bg-card p-4 transition-shadow hover:shadow-sm">
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex min-w-0 items-center gap-2">
-              {item.depth > 0 && (
-                <div className="flex shrink-0 items-center">
-                  {Array.from({ length: item.depth }).map((_, i) => (
-                    <ChevronRight key={i} className="size-3 text-muted-foreground/50" />
-                  ))}
-                </div>
+        <div className="group relative flex flex-col gap-2">
+          <div className="flex items-center justify-between rounded-lg border px-3 py-2.5 transition-colors hover:bg-muted/50">
+            <div className="flex flex-col min-w-0 gap-2">
+              <span className="truncate font-medium text-xs">{item.name}</span>
+              {parent && (
+                <span className="text-xs text-muted-foreground">
+                  Sous-catégorie de <span className="font-medium">{parent}</span>
+                </span>
               )}
-              <span className="truncate font-medium text-sm">{item.name}</span>
+
+              {item.description && (
+                <p className="line-clamp-2 text-xs text-muted-foreground">{item.description}</p>
+              )}
             </div>
             <div onClick={(e) => e.stopPropagation()}>
               <DropdownMenu>
@@ -82,13 +76,13 @@ function CategoryTableBase() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="size-7 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 hover:text-foreground data-[state=open]:opacity-100"
+                    className="size-7 shrink-0 text-muted-foreground transition-opacity"
                     aria-label={`Actions pour ${item.name}`}
                   >
-                    <MoreHorizontal className="size-4" />
+                    <MoreVertical className="size-4" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuContent align="end" className="w-fit">
                   <DropdownMenuItem
                     onClick={() => setDialog({ open: true, category: item, defaultParentId: null })}
                   >
@@ -115,16 +109,6 @@ function CategoryTableBase() {
               </DropdownMenu>
             </div>
           </div>
-
-          {parent && (
-            <span className="text-xs text-muted-foreground">
-              Sous-catégorie de <span className="font-medium">{parent}</span>
-            </span>
-          )}
-
-          {item.description && (
-            <p className="line-clamp-2 text-xs text-muted-foreground">{item.description}</p>
-          )}
         </div>
       );
     },
@@ -134,7 +118,7 @@ function CategoryTableBase() {
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative w-full sm:max-w-sm">
+        {/* <div className="relative w-full sm:max-w-sm">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Rechercher une catégorie..."
@@ -142,12 +126,17 @@ function CategoryTableBase() {
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
           />
+        </div> */}
+        <div>
+          <span className="text-xs text-muted-foreground">
+            {rows.length} catégorie{rows.length !== 1 ? 's' : ''}
+          </span>
         </div>
         <Button
+          variant={'outline'}
           onClick={() => setDialog({ open: true, category: null, defaultParentId: null })}
-          className="bg-(--color-primary) hover:bg-(--color-primary)/80 text-primary-foreground"
         >
-          <Plus className="mr-1 size-4" />
+          <Plus className="size-3" />
           Ajouter
         </Button>
       </div>
@@ -158,18 +147,12 @@ function CategoryTableBase() {
             <FolderTree className="size-5 text-muted-foreground" />
           </div>
           <div>
-            <p className="text-sm font-medium">
-              {search.trim() ? 'Aucun résultat' : 'Aucune catégorie'}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {search.trim()
-                ? 'Aucune catégorie ne correspond à votre recherche.'
-                : 'Créez-en une via le bouton ci-dessus.'}
-            </p>
+            <p className="text-sm font-medium">Aucune catégorie</p>
+            <p className="text-xs text-muted-foreground">Créez-en une via le bouton ci-dessus.</p>
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           {rows.map((row) => (
             <CategoryCard key={row.id} item={row} />
           ))}
