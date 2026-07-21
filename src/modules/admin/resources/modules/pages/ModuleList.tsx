@@ -24,24 +24,30 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { cn } from '@/lib/utils';
 import { ModuleSearch } from '@modules/shared/components/modules';
 import { useModuleListController } from '@/modules/shared/hooks/useModuleListController';
-import { useModulesQuery } from '../hooks/useModulesQuery';
+import { useModules } from '../hooks/useModules';
 import { useDeleteModule } from '../hooks/useDeleteModule';
+import { useDuplicateModule } from '../hooks/useDuplicateModule';
 import type { Module } from '../types';
-import { AdminModuleFormDrawer } from '../components/AdminModuleFormDrawer';
+import { AdminModuleFormDrawer } from './_components/AdminModuleFormDrawer';
 import { AdminModulesTable } from './_components/admin-modules-table';
+import { ModuleDetailDrawer } from './_components/module-detail-drawer';
 import { ModuleCategoryProvider, useModuleCategoryStore } from '../lib/module-store';
 import { useQueryClient } from '@tanstack/react-query';
-import { ADMIN_MODULES_QUERY_KEY } from '../hooks/useModulesQuery';
+import { ADMIN_MODULES_QUERY_KEY } from '../hooks/useModules';
 
 function ModuleListInner() {
   const ctrl = useModuleListController<Module>({
     defaultPageSize: 25,
+    defaultSortBy: 'shortname',
   });
   const queryClient = useQueryClient();
-  const { data, isLoading } = useModulesQuery(ctrl.params);
+  const { data, isLoading } = useModules(ctrl.params);
   const deleteMutation = useDeleteModule();
-  const [duplicateFrom, setDuplicateFrom] = useState<Module | undefined>();
+  const duplicateMutation = useDuplicateModule();
+  const [detailModule, setDetailModule] = useState<Module | undefined>();
   const [deleteConfirm, setDeleteConfirm] = useState<Module | undefined>();
+  const [duplicateConfirm, setDuplicateConfirm] = useState<Module | undefined>();
+  const [duplicateShortname, setDuplicateShortname] = useState('');
   const [catFilterOpen, setCatFilterOpen] = useState(false);
   const { categories: filterCategories } = useModuleCategoryStore();
 
@@ -168,26 +174,75 @@ function ModuleListInner() {
           onSort={ctrl.handleSort}
           onPageChange={ctrl.handlePageChange}
           onPageSizeChange={ctrl.handlePageSizeChange}
+          onDetail={setDetailModule}
           onEdit={ctrl.handleEdit}
-          onDuplicate={setDuplicateFrom}
+          onDuplicate={(module) => {
+            setDuplicateShortname('');
+            setDuplicateConfirm(module);
+          }}
           onDelete={setDeleteConfirm}
           onCategoryChange={handleCategoryChange}
         />
 
+        <ModuleDetailDrawer
+          open={!!detailModule}
+          module={detailModule}
+          onClose={() => setDetailModule(undefined)}
+        />
+
         <AdminModuleFormDrawer
-          open={ctrl.isDrawerOpen || !!duplicateFrom}
-          onClose={() => {
-            ctrl.handleCloseDrawer();
-            setDuplicateFrom(undefined);
-          }}
-          onSuccess={() => {
-            ctrl.handleSuccess();
-            setDuplicateFrom(undefined);
-          }}
+          open={ctrl.isDrawerOpen}
+          onClose={ctrl.handleCloseDrawer}
+          onSuccess={ctrl.handleSuccess}
           module={ctrl.editingModule}
-          duplicateFrom={duplicateFrom}
           usedCategoryIds={usedCategoryIds}
         />
+
+        <AlertDialog
+          open={!!duplicateConfirm}
+          onOpenChange={(open) => {
+            if (!open) setDuplicateConfirm(undefined);
+          }}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Dupliquer le module</AlertDialogTitle>
+              <AlertDialogDescription>
+                Une copie de «&nbsp;{duplicateConfirm?.shortname}&nbsp;» sera créée. Vous pouvez
+                personnaliser le nom du duplicata ou laisser le champ vide pour
+                utiliser le nom par défaut&nbsp;({duplicateConfirm?.shortname}-COPY).
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="px-6 pb-2">
+              <label className="block text-sm font-medium mb-1" htmlFor="dup-shortname">
+                Nom du duplicata <span className="text-muted-foreground">(optionnel)</span>
+              </label>
+              <input
+                id="dup-shortname"
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                placeholder={`${duplicateConfirm?.shortname ?? ''}-COPY`}
+                value={duplicateShortname}
+                onChange={(e) => setDuplicateShortname(e.target.value)}
+                maxLength={255}
+              />
+            </div>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Annuler</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  if (duplicateConfirm)
+                    duplicateMutation.mutate({
+                      id: duplicateConfirm.id,
+                      shortname: duplicateShortname.trim() || undefined,
+                    });
+                  setDuplicateConfirm(undefined);
+                }}
+              >
+                Dupliquer
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         <AlertDialog
           open={!!deleteConfirm}
@@ -199,7 +254,7 @@ function ModuleListInner() {
             <AlertDialogHeader>
               <AlertDialogTitle>Supprimer le module</AlertDialogTitle>
               <AlertDialogDescription>
-                Êtes-vous sûr de vouloir supprimer le module « {deleteConfirm?.name}» ? Cette action
+                Êtes-vous sûr de vouloir supprimer le module « {deleteConfirm?.shortname}» ? Cette action
                 est irréversible.
               </AlertDialogDescription>
             </AlertDialogHeader>
@@ -208,7 +263,11 @@ function ModuleListInner() {
               <AlertDialogAction
                 className="bg-destructive hover:bg-destructive/80"
                 onClick={() => {
-                  if (deleteConfirm) deleteMutation.mutate(deleteConfirm.id);
+                  if (deleteConfirm)
+                    deleteMutation.mutate({
+                      id: deleteConfirm.id,
+                      idnumber: deleteConfirm.idnumber,
+                    });
                   setDeleteConfirm(undefined);
                 }}
               >

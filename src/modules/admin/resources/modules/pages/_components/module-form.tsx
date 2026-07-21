@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
-import { Check, ChevronDown, ChevronsUpDown, GripVertical, Loader2 } from 'lucide-react';
+import { Check, ChevronDown, ChevronsUpDown, GripVertical, ImagePlus, Loader2 } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import {
@@ -49,14 +49,19 @@ import {
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Textarea } from '@/components/ui/textarea';
+import { RichTextEditor, ALIGN_STYLES } from '@modules/shared/components/tiptap/RichTextEditor';
+import {
+  ImageInsertDialog,
+  type ImageConfirmAttrs,
+} from '@modules/shared/components/tiptap/ImageInsertDialog';
+import { adminModulesApi } from '../../api';
 import { cn } from '@/lib/utils';
 import type { MutationLike } from '@/shared/types/mutation';
 import { extractApiError } from '@/shared/utils/api-error';
 import type { genIdentifier } from './module-form-utils';
-import { useModuleCategoryStore } from '../lib/module-store';
-import { ModuleCategoryDrawer } from './module-category-drawer';
-import { CategorySelect } from './module-category-select';
+import { useModuleCategoryStore } from '../../lib/module-store';
+import { ModuleCategoryDrawer } from '../../components/module-category-drawer';
+import { CategorySelect } from '../../components/module-category-select';
 
 interface Course {
   id: string;
@@ -65,6 +70,7 @@ interface Course {
 }
 
 interface CourseCategory {
+  key: string;
   name: string;
   courses: Course[];
 }
@@ -80,7 +86,7 @@ export interface ModuleFormProps {
   coursesByCategory: CourseCategory[];
   openCategories: Set<string>;
   toggleCategory: (name: string) => void;
-  name: string;
+  shortname: string;
   coursePopoverOpen: boolean;
   setCoursePopoverOpen: (open: boolean) => void;
   genIdentifierFn: typeof genIdentifier;
@@ -133,6 +139,68 @@ function SortableCourseItem({
   );
 }
 
+/**
+ * Image upload button injected into the description RichTextEditor toolbar.
+ * Supports both TipTap mode (ctx undefined) and HTML-source mode (ctx.insertHtml)
+ * to match the behaviour of the certificate RichTextEditor.
+ */
+function ModuleDescriptionImageButton({
+  editor,
+  ctx,
+}: {
+  editor: import('@tiptap/react').Editor;
+  ctx?: { insertHtml: (html: string) => void; insertText: (text: string) => void };
+}) {
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  const uploadImage = async (file: File): Promise<{ mediaId: string; src: string }> => {
+    const res = await adminModulesApi.uploadMedia(file);
+    return { mediaId: res.id, src: res.url };
+  };
+
+  const handleConfirm = ({ src, alt, width, height, align, mediaId }: ImageConfirmAttrs) => {
+    if (ctx?.insertHtml) {
+      const alignStyle = ALIGN_STYLES[align] ?? ALIGN_STYLES.left;
+      const sizeStyle = `${width ? `width: ${width}px; ` : ''}${height ? `height: ${height}px;` : ''}`.trim();
+      const style = sizeStyle ? `${alignStyle} ${sizeStyle}` : alignStyle;
+      const widthAttr = width ? ` width="${width}"` : '';
+      const heightAttr = height ? ` height="${height}"` : '';
+      const mediaAttr = mediaId ? ` data-media-id="${mediaId}"` : '';
+      ctx.insertHtml(`<img src="${src}" alt="${alt}"${widthAttr}${heightAttr} style="${style}"${mediaAttr}>`);
+      return;
+    }
+    (
+      editor.chain().focus() as unknown as {
+        setImage: (attrs: Record<string, unknown>) => { run(): boolean };
+      }
+    )
+      .setImage({ src, alt, width, height, align, ...(mediaId ? { dataMediaId: mediaId } : {}) })
+      .run();
+  };
+
+  return (
+    <>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        aria-label="Insérer une image"
+        title="Insérer une image"
+        onClick={() => setDialogOpen(true)}
+        className="size-8"
+      >
+        <ImagePlus className="size-4" />
+      </Button>
+      <ImageInsertDialog
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        onConfirm={handleConfirm}
+        onFileUpload={uploadImage}
+      />
+    </>
+  );
+}
+
 export function ModuleForm({
   form,
   mutation,
@@ -144,7 +212,7 @@ export function ModuleForm({
   coursesByCategory,
   openCategories,
   toggleCategory,
-  name,
+  shortname,
   coursePopoverOpen,
   setCoursePopoverOpen,
   genIdentifierFn,
@@ -199,7 +267,7 @@ export function ModuleForm({
 
   return (
     <Field {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-1 flex-col" noValidate>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-1 flex-col min-h-0" noValidate>
         <div className="flex-1 space-y-5 overflow-y-auto px-6 py-4">
           {mutation.isError && (
             <div
@@ -215,11 +283,17 @@ export function ModuleForm({
             name="category"
             render={({ field }) => (
               <FieldGroup>
-                <FieldLabel className="text-xs">Catégorie</FieldLabel>
+                <FieldLabel className="text-xs">
+                  Catégorie
+                  <span className="ml-2 text-[10px] font-normal text-muted-foreground">
+                    (fonctionnalité à venir)
+                  </span>
+                </FieldLabel>
                 <CategorySelect
-                  value={field.value}
+                  value={field.value ?? ''}
                   onChange={field.onChange}
                   usedCategoryIds={usedCategoryIds}
+                  disabled
                   onEdit={(id) => {
                     setCategoryDrawerEditId(id);
                     setCategoryDrawerOpen(true);
@@ -238,7 +312,7 @@ export function ModuleForm({
 
           <FieldRoot
             control={form.control}
-            name="name"
+            name="shortname"
             render={({ field }) => (
               <FieldGroup>
                 <FieldLabel className="text-xs">Nom</FieldLabel>
@@ -252,7 +326,7 @@ export function ModuleForm({
 
           <FieldRoot
             control={form.control}
-            name="identifier"
+            name="idnumber"
             render={({ field }) => (
               <FieldGroup>
                 <FieldLabel className="text-xs">Identifiant</FieldLabel>
@@ -264,7 +338,7 @@ export function ModuleForm({
                       variant="outline"
                       size="xs"
                       onClick={() =>
-                        form.setValue('identifier', genIdentifierFn(name), { shouldValidate: true })
+                        form.setValue('idnumber', genIdentifierFn(shortname), { shouldValidate: true })
                       }
                     >
                       Auto
@@ -283,10 +357,14 @@ export function ModuleForm({
               <FieldGroup>
                 <FieldLabel className="text-xs">Description</FieldLabel>
                 <FieldContent>
-                  <Textarea
-                    aria-label="Description"
-                    className="min-h-24 resize-y text-xs"
-                    {...field}
+                  <RichTextEditor
+                    value={field.value ?? ''}
+                    onChange={field.onChange}
+                    placeholder="Décrivez le module…"
+                    outputFormat="html"
+                    toolbarExtras={(editor, ctx) => (
+                      <ModuleDescriptionImageButton editor={editor} ctx={ctx} />
+                    )}
                   />
                 </FieldContent>
                 <FieldError />
@@ -331,11 +409,11 @@ export function ModuleForm({
                       <CommandEmpty>Aucun cours trouvé.</CommandEmpty>
 
                       <div className="max-h-100 overflow-y-auto overscroll-contain">
-                        {coursesByCategory.map(({ name, courses }) => {
+                        {coursesByCategory.map(({ key, name, courses }) => {
                           const isOpen = openCategories.has(name);
 
                           return (
-                            <CommandGroup key={name}>
+                            <CommandGroup key={key}>
                               <button
                                 type="button"
                                 onClick={() => toggleCategory(name)}

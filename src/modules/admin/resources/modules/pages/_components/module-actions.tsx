@@ -1,6 +1,6 @@
 'use client';
 
-import { Copy, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { Copy, Eye, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -12,12 +12,13 @@ import {
 
 export interface ModuleActionsProps {
   moduleLabel: string;
+  onDetail?: () => void;
   onEdit?: () => void;
   onDuplicate?: () => void;
   onDelete?: () => void;
 }
 
-export function ModuleActions({ moduleLabel, onEdit, onDuplicate, onDelete }: ModuleActionsProps) {
+export function ModuleActions({ moduleLabel, onDetail, onEdit, onDuplicate, onDelete }: ModuleActionsProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -31,6 +32,11 @@ export function ModuleActions({ moduleLabel, onEdit, onDuplicate, onDelete }: Mo
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-44">
+        <DropdownMenuItem onClick={() => onDetail?.()}>
+          <Eye className="mr-2 size-3.5 text-muted-foreground" />
+          Détail
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
         <DropdownMenuItem onClick={() => onEdit?.()}>
           <Pencil className="mr-2 size-3.5 text-muted-foreground" />
           Modifier

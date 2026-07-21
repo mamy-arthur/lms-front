@@ -8,7 +8,7 @@ import {
 import { formatDate } from '@/shared/lib/date';
 import type { Module } from '../../types';
 import { CategoryCell } from './category-cell';
-import { ModuleActions } from '../../components/module-actions';
+import { ModuleActions } from './module-actions';
 
 export type SortConfig = DataTableSort;
 
@@ -23,6 +23,7 @@ interface AdminModulesTableProps {
   onSort?: (column: string) => void;
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
+  onDetail?: (module: Module) => void;
   onEdit?: (module: Module) => void;
   onDuplicate?: (module: Module) => void;
   onDelete?: (module: Module) => void;
@@ -40,6 +41,7 @@ export function AdminModulesTable({
   onSort,
   onPageChange,
   onPageSizeChange,
+  onDetail,
   onEdit,
   onDuplicate,
   onDelete,
@@ -52,7 +54,7 @@ export function AdminModulesTable({
       sortable: true,
       render: (mod) => (
         <div className="flex flex-col">
-          <span className="text-xs font-medium">{mod.identifier}</span>
+          <span className="text-xs font-medium">{mod.idnumber}</span>
         </div>
       ),
     },
@@ -62,7 +64,7 @@ export function AdminModulesTable({
       sortable: true,
       render: (mod) => (
         <div className="flex flex-col">
-          <span className="text-xs text-muted-foreground">{mod.name}</span>
+          <span className="text-xs text-muted-foreground">{mod.shortname}</span>
         </div>
       ),
     },
@@ -91,7 +93,8 @@ export function AdminModulesTable({
       render: (mod) => (
         <div className="text-right" onClick={(e) => e.stopPropagation()}>
           <ModuleActions
-            moduleLabel={mod.name}
+            moduleLabel={mod.shortname}
+            onDetail={() => onDetail?.(mod)}
             onEdit={() => onEdit?.(mod)}
             onDuplicate={() => onDuplicate?.(mod)}
             onDelete={() => onDelete?.(mod)}

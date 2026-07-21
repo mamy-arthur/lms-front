@@ -1,12 +1,15 @@
 export interface Module {
   id: string;
-  name: string;
-  identifier: string;
+  shortname: string;
+  idnumber: string;
   description: string;
+  /** Frontend-only — not persisted to the API. */
   category: string;
+  categoryId: string | null;
   tenantId: string;
   courseIds: string[];
   createdAt: string;
+  updatedAt: string;
 }
 
 export interface Quiz {
@@ -22,21 +25,6 @@ export interface Quiz {
   updatedAt: string;
 }
 
-export function normalizeModule(raw: Record<string, unknown>): Module {
-  return {
-    id: String(raw.id ?? raw._id ?? ''),
-    name: String(raw.name ?? raw.fullName ?? ''),
-    identifier: String(raw.identifier ?? ''),
-    description: String(raw.description ?? ''),
-    category: String(raw.category ?? ''),
-    tenantId: String(raw.tenantId ?? raw.tenant_id ?? ''),
-    courseIds: (() => {
-      const ids = raw.courseIds ?? raw.course_ids;
-      return Array.isArray(ids) ? ids.map(String) : [];
-    })(),
-    createdAt: String(raw.createdAt ?? raw.created_at ?? ''),
-  };
-}
 
 export function normalizeQuiz(raw: Record<string, unknown>): Quiz {
   return {

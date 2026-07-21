@@ -22,6 +22,11 @@ interface CategorySelectProps {
   onDelete: (categoryId: string) => void;
   onUsedDeleteAttempt: (categoryId: string) => void;
   onCreate: () => void;
+  /**
+   * When true, the selector is shown but interaction is disabled.
+   * Used while the category API is not yet implemented on the backend.
+   */
+  disabled?: boolean;
 }
 
 export function CategorySelect({
@@ -32,19 +37,21 @@ export function CategorySelect({
   onDelete,
   onUsedDeleteAttempt,
   onCreate,
+  disabled = false,
 }: CategorySelectProps) {
   const { categories } = useModuleCategoryStore();
   const [open, setOpen] = useState(false);
 
   return (
     <div className="space-y-1">
-      <Popover open={open} onOpenChange={setOpen}>
+      <Popover open={open} onOpenChange={(o) => !disabled && setOpen(o)}>
         <PopoverTrigger asChild>
           <Button
             type="button"
             variant="outline"
             role="combobox"
             aria-label="Catégorie"
+            disabled={disabled}
             className="h-9 w-full justify-between font-normal text-xs"
           >
             {value ? categories.find((c) => c.id === value)?.name : 'Sélectionner une catégorie'}

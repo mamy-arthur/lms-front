@@ -127,7 +127,7 @@ export function CategoryCell({ module: mod, onCategoryChange }: CategoryCellProp
           <AlertDialogHeader>
             <AlertDialogTitle>Changer la catégorie</AlertDialogTitle>
             <AlertDialogDescription>
-              Êtes-vous sûr de vouloir modifier la catégorie du module « {mod.name} » en «{' '}
+              Êtes-vous sûr de vouloir modifier la catégorie du module « {mod.shortname} » en «{' '}
               {pendingCategory ? getLabel(pendingCategory) : ''} » ?
             </AlertDialogDescription>
           </AlertDialogHeader>

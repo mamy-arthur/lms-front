@@ -1,19 +1,17 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import { useCallback, useMemo, useState } from 'react';
 import type { FieldValues } from 'react-hook-form';
 import { useWatch } from 'react-hook-form';
 import type { z } from 'zod';
-import { MOCK_COURSE_CATEGORIES, MOCK_COURSES } from '@/shared/mocks/courses.mock';
 import type { MutationLike } from '@/shared/types/mutation';
 import { useFormDrawer as _useFormDrawer } from '@/shared/components/form-drawer/use-form-drawer';
+import { useAvailableCoursesQuery } from '../../hooks/useAvailableCoursesQuery';
 
 export type { MutationLike };
 
 export interface ModuleFormModule {
   id: string;
-  name: string;
-  identifier: string;
+  shortname: string;
+  idnumber: string;
   description: string;
   category: string;
   courseIds: string[];
@@ -38,7 +36,7 @@ export function useModuleFormDrawer({
   module?: ModuleFormModule;
   createMutation: MutationLike;
   updateMutation: MutationLike;
-  schema: z.ZodSchema<any>;
+  schema: z.ZodTypeAny;
   defaultValues: FieldValues;
   createDefaults: FieldValues;
   buildCreatePayload: (values: FieldValues) => unknown;
@@ -76,20 +74,37 @@ export function useModuleFormDrawer({
     [base.form],
   );
 
+  // Use real available courses from the backend API.
+  // In edit mode, pass the module ID so already-linked courses are included.
+  const { data: availableCourses = [] } = useAvailableCoursesQuery(module?.id);
+
   const coursesByCategory = useMemo(() => {
-    const map = new Map<string, { name: string; courses: typeof MOCK_COURSES }>();
-    for (const cat of MOCK_COURSE_CATEGORIES) {
-      map.set(cat.id, { name: cat.name, courses: [] });
-    }
-    for (const course of MOCK_COURSES) {
-      const group = map.get(course.categoryId);
-      if (group) group.courses.push(course);
+    const map = new Map<
+      string,
+      { key: string; name: string; courses: Array<{ id: string; fullName: string; categoryId: string }> }
+    >();
+    for (const course of availableCourses) {
+      const key = course.categoryId || '__uncategorized__';
+      if (!map.has(key)) {
+        map.set(key, { key, name: course.categoryName || 'Sans catégorie', courses: [] });
+      }
+      map.get(key)!.courses.push({
+        id: course.id,
+        fullName: course.fullName,
+        categoryId: course.categoryId,
+      });
     }
     return Array.from(map.values());
-  }, []);
+  }, [availableCourses]);
 
-  const [openCategories, setOpenCategories] = useState(
+  // All category names (used to expand all by default once data loads)
+  const allCategoryNames = useMemo(
     () => new Set(coursesByCategory.map(({ name }) => name)),
+    [coursesByCategory],
+  );
+
+  const [openCategories, setOpenCategories] = useState<Set<string>>(
+    () => new Set(),
   );
 
   const toggleCategory = useCallback((name: string) => {
@@ -101,9 +116,9 @@ export function useModuleFormDrawer({
     });
   }, []);
 
-  const name = useWatch({
+  const shortname = useWatch({
     control: base.form.control,
-    name: 'name',
+    name: 'shortname',
   }) as unknown as string;
 
   return {
@@ -111,9 +126,10 @@ export function useModuleFormDrawer({
     selectedCourseIds,
     toggleCourse,
     coursesByCategory,
-    openCategories,
+    // Expand all categories by default when there are no explicit toggles yet
+    openCategories: openCategories.size > 0 ? openCategories : allCategoryNames,
     toggleCategory,
-    name,
+    shortname,
     coursePopoverOpen,
     setCoursePopoverOpen,
   };
