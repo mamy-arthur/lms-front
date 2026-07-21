@@ -34,15 +34,13 @@ export function ProgramsList() {
       await deleteMutation.mutateAsync(id);
       toast.success('Parcours supprimé');
     } catch {
-      toast.error(
-        'Impossible de supprimer ce parcours (des compétences y sont encore liées)',
-      );
+      toast.error('Impossible de supprimer ce parcours (des compétences y sont encore liées)');
     }
   };
 
   return (
     <div className="bg-background">
-      <div className="mx-auto w-full space-y-10">
+      <div className="mx-auto w-full space-y-8">
         <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Gestion des parcours</h1>

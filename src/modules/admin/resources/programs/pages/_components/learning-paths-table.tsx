@@ -1,6 +1,6 @@
 'use client';
 
-import { MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react';
+import { MoreHorizontal, Pencil, Plus, Search, Settings2, Trash2 } from 'lucide-react';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -61,7 +61,15 @@ type Props = {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-function LearningPathsTableBase({ learningPaths, categories, isLoading, onNew, onEdit, onDelete, onManageCategories }: Props) {
+function LearningPathsTableBase({
+  learningPaths,
+  categories,
+  isLoading,
+  onNew,
+  onEdit,
+  onDelete,
+  onManageCategories,
+}: Props) {
   const [search, setSearch] = useState('');
 
   const categoryById = useMemo(
@@ -185,22 +193,30 @@ function LearningPathsTableBase({ learningPaths, categories, isLoading, onNew, o
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3">
+      <div className="flex justify-between items-center gap-3">
         <div className="relative flex-1 max-w-xs">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Rechercher un parcours..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="h-8 text-sm"
+            className="pl-9 h-8 text-sm"
           />
         </div>
-        <Button size="sm" variant="outline" onClick={onManageCategories} className="h-8 gap-1.5">
-          Gérer les catégories
-        </Button>
-        <Button size="sm" onClick={onNew} className="h-8 gap-1.5">
-          <Plus className="size-3.5" />
-          Nouveau parcours
-        </Button>
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" onClick={onManageCategories} className="h-8 gap-1.5">
+            <Settings2 />
+            Gérer les catégories
+          </Button>
+          <Button
+            size="sm"
+            onClick={onNew}
+            className="h-8 gap-1.5 bg-(--color-primary) hover:bg-(--color-primary)/80"
+          >
+            <Plus className="size-3.5" />
+            Nouveau parcours
+          </Button>
+        </div>
       </div>
       <DataTable
         data={filtered}

@@ -2,12 +2,13 @@
 
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { BookOpen, CalendarIcon, Image, Loader2, X } from 'lucide-react';
+import { BookOpen, CalendarIcon, Image, Loader2, Save, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Input } from '@/components/ui/input';
@@ -89,7 +90,11 @@ function DatePickerField({
             !date && 'text-muted-foreground',
           )}
         >
-          <span>{date ? format(date, 'dd MMM yyyy', { locale: fr }) : (placeholder ?? 'Choisir une date')}</span>
+          <span>
+            {date
+              ? format(date, 'dd MMM yyyy', { locale: fr })
+              : (placeholder ?? 'Choisir une date')}
+          </span>
           <CalendarIcon className="size-3.5 text-muted-foreground" />
         </Button>
       </PopoverTrigger>
@@ -237,7 +242,8 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPath, categ
     }
   };
 
-  const isPending = isSubmitting || uploadMedia.isPending || createMutation.isPending || updateMutation.isPending;
+  const isPending =
+    isSubmitting || uploadMedia.isPending || createMutation.isPending || updateMutation.isPending;
   const title = isEdit ? `Modifier — ${learningPath?.name}` : 'Nouveau parcours';
 
   return (
@@ -257,17 +263,17 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPath, categ
               </div>
             </div>
             <div className="flex items-center gap-2 pr-6">
-              <Button type="button" variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Annuler
               </Button>
               <Button
                 type="submit"
                 form="learning-path-form"
-                size="sm"
+                className="bg-(--color-primary) hover:bg-(--color-primary)/80"
                 disabled={isPending}
               >
-                {isPending && <Loader2 className="mr-1.5 size-3.5 animate-spin" />}
-                Sauvegarder
+                {isPending ? <Loader2 className="mr-1.5 size-3.5 animate-spin" /> : <Save />}
+                Enregistrer
               </Button>
             </div>
           </div>
@@ -301,11 +307,9 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPath, categ
                     id="lp-name"
                     {...register('name')}
                     placeholder="Ex: Devenir chef de projet digital"
-                    className="h-8 text-sm"
+                    className="text-sm"
                   />
-                  {errors.name && (
-                    <p className="text-xs text-destructive">{errors.name.message}</p>
-                  )}
+                  {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
                 </div>
 
                 {/* Description */}
@@ -332,12 +336,7 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPath, categ
                   />
                   {imagePreview ? (
                     <div className="group relative overflow-hidden rounded-lg border">
-                      {/* biome-ignore lint/performance/noImgElement: preview of uploaded or existing image */}
-                      <img
-                        src={imagePreview}
-                        alt="Aperçu"
-                        className="h-28 w-full object-cover"
-                      />
+                      <img src={imagePreview} alt="Aperçu" className="h-28 w-full object-cover" />
                       <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
                         <Button
                           type="button"
@@ -362,7 +361,7 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPath, categ
                     <button
                       type="button"
                       onClick={() => imageInputRef.current?.click()}
-                      className="flex h-20 w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-muted-foreground/25 text-xs text-muted-foreground transition-colors hover:border-muted-foreground/40 hover:bg-muted/50"
+                      className="flex h-20 w-full items-center justify-center gap-2 rounded-lg border border-dashed border-muted-foreground/25 text-xs text-muted-foreground transition-colors hover:border-muted-foreground/40 hover:bg-muted/50"
                     >
                       <Image className="size-4" />
                       Cliquer pour ajouter une image
@@ -373,22 +372,28 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPath, categ
                 {/* Catégorie */}
                 <div className="space-y-1.5">
                   <Label>Catégorie</Label>
-                  <Select
-                    value={watch('category_id') ?? '__none__'}
-                    onValueChange={(v) => setValue('category_id', v === '__none__' ? null : v)}
-                  >
-                    <SelectTrigger className="h-8 text-sm">
-                      <SelectValue placeholder="Aucune catégorie" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__none__">Aucune catégorie</SelectItem>
-                      {categories.map((cat) => (
-                        <SelectItem key={cat.id} value={cat.id}>
-                          {cat.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {categories.map((cat) => {
+                      const isSelected = watch('category_id') === cat.id;
+                      return (
+                        <button
+                          key={cat.id}
+                          type="button"
+                          onClick={() => setValue('category_id', isSelected ? null : cat.id)}
+                        >
+                          <Badge
+                            variant={isSelected ? 'default' : 'outline'}
+                            className={`cursor-pointer text-xs px-2.5 py-1 h-auto rounded-full transition-colors ${isSelected ? 'bg-(--color-primary) text-primary-foreground' : 'bg-muted/10 text-muted-foreground'}`}
+                          >
+                            {cat.name}
+                          </Badge>
+                        </button>
+                      );
+                    })}
+                    {categories.length === 0 && (
+                      <p className="text-xs text-muted-foreground">Aucune catégorie disponible</p>
+                    )}
+                  </div>
                 </div>
 
                 {/* Prix & Devise */}
@@ -418,7 +423,7 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPath, categ
                       value={watch('currency') ?? 'EUR'}
                       onValueChange={(v) => setValue('currency', v)}
                     >
-                      <SelectTrigger className="h-8 text-sm">
+                      <SelectTrigger className="h-8 text-xs w-full">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -448,7 +453,7 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPath, categ
                 {/* Visible en boutique */}
                 <div className="flex items-center justify-between rounded-lg border p-3">
                   <div>
-                    <p className="text-sm font-medium">Visible en boutique</p>
+                    <p className="text-xs font-medium">Visible en boutique</p>
                     <p className="text-xs text-muted-foreground">
                       Afficher ce parcours dans la boutique
                     </p>

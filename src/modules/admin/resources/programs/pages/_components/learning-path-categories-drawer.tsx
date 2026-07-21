@@ -1,6 +1,6 @@
 'use client';
 
-import { MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react';
+import { Loader2, MoreVertical, Pencil, Plus, Save, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -35,6 +36,7 @@ import { useCreateLearningPathCategory } from '../../hooks/useCreateLearningPath
 import { useDeleteLearningPathCategory } from '../../hooks/useDeleteLearningPathCategory';
 import { useUpdateLearningPathCategory } from '../../hooks/useUpdateLearningPathCategory';
 import type { LearningPathCategory } from '../../types';
+import { Separator } from '@/components/ui/separator';
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
 
@@ -101,7 +103,13 @@ function CategoryFormDialog({ open, onOpenChange, category }: CategoryFormDialog
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle>{isEdit ? 'Modifier la catégorie' : 'Nouvelle catégorie'}</DialogTitle>
+          <DialogDescription>
+            {isEdit
+              ? 'Modifiez le nom ou la description de cette catégorie.'
+              : 'Créez une nouvelle catégorie pour organiser vos parcours.'}
+          </DialogDescription>
         </DialogHeader>
+        <Separator />
         <form id="category-form-drawer" onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="cat-name-drawer">Nom *</Label>
@@ -111,9 +119,7 @@ function CategoryFormDialog({ open, onOpenChange, category }: CategoryFormDialog
               placeholder="Ex: Management"
               className="h-8 text-sm"
             />
-            {errors.name && (
-              <p className="text-xs text-destructive">{errors.name.message}</p>
-            )}
+            {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="cat-description-drawer">Description</Label>
@@ -127,11 +133,17 @@ function CategoryFormDialog({ open, onOpenChange, category }: CategoryFormDialog
           </div>
         </form>
         <DialogFooter>
-          <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
             Annuler
           </Button>
-          <Button type="submit" form="category-form-drawer" size="sm" disabled={isPending}>
-            {isEdit ? 'Mettre à jour' : 'Créer'}
+          <Button
+            type="submit"
+            form="category-form-drawer"
+            disabled={isPending}
+            className="bg-(--color-primary) hover:bg-(--color-primary)/80"
+          >
+            {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save />}
+            Enregistrer
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -148,12 +160,7 @@ type Props = {
   isLoading: boolean;
 };
 
-export function LearningPathCategoriesDrawer({
-  open,
-  onOpenChange,
-  categories,
-  isLoading,
-}: Props) {
+export function LearningPathCategoriesDrawer({ open, onOpenChange, categories, isLoading }: Props) {
   const deleteMutation = useDeleteLearningPathCategory();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<LearningPathCategory | undefined>();
@@ -205,11 +212,14 @@ export function LearningPathCategoriesDrawer({
               ) : categories.length === 0 ? (
                 <p className="text-xs text-muted-foreground">Aucune catégorie créée.</p>
               ) : (
-                <ul className="divide-y rounded-lg border">
+                <div className="grid grid-cols-2 gap-2">
                   {categories.map((cat) => (
-                    <li key={cat.id} className="flex items-center justify-between px-3 py-2.5">
+                    <div
+                      key={cat.id}
+                      className="flex items-center justify-between rounded-lg border px-3 py-2.5 transition-colors hover:bg-muted/50"
+                    >
                       <div className="min-w-0 flex-1 pr-2">
-                        <p className="truncate text-sm font-medium">{cat.name}</p>
+                        <p className="truncate text-xs font-medium">{cat.name}</p>
                         {cat.description && (
                           <p className="truncate text-xs text-muted-foreground">
                             {cat.description}
@@ -224,7 +234,7 @@ export function LearningPathCategoriesDrawer({
                             className="size-7 shrink-0 text-muted-foreground"
                             aria-label={`Actions pour ${cat.name}`}
                           >
-                            <MoreHorizontal className="size-3.5" />
+                            <MoreVertical className="size-3.5" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-40">
@@ -242,9 +252,9 @@ export function LearningPathCategoriesDrawer({
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
-                    </li>
+                    </div>
                   ))}
-                </ul>
+                </div>
               )}
             </div>
           </div>

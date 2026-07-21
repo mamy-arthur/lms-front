@@ -956,16 +956,6 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
 
         {/* ── Canvas ── */}
         <div className="relative flex-1">
-          {nodes.every((n) => n.data.stepType === 'email') && (
-            <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-1 text-center">
-              <BookOpen className="mb-2 size-8 text-muted-foreground/30" />
-              <p className="text-sm font-medium text-muted-foreground">Canvas vide</p>
-              <p className="text-xs text-muted-foreground/60">
-                Ajoutez un module pour commencer votre parcours
-              </p>
-            </div>
-          )}
-
           <ReactFlow
             nodes={nodes}
             edges={edges}
