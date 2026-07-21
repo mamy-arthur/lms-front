@@ -1,5 +1,13 @@
 import { memo, useCallback, useMemo, useState } from 'react';
-import { MoreHorizontal, Pencil, Trash2, Plus, FolderTree, Search } from 'lucide-react';
+import {
+  MoreHorizontal,
+  Pencil,
+  Trash2,
+  Plus,
+  FolderTree,
+  Search,
+  ChevronRight,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -18,24 +26,22 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { DataTable, type DataTableColumn } from '@/shared/components/ui/DataTable';
 import { buildCategoryTree, useCoursesStore } from '../lib/course-store';
 import type { Category } from '../types/index';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
-import { CategoryDrawer } from './category-drawer';
+import { CategoryFormDialog } from './category-form-dialog';
 
 type CategoryRow = Category & { depth: number };
 
-type Props = {
-  onEdit: (category: Category) => void;
-  onAddChild: (parent: Category) => void;
-};
-
-function CategoryTableBase({ onEdit, onAddChild }: Props) {
+function CategoryTableBase() {
   const { categories, deleteCategory } = useCoursesStore();
   const [confirmDelete, setConfirmDelete] = useState<Category | null>(null);
-  const [categoryDrawerOpen, setCategoryDrawerOpen] = useState(false);
+  const [dialog, setDialog] = useState<{
+    open: boolean;
+    category: Category | null;
+    defaultParentId: string | null;
+  }>({ open: false, category: null, defaultParentId: null });
   const [search, setSearch] = useState('');
 
   const rows: CategoryRow[] = useMemo(() => {
@@ -50,88 +56,79 @@ function CategoryTableBase({ onEdit, onAddChild }: Props) {
   }, [categories, search]);
 
   const parentName = useCallback(
-    (id: string | null) => (id ? (categories.find((c) => c.id === id)?.name ?? '—') : '—'),
+    (id: string | null) => (id ? (categories.find((c) => c.id === id)?.name ?? null) : null),
     [categories],
   );
 
-  const ActionMenu = useCallback(
-    function ActionMenu({ item }: { item: CategoryRow }) {
+  const CategoryCard = useCallback(
+    function CategoryCard({ item }: { item: CategoryRow }) {
+      const parent = parentName(item.parentId);
       return (
-        <div className="text-right" onClick={(e) => e.stopPropagation()}>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-8 text-muted-foreground hover:text-foreground data-[state=open]:bg-muted"
-                aria-label={`Actions pour ${item.name}`}
-              >
-                <MoreHorizontal className="size-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-52">
-              <DropdownMenuItem onClick={() => onEdit(item)}>
-                <Pencil className="mr-2 size-4" />
-                Modifier
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onAddChild(item)}>
-                <Plus className="mr-2 size-4" />
-                Ajouter une sous-catégorie
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                className="text-destructive focus:text-destructive"
-                onClick={() => setConfirmDelete(item)}
-              >
-                <Trash2 className="mr-2 size-4" />
-                Supprimer
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+        <div className="group relative flex flex-col gap-2 rounded-lg border bg-card p-4 transition-shadow hover:shadow-sm">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex min-w-0 items-center gap-2">
+              {item.depth > 0 && (
+                <div className="flex shrink-0 items-center">
+                  {Array.from({ length: item.depth }).map((_, i) => (
+                    <ChevronRight key={i} className="size-3 text-muted-foreground/50" />
+                  ))}
+                </div>
+              )}
+              <span className="truncate font-medium text-sm">{item.name}</span>
+            </div>
+            <div onClick={(e) => e.stopPropagation()}>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-7 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 hover:text-foreground data-[state=open]:opacity-100"
+                    aria-label={`Actions pour ${item.name}`}
+                  >
+                    <MoreHorizontal className="size-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-52">
+                  <DropdownMenuItem
+                    onClick={() => setDialog({ open: true, category: item, defaultParentId: null })}
+                  >
+                    <Pencil className="mr-2 size-4" />
+                    Modifier
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() =>
+                      setDialog({ open: true, category: null, defaultParentId: item.id })
+                    }
+                  >
+                    <Plus className="mr-2 size-4" />
+                    Ajouter une sous-catégorie
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="text-destructive focus:text-destructive"
+                    onClick={() => setConfirmDelete(item)}
+                  >
+                    <Trash2 className="mr-2 size-4" />
+                    Supprimer
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+
+          {parent && (
+            <span className="text-xs text-muted-foreground">
+              Sous-catégorie de <span className="font-medium">{parent}</span>
+            </span>
+          )}
+
+          {item.description && (
+            <p className="line-clamp-2 text-xs text-muted-foreground">{item.description}</p>
+          )}
         </div>
       );
     },
-    [onEdit, onAddChild],
-  );
-
-  const columns: DataTableColumn<CategoryRow>[] = useMemo(
-    () => [
-      {
-        key: 'name',
-        label: 'Nom',
-        sortable: false,
-        render: (row) => (
-          <div className="flex items-center gap-2 font-medium">
-            <span className="text-xs">{row.name}</span>
-          </div>
-        ),
-      },
-      {
-        key: 'parentId',
-        label: 'Catégorie supérieure',
-        sortable: false,
-        render: (row) => (
-          <span className="text-xs text-muted-foreground">{parentName(row.parentId)}</span>
-        ),
-      },
-      {
-        key: 'description',
-        label: 'Description',
-        sortable: false,
-        render: (row) => (
-          <span className="text-xs text-muted-foreground truncate max-w-xs">
-            {row.description ?? '—'}
-          </span>
-        ),
-      },
-      {
-        key: 'actions',
-        label: '',
-        sortable: false,
-        render: (row) => <ActionMenu item={row} />,
-      },
-    ],
-    [parentName, ActionMenu],
+    [parentName, setDialog, setConfirmDelete],
   );
 
   return (
@@ -147,36 +144,37 @@ function CategoryTableBase({ onEdit, onAddChild }: Props) {
           />
         </div>
         <Button
-          onClick={() => setCategoryDrawerOpen(true)}
-          className="bg-(--color-primary) hover:bg-primary/80 text-primary-foreground"
+          onClick={() => setDialog({ open: true, category: null, defaultParentId: null })}
+          className="bg-(--color-primary) hover:bg-(--color-primary)/80 text-primary-foreground"
         >
           <Plus className="mr-1 size-4" />
-          Nouveau catégorie
+          Ajouter
         </Button>
       </div>
 
-      <DataTable
-        data={rows}
-        columns={columns}
-        isLoading={false}
-        hasQuery={!!search.trim()}
-        page={1}
-        pageSize={rows.length || 1}
-        total={rows.length}
-        onPageChange={() => {}}
-        onPageSizeChange={() => {}}
-        emptyState={{
-          icon: (
-            <div className="flex size-10 items-center justify-center rounded-full bg-muted">
-              <FolderTree className="size-5 text-muted-foreground" />
-            </div>
-          ),
-          title: 'Aucune catégorie',
-          description: 'Créez-en une via le formulaire ci-dessus.',
-          filteredTitle: 'Aucun résultat',
-          filteredDescription: 'Aucune catégorie ne correspond à votre recherche.',
-        }}
-      />
+      {rows.length === 0 ? (
+        <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed py-12 text-center">
+          <div className="flex size-10 items-center justify-center rounded-full bg-muted">
+            <FolderTree className="size-5 text-muted-foreground" />
+          </div>
+          <div>
+            <p className="text-sm font-medium">
+              {search.trim() ? 'Aucun résultat' : 'Aucune catégorie'}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {search.trim()
+                ? 'Aucune catégorie ne correspond à votre recherche.'
+                : 'Créez-en une via le bouton ci-dessus.'}
+            </p>
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {rows.map((row) => (
+            <CategoryCard key={row.id} item={row} />
+          ))}
+        </div>
+      )}
 
       <AlertDialog open={!!confirmDelete} onOpenChange={(o) => !o && setConfirmDelete(null)}>
         <AlertDialogContent>
@@ -216,7 +214,12 @@ function CategoryTableBase({ onEdit, onAddChild }: Props) {
         </AlertDialogContent>
       </AlertDialog>
 
-      <CategoryDrawer open={categoryDrawerOpen} onOpenChange={setCategoryDrawerOpen} />
+      <CategoryFormDialog
+        open={dialog.open}
+        onOpenChange={(o) => setDialog((s) => ({ ...s, open: o }))}
+        category={dialog.category}
+        defaultParentId={dialog.defaultParentId}
+      />
     </div>
   );
 }

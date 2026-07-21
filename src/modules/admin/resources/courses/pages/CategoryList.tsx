@@ -22,12 +22,7 @@ export function CategoryInner() {
           </p>
         </div>
       </header>
-      <CategoryTable
-        onEdit={() => {
-          //
-        }}
-        onAddChild={() => {}}
-      />
+      <CategoryTable />
     </div>
   );
 }
