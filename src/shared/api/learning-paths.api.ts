@@ -47,4 +47,7 @@ export const learningPathsApi = {
     apiPost<{ data: ApiLearningPath }>(`platform/learning-paths/${id}/competencies`, {
       competency_id: competencyId,
     }),
+
+  unlinkCompetency: (id: string, competencyId: string) =>
+    apiDelete(`platform/learning-paths/${id}/competencies/${competencyId}`),
 };

@@ -38,6 +38,7 @@ import { Award, BadgeCheck, BookOpen, ClipboardCheck, Mail, Settings2, Trash2 } 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/shared/lib/cn';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { AccessRulesDialog, type AccessRules } from './dialog/AccessRulesDialog';
 import {
   AttestationRulesDialog,
@@ -63,7 +64,7 @@ export type StepNodeData = {
   evaluationConfig?: Omit<EvaluationConfig, 'stepType'>;
 };
 
-type StepNode = Node<StepNodeData, 'programStep'>;
+export type StepNode = Node<StepNodeData, 'programStep'>;
 
 export type EdgeRuleData = {
   kind?: 'retake';
@@ -227,15 +228,30 @@ const FlowActionsContext = createContext<{
   onDeleteNode: (id: string) => void;
   onConfigureEdge: (edgeId: string) => void;
   onEditNode: (id: string) => void;
-}>({ onDeleteNode: () => {}, onConfigureEdge: () => {}, onEditNode: () => {} });
+  onUnlinkCompetency: (competencyId: string) => void;
+}>({
+  onDeleteNode: () => {},
+  onConfigureEdge: () => {},
+  onEditNode: () => {},
+  onUnlinkCompetency: () => {},
+});
 
 // ─── Custom Node ──────────────────────────────────────────────────────────────
 
 function ProgramStepNode({ id, data, isConnectable }: NodeProps<StepNode>) {
-  const { onDeleteNode, onEditNode } = useContext(FlowActionsContext);
+  const { onDeleteNode, onEditNode, onUnlinkCompetency } = useContext(FlowActionsContext);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const cfg = STEP_CONFIG[data.stepType];
   const { Icon } = cfg;
   const isEmail = data.stepType === 'email';
+
+  const handleConfirmDelete = () => {
+    if (data.stepType === 'module' && data.moduleId) {
+      onUnlinkCompetency(data.moduleId);
+    }
+    onDeleteNode(id);
+    setConfirmOpen(false);
+  };
 
   return (
     <div
@@ -254,17 +270,53 @@ function ProgramStepNode({ id, data, isConnectable }: NodeProps<StepNode>) {
           <span className="truncate text-sm font-semibold text-foreground">{data.label}</span>
         </div>
         {!isEmail && (
-          <Button
-            onPointerDown={(e) => e.stopPropagation()}
-            onClick={(e) => {
-              e.stopPropagation();
-              onDeleteNode(id);
-            }}
-            className="flex size-5 shrink-0 bg-gray-50 items-center justify-center rounded-full text-muted-foreground/50 transition-colors hover:bg-black/10 hover:text-red-500"
-            aria-label="Supprimer ce nœud"
-          >
-            <Trash2 className="size-3" />
-          </Button>
+          <Popover open={confirmOpen} onOpenChange={setConfirmOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setConfirmOpen((v) => !v);
+                }}
+                className="flex size-5 shrink-0 bg-gray-50 items-center justify-center rounded-full text-muted-foreground/50 transition-colors hover:bg-black/10 hover:text-red-500"
+                aria-label="Supprimer ce nœud"
+              >
+                <Trash2 className="size-3" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent
+              side="top"
+              className="w-52 p-3"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <p className="text-xs font-medium">Supprimer cette étape ?</p>
+              <div className="flex justify-end gap-2">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 text-xs"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setConfirmOpen(false);
+                  }}
+                >
+                  Annuler
+                </Button>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  className="h-7 text-xs"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleConfirmDelete();
+                  }}
+                >
+                  Supprimer
+                </Button>
+              </div>
+            </PopoverContent>
+          </Popover>
         )}
       </div>
 
@@ -382,10 +434,11 @@ export type ProgramFlowProps = {
   initialNodes?: StepNode[];
   initialEdges?: Edge<EdgeRuleData>[];
   initialNodeOrder?: string[];
+  onUnlinkCompetency?: (competencyId: string) => void;
 };
 
 const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function ProgramFlow(
-  { initialNodes, initialEdges, initialNodeOrder },
+  { initialNodes, initialEdges, initialNodeOrder, onUnlinkCompetency },
   ref,
 ) {
   const [nodes, setNodes] = useState<StepNode[]>(initialNodes ?? [initialEmailNode]);
@@ -909,8 +962,13 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
   );
 
   const flowActions = useMemo(
-    () => ({ onDeleteNode, onConfigureEdge, onEditNode }),
-    [onDeleteNode, onConfigureEdge, onEditNode],
+    () => ({
+      onDeleteNode,
+      onConfigureEdge,
+      onEditNode,
+      onUnlinkCompetency: onUnlinkCompetency ?? (() => {}),
+    }),
+    [onDeleteNode, onConfigureEdge, onEditNode, onUnlinkCompetency],
   );
 
   return (

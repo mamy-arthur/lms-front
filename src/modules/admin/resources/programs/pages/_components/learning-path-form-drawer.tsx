@@ -3,7 +3,7 @@
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { BookOpen, CalendarIcon, Image, Loader2, Save, X } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -29,9 +29,12 @@ import { useCreateLearningPath } from '../../hooks/useCreateLearningPath';
 import { useUpdateLearningPath } from '../../hooks/useUpdateLearningPath';
 import { useUploadLearningPathMedia } from '../../hooks/useUploadLearningPathMedia';
 import { useLinkCompetencyToLearningPath } from '../../hooks/useLinkCompetencyToLearningPath';
+import { useUnlinkCompetencyFromLearningPath } from '../../hooks/useUnlinkCompetencyFromLearningPath';
+import { useModules } from '@/modules/admin/resources/modules/hooks/useModules';
 import ProgramFlow, {
   type ProgramFlowHandle,
   type ModuleStepPayload,
+  type StepNode,
 } from '../../components/ProgramFlow';
 import type { LearningPath, LearningPathCategory } from '../../types';
 
@@ -135,6 +138,75 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPath, categ
   const updateMutation = useUpdateLearningPath();
   const uploadMedia = useUploadLearningPathMedia();
   const linkCompetency = useLinkCompetencyToLearningPath();
+  const unlinkCompetency = useUnlinkCompetencyFromLearningPath();
+
+  // Pre-fetch all modules so competency names are ready when the flow renders
+  const { data: modulesResult, isLoading: isLoadingModules } = useModules();
+
+  const moduleNameMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const m of modulesResult?.data ?? []) {
+      map.set(m.id, m.shortname);
+    }
+    return map;
+  }, [modulesResult]);
+
+  // Immediately unlink a competency from the backend when removed from the flow (edit mode only)
+  const handleUnlinkCompetency = useCallback(
+    (competencyId: string) => {
+      if (!learningPath) return;
+      const isLinked = learningPath.competencies.some((c) => c.competencyId === competencyId);
+      if (!isLinked) return;
+      unlinkCompetency.mutate(
+        { id: learningPath.id, competencyId },
+        {
+          onSuccess: () => toast.success('Compétence détachée du parcours'),
+          onError: () => toast.error('Impossible de détacher la compétence'),
+        },
+      );
+    },
+    [learningPath, unlinkCompetency],
+  );
+
+  // Build initial flow nodes/edges from existing competencies (sorted by position)
+  const initialFlow = useMemo(() => {
+    if (!learningPath?.competencies.length) return null;
+
+    const sorted = [...learningPath.competencies].sort((a, b) => a.position - b.position);
+    const CANVAS_X = 300;
+    const NODE_GAP = 150;
+    const emailNodeId = 'email-start';
+
+    const emailNode: StepNode = {
+      id: emailNodeId,
+      type: 'programStep',
+      position: { x: CANVAS_X, y: 0 },
+      data: { stepType: 'email', label: 'Email de démarrage' },
+    };
+
+    const moduleNodes: StepNode[] = sorted.map((comp, idx) => ({
+      id: `step-module-${comp.competencyId}`,
+      type: 'programStep',
+      position: { x: CANVAS_X, y: (idx + 1) * NODE_GAP },
+      data: {
+        stepType: 'module',
+        label: moduleNameMap.get(comp.competencyId) ?? comp.competencyId,
+        moduleId: comp.competencyId,
+      },
+    }));
+
+    const nodes = [emailNode, ...moduleNodes];
+    const nodeOrder = nodes.map((n) => n.id);
+    const edges = nodeOrder.slice(1).map((targetId, idx) => ({
+      id: `e-${nodeOrder[idx]}-${targetId}`,
+      source: nodeOrder[idx],
+      target: targetId,
+      type: 'configurableEdge' as const,
+      animated: true,
+    }));
+
+    return { nodes, edges, nodeOrder };
+  }, [learningPath, moduleNameMap]);
 
   const imageInputRef = useRef<HTMLInputElement>(null);
   const flowRef = useRef<ProgramFlowHandle>(null);
@@ -306,13 +378,20 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPath, categ
         <div className="flex min-h-0 flex-1 overflow-hidden">
           {/* Flow canvas */}
           <div className="flex-6 overflow-hidden">
-            <ProgramFlow
-              key={learningPath?.id ?? 'new'}
-              ref={flowRef}
-              initialNodes={undefined}
-              initialEdges={undefined}
-              initialNodeOrder={undefined}
-            />
+            {isEdit && isLoadingModules ? (
+              <div className="flex h-full items-center justify-center">
+                <Loader2 className="size-5 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <ProgramFlow
+                key={learningPath?.id ?? 'new'}
+                ref={flowRef}
+                initialNodes={initialFlow?.nodes}
+                initialEdges={initialFlow?.edges}
+                initialNodeOrder={initialFlow?.nodeOrder}
+                onUnlinkCompetency={isEdit ? handleUnlinkCompetency : undefined}
+              />
+            )}
           </div>
 
           {/* Form panel */}
