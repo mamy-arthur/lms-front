@@ -104,9 +104,7 @@ function CategoryFormDialog({ open, onOpenChange, category }: CategoryFormDialog
               placeholder="Ex: Management"
               className="h-8 text-sm"
             />
-            {errors.name && (
-              <p className="text-xs text-destructive">{errors.name.message}</p>
-            )}
+            {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="cat-description">Description</Label>
@@ -168,9 +166,7 @@ export function LearningPathCategoriesSection({ categories, isLoading }: Props) 
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-base font-semibold">Catégories</h2>
-          <p className="text-xs text-muted-foreground">
-            Organisez vos parcours par catégorie.
-          </p>
+          <p className="text-xs text-muted-foreground">Organisez vos parcours par catégorie.</p>
         </div>
         <Button size="sm" variant="outline" onClick={openNew} className="h-7 gap-1 text-xs">
           <Plus className="size-3" />

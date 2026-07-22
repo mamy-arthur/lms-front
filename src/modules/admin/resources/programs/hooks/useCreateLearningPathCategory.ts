@@ -7,8 +7,7 @@ export function useCreateLearningPathCategory() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: CreateLearningPathCategoryPayload) =>
-      learningPathCategoriesApi.create(data),
+    mutationFn: (data: CreateLearningPathCategoryPayload) => learningPathCategoriesApi.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: learningPathCategoryKeys.lists() });
     },

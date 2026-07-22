@@ -1,7 +1,4 @@
-import type {
-  ApiLearningPath,
-  ApiLearningPathCategory,
-} from '@/shared/types/learning-path.types';
+import type { ApiLearningPath, ApiLearningPathCategory } from '@/shared/types/learning-path.types';
 
 export interface LearningPathImage {
   id: string;
