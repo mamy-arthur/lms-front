@@ -42,8 +42,7 @@ export const adminModulesApi = {
     return apiGet<CompetencyListApiResponse>(`${BASE}?${query.toString()}`);
   },
 
-  getById: (id: string) =>
-    apiGet<{ data: CompetencyApiResponse }>(`${BASE}/${id}`),
+  getById: (id: string) => apiGet<{ data: CompetencyApiResponse }>(`${BASE}/${id}`),
 
   create: (payload: CreateModulePayload) =>
     apiPost<{ data: CompetencyApiResponse }, CreateModulePayload>(BASE, payload),
@@ -54,7 +53,10 @@ export const adminModulesApi = {
   remove: (id: string) => apiDelete(`${BASE}/${id}`),
 
   duplicate: (id: string, shortname?: string) =>
-    apiPost<{ data: CompetencyApiResponse }>(`${BASE}/${id}/duplicate`, shortname ? { shortname } : {}),
+    apiPost<{ data: CompetencyApiResponse }>(
+      `${BASE}/${id}/duplicate`,
+      shortname ? { shortname } : {},
+    ),
 
   uploadMedia: async (file: File): Promise<{ id: string; url: string; mimeType: string }> => {
     const form = new FormData();
@@ -88,12 +90,15 @@ export const competencyCategoriesApi = {
   getById: (id: string) =>
     apiGet<{ data: CompetencyCategory }>(`${CATEGORY_BASE}/${id}`).then((r) => r.data),
   create: (payload: CreateCompetencyCategoryPayload) =>
-    apiPost<{ data: CompetencyCategory }, CreateCompetencyCategoryPayload>(CATEGORY_BASE, payload)
-      .then((r) => r.data),
+    apiPost<{ data: CompetencyCategory }, CreateCompetencyCategoryPayload>(
+      CATEGORY_BASE,
+      payload,
+    ).then((r) => r.data),
   update: (id: string, payload: UpdateCompetencyCategoryPayload) =>
-    apiPut<{ data: CompetencyCategory }, UpdateCompetencyCategoryPayload>(`${CATEGORY_BASE}/${id}`, payload).then(
-      (r) => r.data,
-    ),
+    apiPut<{ data: CompetencyCategory }, UpdateCompetencyCategoryPayload>(
+      `${CATEGORY_BASE}/${id}`,
+      payload,
+    ).then((r) => r.data),
   patch: (id: string, payload: UpdateCompetencyCategoryPayload) =>
     apiPatch<{ data: CompetencyCategory }, UpdateCompetencyCategoryPayload>(
       `${CATEGORY_BASE}/${id}`,

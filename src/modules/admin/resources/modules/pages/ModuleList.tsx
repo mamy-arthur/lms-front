@@ -1,8 +1,6 @@
 'use client';
 
-import { Check, ChevronsUpDown, Plus } from 'lucide-react';
-import { useCallback, useMemo, useState } from 'react';
-import { Button } from '@/components/ui/button';
+import { useState } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -13,43 +11,30 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-} from '@/components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { cn } from '@/lib/utils';
-import { ModuleSearch } from '@modules/shared/components/modules';
 import { useModuleListController } from '@/modules/shared/hooks/useModuleListController';
 import { useModules } from '../hooks/useModules';
 import { useDeleteModule } from '../hooks/useDeleteModule';
 import { useDuplicateModule } from '../hooks/useDuplicateModule';
+import { useCompetencyCategoriesQuery } from '../hooks/useCompetencyCategoriesQuery';
 import type { Module } from '../types';
+import { CompetencyCategoriesManageDrawer } from '../components/categories/CompetencyCategoriesManageDrawer';
 import { AdminModuleFormDrawer } from './_components/AdminModuleFormDrawer';
 import { AdminModulesTable } from './_components/admin-modules-table';
-import { ModuleDetailDrawer } from './_components/module-detail-drawer';
-import { ModuleCategoryProvider, useModuleCategoryStore } from '../lib/module-store';
-import { useQueryClient } from '@tanstack/react-query';
-import { ADMIN_MODULES_QUERY_KEY } from '../hooks/useModules';
+import { ModuleListToolbar } from './_components/module-list-toolbar';
 
 function ModuleListInner() {
   const ctrl = useModuleListController<Module>({
     defaultPageSize: 25,
     defaultSortBy: 'shortname',
   });
-  const queryClient = useQueryClient();
   const { data, isLoading } = useModules(ctrl.params);
+  const { data: filterCategories = [] } = useCompetencyCategoriesQuery();
   const deleteMutation = useDeleteModule();
   const duplicateMutation = useDuplicateModule();
-  const [detailModule, setDetailModule] = useState<Module | undefined>();
   const [deleteConfirm, setDeleteConfirm] = useState<Module | undefined>();
   const [duplicateConfirm, setDuplicateConfirm] = useState<Module | undefined>();
   const [duplicateShortname, setDuplicateShortname] = useState('');
-  const [catFilterOpen, setCatFilterOpen] = useState(false);
-  const { categories: filterCategories } = useModuleCategoryStore();
+  const [manageCategoriesOpen, setManageCategoriesOpen] = useState(false);
 
   const selectedCategories = ctrl.draftCategory;
 
@@ -60,24 +45,6 @@ function ModuleListInner() {
     ctrl.setDraftCategory(next.length > 0 ? next : ['all']);
     ctrl.handleSearch();
   };
-
-  const usedCategoryIds = useMemo(() => new Set(data?.data.map((m) => m.category) ?? []), [data]);
-
-  const handleCategoryChange = useCallback(
-    (moduleId: string, newCategory: string) => {
-      queryClient.setQueriesData<{ data: Module[]; total: number }>(
-        { queryKey: ADMIN_MODULES_QUERY_KEY },
-        (prev) => {
-          if (!prev) return prev;
-          return {
-            ...prev,
-            data: prev.data.map((m) => (m.id === moduleId ? { ...m, category: newCategory } : m)),
-          };
-        },
-      );
-    },
-    [queryClient],
-  );
 
   return (
     <div className="bg-background">
@@ -91,77 +58,20 @@ function ModuleListInner() {
       </header>
 
       <div className="space-y-4">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <ModuleSearch
-            value={ctrl.draftSearch}
-            onChange={ctrl.setDraftSearch}
-            onSearch={ctrl.handleSearch}
-          />
-          <div className="flex items-center gap-2 sm:ml-auto">
-            <Popover open={catFilterOpen} onOpenChange={setCatFilterOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  type="button"
-                  variant="outline"
-                  role="combobox"
-                  aria-label="Filtrer par catégorie"
-                  className="h-9 w-44 justify-between font-normal text-xs"
-                >
-                  {selectedCategories.includes('all') || selectedCategories.length === 0
-                    ? 'Toutes les catégories'
-                    : `${selectedCategories.length} catégorie${selectedCategories.length > 1 ? 's' : ''}`}
-                  <ChevronsUpDown className="ml-2 size-4 shrink-0 text-muted-foreground" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent align="end" className="w-56 p-0">
-                <Command>
-                  <CommandInput placeholder="Rechercher…" />
-                  <CommandEmpty>Aucune catégorie</CommandEmpty>
-                  <CommandGroup>
-                    <CommandItem
-                      value="all"
-                      onSelect={() => {
-                        ctrl.setDraftCategory(['all']);
-                        ctrl.handleSearch();
-                        setCatFilterOpen(false);
-                      }}
-                    >
-                      <Check
-                        className={cn(
-                          'mr-2 size-4',
-                          selectedCategories.includes('all') ? 'opacity-100' : 'opacity-0',
-                        )}
-                      />
-                      Toutes les catégories
-                    </CommandItem>
-                    {filterCategories.map((cat) => (
-                      <CommandItem
-                        key={cat.id}
-                        value={cat.name}
-                        onSelect={() => toggleCategoryFilter(cat.id)}
-                      >
-                        <Check
-                          className={cn(
-                            'mr-2 size-4',
-                            selectedCategories.includes(cat.id) ? 'opacity-100' : 'opacity-0',
-                          )}
-                        />
-                        {cat.name}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </Command>
-              </PopoverContent>
-            </Popover>
-            <Button
-              onClick={ctrl.handleOpenCreate}
-              className="bg-(--color-primary) hover:bg-(--color-primary)/80 text-primary-foreground shrink-0"
-            >
-              <Plus className="size-4" />
-              Nouveau module
-            </Button>
-          </div>
-        </div>
+        <ModuleListToolbar
+          draftSearch={ctrl.draftSearch}
+          onDraftSearchChange={ctrl.setDraftSearch}
+          onSearch={ctrl.handleSearch}
+          selectedCategories={selectedCategories}
+          filterCategories={filterCategories}
+          onSelectAllCategories={() => {
+            ctrl.setDraftCategory(['all']);
+            ctrl.handleSearch();
+          }}
+          onToggleCategory={toggleCategoryFilter}
+          onManageCategories={() => setManageCategoriesOpen(true)}
+          onCreateModule={ctrl.handleOpenCreate}
+        />
 
         <AdminModulesTable
           modules={data?.data ?? []}
@@ -174,20 +84,12 @@ function ModuleListInner() {
           onSort={ctrl.handleSort}
           onPageChange={ctrl.handlePageChange}
           onPageSizeChange={ctrl.handlePageSizeChange}
-          onDetail={setDetailModule}
           onEdit={ctrl.handleEdit}
           onDuplicate={(module) => {
             setDuplicateShortname('');
             setDuplicateConfirm(module);
           }}
           onDelete={setDeleteConfirm}
-          onCategoryChange={handleCategoryChange}
-        />
-
-        <ModuleDetailDrawer
-          open={!!detailModule}
-          module={detailModule}
-          onClose={() => setDetailModule(undefined)}
         />
 
         <AdminModuleFormDrawer
@@ -195,7 +97,11 @@ function ModuleListInner() {
           onClose={ctrl.handleCloseDrawer}
           onSuccess={ctrl.handleSuccess}
           module={ctrl.editingModule}
-          usedCategoryIds={usedCategoryIds}
+        />
+
+        <CompetencyCategoriesManageDrawer
+          open={manageCategoriesOpen}
+          onOpenChange={setManageCategoriesOpen}
         />
 
         <AlertDialog
@@ -209,8 +115,8 @@ function ModuleListInner() {
               <AlertDialogTitle>Dupliquer le module</AlertDialogTitle>
               <AlertDialogDescription>
                 Une copie de «&nbsp;{duplicateConfirm?.shortname}&nbsp;» sera créée. Vous pouvez
-                personnaliser le nom du duplicata ou laisser le champ vide pour
-                utiliser le nom par défaut&nbsp;({duplicateConfirm?.shortname}-COPY).
+                personnaliser le nom du duplicata ou laisser le champ vide pour utiliser le nom par
+                défaut&nbsp;({duplicateConfirm?.shortname}-COPY).
               </AlertDialogDescription>
             </AlertDialogHeader>
             <div className="px-6 pb-2">
@@ -254,8 +160,8 @@ function ModuleListInner() {
             <AlertDialogHeader>
               <AlertDialogTitle>Supprimer le module</AlertDialogTitle>
               <AlertDialogDescription>
-                Êtes-vous sûr de vouloir supprimer le module « {deleteConfirm?.shortname}» ? Cette action
-                est irréversible.
+                Êtes-vous sûr de vouloir supprimer le module « {deleteConfirm?.shortname}» ? Cette
+                action est irréversible.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -282,9 +188,5 @@ function ModuleListInner() {
 }
 
 export function ModuleList() {
-  return (
-    <ModuleCategoryProvider>
-      <ModuleListInner />
-    </ModuleCategoryProvider>
-  );
+  return <ModuleListInner />;
 }

@@ -44,6 +44,7 @@ const CREATE_PAYLOAD: CreateModulePayload = {
   shortname: 'Développement Web',
   idnumber: 'DW-001',
   description: '<p>Module de dev web</p>',
+  category_id: 'cat-1',
   course_ids: ['c-001', 'c-002'],
 };
 
@@ -55,14 +56,15 @@ describe('adminModulesApi', () => {
 
   describe('list(params)', () => {
     it('appelle GET platform/competencies avec les paramètres de pagination', async () => {
-      mockApiGet.mockResolvedValue({ data: [MOCK_COMPETENCY], meta: { total: 1, current_page: 1, per_page: 25 } });
+      mockApiGet.mockResolvedValue({
+        data: [MOCK_COMPETENCY],
+        meta: { total: 1, current_page: 1, per_page: 25 },
+      });
 
       await adminModulesApi.list({ page: 1, per_page: 25 });
 
       expect(mockApiGet).toHaveBeenCalledTimes(1);
-      expect(mockApiGet).toHaveBeenCalledWith(
-        expect.stringMatching(/^platform\/competencies\?/),
-      );
+      expect(mockApiGet).toHaveBeenCalledWith(expect.stringMatching(/^platform\/competencies\?/));
     });
 
     it('inclut le paramètre de recherche quand q est fourni', async () => {
@@ -159,7 +161,12 @@ describe('adminModulesApi', () => {
     it('appelle PUT platform/competencies/{id}', async () => {
       mockApiPut.mockResolvedValue({ data: MOCK_COMPETENCY });
 
-      await adminModulesApi.update('mod-uuid-001', { shortname: 'Nouveau nom', idnumber: 'DW-001', course_ids: [] });
+      await adminModulesApi.update('mod-uuid-001', {
+        shortname: 'Nouveau nom',
+        idnumber: 'DW-001',
+        category_id: 'cat-1',
+        course_ids: [],
+      });
 
       expect(mockApiPut).toHaveBeenCalledWith(
         'platform/competencies/mod-uuid-001',
@@ -170,12 +177,14 @@ describe('adminModulesApi', () => {
     it("construit l'URL avec l'id fourni", async () => {
       mockApiPut.mockResolvedValue({ data: MOCK_COMPETENCY });
 
-      await adminModulesApi.update('abc-999', { shortname: 'Test', idnumber: 'T-001', course_ids: [] });
+      await adminModulesApi.update('abc-999', {
+        shortname: 'Test',
+        idnumber: 'T-001',
+        category_id: 'cat-1',
+        course_ids: [],
+      });
 
-      expect(mockApiPut).toHaveBeenCalledWith(
-        'platform/competencies/abc-999',
-        expect.any(Object),
-      );
+      expect(mockApiPut).toHaveBeenCalledWith('platform/competencies/abc-999', expect.any(Object));
     });
 
     it('retourne le module mis à jour', async () => {
@@ -185,6 +194,7 @@ describe('adminModulesApi', () => {
       const result = await adminModulesApi.update('mod-uuid-001', {
         shortname: 'Nouveau nom',
         idnumber: 'DW-001',
+        category_id: 'cat-1',
         course_ids: [],
       });
 
@@ -195,7 +205,12 @@ describe('adminModulesApi', () => {
       mockApiPut.mockRejectedValue(new Error('Network error'));
 
       await expect(
-        adminModulesApi.update('mod-uuid-001', { shortname: 'x', idnumber: 'y', course_ids: [] }),
+        adminModulesApi.update('mod-uuid-001', {
+          shortname: 'x',
+          idnumber: 'y',
+          category_id: 'cat-1',
+          course_ids: [],
+        }),
       ).rejects.toThrow('Network error');
     });
   });
@@ -222,14 +237,13 @@ describe('adminModulesApi', () => {
 
   describe('duplicate(id, shortname?)', () => {
     it('appelle POST platform/competencies/{id}/duplicate sans shortname', async () => {
-      mockApiPost.mockResolvedValue({ data: { ...MOCK_COMPETENCY, shortname: 'Développement Web-COPY' } });
+      mockApiPost.mockResolvedValue({
+        data: { ...MOCK_COMPETENCY, shortname: 'Développement Web-COPY' },
+      });
 
       await adminModulesApi.duplicate('mod-uuid-001');
 
-      expect(mockApiPost).toHaveBeenCalledWith(
-        'platform/competencies/mod-uuid-001/duplicate',
-        {},
-      );
+      expect(mockApiPost).toHaveBeenCalledWith('platform/competencies/mod-uuid-001/duplicate', {});
     });
 
     it('envoie shortname quand il est fourni', async () => {
@@ -237,10 +251,9 @@ describe('adminModulesApi', () => {
 
       await adminModulesApi.duplicate('mod-uuid-001', 'Dev Web BIS');
 
-      expect(mockApiPost).toHaveBeenCalledWith(
-        'platform/competencies/mod-uuid-001/duplicate',
-        { shortname: 'Dev Web BIS' },
-      );
+      expect(mockApiPost).toHaveBeenCalledWith('platform/competencies/mod-uuid-001/duplicate', {
+        shortname: 'Dev Web BIS',
+      });
     });
 
     it('retourne la compétence dupliquée', async () => {

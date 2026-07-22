@@ -5,6 +5,7 @@ export interface ModulePayload {
   shortname: string;
   idnumber: string;
   description?: string;
+  category_id: string;
   course_ids: string[];
 }
 
@@ -15,7 +16,7 @@ export type UpdateModulePayload = ModulePayload;
 
 export interface ModuleSearchParams {
   q?: string;
-  /** Frontend-only — not sent to the API until the backend implements categories. */
+  /** Frontend-only — not sent to the API (pour l'instant). */
   category?: string;
   sort_by?: string;
   sort_dir?: 'asc' | 'desc';
@@ -38,6 +39,7 @@ export interface CompetencyApiResponse {
   idnumber?: string | null;
   description?: string | null;
   tenant_id?: string | null;
+  category_id?: string | null;
   /** Course objects on detail/duplicate endpoints */
   courses?: Array<{ id: string }>;
   /** Course UUID array on list/create/update endpoints */
@@ -55,6 +57,32 @@ export interface CompetencyListApiResponse {
     per_page?: number;
   };
   total?: number;
+}
+
+export interface CompetencyCategory {
+  id: string;
+  tenant_id: string;
+  name: string;
+  idnumber: string;
+  description: string | null;
+  visible: boolean;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+}
+
+export interface CreateCompetencyCategoryPayload {
+  name: string;
+  idnumber: string;
+  description?: string | null;
+  visible: boolean;
+}
+
+export interface UpdateCompetencyCategoryPayload {
+  name?: string;
+  idnumber?: string;
+  description?: string | null;
+  visible?: boolean;
 }
 
 /** Maps a backend CompetencyApiResponse to the frontend Module model. */
@@ -78,8 +106,7 @@ export function normalizeModule(raw: CompetencyApiResponse): Module {
     shortname: raw.shortname ?? '',
     idnumber: raw.idnumber ?? '',
     description: raw.description ?? '',
-    category: '',
-    categoryId: null,
+    category_id: raw.category_id ?? null,
     tenantId: raw.tenant_id ?? '',
     courseIds,
     createdAt: raw.created_at ?? '',

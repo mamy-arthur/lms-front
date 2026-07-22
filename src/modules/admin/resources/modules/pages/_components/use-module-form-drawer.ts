@@ -13,7 +13,6 @@ export interface ModuleFormModule {
   shortname: string;
   idnumber: string;
   description: string;
-  category: string;
   courseIds: string[];
 }
 
@@ -81,7 +80,11 @@ export function useModuleFormDrawer({
   const coursesByCategory = useMemo(() => {
     const map = new Map<
       string,
-      { key: string; name: string; courses: Array<{ id: string; fullName: string; categoryId: string }> }
+      {
+        key: string;
+        name: string;
+        courses: Array<{ id: string; fullName: string; categoryId: string }>;
+      }
     >();
     for (const course of availableCourses) {
       const key = course.categoryId || '__uncategorized__';
@@ -103,9 +106,7 @@ export function useModuleFormDrawer({
     [coursesByCategory],
   );
 
-  const [openCategories, setOpenCategories] = useState<Set<string>>(
-    () => new Set(),
-  );
+  const [openCategories, setOpenCategories] = useState<Set<string>>(() => new Set());
 
   const toggleCategory = useCallback((name: string) => {
     setOpenCategories((prev) => {

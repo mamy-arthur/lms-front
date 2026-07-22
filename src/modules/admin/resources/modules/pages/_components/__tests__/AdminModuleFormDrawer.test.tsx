@@ -11,9 +11,13 @@
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
   value: jest.fn().mockImplementation((query: string) => ({
-    matches: false, media: query, onchange: null,
-    addListener: jest.fn(), removeListener: jest.fn(),
-    addEventListener: jest.fn(), removeEventListener: jest.fn(),
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: jest.fn(),
+    removeListener: jest.fn(),
+    addEventListener: jest.fn(),
+    removeEventListener: jest.fn(),
     dispatchEvent: jest.fn(),
   })),
 });
@@ -31,7 +35,14 @@ jest.mock('@dnd-kit/sortable', () => ({
   SortableContext: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   sortableKeyboardCoordinates: jest.fn(),
   verticalListSortingStrategy: jest.fn(),
-  useSortable: () => ({ attributes: {}, listeners: {}, setNodeRef: jest.fn(), transform: null, transition: null, isDragging: false }),
+  useSortable: () => ({
+    attributes: {},
+    listeners: {},
+    setNodeRef: jest.fn(),
+    transform: null,
+    transition: null,
+    isDragging: false,
+  }),
   arrayMove: jest.fn((arr: unknown[], from: number, to: number) => {
     const result = [...arr];
     result.splice(to, 0, result.splice(from, 1)[0]);
@@ -42,7 +53,15 @@ jest.mock('@dnd-kit/utilities', () => ({ CSS: { Transform: { toString: () => '' 
 
 // ─── Mock RichTextEditor ──────────────────────────────────────────────────────
 jest.mock('@modules/shared/components/tiptap/RichTextEditor', () => ({
-  RichTextEditor: ({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder?: string }) => (
+  RichTextEditor: ({
+    value,
+    onChange,
+    placeholder,
+  }: {
+    value: string;
+    onChange: (v: string) => void;
+    placeholder?: string;
+  }) => (
     <textarea
       data-testid="rich-text-editor"
       placeholder={placeholder}
@@ -61,10 +80,22 @@ const mockCreate = jest.fn();
 const mockUpdate = jest.fn();
 
 jest.mock('@/modules/admin/resources/modules/hooks/useCreateModule', () => ({
-  useCreateModule: () => ({ mutate: mockCreate, isPending: false, isError: false, error: null, reset: jest.fn() }),
+  useCreateModule: () => ({
+    mutate: mockCreate,
+    isPending: false,
+    isError: false,
+    error: null,
+    reset: jest.fn(),
+  }),
 }));
 jest.mock('@/modules/admin/resources/modules/hooks/useUpdateModule', () => ({
-  useUpdateModule: () => ({ mutate: mockUpdate, isPending: false, isError: false, error: null, reset: jest.fn() }),
+  useUpdateModule: () => ({
+    mutate: mockUpdate,
+    isPending: false,
+    isError: false,
+    error: null,
+    reset: jest.fn(),
+  }),
 }));
 jest.mock('@/modules/admin/resources/modules/hooks/useModule', () => ({
   useModule: () => ({ data: undefined }),
@@ -72,23 +103,28 @@ jest.mock('@/modules/admin/resources/modules/hooks/useModule', () => ({
 jest.mock('@/modules/admin/resources/modules/hooks/useAvailableCoursesQuery', () => ({
   useAvailableCoursesQuery: () => ({ data: [] }),
 }));
-jest.mock('@/modules/admin/resources/modules/lib/module-store', () => ({
-  useModuleCategoryStore: () => ({
-    categories: [
-      { id: 'formation', name: 'Formation', identifier: 'formation', description: '', visible: true },
-    ],
-    addCategory: jest.fn(),
-    updateCategory: jest.fn(),
-    deleteCategory: jest.fn(),
-    getLabel: (id: string) => id,
+jest.mock(
+  '@/modules/admin/resources/modules/components/categories/CompetencyCategoryModal',
+  () => ({
+    CompetencyCategoryModal: () => null,
   }),
-}));
-jest.mock('@/modules/admin/resources/modules/components/module-category-drawer', () => ({
-  ModuleCategoryDrawer: () => null,
-}));
-jest.mock('@/modules/admin/resources/modules/components/module-category-select', () => ({
-  CategorySelect: () => <div data-testid="category-select" />,
-}));
+);
+jest.mock(
+  '@/modules/admin/resources/modules/components/categories/CompetencyCategorySelect',
+  () => ({
+    CompetencyCategorySelect: ({
+      value,
+      onChange,
+    }: {
+      value?: string;
+      onChange?: (v: string) => void;
+    }) => {
+      if (!value) onChange?.('formation');
+
+      return <div data-testid="category-select" data-value={value ?? ''} />;
+    },
+  }),
+);
 
 // ─── Imports ──────────────────────────────────────────────────────────────────
 import React from 'react';
@@ -103,8 +139,7 @@ const MOCK_MODULE: Module = {
   shortname: 'Développement Web',
   idnumber: 'DW-001',
   description: '<p>Description existante</p>',
-  category: 'formation',
-  categoryId: null,
+  category_id: 'formation',
   tenantId: '1',
   courseIds: [],
   createdAt: '2025-01-01T00:00:00Z',
@@ -120,12 +155,7 @@ interface RenderOptions {
 
 function renderDrawer({ module, onClose = jest.fn(), onSuccess = jest.fn() }: RenderOptions = {}) {
   return render(
-    <AdminModuleFormDrawer
-      open={true}
-      onClose={onClose}
-      onSuccess={onSuccess}
-      module={module}
-    />,
+    <AdminModuleFormDrawer open={true} onClose={onClose} onSuccess={onSuccess} module={module} />,
   );
 }
 
@@ -140,6 +170,10 @@ describe('AdminModuleFormDrawer', () => {
       const user = userEvent.setup();
       renderDrawer();
 
+      await waitFor(() => {
+        expect(screen.getByTestId('category-select')).toHaveAttribute('data-value', 'formation');
+      });
+
       await user.click(screen.getByRole('button', { name: /créer/i }));
 
       await waitFor(() => {
@@ -153,6 +187,11 @@ describe('AdminModuleFormDrawer', () => {
 
       const shortnameInput = screen.getByRole('textbox', { name: /nom/i });
       await user.type(shortnameInput, 'Mon module');
+
+      await waitFor(() => {
+        expect(screen.getByTestId('category-select')).toHaveAttribute('data-value', 'formation');
+      });
+
       await user.click(screen.getByRole('button', { name: /créer/i }));
 
       await waitFor(() => {
@@ -167,6 +206,11 @@ describe('AdminModuleFormDrawer', () => {
 
       await user.type(screen.getByRole('textbox', { name: /nom/i }), 'Mon module');
       await user.type(screen.getByRole('textbox', { name: /identifiant/i }), 'MOD-001');
+
+      await waitFor(() => {
+        expect(screen.getByTestId('category-select')).toHaveAttribute('data-value', 'formation');
+      });
+
       await user.click(screen.getByRole('button', { name: /créer/i }));
 
       await waitFor(() => {
@@ -190,6 +234,11 @@ describe('AdminModuleFormDrawer', () => {
 
       await user.type(screen.getByRole('textbox', { name: /nom/i }), 'Dev Web');
       await user.type(screen.getByRole('textbox', { name: /identifiant/i }), 'DW-001');
+
+      await waitFor(() => {
+        expect(screen.getByTestId('category-select')).toHaveAttribute('data-value', 'formation');
+      });
+
       await user.click(screen.getByRole('button', { name: /créer/i }));
 
       await waitFor(() => {
@@ -207,6 +256,11 @@ describe('AdminModuleFormDrawer', () => {
 
       await user.type(screen.getByRole('textbox', { name: /nom/i }), 'Dev Web');
       await user.type(screen.getByRole('textbox', { name: /identifiant/i }), 'DW-001');
+
+      await waitFor(() => {
+        expect(screen.getByTestId('category-select')).toHaveAttribute('data-value', 'formation');
+      });
+
       await user.click(screen.getByRole('button', { name: /créer/i }));
 
       await waitFor(() => expect(mockCreate).toHaveBeenCalled());
@@ -287,7 +341,7 @@ describe('AdminModuleFormDrawer', () => {
   // ── Auto-identifiant ───────────────────────────────────────────────────────
 
   describe('bouton Auto (identifiant)', () => {
-    it("génère un identifiant à partir du nom saisi", async () => {
+    it('génère un identifiant à partir du nom saisi', async () => {
       const user = userEvent.setup();
       renderDrawer();
 

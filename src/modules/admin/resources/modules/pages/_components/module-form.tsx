@@ -21,16 +21,6 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import {
   Command,
@@ -59,9 +49,8 @@ import { cn } from '@/lib/utils';
 import type { MutationLike } from '@/shared/types/mutation';
 import { extractApiError } from '@/shared/utils/api-error';
 import type { genIdentifier } from './module-form-utils';
-import { useModuleCategoryStore } from '../../lib/module-store';
-import { ModuleCategoryDrawer } from '../../components/module-category-drawer';
-import { CategorySelect } from '../../components/module-category-select';
+import { CompetencyCategoryModal } from '../../components/categories/CompetencyCategoryModal';
+import { CompetencyCategorySelect } from '../../components/categories/CompetencyCategorySelect';
 
 interface Course {
   id: string;
@@ -90,7 +79,6 @@ export interface ModuleFormProps {
   coursePopoverOpen: boolean;
   setCoursePopoverOpen: (open: boolean) => void;
   genIdentifierFn: typeof genIdentifier;
-  usedCategoryIds?: Set<string>;
 }
 
 function SortableCourseItem({
@@ -161,12 +149,15 @@ function ModuleDescriptionImageButton({
   const handleConfirm = ({ src, alt, width, height, align, mediaId }: ImageConfirmAttrs) => {
     if (ctx?.insertHtml) {
       const alignStyle = ALIGN_STYLES[align] ?? ALIGN_STYLES.left;
-      const sizeStyle = `${width ? `width: ${width}px; ` : ''}${height ? `height: ${height}px;` : ''}`.trim();
+      const sizeStyle =
+        `${width ? `width: ${width}px; ` : ''}${height ? `height: ${height}px;` : ''}`.trim();
       const style = sizeStyle ? `${alignStyle} ${sizeStyle}` : alignStyle;
       const widthAttr = width ? ` width="${width}"` : '';
       const heightAttr = height ? ` height="${height}"` : '';
       const mediaAttr = mediaId ? ` data-media-id="${mediaId}"` : '';
-      ctx.insertHtml(`<img src="${src}" alt="${alt}"${widthAttr}${heightAttr} style="${style}"${mediaAttr}>`);
+      ctx.insertHtml(
+        `<img src="${src}" alt="${alt}"${widthAttr}${heightAttr} style="${style}"${mediaAttr}>`,
+      );
       return;
     }
     (
@@ -216,25 +207,8 @@ export function ModuleForm({
   coursePopoverOpen,
   setCoursePopoverOpen,
   genIdentifierFn,
-  usedCategoryIds,
 }: ModuleFormProps) {
-  const { deleteCategory } = useModuleCategoryStore();
-  const [categoryDrawerOpen, setCategoryDrawerOpen] = useState(false);
-  const [categoryDrawerEditId, setCategoryDrawerEditId] = useState<string | null>(null);
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
-  const [usedDeleteAttempt, setUsedDeleteAttempt] = useState<string | null>(null);
-
-  const currentCategory = form.watch('category');
-
-  const handleDeleteCategory = () => {
-    if (deleteConfirm) {
-      deleteCategory(deleteConfirm);
-      if (currentCategory === deleteConfirm) {
-        form.setValue('category', '', { shouldValidate: true });
-      }
-      setDeleteConfirm(null);
-    }
-  };
+  const [categoryModalOpen, setCategoryModalOpen] = useState(false);
 
   const courseMap = useMemo(() => {
     const map = new Map<string, { fullName: string; categoryName: string }>();
@@ -267,8 +241,12 @@ export function ModuleForm({
 
   return (
     <Field {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-1 flex-col min-h-0" noValidate>
-        <div className="flex-1 space-y-5 overflow-y-auto px-6 py-4">
+      <form
+        onSubmit={form.handleSubmit(onSubmit)}
+        className="flex flex-1 flex-col min-h-0"
+        noValidate
+      >
+        <div className="flex-1 space-y-5 overflow-y-auto px-4 py-4 sm:px-6">
           {mutation.isError && (
             <div
               role="alert"
@@ -280,29 +258,15 @@ export function ModuleForm({
 
           <FieldRoot
             control={form.control}
-            name="category"
+            name="category_id"
             render={({ field }) => (
               <FieldGroup>
-                <FieldLabel className="text-xs">
-                  Catégorie
-                  <span className="ml-2 text-[10px] font-normal text-muted-foreground">
-                    (fonctionnalité à venir)
-                  </span>
-                </FieldLabel>
-                <CategorySelect
+                <FieldLabel className="text-xs">Catégorie</FieldLabel>
+                <CompetencyCategorySelect
                   value={field.value ?? ''}
                   onChange={field.onChange}
-                  usedCategoryIds={usedCategoryIds}
-                  disabled
-                  onEdit={(id) => {
-                    setCategoryDrawerEditId(id);
-                    setCategoryDrawerOpen(true);
-                  }}
-                  onDelete={(id) => setDeleteConfirm(id)}
-                  onUsedDeleteAttempt={(id) => setUsedDeleteAttempt(id)}
                   onCreate={() => {
-                    setCategoryDrawerEditId(null);
-                    setCategoryDrawerOpen(true);
+                    setCategoryModalOpen(true);
                   }}
                 />
                 <FieldError />
@@ -338,7 +302,9 @@ export function ModuleForm({
                       variant="outline"
                       size="xs"
                       onClick={() =>
-                        form.setValue('idnumber', genIdentifierFn(shortname), { shouldValidate: true })
+                        form.setValue('idnumber', genIdentifierFn(shortname), {
+                          shouldValidate: true,
+                        })
                       }
                     >
                       Auto
@@ -488,13 +454,14 @@ export function ModuleForm({
           />
         </div>
 
-        <div className="flex items-center justify-end gap-3 border-t bg-background px-6 py-4 shrink-0">
+        <div className="flex shrink-0 flex-col-reverse items-stretch gap-2 border-t bg-background px-4 py-4 sm:flex-row sm:items-center sm:justify-end sm:gap-3 sm:px-6">
           <Button
             type="button"
             variant="outline"
             onClick={handleClose}
             disabled={mutation.isPending}
             size="lg"
+            className="w-full sm:w-auto"
           >
             Annuler
           </Button>
@@ -502,7 +469,7 @@ export function ModuleForm({
             type="submit"
             disabled={mutation.isPending}
             size="lg"
-            className="bg-(--color-primary) hover:bg-(--color-primary)/80"
+            className="w-full bg-(--color-primary) hover:bg-(--color-primary)/80 sm:w-auto"
           >
             {mutation.isPending && <Loader2 className="size-4 animate-spin" />}
             {mutation.isPending
@@ -516,62 +483,13 @@ export function ModuleForm({
         </div>
       </form>
 
-      <ModuleCategoryDrawer
-        open={categoryDrawerOpen}
-        editingId={categoryDrawerEditId}
-        onOpenChange={(open) => {
-          setCategoryDrawerOpen(open);
-          if (!open) setCategoryDrawerEditId(null);
+      <CompetencyCategoryModal
+        open={categoryModalOpen}
+        onOpenChange={setCategoryModalOpen}
+        onCreated={(created) => {
+          form.setValue('category_id', created.id, { shouldValidate: true });
         }}
       />
-
-      <AlertDialog
-        open={!!deleteConfirm}
-        onOpenChange={(open) => {
-          if (!open) setDeleteConfirm(null);
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Supprimer la catégorie</AlertDialogTitle>
-            <AlertDialogDescription>
-              Êtes-vous sûr de vouloir supprimer cette catégorie ? Les modules utilisant cette
-              catégorie ne seront pas supprimés mais leur catégorie sera réinitialisée.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive hover:bg-destructive/80"
-              onClick={handleDeleteCategory}
-            >
-              Supprimer
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog
-        open={!!usedDeleteAttempt}
-        onOpenChange={(open) => {
-          if (!open) setUsedDeleteAttempt(null);
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Suppression impossible</AlertDialogTitle>
-            <AlertDialogDescription>
-              Cette catégorie de module ne peut pas être supprimée car elle contient des modules
-              liés. Veuillez déplacer ou supprimer les modules avant de supprimer la catégorie.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogAction onClick={() => setUsedDeleteAttempt(null)}>
-              Compris
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </Field>
   );
 }

@@ -3,9 +3,8 @@ export interface Module {
   shortname: string;
   idnumber: string;
   description: string;
-  /** Frontend-only — not persisted to the API. */
-  category: string;
-  categoryId: string | null;
+  /** Competency category id (backend field `category_id`). */
+  category_id: string | null;
   tenantId: string;
   courseIds: string[];
   createdAt: string;
@@ -24,7 +23,6 @@ export interface Quiz {
   tenantId: string;
   updatedAt: string;
 }
-
 
 export function normalizeQuiz(raw: Record<string, unknown>): Quiz {
   return {

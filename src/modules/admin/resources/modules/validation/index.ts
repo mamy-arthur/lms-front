@@ -4,8 +4,7 @@ export const moduleSchema = z.object({
   shortname: z.string().min(1, 'Nom requis').max(255),
   idnumber: z.string().min(1, 'Identifiant requis').max(60),
   description: z.string().max(2000).optional().or(z.literal('')),
-  /** Frontend-only — not sent to the API. */
-  category: z.string().optional(),
+  category_id: z.string().min(1, 'Catégorie requise'),
   courseIds: z.array(z.string()),
 });
 
@@ -15,6 +14,6 @@ export const MODULE_FORM_DEFAULTS: ModuleFormValues = {
   shortname: '',
   idnumber: '',
   description: '',
-  category: '',
+  category_id: '',
   courseIds: [],
 };

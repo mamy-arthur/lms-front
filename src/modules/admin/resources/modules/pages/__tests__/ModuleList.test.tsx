@@ -67,37 +67,20 @@ jest.mock('@modules/shared/components/modules', () => ({
 }));
 
 const mockTableProps = jest.fn();
-jest.mock(
-  '@/modules/admin/resources/modules/pages/_components/admin-modules-table',
-  () => ({
-    AdminModulesTable: (props: object) => {
-      mockTableProps(props);
-      return <div data-testid="admin-modules-table" />;
-    },
-  }),
-);
+jest.mock('@/modules/admin/resources/modules/pages/_components/admin-modules-table', () => ({
+  AdminModulesTable: (props: object) => {
+    mockTableProps(props);
+    return <div data-testid="admin-modules-table" />;
+  },
+}));
 
 const mockDrawerProps = jest.fn();
-jest.mock(
-  '@/modules/admin/resources/modules/pages/_components/AdminModuleFormDrawer',
-  () => ({
-    AdminModuleFormDrawer: (props: object) => {
-      mockDrawerProps(props);
-      return null;
-    },
-  }),
-);
-
-const mockDetailDrawerProps = jest.fn();
-jest.mock(
-  '@/modules/admin/resources/modules/pages/_components/module-detail-drawer',
-  () => ({
-    ModuleDetailDrawer: (props: object) => {
-      mockDetailDrawerProps(props);
-      return null;
-    },
-  }),
-);
+jest.mock('@/modules/admin/resources/modules/pages/_components/AdminModuleFormDrawer', () => ({
+  AdminModuleFormDrawer: (props: object) => {
+    mockDrawerProps(props);
+    return null;
+  },
+}));
 
 // ─── Imports ──────────────────────────────────────────────────────────────────
 import React from 'react';
@@ -120,8 +103,7 @@ const MOD_1: Module = {
   shortname: 'Développement Web',
   idnumber: 'DW-001',
   description: '',
-  category: 'formation',
-  categoryId: null,
+  category_id: 'formation',
   tenantId: '1',
   courseIds: [],
   createdAt: '2025-01-01T00:00:00Z',
@@ -133,8 +115,7 @@ const MOD_2: Module = {
   shortname: 'Sécurité Réseau',
   idnumber: 'SEC-002',
   description: '',
-  category: 'specialisation',
-  categoryId: null,
+  category_id: 'specialisation',
   tenantId: '1',
   courseIds: [],
   createdAt: '2025-02-01T00:00:00Z',
@@ -156,19 +137,9 @@ function lastTableProps() {
   return calls[calls.length - 1]?.[0] as {
     modules: Module[];
     isLoading: boolean;
-    onDetail: (m: Module) => void;
     onEdit: (m: Module) => void;
     onDuplicate: (m: Module) => void;
     onDelete: (m: Module) => void;
-  };
-}
-
-function lastDetailDrawerProps() {
-  const calls = mockDetailDrawerProps.mock.calls;
-  return calls[calls.length - 1]?.[0] as {
-    open: boolean;
-    module: Module | undefined;
-    onClose: () => void;
   };
 }
 
@@ -267,44 +238,6 @@ describe('ModuleList', () => {
     expect(mockHandleEdit).toHaveBeenCalledWith(MOD_1);
   });
 
-  // ── Drawer de détail ────────────────────────────────────────────────────────
-
-  it('le drawer de détail est fermé par défaut', () => {
-    renderPage();
-    expect(lastDetailDrawerProps().open).toBe(false);
-    expect(lastDetailDrawerProps().module).toBeUndefined();
-  });
-
-  it('ouvre le drawer de détail avec le bon module via onDetail', () => {
-    mockUseModules.mockReturnValue({
-      data: { data: [MOD_1], total: 1 },
-      isLoading: false,
-    } as ReturnType<typeof useModules>);
-    renderPage();
-
-    act(() => {
-      lastTableProps().onDetail(MOD_1);
-    });
-
-    expect(lastDetailDrawerProps().open).toBe(true);
-    expect(lastDetailDrawerProps().module).toEqual(MOD_1);
-  });
-
-  it('ferme le drawer de détail via onClose', () => {
-    mockUseModules.mockReturnValue({
-      data: { data: [MOD_1], total: 1 },
-      isLoading: false,
-    } as ReturnType<typeof useModules>);
-    renderPage();
-
-    act(() => { lastTableProps().onDetail(MOD_1); });
-    expect(lastDetailDrawerProps().open).toBe(true);
-
-    act(() => { lastDetailDrawerProps().onClose(); });
-    expect(lastDetailDrawerProps().open).toBe(false);
-    expect(lastDetailDrawerProps().module).toBeUndefined();
-  });
-
   // ── Dialog de suppression ──────────────────────────────────────────────────
 
   it('ouvre le dialog de suppression via onDelete', () => {
@@ -331,7 +264,9 @@ describe('ModuleList', () => {
     } as ReturnType<typeof useModules>);
     renderPage();
 
-    act(() => { lastTableProps().onDelete(MOD_1); });
+    act(() => {
+      lastTableProps().onDelete(MOD_1);
+    });
 
     await user.click(screen.getByRole('button', { name: /^supprimer$/i }));
 
@@ -346,7 +281,9 @@ describe('ModuleList', () => {
     } as ReturnType<typeof useModules>);
     renderPage();
 
-    act(() => { lastTableProps().onDelete(MOD_1); });
+    act(() => {
+      lastTableProps().onDelete(MOD_1);
+    });
     await user.click(screen.getByRole('button', { name: /annuler/i }));
 
     await waitFor(() => {
@@ -380,7 +317,9 @@ describe('ModuleList', () => {
     } as ReturnType<typeof useModules>);
     renderPage();
 
-    act(() => { lastTableProps().onDuplicate(MOD_1); });
+    act(() => {
+      lastTableProps().onDuplicate(MOD_1);
+    });
     await user.click(screen.getByRole('button', { name: /dupliquer/i }));
 
     expect(mockDuplicate).toHaveBeenCalledWith({ id: MOD_1.id, shortname: undefined });
@@ -394,7 +333,9 @@ describe('ModuleList', () => {
     } as ReturnType<typeof useModules>);
     renderPage();
 
-    act(() => { lastTableProps().onDuplicate(MOD_1); });
+    act(() => {
+      lastTableProps().onDuplicate(MOD_1);
+    });
 
     const input = screen.getByRole('textbox');
     await user.type(input, 'Dev Web BIS');

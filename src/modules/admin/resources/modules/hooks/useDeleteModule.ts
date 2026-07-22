@@ -7,8 +7,7 @@ export function useDeleteModule() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id }: { id: string; idnumber: string }) =>
-      adminModulesApi.remove(id),
+    mutationFn: ({ id }: { id: string; idnumber: string }) => adminModulesApi.remove(id),
     onSuccess: (_data, { idnumber }) => {
       queryClient.invalidateQueries({ queryKey: ADMIN_MODULES_QUERY_KEY });
       queryClient.removeQueries({ queryKey: moduleQueryKey(idnumber) });

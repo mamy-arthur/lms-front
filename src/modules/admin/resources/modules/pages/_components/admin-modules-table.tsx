@@ -7,7 +7,7 @@ import {
 } from '@/shared/components/ui/DataTable';
 import { formatDate } from '@/shared/lib/date';
 import type { Module } from '../../types';
-import { CategoryCell } from './category-cell';
+import { useCompetencyCategoriesQuery } from '../../hooks/useCompetencyCategoriesQuery';
 import { ModuleActions } from './module-actions';
 
 export type SortConfig = DataTableSort;
@@ -23,11 +23,9 @@ interface AdminModulesTableProps {
   onSort?: (column: string) => void;
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
-  onDetail?: (module: Module) => void;
   onEdit?: (module: Module) => void;
   onDuplicate?: (module: Module) => void;
   onDelete?: (module: Module) => void;
-  onCategoryChange?: (moduleId: string, newCategory: string) => void;
 }
 
 export function AdminModulesTable({
@@ -41,12 +39,13 @@ export function AdminModulesTable({
   onSort,
   onPageChange,
   onPageSizeChange,
-  onDetail,
   onEdit,
   onDuplicate,
   onDelete,
-  onCategoryChange,
 }: AdminModulesTableProps) {
+  const { data: categories = [] } = useCompetencyCategoriesQuery();
+  const categoryNameById = new Map(categories.map((c) => [c.id, c.name]));
+
   const columns: DataTableColumn<Module>[] = [
     {
       key: 'identifier',
@@ -73,7 +72,9 @@ export function AdminModulesTable({
       label: 'Catégorie',
       sortable: true,
       render: (mod) => (
-        <CategoryCell module={mod} onCategoryChange={(id, cat) => onCategoryChange?.(id, cat)} />
+        <span className="text-xs text-muted-foreground">
+          {mod.category_id ? (categoryNameById.get(mod.category_id) ?? '—') : '—'}
+        </span>
       ),
     },
     {
@@ -94,7 +95,6 @@ export function AdminModulesTable({
         <div className="text-right" onClick={(e) => e.stopPropagation()}>
           <ModuleActions
             moduleLabel={mod.shortname}
-            onDetail={() => onDetail?.(mod)}
             onEdit={() => onEdit?.(mod)}
             onDuplicate={() => onDuplicate?.(mod)}
             onDelete={() => onDelete?.(mod)}

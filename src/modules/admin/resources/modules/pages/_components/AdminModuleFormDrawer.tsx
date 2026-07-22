@@ -21,8 +21,6 @@ export interface AdminModuleFormDrawerProps {
   onClose: () => void;
   onSuccess?: () => void;
   module?: Module;
-  duplicateFrom?: Module;
-  usedCategoryIds?: Set<string>;
 }
 
 function AdminModuleFormDrawerBase({
@@ -30,11 +28,8 @@ function AdminModuleFormDrawerBase({
   onClose,
   onSuccess,
   module,
-  duplicateFrom,
-  usedCategoryIds,
 }: AdminModuleFormDrawerProps) {
   const isEdit = !!module;
-  const isDuplicate = !!duplicateFrom;
 
   const createMutation = useCreateModule();
   const updateMutation = useUpdateModule();
@@ -54,29 +49,18 @@ function AdminModuleFormDrawerBase({
         idnumber: module.idnumber,
         // Prefer detail data (full description + courseIds); fall back to list data
         description: detailedModule?.description ?? module.description,
-        category: module.category,
+        category_id: detailedModule?.category_id ?? module.category_id ?? '',
         courseIds: detailedModule?.courseIds ?? module.courseIds,
       };
     }
-    if (duplicateFrom) {
-      return {
-        shortname: duplicateFrom.shortname,
-        idnumber: duplicateFrom.idnumber,
-        description: duplicateFrom.description,
-        category: duplicateFrom.category,
-        courseIds: duplicateFrom.courseIds,
-      };
-    }
     return MODULE_FORM_DEFAULTS;
-  }, [module, duplicateFrom, detailedModule]);
-
-  const formModule = isDuplicate ? undefined : module;
+  }, [module, detailedModule]);
 
   const formState = useModuleFormDrawer({
     open,
     onClose,
     onSuccess,
-    module: formModule,
+    module,
     createMutation,
     updateMutation,
     schema: moduleSchema,
@@ -86,8 +70,8 @@ function AdminModuleFormDrawerBase({
       shortname: values.shortname,
       idnumber: values.idnumber,
       description: values.description ?? '',
+      category_id: values.category_id,
       course_ids: values.courseIds,
-      // category is intentionally omitted — backend does not implement it yet
     }),
     buildUpdatePayload: (values, id) => ({
       id,
@@ -95,6 +79,7 @@ function AdminModuleFormDrawerBase({
         shortname: values.shortname,
         idnumber: values.idnumber,
         description: values.description ?? '',
+        category_id: values.category_id,
         course_ids: values.courseIds,
       } as ModulePayload,
     }),
@@ -108,14 +93,12 @@ function AdminModuleFormDrawerBase({
 
   const title = isEdit
     ? 'Modifier le module'
-    : isDuplicate
-      ? 'Dupliquer le module'
-      : 'Ajouter un module';
+    : 'Ajouter un module';
 
   return (
     <Sheet open={open} onOpenChange={(nextOpen) => !nextOpen && formState.handleClose()}>
       <SheetContent
-        className="flex w-full flex-col gap-0 p-0 overflow-hidden !w-[40vw] !max-w-[40vw]"
+        className="flex w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-xl md:max-w-2xl lg:max-w-[40vw]"
         showCloseButton={true}
         onInteractOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
@@ -139,7 +122,6 @@ function AdminModuleFormDrawerBase({
           coursePopoverOpen={formState.coursePopoverOpen}
           setCoursePopoverOpen={formState.setCoursePopoverOpen}
           genIdentifierFn={genIdentifier}
-          usedCategoryIds={usedCategoryIds}
         />
       </SheetContent>
     </Sheet>
