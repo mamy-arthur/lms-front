@@ -65,7 +65,7 @@ export function CompetencyCategoriesManageDrawer({ open, onOpenChange }: Props) 
   return (
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent className="flex w-full flex-col gap-0 p-0 sm:max-w-xl lg:max-w-2xl">
+        <SheetContent className="flex w-full flex-col gap-0 p-0 max-w-187.5!">
           <SheetHeader className="border-b px-4 py-4">
             <div className="flex items-start justify-between gap-3 pr-8">
               <div className="space-y-1">
@@ -83,10 +83,11 @@ export function CompetencyCategoriesManageDrawer({ open, onOpenChange }: Props) 
                 type="button"
                 size="sm"
                 onClick={openCreate}
-                className="shrink-0 bg-(--color-primary) hover:bg-(--color-primary)/80"
+                className="shrink-0"
+                variant="outline"
               >
                 <Plus className="size-3.5" />
-                Ajouter une catégorie
+                Ajouter
               </Button>
             </div>
             {isLoading ? (

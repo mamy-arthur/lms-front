@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,15 +36,16 @@ function ModuleListInner() {
   const [duplicateShortname, setDuplicateShortname] = useState('');
   const [manageCategoriesOpen, setManageCategoriesOpen] = useState(false);
 
-  const selectedCategories = ctrl.draftCategory;
+  const categoryFilter = ctrl.draftCategory[0] ?? 'all';
 
-  const toggleCategoryFilter = (categoryId: string) => {
-    const next = selectedCategories.includes(categoryId)
-      ? selectedCategories.filter((c) => c !== categoryId)
-      : [...selectedCategories.filter((c) => c !== 'all'), categoryId];
-    ctrl.setDraftCategory(next.length > 0 ? next : ['all']);
-    ctrl.handleSearch();
-  };
+  const modulesAll = data?.data ?? [];
+  const filteredModules = useMemo(
+    () =>
+      categoryFilter === 'all'
+        ? modulesAll
+        : modulesAll.filter((m) => m.category_id === categoryFilter),
+    [modulesAll, categoryFilter],
+  );
 
   return (
     <div className="bg-background">
@@ -62,19 +63,17 @@ function ModuleListInner() {
           draftSearch={ctrl.draftSearch}
           onDraftSearchChange={ctrl.setDraftSearch}
           onSearch={ctrl.handleSearch}
-          selectedCategories={selectedCategories}
+          categoryFilter={categoryFilter}
           filterCategories={filterCategories}
-          onSelectAllCategories={() => {
-            ctrl.setDraftCategory(['all']);
-            ctrl.handleSearch();
+          onCategoryFilterChange={(value) => {
+            ctrl.setDraftCategory([value]);
           }}
-          onToggleCategory={toggleCategoryFilter}
           onManageCategories={() => setManageCategoriesOpen(true)}
           onCreateModule={ctrl.handleOpenCreate}
         />
 
         <AdminModulesTable
-          modules={data?.data ?? []}
+          modules={filteredModules}
           isLoading={isLoading}
           hasQuery={ctrl.hasQuery}
           page={ctrl.page}

@@ -1,10 +1,11 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { FieldValues } from 'react-hook-form';
 import { useWatch } from 'react-hook-form';
 import type { z } from 'zod';
 import type { MutationLike } from '@/shared/types/mutation';
 import { useFormDrawer as _useFormDrawer } from '@/shared/components/form-drawer/use-form-drawer';
 import { useAvailableCoursesQuery } from '../../hooks/useAvailableCoursesQuery';
+import { useCategoryData } from '@/modules/shared/components/courses/hooks/useCategoryData';
 
 export type { MutationLike };
 
@@ -76,8 +77,11 @@ export function useModuleFormDrawer({
   // Use real available courses from the backend API.
   // In edit mode, pass the module ID so already-linked courses are included.
   const { data: availableCourses = [] } = useAvailableCoursesQuery(module?.id);
+  const { categoriesQuery } = useCategoryData();
+  const courseCategories = categoriesQuery.data ?? [];
 
   const coursesByCategory = useMemo(() => {
+    const categoryNameById = new Map(courseCategories.map((c) => [c.id, c.name]));
     const map = new Map<
       string,
       {
@@ -89,7 +93,9 @@ export function useModuleFormDrawer({
     for (const course of availableCourses) {
       const key = course.categoryId || '__uncategorized__';
       if (!map.has(key)) {
-        map.set(key, { key, name: course.categoryName || 'Sans catégorie', courses: [] });
+        const name =
+          course.categoryName || categoryNameById.get(course.categoryId) || 'Sans catégorie';
+        map.set(key, { key, name, courses: [] });
       }
       map.get(key)!.courses.push({
         id: course.id,
@@ -98,21 +104,21 @@ export function useModuleFormDrawer({
       });
     }
     return Array.from(map.values());
-  }, [availableCourses]);
-
-  // All category names (used to expand all by default once data loads)
-  const allCategoryNames = useMemo(
-    () => new Set(coursesByCategory.map(({ name }) => name)),
-    [coursesByCategory],
-  );
+  }, [availableCourses, courseCategories]);
 
   const [openCategories, setOpenCategories] = useState<Set<string>>(() => new Set());
 
-  const toggleCategory = useCallback((name: string) => {
+  useEffect(() => {
+    if (coursesByCategory.length > 0 && openCategories.size === 0) {
+      setOpenCategories(new Set(coursesByCategory.map(({ key }) => key)));
+    }
+  }, [coursesByCategory]);
+
+  const toggleCategory = useCallback((key: string) => {
     setOpenCategories((prev) => {
       const next = new Set(prev);
-      if (next.has(name)) next.delete(name);
-      else next.add(name);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
       return next;
     });
   }, []);
@@ -127,8 +133,7 @@ export function useModuleFormDrawer({
     selectedCourseIds,
     toggleCourse,
     coursesByCategory,
-    // Expand all categories by default when there are no explicit toggles yet
-    openCategories: openCategories.size > 0 ? openCategories : allCategoryNames,
+    openCategories,
     toggleCategory,
     shortname,
     coursePopoverOpen,
