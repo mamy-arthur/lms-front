@@ -130,6 +130,7 @@ jest.mock(
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AdminModuleFormDrawer } from '../AdminModuleFormDrawer';
 import type { Module } from '../../../types';
 
@@ -154,8 +155,11 @@ interface RenderOptions {
 }
 
 function renderDrawer({ module, onClose = jest.fn(), onSuccess = jest.fn() }: RenderOptions = {}) {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
-    <AdminModuleFormDrawer open={true} onClose={onClose} onSuccess={onSuccess} module={module} />,
+    <QueryClientProvider client={queryClient}>
+      <AdminModuleFormDrawer open={true} onClose={onClose} onSuccess={onSuccess} module={module} />
+    </QueryClientProvider>,
   );
 }
 
