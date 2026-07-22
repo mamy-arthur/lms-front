@@ -1,8 +1,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminModulesApi } from '../api';
-import type { Module, UpdateModulePayload } from '../types';
-import { normalizeModule } from '../types';
-import { ADMIN_MODULES_QUERY_KEY } from './useModulesQuery';
+import type { UpdateModulePayload } from '../types';
+import { ADMIN_MODULES_QUERY_KEY } from './useModules';
+import { moduleQueryKey } from './useModule';
 
 export function useUpdateModule() {
   const queryClient = useQueryClient();
@@ -10,15 +10,11 @@ export function useUpdateModule() {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: UpdateModulePayload }) =>
       adminModulesApi.update(id, data),
-    onSuccess: ({ data: rawModule }) => {
-      const updated = normalizeModule(rawModule as unknown as Record<string, unknown>);
-      queryClient.setQueryData<{ data: Module[]; total: number }>(
-        ADMIN_MODULES_QUERY_KEY,
-        (prev) => ({
-          data: (prev?.data ?? []).map((m) => (m.id === updated.id ? updated : m)),
-          total: prev?.total ?? 0,
-        }),
-      );
+    onSuccess: ({ data: raw }) => {
+      queryClient.invalidateQueries({ queryKey: ADMIN_MODULES_QUERY_KEY });
+      if (raw.idnumber) {
+        queryClient.invalidateQueries({ queryKey: moduleQueryKey(raw.idnumber) });
+      }
     },
   });
 }

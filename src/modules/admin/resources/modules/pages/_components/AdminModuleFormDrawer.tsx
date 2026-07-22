@@ -1,7 +1,6 @@
 'use client';
 
 import { memo, useEffect, useMemo } from 'react';
-import { z } from 'zod';
 import {
   Sheet,
   SheetContent,
@@ -12,43 +11,16 @@ import {
 import { ModuleForm } from './module-form';
 import { genIdentifier } from './module-form-utils';
 import { useModuleFormDrawer } from './use-module-form-drawer';
-import { useCreateModule } from '../hooks/useCreateModule';
-import { useUpdateModule } from '../hooks/useUpdateModule';
-import type { CreateModulePayload, Module, UpdateModulePayload } from '../types';
-
-const createSchema = z.object({
-  name: z.string().min(1, 'Nom requis').max(255),
-  identifier: z.string().min(1, 'Identifiant requis').max(60),
-  description: z.string().max(2000).optional().or(z.literal('')),
-  category: z.string().min(1, 'Catégorie requise'),
-  courseIds: z.array(z.string()).min(0),
-});
-
-const updateSchema = z.object({
-  name: z.string().min(1, 'Nom requis').max(255),
-  identifier: z.string().min(1, 'Identifiant requis').max(60),
-  description: z.string().max(2000).optional().or(z.literal('')),
-  category: z.string().min(1, 'Catégorie requise'),
-  courseIds: z.array(z.string()).min(0),
-});
-
-type CreateFormValues = z.infer<typeof createSchema>;
-
-const CREATE_DEFAULTS: CreateFormValues = {
-  name: '',
-  identifier: '',
-  description: '',
-  category: '',
-  courseIds: [],
-};
-
+import { useCreateModule } from '../../hooks/useCreateModule';
+import { useUpdateModule } from '../../hooks/useUpdateModule';
+import { useModule } from '../../hooks/useModule';
+import { moduleSchema, MODULE_FORM_DEFAULTS } from '../../validation';
+import type { Module, ModulePayload } from '../../types';
 export interface AdminModuleFormDrawerProps {
   open: boolean;
   onClose: () => void;
   onSuccess?: () => void;
   module?: Module;
-  duplicateFrom?: Module;
-  usedCategoryIds?: Set<string>;
 }
 
 function AdminModuleFormDrawerBase({
@@ -56,66 +28,60 @@ function AdminModuleFormDrawerBase({
   onClose,
   onSuccess,
   module,
-  duplicateFrom,
-  usedCategoryIds,
 }: AdminModuleFormDrawerProps) {
   const isEdit = !!module;
-  const isDuplicate = !!duplicateFrom;
 
   const createMutation = useCreateModule();
   const updateMutation = useUpdateModule();
 
-  const schema = isEdit ? updateSchema : createSchema;
+  // Fetch full details when editing to ensure course_ids are populated
+  // (the list endpoint may omit them for performance).
+  // Keyed by idnumber per cache convention.
+  const { data: detailedModule } = useModule(
+    isEdit ? module?.idnumber : undefined,
+    isEdit ? module?.id : undefined,
+  );
 
   const defaultValues = useMemo(() => {
     if (module) {
       return {
-        name: module.name,
-        identifier: module.identifier,
-        description: module.description,
-        category: module.category,
-        courseIds: module.courseIds,
+        shortname: module.shortname,
+        idnumber: module.idnumber,
+        // Prefer detail data (full description + courseIds); fall back to list data
+        description: detailedModule?.description ?? module.description,
+        category_id: detailedModule?.category_id ?? module.category_id ?? '',
+        courseIds: detailedModule?.courseIds ?? module.courseIds,
       };
     }
-    if (duplicateFrom) {
-      return {
-        name: duplicateFrom.name,
-        identifier: duplicateFrom.identifier,
-        description: duplicateFrom.description,
-        category: duplicateFrom.category,
-        courseIds: duplicateFrom.courseIds,
-      };
-    }
-    return CREATE_DEFAULTS;
-  }, [module, duplicateFrom]);
-
-  const formModule = isDuplicate ? undefined : module;
+    return MODULE_FORM_DEFAULTS;
+  }, [module, detailedModule]);
 
   const formState = useModuleFormDrawer({
     open,
     onClose,
     onSuccess,
-    module: formModule,
+    module,
     createMutation,
     updateMutation,
-    schema,
+    schema: moduleSchema,
     defaultValues,
-    createDefaults: CREATE_DEFAULTS,
-    buildCreatePayload: (values) =>
-      ({
-        ...values,
-        description: values.description ?? '',
-        course_ids: values.courseIds,
-      }) as CreateModulePayload,
+    createDefaults: MODULE_FORM_DEFAULTS,
+    buildCreatePayload: (values): ModulePayload => ({
+      shortname: values.shortname,
+      idnumber: values.idnumber,
+      description: values.description ?? '',
+      category_id: values.category_id,
+      course_ids: values.courseIds,
+    }),
     buildUpdatePayload: (values, id) => ({
       id,
       data: {
-        name: values.name,
-        identifier: values.identifier,
+        shortname: values.shortname,
+        idnumber: values.idnumber,
         description: values.description ?? '',
-        category: values.category,
+        category_id: values.category_id,
         course_ids: values.courseIds,
-      } as UpdateModulePayload,
+      } as ModulePayload,
     }),
   });
 
@@ -125,16 +91,12 @@ function AdminModuleFormDrawerBase({
     }
   }, [open, defaultValues, formState.form]);
 
-  const title = isEdit
-    ? 'Modifier le module'
-    : isDuplicate
-      ? 'Dupliquer le module'
-      : 'Ajouter un module';
+  const title = isEdit ? 'Modifier le module' : 'Ajouter un module';
 
   return (
     <Sheet open={open} onOpenChange={(nextOpen) => !nextOpen && formState.handleClose()}>
       <SheetContent
-        className="flex w-full flex-col gap-0 p-0 sm:max-w-2xl lg:max-w-4xl"
+        className="flex w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-xl md:max-w-2xl lg:max-w-[40vw]"
         showCloseButton={true}
         onInteractOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
@@ -154,11 +116,10 @@ function AdminModuleFormDrawerBase({
           coursesByCategory={formState.coursesByCategory}
           openCategories={formState.openCategories}
           toggleCategory={formState.toggleCategory}
-          name={formState.name}
+          shortname={formState.shortname}
           coursePopoverOpen={formState.coursePopoverOpen}
           setCoursePopoverOpen={formState.setCoursePopoverOpen}
           genIdentifierFn={genIdentifier}
-          usedCategoryIds={usedCategoryIds}
         />
       </SheetContent>
     </Sheet>

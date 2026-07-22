@@ -1,6 +1,6 @@
 'use client';
 
-import { Check, ChevronsUpDown, Pencil, Plus, Trash2 } from 'lucide-react';
+import { Check, ChevronsUpDown, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -12,39 +12,34 @@ import {
 } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
-import { useModuleCategoryStore } from '../lib/module-store';
+import { useCompetencyCategoriesQuery } from '../../hooks/useCompetencyCategoriesQuery';
 
-interface CategorySelectProps {
+interface CompetencyCategorySelectProps {
   value: string;
   onChange: (value: string) => void;
-  usedCategoryIds?: Set<string>;
-  onEdit: (categoryId: string) => void;
-  onDelete: (categoryId: string) => void;
-  onUsedDeleteAttempt: (categoryId: string) => void;
   onCreate: () => void;
+  disabled?: boolean;
 }
 
-export function CategorySelect({
+export function CompetencyCategorySelect({
   value,
   onChange,
-  usedCategoryIds,
-  onEdit,
-  onDelete,
-  onUsedDeleteAttempt,
   onCreate,
-}: CategorySelectProps) {
-  const { categories } = useModuleCategoryStore();
+  disabled = false,
+}: CompetencyCategorySelectProps) {
+  const { data: categories = [], isLoading } = useCompetencyCategoriesQuery();
   const [open, setOpen] = useState(false);
 
   return (
     <div className="space-y-1">
-      <Popover open={open} onOpenChange={setOpen}>
+      <Popover open={open} onOpenChange={(o) => !disabled && setOpen(o)}>
         <PopoverTrigger asChild>
           <Button
             type="button"
             variant="outline"
             role="combobox"
             aria-label="Catégorie"
+            disabled={disabled}
             className="h-9 w-full justify-between font-normal text-xs"
           >
             {value ? categories.find((c) => c.id === value)?.name : 'Sélectionner une catégorie'}
@@ -58,7 +53,7 @@ export function CategorySelect({
         >
           <Command>
             <CommandInput placeholder="Rechercher…" />
-            <CommandEmpty>Aucune catégorie trouvée.</CommandEmpty>
+            <CommandEmpty>{isLoading ? 'Chargement...' : 'Aucune catégorie trouvée.'}</CommandEmpty>
             <CommandList>
               {categories.map((category) => (
                 <CommandItem
@@ -79,39 +74,6 @@ export function CategorySelect({
                       />
                       <span>{category.name}</span>
                     </div>
-                    <div className="flex items-center gap-0.5">
-                      <button
-                        type="button"
-                        className="inline-flex items-center justify-center rounded p-0.5 text-muted-foreground hover:text-foreground hover:bg-accent"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setOpen(false);
-                          onEdit(category.id);
-                        }}
-                      >
-                        <Pencil className="size-3" />
-                      </button>
-                      <button
-                        type="button"
-                        className={cn(
-                          'inline-flex items-center justify-center rounded p-0.5',
-                          usedCategoryIds?.has(category.id)
-                            ? 'text-muted-foreground/40 cursor-not-allowed'
-                            : 'text-muted-foreground hover:text-destructive hover:bg-destructive/10',
-                        )}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setOpen(false);
-                          if (usedCategoryIds?.has(category.id)) {
-                            onUsedDeleteAttempt(category.id);
-                          } else {
-                            onDelete(category.id);
-                          }
-                        }}
-                      >
-                        <Trash2 className="size-3" />
-                      </button>
-                    </div>
                   </div>
                 </CommandItem>
               ))}
@@ -125,7 +87,7 @@ export function CategorySelect({
               }}
             >
               <Plus className="size-3.5" />
-              Nouvelle catégorie
+              Créer
             </div>
           </Command>
         </PopoverContent>
