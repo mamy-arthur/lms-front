@@ -22,13 +22,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Button } from '@/components/ui/button';
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-} from '@/components/ui/command';
+import { Command, CommandEmpty, CommandInput, CommandItem } from '@/components/ui/command';
 import {
   Field,
   FieldContent,
@@ -301,6 +295,7 @@ export function ModuleForm({
                       type="button"
                       variant="outline"
                       size="xs"
+                      className="h-7"
                       onClick={() =>
                         form.setValue('idnumber', genIdentifierFn(shortname), {
                           shouldValidate: true,
@@ -372,17 +367,19 @@ export function ModuleForm({
                     <Command className="overflow-hidden">
                       <CommandInput placeholder="Rechercher un cours..." />
 
-                      <CommandEmpty>Aucun cours trouvé.</CommandEmpty>
+                      {coursesByCategory.length === 0 && (
+                        <CommandEmpty>Aucun cours trouvé.</CommandEmpty>
+                      )}
 
                       <div className="max-h-100 overflow-y-auto overscroll-contain">
                         {coursesByCategory.map(({ key, name, courses }) => {
-                          const isOpen = openCategories.has(name);
+                          const isOpen = openCategories.has(key);
 
                           return (
-                            <CommandGroup key={key}>
+                            <div key={key}>
                               <button
                                 type="button"
-                                onClick={() => toggleCategory(name)}
+                                onClick={() => toggleCategory(key)}
                                 className="flex w-full items-center gap-2 px-2 py-2 text-xs font-medium text-muted-foreground hover:text-foreground"
                               >
                                 <ChevronDown
@@ -412,7 +409,7 @@ export function ModuleForm({
                                     {course.fullName}
                                   </CommandItem>
                                 ))}
-                            </CommandGroup>
+                            </div>
                           );
                         })}
                       </div>

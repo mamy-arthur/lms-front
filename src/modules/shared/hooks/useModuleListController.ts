@@ -41,18 +41,21 @@ export function useModuleListController<TModule>(opts?: UseModuleListControllerO
     page_size: defaultPageSize,
   });
 
-  const handleSearch = useCallback(() => {
-    const selected = draftCategory.filter((c) => c !== 'all');
-    setParams((prev) => ({
-      ...prev,
-      q: draftSearch || undefined,
-      category: selected.length > 0 ? selected.join(',') : undefined,
-      ...(includeTenantFilter
-        ? { tenant_id: draftTenant !== 'all' ? draftTenant : undefined }
-        : {}),
-      page: 0,
-    }));
-  }, [draftSearch, draftCategory, draftTenant, includeTenantFilter]);
+  const handleSearch = useCallback(
+    (draftCategoryOverride?: string[]) => {
+      const selected = (draftCategoryOverride ?? draftCategory).filter((c) => c !== 'all');
+      setParams((prev) => ({
+        ...prev,
+        q: draftSearch || undefined,
+        category: selected.length > 0 ? selected.join(',') : undefined,
+        ...(includeTenantFilter
+          ? { tenant_id: draftTenant !== 'all' ? draftTenant : undefined }
+          : {}),
+        page: 0,
+      }));
+    },
+    [draftSearch, draftCategory, draftTenant, includeTenantFilter],
+  );
 
   const handleSort = useCallback((column: string) => {
     setParams((prev) => ({

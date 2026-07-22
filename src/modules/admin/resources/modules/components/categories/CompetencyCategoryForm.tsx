@@ -149,7 +149,12 @@ export function CompetencyCategoryForm({
           >
             Annuler
           </Button>
-          <Button type="submit" size="sm" disabled={mutation.isPending}>
+          <Button
+            type="submit"
+            size="sm"
+            disabled={mutation.isPending}
+            className="bg-(--color-primary) hover:bg-(--color-primary)/80"
+          >
             {mutation.isPending
               ? isEdit
                 ? 'Enregistrement…'

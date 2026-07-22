@@ -96,7 +96,7 @@ function AdminModuleFormDrawerBase({
   return (
     <Sheet open={open} onOpenChange={(nextOpen) => !nextOpen && formState.handleClose()}>
       <SheetContent
-        className="flex w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-xl md:max-w-2xl lg:max-w-[40vw]"
+        className="flex w-full flex-col gap-0 overflow-hidden p-0  max-w-187.5!"
         showCloseButton={true}
         onInteractOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
