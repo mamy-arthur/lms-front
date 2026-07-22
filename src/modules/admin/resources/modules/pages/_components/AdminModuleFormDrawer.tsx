@@ -91,9 +91,7 @@ function AdminModuleFormDrawerBase({
     }
   }, [open, defaultValues, formState.form]);
 
-  const title = isEdit
-    ? 'Modifier le module'
-    : 'Ajouter un module';
+  const title = isEdit ? 'Modifier le module' : 'Ajouter un module';
 
   return (
     <Sheet open={open} onOpenChange={(nextOpen) => !nextOpen && formState.handleClose()}>
