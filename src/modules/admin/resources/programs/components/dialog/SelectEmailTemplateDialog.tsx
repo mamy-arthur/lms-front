@@ -1,8 +1,7 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { Mail, Search } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { useEffect, useMemo, useState } from 'react';
+import { Loader2, Mail, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -14,6 +13,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/shared/lib/cn';
+import { useMailTemplatesQuery } from '@/modules/admin/resources/mail-templates/hooks/useMailTemplatesQuery';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -21,49 +21,7 @@ export type EmailTemplate = {
   id: string;
   name: string;
   subject: string;
-  category: string;
 };
-
-// ─── Mock data ────────────────────────────────────────────────────────────────
-
-const MOCK_EMAIL_TEMPLATES: EmailTemplate[] = [
-  {
-    id: 'et1',
-    name: 'Bienvenue dans le parcours',
-    subject: 'Bienvenue ! Votre formation commence maintenant',
-    category: 'Démarrage',
-  },
-  {
-    id: 'et2',
-    name: 'Rappel de connexion',
-    subject: 'Votre formation vous attend — connectez-vous',
-    category: 'Relance',
-  },
-  {
-    id: 'et3',
-    name: 'Module complété',
-    subject: 'Bravo ! Vous avez terminé ce module avec succès',
-    category: 'Progression',
-  },
-  {
-    id: 'et4',
-    name: "Invitation à l'évaluation",
-    subject: 'Vous pouvez maintenant passer votre évaluation',
-    category: 'Évaluation',
-  },
-  {
-    id: 'et5',
-    name: "Résultats d'évaluation",
-    subject: "Vos résultats d'évaluation sont disponibles",
-    category: 'Évaluation',
-  },
-  {
-    id: 'et6',
-    name: 'Attestation disponible',
-    subject: 'Votre attestation est prête à télécharger',
-    category: 'Certification',
-  },
-];
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -81,15 +39,21 @@ export function SelectEmailTemplateDialog({
   onSelect,
 }: Props) {
   const [search, setSearch] = useState('');
-  const [selected, setSelected] = useState<EmailTemplate | null>(
-    initialTemplateId
-      ? (MOCK_EMAIL_TEMPLATES.find((t) => t.id === initialTemplateId) ?? null)
-      : null,
-  );
+  const [selected, setSelected] = useState<EmailTemplate | null>(null);
+
+  const { data: queryData, isLoading } = useMailTemplatesQuery();
+  const data = queryData?.data;
+
+  // Restore initial selection when data loads
+  useEffect(() => {
+    if (!initialTemplateId || !data) return;
+    const found = data.find((t) => t.id === initialTemplateId);
+    if (found) setSelected({ id: found.id, name: found.name, subject: found.subject });
+  }, [initialTemplateId, data]);
 
   const filtered = useMemo(
-    () => MOCK_EMAIL_TEMPLATES.filter((t) => t.name.toLowerCase().includes(search.toLowerCase())),
-    [search],
+    () => (data ?? []).filter((t) => t.name.toLowerCase().includes(search.toLowerCase())),
+    [data, search],
   );
 
   return (
@@ -114,32 +78,34 @@ export function SelectEmailTemplateDialog({
           </div>
 
           <div className="flex max-h-[55vh] flex-col gap-2 overflow-y-auto pr-1">
-            {filtered.map((template) => (
-              <button
-                key={template.id}
-                type="button"
-                onClick={() => setSelected(template)}
-                className={cn(
-                  'flex items-start gap-3 rounded-lg border bg-card p-3 text-left transition-colors',
-                  selected?.id === template.id
-                    ? 'border-violet-400 bg-violet-50/60 ring-1 ring-violet-300'
-                    : 'border-border hover:border-violet-400/60 hover:bg-violet-50/50',
-                )}
-              >
-                <Mail className="mt-0.5 size-4 shrink-0 text-violet-500" />
-                <div>
-                  <p className="text-xs font-semibold">{template.name}</p>
-                  <p className="mt-0.5 text-[11px] text-muted-foreground">{template.subject}</p>
-                  <Badge
-                    variant="outline"
-                    className="mt-1 border-violet-200 text-[10px] text-violet-700"
-                  >
-                    {template.category}
-                  </Badge>
-                </div>
-              </button>
-            ))}
-            {filtered.length === 0 && (
+            {isLoading && (
+              <div className="flex items-center justify-center py-10">
+                <Loader2 className="size-5 animate-spin text-muted-foreground" />
+              </div>
+            )}
+            {!isLoading &&
+              filtered.map((template) => (
+                <button
+                  key={template.id}
+                  type="button"
+                  onClick={() =>
+                    setSelected({ id: template.id, name: template.name, subject: template.subject })
+                  }
+                  className={cn(
+                    'flex items-start gap-3 rounded-lg border bg-card p-3 text-left transition-colors',
+                    selected?.id === template.id
+                      ? 'border-violet-400 bg-violet-50/60 ring-1 ring-violet-300'
+                      : 'border-border hover:border-violet-400/60 hover:bg-violet-50/50',
+                  )}
+                >
+                  <Mail className="mt-0.5 size-4 shrink-0 text-violet-500" />
+                  <div>
+                    <p className="text-xs font-semibold">{template.name}</p>
+                    <p className="mt-0.5 text-[11px] text-muted-foreground">{template.subject}</p>
+                  </div>
+                </button>
+              ))}
+            {!isLoading && filtered.length === 0 && (
               <p className="py-8 text-center text-xs text-muted-foreground">
                 Aucun modèle ne correspond à votre recherche.
               </p>

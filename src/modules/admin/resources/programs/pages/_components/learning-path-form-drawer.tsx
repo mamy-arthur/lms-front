@@ -28,7 +28,11 @@ import { cn } from '@/lib/utils';
 import { useCreateLearningPath } from '../../hooks/useCreateLearningPath';
 import { useUpdateLearningPath } from '../../hooks/useUpdateLearningPath';
 import { useUploadLearningPathMedia } from '../../hooks/useUploadLearningPathMedia';
-import ProgramFlow, { type ProgramFlowHandle } from '../../components/ProgramFlow';
+import { useLinkCompetencyToLearningPath } from '../../hooks/useLinkCompetencyToLearningPath';
+import ProgramFlow, {
+  type ProgramFlowHandle,
+  type ModuleStepPayload,
+} from '../../components/ProgramFlow';
 import type { LearningPath, LearningPathCategory } from '../../types';
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
@@ -130,6 +134,7 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPath, categ
   const createMutation = useCreateLearningPath();
   const updateMutation = useUpdateLearningPath();
   const uploadMedia = useUploadLearningPathMedia();
+  const linkCompetency = useLinkCompetencyToLearningPath();
 
   const imageInputRef = useRef<HTMLInputElement>(null);
   const flowRef = useRef<ProgramFlowHandle>(null);
@@ -229,13 +234,31 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPath, categ
         show_in_shop: values.show_in_shop ?? false,
       };
 
+      let lpId: string;
+
       if (isEdit && learningPath) {
         await updateMutation.mutateAsync({ id: learningPath.id, ...payload });
+        lpId = learningPath.id;
         toast.success('Parcours mis à jour');
       } else {
-        await createMutation.mutateAsync(payload);
+        const result = await createMutation.mutateAsync(payload);
+        lpId = result.data.id;
         toast.success('Parcours créé');
       }
+
+      // Link new module competencies to the learning path
+      const flowPayload = flowRef.current?.getPayload();
+      const moduleSteps = (flowPayload?.etapes ?? []).filter(
+        (s): s is ModuleStepPayload => s.type === 'module' && !!s.moduleId,
+      );
+      const alreadyLinked = new Set(
+        isEdit ? (learningPath?.competencies ?? []).map((c) => c.competencyId) : [],
+      );
+      const toLink = moduleSteps.filter((s) => !alreadyLinked.has(s.moduleId!));
+      await Promise.allSettled(
+        toLink.map((s) => linkCompetency.mutateAsync({ id: lpId, competencyId: s.moduleId! })),
+      );
+
       onOpenChange(false);
     } catch {
       toast.error('Une erreur est survenue');

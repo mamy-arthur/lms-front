@@ -42,4 +42,9 @@ export const learningPathsApi = {
     formData.append('file', file);
     return apiUpload<{ data: ApiUploadedMedia }>('platform/learning-paths/media', formData);
   },
+
+  linkCompetency: (id: string, competencyId: string) =>
+    apiPost<{ data: ApiLearningPath }>(`platform/learning-paths/${id}/competencies`, {
+      competency_id: competencyId,
+    }),
 };
