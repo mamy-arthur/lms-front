@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 
-import { Search, BookOpen, Plus, LayoutGrid, List } from 'lucide-react';
+import { Search, BookOpen, Plus, LayoutGrid, List, Settings2 } from 'lucide-react';
 import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,6 +28,7 @@ import { toast } from 'sonner';
 import { CourseCard } from '@/modules/shared/components/courses/components/CourseCard';
 import { CourseDrawer } from './course-drawer';
 import { CourseDataTable } from './CourseDataTable';
+import { CategoryDrawer } from '../categories/category-drawer';
 
 type View = 'card' | 'table';
 
@@ -48,6 +49,7 @@ export function CourseTable({ basePath }: Props) {
     open: false,
     course: null,
   });
+  const [categoryDrawerOpen, setCategoryDrawerOpen] = useState(false);
 
   const filtered = useMemo(() => {
     return courses.filter((c) => {
@@ -108,6 +110,10 @@ export function CourseTable({ basePath }: Props) {
               ))}
             </SelectContent>
           </Select>
+          <Button variant="outline" onClick={() => setCategoryDrawerOpen(true)}>
+            <Settings2 className="mr-1 size-4" />
+            Gérer les catégories
+          </Button>
           <Button
             onClick={() => setCourseDrawer({ open: true, course: null })}
             className="bg-(--color-primary) hover:bg-(--color-primary)/80 text-primary-foreground"
@@ -225,6 +231,8 @@ export function CourseTable({ basePath }: Props) {
         }
         course={courseDrawer.course}
       />
+
+      <CategoryDrawer open={categoryDrawerOpen} onOpenChange={setCategoryDrawerOpen} />
     </div>
   );
 }

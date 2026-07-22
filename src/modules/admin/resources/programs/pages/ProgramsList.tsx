@@ -1,39 +1,47 @@
 'use client';
 
 import { useState } from 'react';
-import { ProgramDrawer } from '../components/ProgramDrawer';
-import { ProgramsTable } from '../components/programs-table';
-import { useProgramStore } from '../hooks/useProgramStore';
-import type { ProgramFormValues } from '../components/ProgramFormPanel';
-import type { StoredFlowData, StoredProgram } from '../types';
+import { toast } from 'sonner';
+import { useLearningPathsQuery } from '../hooks/useLearningPathsQuery';
+import { useLearningPathCategoriesQuery } from '../hooks/useLearningPathCategoriesQuery';
+import { useDeleteLearningPath } from '../hooks/useDeleteLearningPath';
+import { LearningPathsTable } from './_components/learning-paths-table';
+import { LearningPathFormDrawer } from './_components/learning-path-form-drawer';
+import { LearningPathCategoriesDrawer } from './_components/learning-path-categories-drawer';
+import type { LearningPath } from '../types';
 
 export function ProgramsList() {
-  const { programs, create, update, remove } = useProgramStore();
+  const learningPathsQuery = useLearningPathsQuery();
+  const categoriesQuery = useLearningPathCategoriesQuery();
+  const deleteMutation = useDeleteLearningPath();
+
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [editingProgram, setEditingProgram] = useState<StoredProgram | undefined>(undefined);
+  const [editingPath, setEditingPath] = useState<LearningPath | undefined>(undefined);
+  const [categoriesDrawerOpen, setCategoriesDrawerOpen] = useState(false);
 
   const openNew = () => {
-    setEditingProgram(undefined);
+    setEditingPath(undefined);
     setDrawerOpen(true);
   };
 
-  const openEdit = (program: StoredProgram) => {
-    setEditingProgram(program);
+  const openEdit = (path: LearningPath) => {
+    setEditingPath(path);
     setDrawerOpen(true);
   };
 
-  const handleSave = (id: string | null, formValues: ProgramFormValues, flow: StoredFlowData) => {
-    if (id) {
-      update(id, formValues, flow);
-    } else {
-      create(formValues, flow);
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteMutation.mutateAsync(id);
+      toast.success('Parcours supprimé');
+    } catch {
+      toast.error('Impossible de supprimer ce parcours (des compétences y sont encore liées)');
     }
   };
 
   return (
     <div className="bg-background">
-      <div className="mx-auto w-full">
-        <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mx-auto w-full space-y-8">
+        <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Gestion des parcours</h1>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -41,14 +49,31 @@ export function ProgramsList() {
             </p>
           </div>
         </header>
-        <ProgramsTable programs={programs} onNew={openNew} onEdit={openEdit} onDelete={remove} />
-        <ProgramDrawer
-          open={drawerOpen}
-          onOpenChange={setDrawerOpen}
-          program={editingProgram}
-          onSave={handleSave}
+
+        <LearningPathsTable
+          learningPaths={learningPathsQuery.data ?? []}
+          categories={categoriesQuery.data ?? []}
+          isLoading={learningPathsQuery.isLoading}
+          onNew={openNew}
+          onEdit={openEdit}
+          onDelete={handleDelete}
+          onManageCategories={() => setCategoriesDrawerOpen(true)}
         />
       </div>
+
+      <LearningPathFormDrawer
+        open={drawerOpen}
+        onOpenChange={setDrawerOpen}
+        learningPath={editingPath}
+        categories={categoriesQuery.data ?? []}
+      />
+
+      <LearningPathCategoriesDrawer
+        open={categoriesDrawerOpen}
+        onOpenChange={setCategoriesDrawerOpen}
+        categories={categoriesQuery.data ?? []}
+        isLoading={categoriesQuery.isLoading}
+      />
     </div>
   );
 }

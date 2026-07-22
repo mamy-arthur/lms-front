@@ -48,3 +48,15 @@ export const contentTypeKeys = {
   lists: () => [...contentTypeKeys.all, 'list'] as const,
   detail: (id: string) => [...contentTypeKeys.all, 'detail', id] as const,
 };
+
+export const learningPathCategoryKeys = {
+  all: ['learning-path-categories'] as const,
+  lists: () => [...learningPathCategoryKeys.all, 'list'] as const,
+  detail: (id: string) => [...learningPathCategoryKeys.all, 'detail', id] as const,
+};
+
+export const learningPathKeys = {
+  all: ['learning-paths'] as const,
+  lists: () => [...learningPathKeys.all, 'list'] as const,
+  detail: (id: string) => [...learningPathKeys.all, 'detail', id] as const,
+};

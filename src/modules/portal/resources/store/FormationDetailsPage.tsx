@@ -5,7 +5,6 @@ import {
   Award,
   BookOpen,
   CalendarDays,
-  CheckCircle2,
   ClipboardCheck,
   FileText,
   Globe,
@@ -186,7 +185,7 @@ export function FormationDetailsPage({ formation }: FormationDetailsPageProps) {
 
       <div className="grid gap-6 lg:grid-cols-[1.4fr_0.9fr]">
         <div className="space-y-6">
-          <Card>
+          {/* <Card>
             <CardHeader>
               <CardTitle>Description</CardTitle>
               <CardDescription>
@@ -215,7 +214,7 @@ export function FormationDetailsPage({ formation }: FormationDetailsPageProps) {
                 ))}
               </ul>
             </CardContent>
-          </Card>
+          </Card> */}
 
           <Card>
             <CardHeader>

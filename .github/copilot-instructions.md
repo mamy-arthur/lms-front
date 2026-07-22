@@ -367,3 +367,84 @@ const columns: DataTableColumn<User>[] = [
 - ❌ Ne pas appeler `fetch` directement — utiliser les helpers `apiClient`.
 - ❌ Ne pas utiliser `localStorage` pour l'auth — cookie HttpOnly uniquement.
 - ❌ Ne pas créer de types dupliqués — vérifier d'abord dans `src/shared/types/`.
+
+# Règles concernant les tests Frontend
+
+## Philosophie
+
+Les tests doivent valider le comportement fonctionnel de l'application, et non son implémentation.
+
+Nous privilégions les tests fonctionnels (integration tests) avec React Testing Library.
+
+L'objectif est que les tests restent valides même si le design ou la structure des composants évoluent.
+
+---
+
+## Ce qu'il faut tester
+
+Les tests doivent couvrir :
+
+- les parcours utilisateurs ;
+- les opérations CRUD ;
+- les interactions utilisateur ;
+- les appels API (mockés) ;
+- les états de chargement ;
+- la gestion des erreurs ;
+- l'affichage des données métier.
+
+---
+
+## Ce qu'il ne faut pas tester
+
+Ne jamais écrire de tests qui vérifient uniquement :
+
+- l'existence d'un label ;
+- un texte statique ;
+- une icône ;
+- une classe CSS ;
+- une couleur ;
+- la structure du DOM ;
+- le nombre de colonnes ;
+- la disposition des composants ;
+- des détails d'implémentation des composants.
+
+Ces tests sont fragiles et cassent dès qu'une modification visuelle est apportée alors que la fonctionnalité continue de fonctionner correctement.
+
+---
+
+## Principe
+
+Chaque test doit répondre à cette question :
+
+> Si ce test échoue, est-ce qu'un utilisateur ne peut plus utiliser cette fonctionnalité ?
+
+Si la réponse est **non**, alors le test n'a probablement pas de valeur.
+
+---
+
+## Bonnes pratiques
+
+- Privilégier quelques tests fonctionnels complets plutôt qu'un grand nombre de tests superficiels.
+- Tester les scénarios utilisateur de bout en bout.
+- Vérifier que les données sont correctement affichées ou mises à jour après une action.
+- Vérifier que les erreurs sont correctement gérées.
+- Les appels API doivent toujours être mockés.
+- Ne jamais tester uniquement l'apparence de l'interface.
+
+---
+
+## Exemple
+
+❌ À éviter
+
+- Vérifier qu'un label est affiché.
+- Vérifier qu'un bouton possède une classe CSS.
+- Vérifier qu'une icône est présente.
+- Vérifier un texte statique sans lien avec une fonctionnalité.
+
+✅ À privilégier
+
+- Créer un parcours et vérifier qu'il apparaît dans la liste.
+- Modifier un parcours et vérifier que les nouvelles données sont affichées.
+- Supprimer un parcours et vérifier qu'il disparaît de la liste.
+- Vérifier qu'une erreur est affichée si l'API échoue.

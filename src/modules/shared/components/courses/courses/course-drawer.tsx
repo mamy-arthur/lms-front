@@ -101,7 +101,7 @@ export function CourseDrawer({ open, onOpenChange, course }: Props) {
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="flex w-full flex-col gap-0 p-0 sm:max-w-2xl lg:max-w-4xl">
+      <SheetContent className="flex flex-col gap-0 p-0 max-w-187.5!">
         <SheetHeader className="border-b px-4 py-4">
           <SheetTitle>{course ? 'Modifier le cours' : 'Nouveau cours'}</SheetTitle>
           <SheetDescription>
