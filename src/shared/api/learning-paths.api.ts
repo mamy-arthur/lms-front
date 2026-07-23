@@ -3,10 +3,12 @@ import type {
   ApiLearningPath,
   ApiLearningPathCategory,
   ApiUploadedMedia,
+  ApiShopLearningPathsResponse,
   CreateLearningPathCategoryPayload,
   UpdateLearningPathCategoryPayload,
   CreateLearningPathPayload,
   UpdateLearningPathPayload,
+  ShopLearningPathParams,
 } from '@/shared/types/learning-path.types';
 
 export const learningPathCategoriesApi = {
@@ -50,4 +52,29 @@ export const learningPathsApi = {
 
   unlinkCompetency: (id: string, competencyId: string) =>
     apiDelete(`platform/learning-paths/${id}/competencies/${competencyId}`),
+};
+
+/**
+ * Boutique éditeur — routes platform/shop/learning-paths
+ * Authentification : token platform (ability:platform)
+ */
+export const editorShopApi = {
+  list: (params?: ShopLearningPathParams) =>
+    apiGet<ApiShopLearningPathsResponse>(
+      'platform/shop/learning-paths',
+      params as Record<string, unknown>,
+    ),
+
+  get: (id: string) => apiGet<{ data: ApiLearningPath }>(`platform/shop/learning-paths/${id}`),
+};
+
+/**
+ * Boutique client — routes shop/learning-paths
+ * Authentification : token tenant (ability:tenant:{id})
+ */
+export const clientShopApi = {
+  list: (params?: ShopLearningPathParams) =>
+    apiGet<ApiShopLearningPathsResponse>('shop/learning-paths', params as Record<string, unknown>),
+
+  get: (id: string) => apiGet<{ data: ApiLearningPath }>(`shop/learning-paths/${id}`),
 };

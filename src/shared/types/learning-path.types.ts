@@ -80,3 +80,21 @@ export interface UpdateLearningPathPayload {
   show_in_shop?: boolean;
   competency_ids?: string[];
 }
+
+// ── Shop (boutique) ───────────────────────────────────────────────────────────
+
+export interface ShopLearningPathParams {
+  page?: number;
+  per_page?: number;
+  q?: string;
+  category_id?: string;
+}
+
+export interface ApiShopLearningPathsResponse {
+  data: ApiLearningPath[];
+  meta: {
+    total: number;
+    page: number;
+    per_page: number;
+  };
+}

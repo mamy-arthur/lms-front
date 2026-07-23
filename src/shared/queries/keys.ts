@@ -60,3 +60,10 @@ export const learningPathKeys = {
   lists: () => [...learningPathKeys.all, 'list'] as const,
   detail: (id: string) => [...learningPathKeys.all, 'detail', id] as const,
 };
+
+export const shopLearningPathKeys = {
+  all: ['shop-learning-paths'] as const,
+  lists: () => [...shopLearningPathKeys.all, 'list'] as const,
+  list: (filters: object) => [...shopLearningPathKeys.lists(), filters] as const,
+  detail: (id: string) => [...shopLearningPathKeys.all, 'detail', id] as const,
+};
