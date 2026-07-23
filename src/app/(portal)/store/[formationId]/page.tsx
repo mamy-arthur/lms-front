@@ -4,34 +4,8 @@ import { use } from 'react';
 import { notFound } from 'next/navigation';
 import { FormationDetailsPage } from '@/modules/portal/resources/store/FormationDetailsPage';
 import { useShopLearningPathQuery } from '@/modules/portal/resources/store/hooks/useShopLearningPathQuery';
+import { toShopFormationDetails } from '@/shared/lib/shop-formation';
 import { Skeleton } from '@/components/ui/skeleton';
-import type { StoreFormationDetails } from '@/shared/mocks/store.mock';
-import type { ApiLearningPath } from '@/shared/types/learning-path.types';
-
-function toFormationDetails(lp: ApiLearningPath): StoreFormationDetails {
-  return {
-    id: lp.id,
-    title: lp.name,
-    author: '',
-    category: '',
-    categoryId: lp.category_id ?? '',
-    coverImage: lp.image?.url,
-    price: lp.price ?? 0,
-    updatedAt: lp.updated_at,
-    enrolledCompanies: 0,
-    moduleCount: lp.competencies.length,
-    evaluationCount: 0,
-    shortDescription: lp.description ?? '',
-    fullDescription: lp.description ?? '',
-    level: 'Débutant',
-    duration: '',
-    language: 'Français',
-    certificate: false,
-    learningObjectives: [],
-    programSteps: [],
-    courseCount: lp.competencies.length,
-  };
-}
 
 interface PageProps {
   params: Promise<{ formationId: string }>;
@@ -55,5 +29,5 @@ export default function Page({ params }: PageProps) {
     notFound();
   }
 
-  return <FormationDetailsPage formation={toFormationDetails(data)} />;
+  return <FormationDetailsPage formation={toShopFormationDetails(data)} />;
 }

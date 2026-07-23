@@ -3,6 +3,7 @@ import type {
   ApiLearningPath,
   ApiLearningPathCategory,
   ApiUploadedMedia,
+  ApiShopLearningPath,
   ApiShopLearningPathsResponse,
   CreateLearningPathCategoryPayload,
   UpdateLearningPathCategoryPayload,
@@ -65,7 +66,7 @@ export const editorShopApi = {
       params as Record<string, unknown>,
     ),
 
-  get: (id: string) => apiGet<{ data: ApiLearningPath }>(`platform/shop/learning-paths/${id}`),
+  get: (id: string) => apiGet<{ data: ApiShopLearningPath }>(`platform/shop/learning-paths/${id}`),
 };
 
 /**
@@ -76,5 +77,5 @@ export const clientShopApi = {
   list: (params?: ShopLearningPathParams) =>
     apiGet<ApiShopLearningPathsResponse>('shop/learning-paths', params as Record<string, unknown>),
 
-  get: (id: string) => apiGet<{ data: ApiLearningPath }>(`shop/learning-paths/${id}`),
+  get: (id: string) => apiGet<{ data: ApiShopLearningPath }>(`shop/learning-paths/${id}`),
 };
