@@ -96,7 +96,9 @@ function CategoryFormDialog({ open, onOpenChange, category }: CategoryFormDialog
         <DialogHeader>
           <DialogTitle>{isEdit ? 'Modifier la catégorie' : 'Nouvelle catégorie'}</DialogTitle>
           <DialogDescription className="sr-only">
-            {isEdit ? 'Modifiez les informations de la catégorie.' : 'Créez une nouvelle catégorie de parcours.'}
+            {isEdit
+              ? 'Modifiez les informations de la catégorie.'
+              : 'Créez une nouvelle catégorie de parcours.'}
           </DialogDescription>
         </DialogHeader>
         <form id="category-form" onSubmit={handleSubmit(onSubmit)} className="space-y-4">
