@@ -7,9 +7,11 @@ import { FormationCard } from '@/modules/shared/components/store/FormationCard';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
 import { useCartStore } from '@/modules/portal/resources/cart/CartStore';
 import { toast } from 'sonner';
 import { useShopLearningPathsQuery } from './hooks/useShopLearningPathsQuery';
+import { useShopLearningPathCategoriesQuery } from './hooks/useShopLearningPathCategoriesQuery';
 
 const PAGE_SIZE = 12;
 
@@ -34,6 +36,7 @@ export function StorePage() {
   const addToCart = useCartStore((state) => state.addToCart);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [perPage, setPerPage] = useState(PAGE_SIZE);
 
   useEffect(() => {
@@ -43,19 +46,26 @@ export function StorePage() {
 
   const shopQuery = useShopLearningPathsQuery({
     q: debouncedSearch || undefined,
+    category_id: selectedCategoryId ?? undefined,
     per_page: perPage,
     page: 1,
   });
 
+  const categoriesQuery = useShopLearningPathCategoriesQuery();
+
   const items = shopQuery.data?.data ?? [];
   const total = shopQuery.data?.meta.total ?? 0;
   const hasMore = items.length < total;
-  const hasSearch = search.trim() !== '';
+  const hasFilters = search.trim() !== '' || selectedCategoryId !== null;
 
   const handleReset = () => {
     setSearch('');
+    setSelectedCategoryId(null);
     setPerPage(PAGE_SIZE);
   };
+
+  const categoryName = (id: string | null) =>
+    categoriesQuery.data?.data.find((c) => c.id === id)?.name ?? id ?? '';
 
   const handleAddToCart = (id: string) => {
     const lp = items.find((item) => item.id === id);
@@ -88,8 +98,9 @@ export function StorePage() {
       </header>
 
       {/* Filtres */}
-      <div className="mb-6 flex items-center gap-3">
-        <div className="relative max-w-sm flex-1">
+      <div className="mb-6 flex flex-col gap-3">
+        {/* Barre de recherche */}
+        <div className="relative max-w-sm">
           <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground pointer-events-none" />
           <Input
             placeholder="Rechercher une formation..."
@@ -101,11 +112,39 @@ export function StorePage() {
             className="pl-8"
           />
         </div>
-        {hasSearch && (
-          <Button variant="ghost" size="sm" onClick={handleReset} className="gap-1">
-            <X className="size-3" />
-            Réinitialiser
-          </Button>
+
+        {/* Badges catégories */}
+        {(categoriesQuery.data?.data.length ?? 0) > 0 && (
+          <div className="flex flex-wrap items-center gap-2">
+            {categoriesQuery.data!.data.map((cat) => {
+              const active = selectedCategoryId === cat.id;
+              return (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => {
+                    setSelectedCategoryId(active ? null : cat.id);
+                    setPerPage(PAGE_SIZE);
+                  }}
+                  className={cn(
+                    'inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium transition-colors',
+                    active
+                      ? 'border-(--color-primary) bg-(--color-primary) text-white'
+                      : 'border-border bg-muted text-muted-foreground hover:border-primary/50 hover:text-foreground',
+                  )}
+                >
+                  {cat.name}
+                </button>
+              );
+            })}
+
+            {hasFilters && (
+              <Button variant="ghost" size="sm" onClick={handleReset} className="gap-1">
+                <X className="size-3" />
+                Réinitialiser
+              </Button>
+            )}
+          </div>
         )}
       </div>
 
@@ -119,7 +158,7 @@ export function StorePage() {
       ) : items.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 text-center text-muted-foreground">
           <p className="text-sm">Aucune formation ne correspond à votre recherche.</p>
-          {hasSearch && (
+          {hasFilters && (
             <Button variant="link" size="sm" onClick={handleReset} className="mt-2">
               Voir toutes les formations
             </Button>
@@ -134,7 +173,7 @@ export function StorePage() {
                 id={lp.id}
                 title={lp.name}
                 author=""
-                category=""
+                category={categoryName(lp.category_id)}
                 coverImage={lp.image?.url}
                 price={lp.price ?? 0}
                 updatedAt={lp.updated_at}

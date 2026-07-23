@@ -78,4 +78,7 @@ export const clientShopApi = {
     apiGet<ApiShopLearningPathsResponse>('shop/learning-paths', params as Record<string, unknown>),
 
   get: (id: string) => apiGet<{ data: ApiShopLearningPath }>(`shop/learning-paths/${id}`),
+
+  listCategories: () =>
+    apiGet<{ data: ApiLearningPathCategory[] }>('shop/learning-path-categories'),
 };
