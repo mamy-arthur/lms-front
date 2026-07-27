@@ -21,6 +21,5 @@ export function useAvailableCoursesQuery(competencyId?: string) {
       : AVAILABLE_COURSES_QUERY_KEY,
     queryFn: () => adminModulesApi.availableCourses(competencyId),
     staleTime: 5 * 60 * 1000, // 5 min — course list rarely changes mid-session
-    
   });
 }

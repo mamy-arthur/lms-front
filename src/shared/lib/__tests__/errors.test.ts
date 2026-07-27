@@ -7,9 +7,9 @@ describe('getApiErrorMessage', () => {
   });
 
   it('reads Laravel message', () => {
-    expect(
-      getApiErrorMessage({ json: { message: 'Compétence déjà liée' } }, 'fallback'),
-    ).toBe('Compétence déjà liée');
+    expect(getApiErrorMessage({ json: { message: 'Compétence déjà liée' } }, 'fallback')).toBe(
+      'Compétence déjà liée',
+    );
   });
 
   it('flattens validation errors', () => {

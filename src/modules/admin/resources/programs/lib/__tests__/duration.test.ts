@@ -1,8 +1,4 @@
-import {
-  durationToMinutes,
-  formatDuration,
-  minutesToDuration,
-} from '../duration';
+import { durationToMinutes, formatDuration, minutesToDuration } from '../duration';
 
 describe('duration helpers', () => {
   describe('durationToMinutes', () => {

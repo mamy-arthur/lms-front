@@ -86,7 +86,10 @@ const CURRENCIES = [
 const CANVAS_X = 300;
 const NODE_GAP = 150;
 
-function toApiDuration(value: number | null | undefined, unit: DurationUnit | undefined): number | null {
+function toApiDuration(
+  value: number | null | undefined,
+  unit: DurationUnit | undefined,
+): number | null {
   if (value === null || value === undefined || Number.isNaN(value)) return null;
   return durationToMinutes(value, unit ?? 'minutes');
 }
@@ -413,7 +416,7 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPath, categ
         toast.error(
           getApiErrorMessage(
             err,
-            "Le parcours a été enregistré, mais la synchronisation des compétences a échoué. Rouvrez le parcours et réessayez.",
+            'Le parcours a été enregistré, mais la synchronisation des compétences a échoué. Rouvrez le parcours et réessayez.',
           ),
         );
         return;
@@ -510,7 +513,6 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPath, categ
                   />
                   {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
                 </div>
-
                 {/* Description */}
                 <div className="space-y-1.5">
                   <Label htmlFor="lp-description">Description</Label>
@@ -522,7 +524,6 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPath, categ
                     rows={3}
                   />
                 </div>
-
                 {/* Image */}
                 <div className="space-y-1.5">
                   <Label>Image de couverture</Label>
@@ -567,7 +568,6 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPath, categ
                     </button>
                   )}
                 </div>
-
                 {/* Catégorie */}
                 <div className="space-y-1.5">
                   <Label>Catégorie</Label>
@@ -594,7 +594,6 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPath, categ
                     )}
                   </div>
                 </div>
-
                 {/* Prix & Devise */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
@@ -638,7 +637,6 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPath, categ
                     )}
                   </div>
                 </div>
-
                 {/* Durée de formation */}
                 <div className="space-y-1.5">
                   <Label>Durée de formation</Label>
@@ -676,8 +674,8 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPath, categ
                     <p className="text-xs text-destructive">{errors.duration_value.message}</p>
                   )}
                 </div>
-
-                {/* Date de publication */}                <div className="space-y-1.5">
+                {/* Date de publication */}{' '}
+                <div className="space-y-1.5">
                   <Label>Date de publication</Label>
                   <DatePickerField
                     value={watchedPublishedAt}
@@ -685,7 +683,6 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPath, categ
                     placeholder="Non définie"
                   />
                 </div>
-
                 {/* Visible en boutique */}
                 <div className="flex items-center justify-between rounded-lg border p-3">
                   <div>

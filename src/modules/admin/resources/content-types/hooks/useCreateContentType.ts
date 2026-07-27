@@ -8,7 +8,7 @@ export const useCreateContentType = () => {
   return useMutation({
     mutationFn: contentTypeApi.create,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: CONTENT_TYPES_KEY});
+      queryClient.invalidateQueries({ queryKey: CONTENT_TYPES_KEY });
     },
   });
 };
