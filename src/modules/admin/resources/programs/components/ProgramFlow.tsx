@@ -435,10 +435,11 @@ export type ProgramFlowProps = {
   initialEdges?: Edge<EdgeRuleData>[];
   initialNodeOrder?: string[];
   onUnlinkCompetency?: (competencyId: string) => void;
+  learningPathId?: string;
 };
 
 const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function ProgramFlow(
-  { initialNodes, initialEdges, initialNodeOrder, onUnlinkCompetency },
+  { initialNodes, initialEdges, initialNodeOrder, onUnlinkCompetency, learningPathId },
   ref,
 ) {
   const [nodes, setNodes] = useState<StepNode[]>(initialNodes ?? [initialEmailNode]);
@@ -1038,6 +1039,7 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
         onOpenChange={setModuleDialogOpen}
         usedModuleIds={usedModuleIds}
         onSelect={handleModuleSelect}
+        currentLearningPathId={learningPathId}
       />
       <AddEvaluationDialog
         open={evalDialogOpen}
@@ -1090,6 +1092,7 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
         }}
         usedModuleIds={editModuleUsedIds}
         onSelect={handleEditModuleSave}
+        currentLearningPathId={learningPathId}
       />
       <AddEvaluationDialog
         key={editEvalDialog?.nodeId}

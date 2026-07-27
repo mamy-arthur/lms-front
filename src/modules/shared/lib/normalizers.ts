@@ -9,6 +9,8 @@ export interface Module {
   courseIds: string[];
   createdAt: string;
   updatedAt: string;
+  /** UUID of the learning path this competency is linked to, or null if not linked. */
+  linkedLearningPathId: string | null;
 }
 
 export interface Quiz {
