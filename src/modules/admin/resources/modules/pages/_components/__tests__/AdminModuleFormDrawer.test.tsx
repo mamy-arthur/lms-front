@@ -147,6 +147,7 @@ const MOCK_MODULE: Module = {
   courseIds: [],
   createdAt: '2025-01-01T00:00:00Z',
   updatedAt: '2025-01-01T00:00:00Z',
+  linkedLearningPathId: null,
 };
 
 // ─── Helper ───────────────────────────────────────────────────────────────────

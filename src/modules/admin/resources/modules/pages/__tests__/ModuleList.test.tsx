@@ -108,6 +108,7 @@ const MOD_1: Module = {
   courseIds: [],
   createdAt: '2025-01-01T00:00:00Z',
   updatedAt: '2025-01-01T00:00:00Z',
+  linkedLearningPathId: null,
 };
 
 const MOD_2: Module = {
@@ -120,6 +121,7 @@ const MOD_2: Module = {
   courseIds: [],
   createdAt: '2025-02-01T00:00:00Z',
   updatedAt: '2025-02-01T00:00:00Z',
+  linkedLearningPathId: null,
 };
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
