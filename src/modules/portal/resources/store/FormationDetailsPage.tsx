@@ -24,7 +24,8 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-import { useCartStore, type CartProduct } from '@/modules/portal/resources/cart/CartStore';
+import { useCartActions } from '@/modules/portal/resources/cart/hooks/useCartActions';
+import { CartQuantityControls } from '@/modules/shared/components/store/CartQuantityControls';
 import type {
   StoreFormationDetails,
   StoreModuleStep,
@@ -105,17 +106,20 @@ function ProgramEvaluation({ step, stepIndex }: { step: StoreEvaluationStep; ste
 }
 
 export function FormationDetailsPage({ formation }: FormationDetailsPageProps) {
-  const addToCart = useCartStore((state) => state.addToCart);
+  const { add, increase, decrease, findItem, isMutatingFor } = useCartActions();
 
-  const product: CartProduct = {
-    id: formation.id,
-    title: formation.title,
-    price: formation.price,
-    coverImage: formation.coverImage,
-  };
+  const cartItem = findItem(formation.id);
+  const isInCart = Boolean(cartItem);
+  const isCartMutating = isMutatingFor({
+    learningPathId: formation.id,
+    cartItemId: cartItem?.id,
+  });
 
-  const handleBuyNow = () => {
-    addToCart(product);
+  const handleBuyNow = async () => {
+    if (!isInCart) {
+      const ok = await add(formation.id, { silentSuccess: true });
+      if (!ok) return;
+    }
     toast.info('Ouvrez le panier pour finaliser le paiement.');
   };
 
@@ -166,15 +170,25 @@ export function FormationDetailsPage({ formation }: FormationDetailsPageProps) {
 
             <div className="mt-auto flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-3xl text-foreground">{formatPrice(formation.price)}</p>
-              <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
-                <Button
-                  className="bg-(--color-primary) hover:bg-(--color-primary)/80"
-                  onClick={() => addToCart(product)}
-                >
-                  <ShoppingCart />
-                  Ajouter au panier
-                </Button>
-                <Button variant="outline" onClick={handleBuyNow}>
+              <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+                {isInCart && cartItem ? (
+                  <CartQuantityControls
+                    quantity={cartItem.quantity}
+                    onDecrease={() => decrease(cartItem.id, cartItem.quantity)}
+                    onIncrease={() => increase(cartItem.id)}
+                    disabled={isCartMutating}
+                  />
+                ) : (
+                  <Button
+                    className="bg-(--color-primary) hover:bg-(--color-primary)/80"
+                    onClick={() => add(formation.id)}
+                    disabled={isCartMutating}
+                  >
+                    <ShoppingCart />
+                    Ajouter au panier
+                  </Button>
+                )}
+                <Button variant="outline" onClick={handleBuyNow} disabled={isCartMutating}>
                   Acheter maintenant
                 </Button>
               </div>

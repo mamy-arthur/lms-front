@@ -8,8 +8,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import { useCartStore } from '@/modules/portal/resources/cart/CartStore';
 import { toast } from 'sonner';
+import { useCartActions } from '@/modules/portal/resources/cart/hooks/useCartActions';
 import { useShopLearningPathsQuery } from './hooks/useShopLearningPathsQuery';
 import { useShopLearningPathCategoriesQuery } from './hooks/useShopLearningPathCategoriesQuery';
 
@@ -33,7 +33,7 @@ function FormationCardSkeleton() {
 
 export function StorePage() {
   const router = useRouter();
-  const addToCart = useCartStore((state) => state.addToCart);
+  const { add, increase, decrease, findItem, isMutatingFor } = useCartActions();
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
@@ -67,19 +67,13 @@ export function StorePage() {
   const categoryName = (id: string | null) =>
     categoriesQuery.data?.data.find((c) => c.id === id)?.name ?? id ?? '';
 
-  const handleAddToCart = (id: string) => {
+  const handleAddToCart = async (id: string) => {
     const lp = items.find((item) => item.id === id);
     if (!lp) {
       toast.error('Formation introuvable.');
       return;
     }
-    addToCart({
-      id: lp.id,
-      title: lp.name,
-      price: lp.price ?? 0,
-      coverImage: lp.image?.url,
-    });
-    toast.success('Ajouté au panier.');
+    await add(lp.id);
   };
 
   const handleOpenDetails = (id: string) => {
@@ -167,23 +161,36 @@ export function StorePage() {
       ) : (
         <>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {items.map((lp) => (
-              <FormationCard
-                key={lp.id}
-                id={lp.id}
-                title={lp.name}
-                author=""
-                category={categoryName(lp.category_id)}
-                coverImage={lp.image?.url}
-                price={lp.price ?? 0}
-                updatedAt={lp.updated_at}
-                enrolledCompanies={0}
-                moduleCount={lp.competencies.length}
-                evaluationCount={0}
-                onAddToCart={handleAddToCart}
-                onOpenDetails={handleOpenDetails}
-              />
-            ))}
+            {items.map((lp) => {
+              const cartItem = findItem(lp.id);
+
+              return (
+                <FormationCard
+                  key={lp.id}
+                  id={lp.id}
+                  title={lp.name}
+                  author=""
+                  category={categoryName(lp.category_id)}
+                  coverImage={lp.image?.url}
+                  price={lp.price ?? 0}
+                  updatedAt={lp.updated_at}
+                  enrolledCompanies={0}
+                  moduleCount={lp.competencies.length}
+                  evaluationCount={0}
+                  onAddToCart={handleAddToCart}
+                  onOpenDetails={handleOpenDetails}
+                  cartQuantity={cartItem?.quantity}
+                  onIncreaseQuantity={cartItem ? () => increase(cartItem.id) : undefined}
+                  onDecreaseQuantity={
+                    cartItem ? () => decrease(cartItem.id, cartItem.quantity) : undefined
+                  }
+                  isCartMutating={isMutatingFor({
+                    learningPathId: lp.id,
+                    cartItemId: cartItem?.id,
+                  })}
+                />
+              );
+            })}
           </div>
 
           {hasMore && (
