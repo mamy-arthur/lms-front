@@ -1039,7 +1039,6 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
         onOpenChange={setModuleDialogOpen}
         usedModuleIds={usedModuleIds}
         onSelect={handleModuleSelect}
-        currentLearningPathId={learningPathId}
       />
       <AddEvaluationDialog
         open={evalDialogOpen}
@@ -1092,7 +1091,6 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
         }}
         usedModuleIds={editModuleUsedIds}
         onSelect={handleEditModuleSave}
-        currentLearningPathId={learningPathId}
       />
       <AddEvaluationDialog
         key={editEvalDialog?.nodeId}

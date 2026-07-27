@@ -2,7 +2,7 @@ import { apiGet, apiPost, apiPatch, apiDelete, apiUpload } from '@/shared/lib/ap
 import type {
   ApiLearningPath,
   ApiLearningPathCategory,
-  ApiLearningPathCompetencyAssociation,
+  ApiLpCompetencyItem,
   ApiUploadedMedia,
   ApiShopLearningPath,
   ApiShopLearningPathsResponse,
@@ -55,7 +55,7 @@ export const learningPathsApi = {
     apiDelete(`platform/learning-paths/${id}/competencies/${competencyId}`),
 
   listCompetencyAssociations: () =>
-    apiGet<{ data: ApiLearningPathCompetencyAssociation[] }>('platform/learning-path-competencies'),
+    apiGet<{ data: ApiLpCompetencyItem[] }>('platform/learning-path-competencies'),
 };
 
 /**

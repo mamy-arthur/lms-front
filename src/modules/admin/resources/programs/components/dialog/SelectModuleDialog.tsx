@@ -16,7 +16,6 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/shared/lib/cn';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Separator } from '@/components/ui/separator';
-import { useModules } from '@/modules/admin/resources/modules/hooks/useModules';
 import { useCompetencyCategoriesQuery } from '@/modules/admin/resources/modules/hooks/useCompetencyCategoriesQuery';
 import { useLearningPathCompetencyAssociationsQuery } from '../../hooks/useLearningPathCompetencyAssociationsQuery';
 
@@ -36,7 +35,6 @@ type Props = {
   onOpenChange: (open: boolean) => void;
   usedModuleIds: string[];
   onSelect: (module: ModuleItem) => void;
-  currentLearningPathId?: string;
 };
 
 export function SelectModuleDialog({
@@ -44,26 +42,14 @@ export function SelectModuleDialog({
   onOpenChange,
   usedModuleIds,
   onSelect,
-  currentLearningPathId,
 }: Props) {
   const [search, setSearch] = useState('');
   const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
   const [selected, setSelected] = useState<ModuleItem | null>(null);
 
-  const { data: modulesResult, isLoading: isLoadingCompetencies } = useModules();
-  const competenciesData = modulesResult?.data;
+  const { data: catalog, isLoading: isLoadingCompetencies } = useLearningPathCompetencyAssociationsQuery(open);
 
   const { data: categoriesData } = useCompetencyCategoriesQuery(open);
-  const { data: associations } = useLearningPathCompetencyAssociationsQuery(open);
-
-  // Map competency_id → learning_path_id for quick lookup
-  const associationMap = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const assoc of associations ?? []) {
-      map.set(assoc.competency_id, assoc.learning_path_id);
-    }
-    return map;
-  }, [associations]);
 
   // Build a category id→name map for display
   const categoryMap = useMemo(() => {
@@ -75,18 +61,18 @@ export function SelectModuleDialog({
   }, [categoriesData]);
 
   const filtered = useMemo(() => {
-    return (competenciesData ?? []).filter((comp) => {
+    return (catalog ?? []).filter((comp) => {
       const matchSearch = comp.shortname.toLowerCase().includes(search.toLowerCase());
       const matchCat = activeCategoryId === null || comp.category_id === activeCategoryId;
       return matchSearch && matchCat;
     });
-  }, [competenciesData, search, activeCategoryId]);
+  }, [catalog, search, activeCategoryId]);
 
   // Only show categories present in the full (unfiltered) competency list
   const availableCategories = useMemo(() => {
-    const ids = new Set((competenciesData ?? []).map((c) => c.category_id));
+    const ids = new Set((catalog ?? []).map((c) => c.category_id));
     return (categoriesData ?? []).filter((cat) => ids.has(cat.id));
-  }, [competenciesData, categoriesData]);
+  }, [catalog, categoriesData]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -151,10 +137,8 @@ export function SelectModuleDialog({
             {!isLoadingCompetencies &&
               filtered.map((comp) => {
                 const isAdded = usedModuleIds.includes(comp.id);
-                const hasCourses = comp.courseIds.length > 0;
-                const isLinkedToOtherLp =
-                  !!associationMap.get(comp.id) &&
-                  associationMap.get(comp.id) !== currentLearningPathId;
+                const hasCourses = comp.courses_count > 0;
+                const isLinkedToOtherLp = comp.is_linked && !usedModuleIds.includes(comp.id);
                 const isDisabled = isAdded || !hasCourses || isLinkedToOtherLp;
                 const categoryName = comp.category_id
                   ? (categoryMap.get(comp.category_id) ?? null)
