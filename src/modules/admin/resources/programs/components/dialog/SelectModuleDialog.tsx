@@ -37,17 +37,13 @@ type Props = {
   onSelect: (module: ModuleItem) => void;
 };
 
-export function SelectModuleDialog({
-  open,
-  onOpenChange,
-  usedModuleIds,
-  onSelect,
-}: Props) {
+export function SelectModuleDialog({ open, onOpenChange, usedModuleIds, onSelect }: Props) {
   const [search, setSearch] = useState('');
   const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
   const [selected, setSelected] = useState<ModuleItem | null>(null);
 
-  const { data: catalog, isLoading: isLoadingCompetencies } = useLearningPathCompetencyAssociationsQuery(open);
+  const { data: catalog, isLoading: isLoadingCompetencies } =
+    useLearningPathCompetencyAssociationsQuery(open);
 
   const { data: categoriesData } = useCompetencyCategoriesQuery(open);
 
