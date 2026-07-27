@@ -158,13 +158,9 @@ export function SelectModuleDialog({ open, onOpenChange, usedModuleIds, onSelect
                             'flex w-full flex-col gap-2 rounded-lg border p-3 text-left transition-colors',
                             isAdded
                               ? 'cursor-not-allowed border-border bg-muted/40 opacity-60'
-                              : !hasCourses
-                                ? 'cursor-not-allowed border-amber-200 bg-amber-50/40 opacity-70 dark:border-amber-800 dark:bg-amber-950/20'
-                                : isLinkedToOtherLp
-                                  ? 'cursor-not-allowed border-orange-200 bg-orange-50/40 opacity-70 dark:border-orange-800 dark:bg-orange-950/20'
-                                  : selected?.id === comp.id
-                                    ? 'border-(--color-primary) bg-(--color-primary)/5 ring-1 ring-(--color-primary)/30 cursor-pointer'
-                                    : 'border-border bg-card hover:border-(--color-primary)/50 cursor-pointer',
+                              : selected?.id === comp.id
+                                ? 'border-(--color-primary) bg-(--color-primary)/5 ring-1 ring-(--color-primary)/30 cursor-pointer'
+                                : 'border-border bg-card hover:border-(--color-primary)/50 cursor-pointer',
                           )}
                         >
                           <div className="flex items-start justify-between gap-2">
