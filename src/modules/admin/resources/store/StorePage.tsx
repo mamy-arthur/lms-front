@@ -1,14 +1,15 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, X } from 'lucide-react';
 import { FormationCard } from '@/modules/shared/components/store/FormationCard';
-import { MOCK_STORE_FORMATIONS, MOCK_STORE_CATEGORIES } from '@/shared/mocks/store.mock';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { useShopLearningPathsQuery } from './hooks/useShopLearningPathsQuery';
+import { useLearningPathCategoriesQuery } from '../programs/hooks/useLearningPathCategoriesQuery';
 
 const PAGE_SIZE = 12;
 
@@ -30,46 +31,41 @@ function FormationCardSkeleton() {
 export function StorePage() {
   const router = useRouter();
   const [search, setSearch] = useState('');
-  const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
-  const [isLoading] = useState(false);
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [perPage, setPerPage] = useState(PAGE_SIZE);
 
-  const hasFilters = search.trim() !== '' || selectedCategories.size > 0;
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search.trim()), 300);
+    return () => clearTimeout(t);
+  }, [search]);
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return MOCK_STORE_FORMATIONS.filter((f) => {
-      const matchSearch = q === '' || f.title.toLowerCase().includes(q);
-      const matchCategory = selectedCategories.size === 0 || selectedCategories.has(f.categoryId);
-      return matchSearch && matchCategory;
-    });
-  }, [search, selectedCategories]);
+  const shopQuery = useShopLearningPathsQuery({
+    q: debouncedSearch || undefined,
+    category_id: selectedCategoryId ?? undefined,
+    per_page: perPage,
+    page: 1,
+  });
 
-  const visible = filtered.slice(0, visibleCount);
-  const hasMore = visibleCount < filtered.length;
+  const categoriesQuery = useLearningPathCategoriesQuery();
 
-  const toggleCategory = (id: string) => {
-    setSelectedCategories((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
-    setVisibleCount(PAGE_SIZE);
-  };
+  const items = shopQuery.data?.data ?? [];
+  const total = shopQuery.data?.meta.total ?? 0;
+  const hasMore = items.length < total;
+  const hasFilters = search.trim() !== '' || selectedCategoryId !== null;
 
   const handleReset = () => {
     setSearch('');
-    setSelectedCategories(new Set());
-    setVisibleCount(PAGE_SIZE);
+    setSelectedCategoryId(null);
+    setPerPage(PAGE_SIZE);
   };
 
   const handleOpenDetails = (id: string) => {
     router.push(`/admin/store/${id}`);
   };
+
+  const categoryName = (id: string | null) =>
+    categoriesQuery.data?.find((c) => c.id === id)?.name ?? id ?? '';
 
   return (
     <div className="mx-auto w-full">
@@ -92,72 +88,79 @@ export function StorePage() {
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
-              setVisibleCount(PAGE_SIZE);
+              setPerPage(PAGE_SIZE);
             }}
             className="pl-8"
           />
         </div>
 
         {/* Badges catégories */}
-        <div className="flex flex-wrap items-center gap-2">
-          {MOCK_STORE_CATEGORIES.map((cat) => {
-            const active = selectedCategories.has(cat.id);
-            return (
-              <button
-                key={cat.id}
-                type="button"
-                onClick={() => toggleCategory(cat.id)}
-                className={cn(
-                  'inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium transition-colors',
-                  active
-                    ? 'border-(--color-primary) bg-(--color-primary) text-white'
-                    : 'border-border bg-muted text-muted-foreground hover:border-primary/50 hover:text-foreground',
-                )}
-              >
-                {cat.name}
-              </button>
-            );
-          })}
+        {(categoriesQuery.data?.length ?? 0) > 0 && (
+          <div className="flex flex-wrap items-center gap-2">
+            {categoriesQuery.data!.map((cat) => {
+              const active = selectedCategoryId === cat.id;
+              return (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => {
+                    setSelectedCategoryId(active ? null : cat.id);
+                    setPerPage(PAGE_SIZE);
+                  }}
+                  className={cn(
+                    'inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium transition-colors',
+                    active
+                      ? 'border-(--color-primary) bg-(--color-primary) text-white'
+                      : 'border-border bg-muted text-muted-foreground hover:border-primary/50 hover:text-foreground',
+                  )}
+                >
+                  {cat.name}
+                </button>
+              );
+            })}
 
-          {hasFilters && (
-            <Button variant="ghost" size="sm" onClick={handleReset} className="gap-1">
-              <X className="size-3" />
-              Réinitialiser
-            </Button>
-          )}
-        </div>
+            {hasFilters && (
+              <Button variant="ghost" size="sm" onClick={handleReset} className="gap-1">
+                <X className="size-3" />
+                Réinitialiser
+              </Button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Grille */}
-      {isLoading ? (
+      {shopQuery.isLoading ? (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {Array.from({ length: PAGE_SIZE }).map((_, i) => (
             <FormationCardSkeleton key={i} />
           ))}
         </div>
-      ) : visible.length === 0 ? (
+      ) : items.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 text-center text-muted-foreground">
           <p className="text-sm">Aucune formation ne correspond à votre recherche.</p>
-          <Button variant="link" size="sm" onClick={handleReset} className="mt-2">
-            Voir toutes les formations
-          </Button>
+          {hasFilters && (
+            <Button variant="link" size="sm" onClick={handleReset} className="mt-2">
+              Voir toutes les formations
+            </Button>
+          )}
         </div>
       ) : (
         <>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {visible.map((formation) => (
+            {items.map((lp) => (
               <FormationCard
-                key={formation.id}
-                id={formation.id}
-                title={formation.title}
-                author={formation.author}
-                category={formation.category}
-                coverImage={formation.coverImage}
-                price={formation.price}
-                updatedAt={formation.updatedAt}
-                enrolledCompanies={formation.enrolledCompanies}
-                moduleCount={formation.moduleCount}
-                evaluationCount={formation.evaluationCount}
+                key={lp.id}
+                id={lp.id}
+                title={lp.name}
+                author=""
+                category={categoryName(lp.category_id)}
+                coverImage={lp.image?.url}
+                price={lp.price ?? 0}
+                updatedAt={lp.updated_at}
+                enrolledCompanies={0}
+                moduleCount={lp.competencies.length}
+                evaluationCount={0}
                 onOpenDetails={handleOpenDetails}
               />
             ))}
@@ -165,8 +168,12 @@ export function StorePage() {
 
           {hasMore && (
             <div className="mt-8 flex justify-center">
-              <Button variant="outline" onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}>
-                Voir plus ({filtered.length - visibleCount} restantes)
+              <Button
+                variant="outline"
+                onClick={() => setPerPage((p) => p + PAGE_SIZE)}
+                disabled={shopQuery.isFetching}
+              >
+                Voir plus ({total - items.length} restantes)
               </Button>
             </div>
           )}

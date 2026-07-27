@@ -4,10 +4,32 @@ export interface ApiLearningPathImage {
   mime_type: string;
 }
 
+/** Used by admin/platform CRUD endpoints — competency id only */
 export interface ApiLearningPathCompetency {
   competency_id: string;
   position: number;
 }
+
+/** Embedded course inside a shop competency */
+export interface ApiShopCourse {
+  id: string;
+  position: number;
+  full_name: string;
+  short_name: string;
+}
+
+/** Enriched competency returned by shop endpoints */
+export interface ApiShopCompetency {
+  competency_id: string;
+  position: number;
+  shortname: string;
+  courses: ApiShopCourse[];
+}
+
+/** Learning path returned by shop endpoints — competencies are fully embedded */
+export type ApiShopLearningPath = Omit<ApiLearningPath, 'competencies'> & {
+  competencies: ApiShopCompetency[];
+};
 
 export interface ApiLearningPath {
   id: string;
@@ -79,4 +101,22 @@ export interface UpdateLearningPathPayload {
   author_id?: string | null;
   show_in_shop?: boolean;
   competency_ids?: string[];
+}
+
+// ── Shop (boutique) ───────────────────────────────────────────────────────────
+
+export interface ShopLearningPathParams {
+  page?: number;
+  per_page?: number;
+  q?: string;
+  category_id?: string;
+}
+
+export interface ApiShopLearningPathsResponse {
+  data: ApiShopLearningPath[];
+  meta: {
+    total: number;
+    page: number;
+    per_page: number;
+  };
 }

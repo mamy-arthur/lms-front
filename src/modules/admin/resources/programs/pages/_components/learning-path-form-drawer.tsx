@@ -21,7 +21,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
@@ -352,9 +358,9 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPath, categ
               </div>
               <div>
                 <SheetTitle className="text-base">{title}</SheetTitle>
-                <p className="mt-0.5 text-xs text-muted-foreground">
+                <SheetDescription className="mt-0.5 text-xs">
                   Définissez les informations et construisez le parcours pédagogique.
-                </p>
+                </SheetDescription>
               </div>
             </div>
             <div className="flex items-center gap-2 pr-6">
