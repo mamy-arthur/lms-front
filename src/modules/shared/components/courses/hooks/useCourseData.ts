@@ -20,6 +20,7 @@ export function useCourseData() {
     onSuccess: ({ data }) => {
       const created = mapApiCourse(data);
       queryClient.setQueryData<Course[]>(courseKeys.lists(), (prev = []) => [created, ...prev]);
+      queryClient.invalidateQueries({ queryKey: ['admin', 'modules', 'available-courses'] });
     },
   });
 

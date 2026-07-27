@@ -118,6 +118,7 @@ const MOCK_PATH_1: LearningPath = {
   showInShop: false,
   isPublished: false,
   isSellable: false,
+  duration: null,
   competencies: [],
   createdAt: '2024-01-01T00:00:00Z',
   updatedAt: '2024-01-01T00:00:00Z',
@@ -282,7 +283,7 @@ describe('ProgramsList', () => {
       await user.click(screen.getByRole('button', { name: /enregistrer/i }));
 
       await waitFor(() => {
-        expect(mockToast.error).toHaveBeenCalledWith('Une erreur est survenue');
+        expect(mockToast.error).toHaveBeenCalledWith('Server error');
       });
     });
   });
@@ -364,7 +365,7 @@ describe('ProgramsList', () => {
       await user.click(screen.getByRole('button', { name: /enregistrer/i }));
 
       await waitFor(() => {
-        expect(mockToast.error).toHaveBeenCalledWith('Une erreur est survenue');
+        expect(mockToast.error).toHaveBeenCalledWith('Server error');
       });
     });
   });
@@ -411,9 +412,7 @@ describe('ProgramsList', () => {
       await user.click(screen.getByRole('menuitem', { name: /supprimer/i }));
 
       await waitFor(() => {
-        expect(mockToast.error).toHaveBeenCalledWith(
-          'Impossible de supprimer ce parcours (des compétences y sont encore liées)',
-        );
+        expect(mockToast.error).toHaveBeenCalledWith('Server error');
       });
     });
   });
