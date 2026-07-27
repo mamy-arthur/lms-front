@@ -8,6 +8,8 @@ export interface ApiLearningPathImage {
 export interface ApiLearningPathCompetency {
   competency_id: string;
   position: number;
+  location_x: number | null;
+  location_y: number | null;
 }
 
 /** Embedded course inside a shop competency */
@@ -46,6 +48,8 @@ export interface ApiLearningPath {
   show_in_shop: boolean;
   is_published: boolean;
   is_sellable: boolean;
+  /** Durée estimée du parcours en minutes */
+  duration: number | null;
   competencies: ApiLearningPathCompetency[];
   created_at: string;
   updated_at: string;
@@ -87,6 +91,8 @@ export interface CreateLearningPathPayload {
   published_at?: string | null;
   author_id?: string | null;
   show_in_shop?: boolean;
+  /** Durée estimée en minutes */
+  duration?: number | null;
   competency_ids?: string[];
 }
 
@@ -100,11 +106,17 @@ export interface UpdateLearningPathPayload {
   published_at?: string | null;
   author_id?: string | null;
   show_in_shop?: boolean;
+  /** Durée estimée en minutes */
+  duration?: number | null;
   competency_ids?: string[];
 }
 
-// ── Shop (boutique) ───────────────────────────────────────────────────────────
-
+export interface LinkCompetencyPayload {
+  competency_id: string;
+  location_x?: number | null;
+  location_y?: number | null;
+  // ── Shop (boutique) ───────────────────────────────────────────────────────────
+}
 export interface ShopLearningPathParams {
   page?: number;
   per_page?: number;

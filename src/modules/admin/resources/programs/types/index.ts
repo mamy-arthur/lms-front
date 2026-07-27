@@ -9,6 +9,8 @@ export interface LearningPathImage {
 export interface LearningPathCompetency {
   competencyId: string;
   position: number;
+  locationX: number | null;
+  locationY: number | null;
 }
 
 export interface LearningPath {
@@ -26,6 +28,8 @@ export interface LearningPath {
   showInShop: boolean;
   isPublished: boolean;
   isSellable: boolean;
+  /** Durée estimée du parcours en minutes */
+  duration: number | null;
   competencies: LearningPathCompetency[];
   createdAt: string;
   updatedAt: string;
@@ -58,9 +62,12 @@ export function normalizeLearningPath(api: ApiLearningPath): LearningPath {
     showInShop: api.show_in_shop,
     isPublished: api.is_published,
     isSellable: api.is_sellable,
+    duration: api.duration ?? null,
     competencies: api.competencies.map((c) => ({
       competencyId: c.competency_id,
       position: c.position,
+      locationX: c.location_x ?? null,
+      locationY: c.location_y ?? null,
     })),
     createdAt: api.created_at,
     updatedAt: api.updated_at,
@@ -83,4 +90,5 @@ export type {
   UpdateLearningPathPayload,
   CreateLearningPathCategoryPayload,
   UpdateLearningPathCategoryPayload,
+  LinkCompetencyPayload,
 } from '@/shared/types/learning-path.types';

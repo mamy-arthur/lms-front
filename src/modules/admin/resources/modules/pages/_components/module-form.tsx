@@ -1,7 +1,15 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
-import { Check, ChevronDown, ChevronsUpDown, GripVertical, ImagePlus, Loader2 } from 'lucide-react';
+import {
+  Check,
+  ChevronDown,
+  ChevronsUpDown,
+  GripVertical,
+  ImagePlus,
+  Loader2,
+  Save,
+} from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import {
@@ -468,14 +476,12 @@ export function ModuleForm({
             size="lg"
             className="w-full bg-(--color-primary) hover:bg-(--color-primary)/80 sm:w-auto"
           >
-            {mutation.isPending && <Loader2 className="size-4 animate-spin" />}
-            {mutation.isPending
-              ? isEdit
-                ? 'Enregistrement…'
-                : 'Création…'
-              : isEdit
-                ? 'Enregistrer'
-                : 'Créer'}
+            {mutation.isPending ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Save className="size-4" />
+            )}
+            Enregistrer
           </Button>
         </div>
       </form>

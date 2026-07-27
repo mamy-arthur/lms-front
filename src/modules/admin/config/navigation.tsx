@@ -41,6 +41,7 @@ export const ADMIN_NAV: AdminNavItem[] = [
     url: ROUTES.admin.wallet,
     title: 'Portefeuille',
     icon: Wallet,
+    access: ACCESS.wallet,
     items: [],
   },
   {

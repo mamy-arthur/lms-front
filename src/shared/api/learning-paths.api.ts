@@ -9,6 +9,7 @@ import type {
   UpdateLearningPathCategoryPayload,
   CreateLearningPathPayload,
   UpdateLearningPathPayload,
+  LinkCompetencyPayload,
   ShopLearningPathParams,
 } from '@/shared/types/learning-path.types';
 
@@ -46,10 +47,8 @@ export const learningPathsApi = {
     return apiUpload<{ data: ApiUploadedMedia }>('platform/learning-paths/media', formData);
   },
 
-  linkCompetency: (id: string, competencyId: string) =>
-    apiPost<{ data: ApiLearningPath }>(`platform/learning-paths/${id}/competencies`, {
-      competency_id: competencyId,
-    }),
+  linkCompetency: (id: string, data: LinkCompetencyPayload) =>
+    apiPost<{ data: ApiLearningPath }>(`platform/learning-paths/${id}/competencies`, data),
 
   unlinkCompetency: (id: string, competencyId: string) =>
     apiDelete(`platform/learning-paths/${id}/competencies/${competencyId}`),

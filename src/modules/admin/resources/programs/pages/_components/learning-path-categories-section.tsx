@@ -25,6 +25,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { getApiErrorMessage, getFormValidationMessage } from '@/shared/lib/errors';
 import { useCreateLearningPathCategory } from '../../hooks/useCreateLearningPathCategory';
 import { useUpdateLearningPathCategory } from '../../hooks/useUpdateLearningPathCategory';
 import { useDeleteLearningPathCategory } from '../../hooks/useDeleteLearningPathCategory';
@@ -83,9 +84,18 @@ function CategoryFormDialog({ open, onOpenChange, category }: CategoryFormDialog
       }
       reset();
       onOpenChange(false);
-    } catch {
-      toast.error('Une erreur est survenue');
+    } catch (err) {
+      toast.error(
+        getApiErrorMessage(
+          err,
+          "Impossible d'enregistrer la catégorie. Vérifiez le nom (unique) et réessayez.",
+        ),
+      );
     }
+  };
+
+  const onInvalid = (formErrors: typeof errors) => {
+    toast.error(getFormValidationMessage(formErrors));
   };
 
   const isPending = isSubmitting || createMutation.isPending || updateMutation.isPending;
@@ -101,7 +111,7 @@ function CategoryFormDialog({ open, onOpenChange, category }: CategoryFormDialog
               : 'Créez une nouvelle catégorie de parcours.'}
           </DialogDescription>
         </DialogHeader>
-        <form id="category-form" onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form id="category-form" onSubmit={handleSubmit(onSubmit, onInvalid)} className="space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="cat-name">Nom *</Label>
             <Input
@@ -162,8 +172,13 @@ export function LearningPathCategoriesSection({ categories, isLoading }: Props) 
     try {
       await deleteMutation.mutateAsync(id);
       toast.success('Catégorie supprimée');
-    } catch {
-      toast.error('Impossible de supprimer cette catégorie (des parcours y sont rattachés)');
+    } catch (err) {
+      toast.error(
+        getApiErrorMessage(
+          err,
+          'Impossible de supprimer cette catégorie. Détachez d’abord les parcours qui y sont rattachés, puis réessayez.',
+        ),
+      );
     }
   };
 

@@ -31,6 +31,7 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
+import { getApiErrorMessage, getFormValidationMessage } from '@/shared/lib/errors';
 import { useCreateLearningPath } from '../../hooks/useCreateLearningPath';
 import { useUpdateLearningPath } from '../../hooks/useUpdateLearningPath';
 import { useUploadLearningPathMedia } from '../../hooks/useUploadLearningPathMedia';
@@ -42,9 +43,17 @@ import ProgramFlow, {
   type ModuleStepPayload,
   type StepNode,
 } from '../../components/ProgramFlow';
+import {
+  DURATION_UNITS,
+  durationToMinutes,
+  minutesToDuration,
+  type DurationUnit,
+} from '../../lib/duration';
 import type { LearningPath, LearningPathCategory } from '../../types';
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
+
+const durationUnitSchema = z.enum(['minutes', 'hours', 'days', 'months', 'years']);
 
 const schema = z
   .object({
@@ -55,6 +64,8 @@ const schema = z
     currency: z.string().length(3).optional(),
     published_at: z.string().nullable().optional(),
     show_in_shop: z.boolean().optional(),
+    duration_value: z.number().min(0).nullable().optional(),
+    duration_unit: durationUnitSchema.optional(),
   })
   .refine(
     (data) => {
@@ -77,6 +88,17 @@ const CURRENCIES = [
   { value: 'MAD', label: 'MAD (د.م.)' },
   { value: 'XOF', label: 'XOF (Fr)' },
 ];
+
+const CANVAS_X = 300;
+const NODE_GAP = 150;
+
+function toApiDuration(
+  value: number | null | undefined,
+  unit: DurationUnit | undefined,
+): number | null {
+  if (value === null || value === undefined || Number.isNaN(value)) return null;
+  return durationToMinutes(value, unit ?? 'minutes');
+}
 
 // ─── Date Picker ─────────────────────────────────────────────────────────────
 
@@ -161,13 +183,25 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPath, categ
   const handleUnlinkCompetency = useCallback(
     (competencyId: string) => {
       if (!learningPath) return;
-      const isLinked = learningPath.competencies.some((c) => c.competencyId === competencyId);
-      if (!isLinked) return;
+      const wasOriginallyLinked = learningPath.competencies.some(
+        (c) => c.competencyId === competencyId,
+      );
+      if (!wasOriginallyLinked) return;
+      if (unlinkedDuringSessionRef.current.has(competencyId)) return;
+      unlinkedDuringSessionRef.current.add(competencyId);
       unlinkCompetency.mutate(
         { id: learningPath.id, competencyId },
         {
           onSuccess: () => toast.success('Compétence détachée du parcours'),
-          onError: () => toast.error('Impossible de détacher la compétence'),
+          onError: (err) => {
+            unlinkedDuringSessionRef.current.delete(competencyId);
+            toast.error(
+              getApiErrorMessage(
+                err,
+                'Impossible de détacher la compétence. Vérifiez votre connexion et réessayez.',
+              ),
+            );
+          },
         },
       );
     },
@@ -179,8 +213,6 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPath, categ
     if (!learningPath?.competencies.length) return null;
 
     const sorted = [...learningPath.competencies].sort((a, b) => a.position - b.position);
-    const CANVAS_X = 300;
-    const NODE_GAP = 150;
     const emailNodeId = 'email-start';
 
     const emailNode: StepNode = {
@@ -193,7 +225,10 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPath, categ
     const moduleNodes: StepNode[] = sorted.map((comp, idx) => ({
       id: `step-module-${comp.competencyId}`,
       type: 'programStep',
-      position: { x: CANVAS_X, y: (idx + 1) * NODE_GAP },
+      position: {
+        x: comp.locationX ?? CANVAS_X,
+        y: comp.locationY ?? (idx + 1) * NODE_GAP,
+      },
       data: {
         stepType: 'module',
         label: moduleNameMap.get(comp.competencyId) ?? comp.competencyId,
@@ -216,6 +251,8 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPath, categ
 
   const imageInputRef = useRef<HTMLInputElement>(null);
   const flowRef = useRef<ProgramFlowHandle>(null);
+  /** Competencies unlinked during this edit session (editingPath snapshot may be stale). */
+  const unlinkedDuringSessionRef = useRef<Set<string>>(new Set());
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [pendingImageFile, setPendingImageFile] = useState<File | null>(null);
   const [imageId, setImageId] = useState<string | null>(null);
@@ -237,16 +274,24 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPath, categ
       currency: 'EUR',
       published_at: null,
       show_in_shop: false,
+      duration_value: null,
+      duration_unit: 'hours',
     },
   });
 
   const watchedPrice = watch('price');
   const watchedPublishedAt = watch('published_at');
+  const watchedDurationValue = watch('duration_value');
+  const watchedDurationUnit = watch('duration_unit');
 
   // Sync form state when drawer opens
   useEffect(() => {
     if (open) {
       if (learningPath) {
+        const durationParts =
+          learningPath.duration !== null && learningPath.duration !== undefined
+            ? minutesToDuration(learningPath.duration)
+            : { value: null as number | null, unit: 'hours' as DurationUnit };
         reset({
           name: learningPath.name,
           description: learningPath.description,
@@ -255,6 +300,8 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPath, categ
           currency: learningPath.currency ?? 'EUR',
           published_at: learningPath.publishedAt,
           show_in_shop: learningPath.showInShop,
+          duration_value: durationParts.value,
+          duration_unit: durationParts.unit,
         });
         setImageId(learningPath.image?.id ?? null);
         setImagePreview(learningPath.image?.url ?? null);
@@ -267,11 +314,14 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPath, categ
           currency: 'EUR',
           published_at: null,
           show_in_shop: false,
+          duration_value: null,
+          duration_unit: 'hours',
         });
         setImageId(null);
         setImagePreview(null);
       }
       setPendingImageFile(null);
+      unlinkedDuringSessionRef.current = new Set();
     }
   }, [open, learningPath, reset]);
 
@@ -297,8 +347,18 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPath, categ
 
       // Upload new image if a file was selected
       if (pendingImageFile) {
-        const { data } = await uploadMedia.mutateAsync(pendingImageFile);
-        finalImageId = data.id;
+        try {
+          const { data } = await uploadMedia.mutateAsync(pendingImageFile);
+          finalImageId = data.id;
+        } catch (err) {
+          toast.error(
+            getApiErrorMessage(
+              err,
+              "Impossible d'uploader l'image. Utilisez un JPEG, PNG, GIF ou WebP, puis réessayez.",
+            ),
+          );
+          return;
+        }
       }
 
       const payload = {
@@ -310,37 +370,77 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPath, categ
         image: finalImageId,
         published_at: values.published_at ?? null,
         show_in_shop: values.show_in_shop ?? false,
+        duration: toApiDuration(values.duration_value, values.duration_unit),
       };
 
       let lpId: string;
 
-      if (isEdit && learningPath) {
-        await updateMutation.mutateAsync({ id: learningPath.id, ...payload });
-        lpId = learningPath.id;
-        toast.success('Parcours mis à jour');
-      } else {
-        const result = await createMutation.mutateAsync(payload);
-        lpId = result.data.id;
-        toast.success('Parcours créé');
+      try {
+        if (isEdit && learningPath) {
+          await updateMutation.mutateAsync({ id: learningPath.id, ...payload });
+          lpId = learningPath.id;
+          toast.success('Parcours mis à jour');
+        } else {
+          const result = await createMutation.mutateAsync(payload);
+          lpId = result.data.id;
+          toast.success('Parcours créé');
+        }
+      } catch (err) {
+        toast.error(
+          getApiErrorMessage(
+            err,
+            "Impossible d'enregistrer le parcours. Vérifiez les informations saisies et réessayez.",
+          ),
+        );
+        return;
       }
 
-      // Link new module competencies to the learning path
+      // Link new module competencies with canvas positions (location_x / location_y)
       const flowPayload = flowRef.current?.getPayload();
       const moduleSteps = (flowPayload?.etapes ?? []).filter(
         (s): s is ModuleStepPayload => s.type === 'module' && !!s.moduleId,
       );
       const alreadyLinked = new Set(
-        isEdit ? (learningPath?.competencies ?? []).map((c) => c.competencyId) : [],
-      );
-      const toLink = moduleSteps.filter((s) => !alreadyLinked.has(s.moduleId!));
-      await Promise.allSettled(
-        toLink.map((s) => linkCompetency.mutateAsync({ id: lpId, competencyId: s.moduleId! })),
+        (isEdit ? (learningPath?.competencies ?? []) : [])
+          .filter((c) => !unlinkedDuringSessionRef.current.has(c.competencyId))
+          .map((c) => c.competencyId),
       );
 
+      try {
+        for (const step of moduleSteps) {
+          const competencyId = step.moduleId!;
+          if (alreadyLinked.has(competencyId)) continue;
+
+          await linkCompetency.mutateAsync({
+            id: lpId,
+            competencyId,
+            locationX: Math.round(step.position.x),
+            locationY: Math.round(step.position.y),
+          });
+        }
+      } catch (err) {
+        toast.error(
+          getApiErrorMessage(
+            err,
+            'Le parcours a été enregistré, mais la synchronisation des compétences a échoué. Rouvrez le parcours et réessayez.',
+          ),
+        );
+        return;
+      }
+
       onOpenChange(false);
-    } catch {
-      toast.error('Une erreur est survenue');
+    } catch (err) {
+      toast.error(
+        getApiErrorMessage(
+          err,
+          "Une erreur inattendue est survenue lors de l'enregistrement. Réessayez.",
+        ),
+      );
     }
+  };
+
+  const onInvalid = (formErrors: typeof errors) => {
+    toast.error(getFormValidationMessage(formErrors));
   };
 
   const isPending =
@@ -404,7 +504,7 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPath, categ
           <div className="flex-4 overflow-hidden border-l">
             <form
               id="learning-path-form"
-              onSubmit={handleSubmit(onSubmit)}
+              onSubmit={handleSubmit(onSubmit, onInvalid)}
               className="h-full overflow-y-auto px-5 py-5"
             >
               <div className="space-y-5">
@@ -419,7 +519,6 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPath, categ
                   />
                   {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
                 </div>
-
                 {/* Description */}
                 <div className="space-y-1.5">
                   <Label htmlFor="lp-description">Description</Label>
@@ -431,7 +530,6 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPath, categ
                     rows={3}
                   />
                 </div>
-
                 {/* Image */}
                 <div className="space-y-1.5">
                   <Label>Image de couverture</Label>
@@ -476,7 +574,6 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPath, categ
                     </button>
                   )}
                 </div>
-
                 {/* Catégorie */}
                 <div className="space-y-1.5">
                   <Label>Catégorie</Label>
@@ -503,7 +600,6 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPath, categ
                     )}
                   </div>
                 </div>
-
                 {/* Prix & Devise */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
@@ -547,8 +643,44 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPath, categ
                     )}
                   </div>
                 </div>
-
-                {/* Date de publication */}
+                {/* Durée de formation */}
+                <div className="space-y-1.5">
+                  <Label>Durée de formation</Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Input
+                      id="lp-duration"
+                      type="number"
+                      min={0}
+                      step={1}
+                      placeholder="Ex: 2"
+                      className="h-8 text-sm"
+                      value={watchedDurationValue ?? ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setValue('duration_value', val === '' ? null : parseFloat(val));
+                      }}
+                    />
+                    <Select
+                      value={watchedDurationUnit ?? 'hours'}
+                      onValueChange={(v) => setValue('duration_unit', v as DurationUnit)}
+                    >
+                      <SelectTrigger className="h-8 text-xs w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {DURATION_UNITS.map((u) => (
+                          <SelectItem key={u.value} value={u.value}>
+                            {u.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {errors.duration_value && (
+                    <p className="text-xs text-destructive">{errors.duration_value.message}</p>
+                  )}
+                </div>
+                {/* Date de publication */}{' '}
                 <div className="space-y-1.5">
                   <Label>Date de publication</Label>
                   <DatePickerField
@@ -557,7 +689,6 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPath, categ
                     placeholder="Non définie"
                   />
                 </div>
-
                 {/* Visible en boutique */}
                 <div className="flex items-center justify-between rounded-lg border p-3">
                   <div>
