@@ -179,7 +179,7 @@ describe('AdminModuleFormDrawer', () => {
       });
 
       await user.click(screen.getByRole('button', { name: /enregistrer/i }));
-    
+
       await waitFor(() => {
         expect(screen.getByText(/nom requis/i)).toBeInTheDocument();
       });
@@ -197,7 +197,7 @@ describe('AdminModuleFormDrawer', () => {
       });
 
       await user.click(screen.getByRole('button', { name: /enregistrer/i }));
-    
+
       await waitFor(() => {
         expect(screen.getByText(/identifiant requis/i)).toBeInTheDocument();
       });
@@ -216,7 +216,7 @@ describe('AdminModuleFormDrawer', () => {
       });
 
       await user.click(screen.getByRole('button', { name: /enregistrer/i }));
-    
+
       await waitFor(() => {
         expect(screen.queryByText(/requis/i)).not.toBeInTheDocument();
       });
@@ -244,7 +244,7 @@ describe('AdminModuleFormDrawer', () => {
       });
 
       await user.click(screen.getByRole('button', { name: /enregistrer/i }));
-    
+
       await waitFor(() => {
         expect(mockCreate).toHaveBeenCalledWith(
           expect.objectContaining({ shortname: 'Dev Web', idnumber: 'DW-001' }),
@@ -266,7 +266,7 @@ describe('AdminModuleFormDrawer', () => {
       });
 
       await user.click(screen.getByRole('button', { name: /enregistrer/i }));
-    
+
       await waitFor(() => expect(mockCreate).toHaveBeenCalled());
       expect(mockUpdate).not.toHaveBeenCalled();
     });
