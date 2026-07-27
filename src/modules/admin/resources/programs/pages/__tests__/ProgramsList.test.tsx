@@ -66,6 +66,11 @@ jest.mock('@/modules/admin/resources/programs/hooks/useDeleteLearningPathCategor
   useDeleteLearningPathCategory: () => ({ mutateAsync: jest.fn(), isPending: false }),
 }));
 
+// useModules est utilisé par LearningPathFormDrawer — on évite l'appel API réel
+jest.mock('@/modules/admin/resources/modules/hooks/useModules', () => ({
+  useModules: jest.fn().mockReturnValue({ data: undefined, isLoading: false, isError: false }),
+}));
+
 // ─── Imports ──────────────────────────────────────────────────────────────────
 
 import React from 'react';

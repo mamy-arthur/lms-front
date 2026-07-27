@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -104,6 +105,11 @@ function CategoryFormDialog({ open, onOpenChange, category }: CategoryFormDialog
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle>{isEdit ? 'Modifier la catégorie' : 'Nouvelle catégorie'}</DialogTitle>
+          <DialogDescription className="sr-only">
+            {isEdit
+              ? 'Modifiez les informations de la catégorie.'
+              : 'Créez une nouvelle catégorie de parcours.'}
+          </DialogDescription>
         </DialogHeader>
         <form id="category-form" onSubmit={handleSubmit(onSubmit, onInvalid)} className="space-y-4">
           <div className="space-y-1.5">

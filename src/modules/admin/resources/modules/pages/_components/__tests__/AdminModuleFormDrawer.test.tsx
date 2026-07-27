@@ -119,7 +119,9 @@ jest.mock(
       value?: string;
       onChange?: (v: string) => void;
     }) => {
-      if (!value) onChange?.('formation');
+      React.useEffect(() => {
+        if (!value) onChange?.('formation');
+      }, []);
 
       return <div data-testid="category-select" data-value={value ?? ''} />;
     },
