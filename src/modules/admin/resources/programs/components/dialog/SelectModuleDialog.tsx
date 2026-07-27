@@ -18,6 +18,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { Separator } from '@/components/ui/separator';
 import { useModules } from '@/modules/admin/resources/modules/hooks/useModules';
 import { useCompetencyCategoriesQuery } from '@/modules/admin/resources/modules/hooks/useCompetencyCategoriesQuery';
+import { useLearningPathCompetencyAssociationsQuery } from '../../hooks/useLearningPathCompetencyAssociationsQuery';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -53,6 +54,16 @@ export function SelectModuleDialog({
   const competenciesData = modulesResult?.data;
 
   const { data: categoriesData } = useCompetencyCategoriesQuery(open);
+  const { data: associations } = useLearningPathCompetencyAssociationsQuery(open);
+
+  // Map competency_id → learning_path_id for quick lookup
+  const associationMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const assoc of associations ?? []) {
+      map.set(assoc.competency_id, assoc.learning_path_id);
+    }
+    return map;
+  }, [associations]);
 
   // Build a category id→name map for display
   const categoryMap = useMemo(() => {
@@ -142,8 +153,8 @@ export function SelectModuleDialog({
                 const isAdded = usedModuleIds.includes(comp.id);
                 const hasCourses = comp.courseIds.length > 0;
                 const isLinkedToOtherLp =
-                  !!comp.linkedLearningPathId &&
-                  comp.linkedLearningPathId !== currentLearningPathId;
+                  !!associationMap.get(comp.id) &&
+                  associationMap.get(comp.id) !== currentLearningPathId;
                 const isDisabled = isAdded || !hasCourses || isLinkedToOtherLp;
                 const categoryName = comp.category_id
                   ? (categoryMap.get(comp.category_id) ?? null)

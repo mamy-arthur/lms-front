@@ -46,8 +46,6 @@ export interface CompetencyApiResponse {
   course_ids?: string[];
   created_at?: string | null;
   updated_at?: string | null;
-  /** UUID of the learning path this competency is linked to, or null if not linked. */
-  linked_learning_path_id?: string | null;
 }
 
 export interface CompetencyListApiResponse {
@@ -113,6 +111,5 @@ export function normalizeModule(raw: CompetencyApiResponse): Module {
     courseIds,
     createdAt: raw.created_at ?? '',
     updatedAt: raw.updated_at ?? '',
-    linkedLearningPathId: raw.linked_learning_path_id ?? null,
   };
 }
