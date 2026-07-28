@@ -1,13 +1,13 @@
 'use client';
 
-import { MoreHorizontal, Pencil, Plus, Search, Settings2, Trash2 } from 'lucide-react';
+import { MoreHorizontal, Pencil, Plus, Search, Settings2 } from 'lucide-react';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
+  // DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
@@ -103,14 +103,14 @@ function LearningPathsTableBase({
                 <Pencil className="mr-2 size-3.5 text-muted-foreground" />
                 Modifier
               </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
+              {/* <DropdownMenuSeparator /> */}
+              {/* <DropdownMenuItem
                 className="text-destructive focus:text-destructive"
                 onClick={() => onDelete?.(item.id)}
               >
                 <Trash2 className="mr-2 size-3.5" />
                 Supprimer
-              </DropdownMenuItem>
+              </DropdownMenuItem> */}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -179,7 +179,7 @@ function LearningPathsTableBase({
         key: 'isPublished',
         label: 'Statut',
         sortable: true,
-        render: (row) => <StatusBadge isPublished={row.isPublished} />,
+        render: (row) => <StatusBadge isPublished={row.showInShop} />,
         skeleton: <Skeleton className="h-5 w-16 rounded-full" />,
       },
       {
@@ -216,7 +216,7 @@ function LearningPathsTableBase({
           />
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={onManageCategories} className="h-8 gap-1.5">
+          <Button variant="outline" onClick={onManageCategories} className="gap-1.5">
             <Settings2 />
             Gérer les catégories
           </Button>
