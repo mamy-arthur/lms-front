@@ -1,21 +1,33 @@
-import { notFound } from 'next/navigation';
+'use client';
 
+import { use } from 'react';
+import { notFound } from 'next/navigation';
 import { FormationDetailsPage } from '@/modules/portal/resources/store/FormationDetailsPage';
-import { getStoreFormationDetailsById } from '@/shared/mocks/store.mock';
+import { useShopLearningPathQuery } from '@/modules/admin/resources/store/hooks/useShopLearningPathQuery';
+import { toShopFormationDetails } from '@/shared/lib/shop-formation';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface PageProps {
-  params: Promise<{
-    formationId: string;
-  }>;
+  params: Promise<{ formationId: string }>;
 }
 
-export default async function Page({ params }: PageProps) {
-  const { formationId } = await params;
-  const formation = getStoreFormationDetailsById(formationId);
+export default function Page({ params }: PageProps) {
+  const { formationId } = use(params);
+  const { data: lp, isLoading, isError } = useShopLearningPathQuery(formationId);
 
-  if (!formation) {
+  if (isLoading) {
+    return (
+      <div className="space-y-4 p-6">
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-3/4" />
+      </div>
+    );
+  }
+
+  if (isError || !lp) {
     notFound();
   }
 
-  return <FormationDetailsPage formation={formation} backHref="/admin/store" />;
+  return <FormationDetailsPage formation={toShopFormationDetails(lp)} backHref="/admin/store" />;
 }

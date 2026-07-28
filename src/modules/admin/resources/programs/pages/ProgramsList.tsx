@@ -8,6 +8,7 @@ import { useDeleteLearningPath } from '../hooks/useDeleteLearningPath';
 import { LearningPathsTable } from './_components/learning-paths-table';
 import { LearningPathFormDrawer } from './_components/learning-path-form-drawer';
 import { LearningPathCategoriesDrawer } from './_components/learning-path-categories-drawer';
+import { getApiErrorMessage } from '@/shared/lib/errors';
 import type { LearningPath } from '../types';
 
 export function ProgramsList() {
@@ -33,8 +34,13 @@ export function ProgramsList() {
     try {
       await deleteMutation.mutateAsync(id);
       toast.success('Parcours supprimé');
-    } catch {
-      toast.error('Impossible de supprimer ce parcours (des compétences y sont encore liées)');
+    } catch (err) {
+      toast.error(
+        getApiErrorMessage(
+          err,
+          'Impossible de supprimer ce parcours. Détachez d’abord toutes les compétences liées, puis réessayez.',
+        ),
+      );
     }
   };
 

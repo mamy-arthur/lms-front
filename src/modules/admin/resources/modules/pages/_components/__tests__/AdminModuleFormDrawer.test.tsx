@@ -119,7 +119,9 @@ jest.mock(
       value?: string;
       onChange?: (v: string) => void;
     }) => {
-      if (!value) onChange?.('formation');
+      React.useEffect(() => {
+        if (!value) onChange?.('formation');
+      }, []);
 
       return <div data-testid="category-select" data-value={value ?? ''} />;
     },
@@ -178,7 +180,7 @@ describe('AdminModuleFormDrawer', () => {
         expect(screen.getByTestId('category-select')).toHaveAttribute('data-value', 'formation');
       });
 
-      await user.click(screen.getByRole('button', { name: /créer/i }));
+      await user.click(screen.getByRole('button', { name: /enregistrer/i }));
 
       await waitFor(() => {
         expect(screen.getByText(/nom requis/i)).toBeInTheDocument();
@@ -196,7 +198,7 @@ describe('AdminModuleFormDrawer', () => {
         expect(screen.getByTestId('category-select')).toHaveAttribute('data-value', 'formation');
       });
 
-      await user.click(screen.getByRole('button', { name: /créer/i }));
+      await user.click(screen.getByRole('button', { name: /enregistrer/i }));
 
       await waitFor(() => {
         expect(screen.getByText(/identifiant requis/i)).toBeInTheDocument();
@@ -215,7 +217,7 @@ describe('AdminModuleFormDrawer', () => {
         expect(screen.getByTestId('category-select')).toHaveAttribute('data-value', 'formation');
       });
 
-      await user.click(screen.getByRole('button', { name: /créer/i }));
+      await user.click(screen.getByRole('button', { name: /enregistrer/i }));
 
       await waitFor(() => {
         expect(screen.queryByText(/requis/i)).not.toBeInTheDocument();
@@ -243,7 +245,7 @@ describe('AdminModuleFormDrawer', () => {
         expect(screen.getByTestId('category-select')).toHaveAttribute('data-value', 'formation');
       });
 
-      await user.click(screen.getByRole('button', { name: /créer/i }));
+      await user.click(screen.getByRole('button', { name: /enregistrer/i }));
 
       await waitFor(() => {
         expect(mockCreate).toHaveBeenCalledWith(
@@ -265,7 +267,7 @@ describe('AdminModuleFormDrawer', () => {
         expect(screen.getByTestId('category-select')).toHaveAttribute('data-value', 'formation');
       });
 
-      await user.click(screen.getByRole('button', { name: /créer/i }));
+      await user.click(screen.getByRole('button', { name: /enregistrer/i }));
 
       await waitFor(() => expect(mockCreate).toHaveBeenCalled());
       expect(mockUpdate).not.toHaveBeenCalled();

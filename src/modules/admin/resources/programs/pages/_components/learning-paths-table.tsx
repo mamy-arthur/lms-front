@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DataTable, type DataTableColumn } from '@/shared/components/ui/DataTable';
 import { formatDate } from '@/shared/lib/date';
+import { formatDuration } from '../../lib/duration';
 import type { LearningPath, LearningPathCategory } from '../../types';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -161,6 +162,17 @@ function LearningPathsTableBase({
         label: 'Prix',
         sortable: false,
         render: (row) => <PriceBadge path={row} />,
+        skeleton: <Skeleton className="h-4 w-20" />,
+      },
+      {
+        key: 'duration',
+        label: 'Durée',
+        sortable: true,
+        render: (row) => (
+          <span className="text-xs text-muted-foreground tabular-nums">
+            {formatDuration(row.duration)}
+          </span>
+        ),
         skeleton: <Skeleton className="h-4 w-20" />,
       },
       {

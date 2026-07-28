@@ -98,8 +98,6 @@ function AdminModuleFormDrawerBase({
       <SheetContent
         className="flex w-full flex-col gap-0 overflow-hidden p-0  max-w-187.5!"
         showCloseButton={true}
-        onInteractOutside={(e) => e.preventDefault()}
-        onEscapeKeyDown={(e) => e.preventDefault()}
       >
         <SheetHeader className="border-b px-4 py-4">
           <SheetTitle>{title}</SheetTitle>

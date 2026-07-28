@@ -396,6 +396,8 @@ export function RichTextEditor({
           '[&_pre]:rounded [&_pre]:bg-[#1e1e1e] [&_pre]:text-[#d4d4d4] [&_pre]:p-4 [&_pre]:text-xs [&_pre]:font-mono [&_pre]:overflow-x-auto',
           '[&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_pre_code]:text-inherit',
           '[&_a]:text-primary [&_a]:underline',
+          // overflow-y:auto crée un BFC → contient les images flottantes.
+          'max-h-96 overflow-y-auto after:content-[""] after:block after:clear-both',
         ),
       },
       // Mode HTML : on intercepte TOUJOURS le coller si le text/plain contient
@@ -603,7 +605,7 @@ export function RichTextEditor({
         {sourceMode ? (
           <textarea
             ref={sourceTextareaRef}
-            className="min-h-32 w-full rounded-b-md border bg-[#1e1e1e] text-[#d4d4d4] font-mono text-xs px-3 py-2 resize-y focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            className="min-h-32 max-h-96 overflow-y-auto w-full rounded-b-md border bg-[#1e1e1e] text-[#d4d4d4] font-mono text-xs px-3 py-2 resize-y focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             value={sourceValue}
             onChange={(e) => {
               setSourceValue(e.target.value);
@@ -626,7 +628,7 @@ export function RichTextEditor({
             onMouseUp={saveSelection}
             onKeyUp={saveSelection}
             className={cn(
-              'min-h-32 w-full rounded-b-md border bg-background px-3 py-2 text-sm overflow-auto',
+              'min-h-32 max-h-96 overflow-y-auto w-full rounded-b-md border bg-background px-3 py-2 text-sm',
               'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
             )}
           />
@@ -653,7 +655,7 @@ export function RichTextEditor({
               expandable={false}
               outputFormat={outputFormat}
               toolbarExtras={toolbarExtras}
-              className="h-full [&_.tiptap]:min-h-[55vh]"
+              className="h-full [&_.tiptap]:min-h-[55vh] [&_.ProseMirror]:max-h-none"
             />
           </div>
 

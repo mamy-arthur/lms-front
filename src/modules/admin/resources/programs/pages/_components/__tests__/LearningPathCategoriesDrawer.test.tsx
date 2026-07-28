@@ -214,7 +214,7 @@ describe('LearningPathCategoriesDrawer', () => {
       await user.click(screen.getByRole('button', { name: /enregistrer/i }));
 
       await waitFor(() => {
-        expect(mockToast.error).toHaveBeenCalledWith('Une erreur est survenue');
+        expect(mockToast.error).toHaveBeenCalledWith('Server error');
       });
     });
   });
@@ -291,7 +291,7 @@ describe('LearningPathCategoriesDrawer', () => {
       await user.click(screen.getByRole('button', { name: /enregistrer/i }));
 
       await waitFor(() => {
-        expect(mockToast.error).toHaveBeenCalledWith('Une erreur est survenue');
+        expect(mockToast.error).toHaveBeenCalledWith('Server error');
       });
     });
   });
@@ -337,9 +337,7 @@ describe('LearningPathCategoriesDrawer', () => {
       await user.click(screen.getByRole('menuitem', { name: /supprimer/i }));
 
       await waitFor(() => {
-        expect(mockToast.error).toHaveBeenCalledWith(
-          'Impossible de supprimer cette catégorie (des parcours y sont rattachés)',
-        );
+        expect(mockToast.error).toHaveBeenCalledWith('has_paths');
       });
     });
   });
