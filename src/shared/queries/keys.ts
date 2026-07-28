@@ -71,4 +71,8 @@ export const shopLearningPathKeys = {
 export const cartKeys = {
   all: ['carts'] as const,
   active: () => [...cartKeys.all, 'active'] as const,
+
+export const learningPathCompetencyAssociationKeys = {
+  all: ['learning-path-competency-associations'] as const,
+  lists: () => [...learningPathCompetencyAssociationKeys.all, 'list'] as const,
 };

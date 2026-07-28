@@ -276,7 +276,7 @@ function buildFormationDetails(formation: StoreFormation, index: number): StoreF
       `Cette formation a été conçue pour des clients B2B souhaitant acquérir des licences et structurer la montée en compétences de leurs équipes. ` +
       `Vous visualisez ici l'architecture complète du parcours (modules et évaluations) sans accès au contenu pédagogique avant l'achat.`,
     level: levels[index % levels.length],
-    duration: `${10 + index}h`,
+    duration: '3h 30min',
     language: 'Français',
     certificate: true,
     learningObjectives: [

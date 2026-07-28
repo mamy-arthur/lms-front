@@ -25,13 +25,13 @@ export function AppHeader() {
         </div>
 
         {/* RIGHT */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center">
           <Popover>
             <PopoverTrigger asChild>
               <Button
                 variant="ghost"
                 size="icon"
-                className="relative h-9 w-9 rounded-full hover:bg-accent bg-gray-100"
+                className="relative h-9 w-9 hover:bg-accent"
                 aria-label="Notifications"
               >
                 <Bell className="h-5 w-5" />
@@ -69,7 +69,7 @@ export function AppHeader() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="relative h-9 w-9 rounded-full hover:bg-accent bg-gray-100"
+                className="relative h-9 w-9 hover:bg-accent"
                 aria-label="Alertes"
               >
                 <AlertTriangle className="h-4.5 w-4.5" />
@@ -102,7 +102,7 @@ export function AppHeader() {
           <Button
             variant="ghost"
             size="icon"
-            className="relative h-9 w-9 rounded-full hover:bg-accent bg-gray-100"
+            className="relative h-9 w-9 hover:bg-accent"
             aria-label="Panier"
             onClick={() => setCartOpen(true)}
           >

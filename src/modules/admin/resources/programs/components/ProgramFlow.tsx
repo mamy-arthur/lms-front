@@ -435,6 +435,7 @@ export type ProgramFlowProps = {
   initialEdges?: Edge<EdgeRuleData>[];
   initialNodeOrder?: string[];
   onUnlinkCompetency?: (competencyId: string) => void;
+  learningPathId?: string;
 };
 
 const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function ProgramFlow(
