@@ -93,20 +93,6 @@ export function UserForm({
 
           <FieldRoot
             control={form.control}
-            name="username"
-            render={({ field }) => (
-              <FieldGroup>
-                <FieldLabel className="text-xs">Nom d'utilisateur</FieldLabel>
-                <FieldContent>
-                  <Input aria-label="Nom d'utilisateur" className="text-xs" {...field} />
-                </FieldContent>
-                <FieldError />
-              </FieldGroup>
-            )}
-          />
-
-          <FieldRoot
-            control={form.control}
             name="email"
             render={({ field }) => (
               <FieldGroup>
@@ -146,34 +132,6 @@ export function UserForm({
 
           {extraFields}
 
-          <FieldRoot
-            control={form.control}
-            name="city"
-            render={({ field }) => (
-              <FieldGroup>
-                <FieldLabel className="text-xs">Ville</FieldLabel>
-                <FieldContent>
-                  <Input aria-label="Ville" className="text-xs" {...field} />
-                </FieldContent>
-                <FieldError />
-              </FieldGroup>
-            )}
-          />
-
-          <FieldRoot
-            control={form.control}
-            name="country"
-            render={({ field }) => (
-              <FieldGroup>
-                <FieldLabel className="text-xs">Pays</FieldLabel>
-                <FieldContent>
-                  <Input aria-label="Pays" className="text-xs" {...field} />
-                </FieldContent>
-                <FieldError />
-              </FieldGroup>
-            )}
-          />
-
           {isEdit && lastLogin && (
             <div className="flex flex-col gap-1">
               <span className="text-xs text-muted-foreground">Dernière connexion</span>
@@ -189,37 +147,39 @@ export function UserForm({
             </div>
           )}
 
-          <FieldRoot
-            control={form.control}
-            name="password"
-            render={({ field }) => (
-              <FieldGroup>
-                <FieldLabel className="text-xs">Mot de passe</FieldLabel>
-                <FieldContent>
-                  <div className="relative">
-                    <Input
-                      type={showPassword ? 'text' : 'password'}
-                      aria-label="Mot de passe"
-                      className="text-xs"
-                      {...field}
-                    />
-                    <button
-                      type="button"
-                      onClick={togglePasswordVisibility}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                      tabIndex={-1}
-                      aria-label={
-                        showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'
-                      }
-                    >
-                      {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                    </button>
-                  </div>
-                </FieldContent>
-                <FieldError />
-              </FieldGroup>
-            )}
-          />
+          {!isEdit && (
+            <FieldRoot
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FieldGroup>
+                  <FieldLabel className="text-xs">Mot de passe</FieldLabel>
+                  <FieldContent>
+                    <div className="relative">
+                      <Input
+                        type={showPassword ? 'text' : 'password'}
+                        aria-label="Mot de passe"
+                        className="text-xs"
+                        {...field}
+                      />
+                      <button
+                        type="button"
+                        onClick={togglePasswordVisibility}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                        tabIndex={-1}
+                        aria-label={
+                          showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'
+                        }
+                      >
+                        {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                      </button>
+                    </div>
+                  </FieldContent>
+                  <FieldError />
+                </FieldGroup>
+              )}
+            />
+          )}
         </div>
 
         <div className="flex items-center justify-end gap-3 border-t bg-background px-6 py-4 shrink-0">

@@ -2,35 +2,45 @@ import { Role } from '@/shared/constants/roles';
 
 export interface User {
   id: string;
+  tenant_id: string | null;
+  editor_id: string | null;
   first_name: string;
   last_name: string;
-  username: string;
+  full_name: string;
   email: string;
   role: Role;
-  isActive: boolean;
-  city: string;
-  country: string;
-  lastLogin: string;
-  createdAt: string;
+  is_active: boolean;
+  profile_photo: { id: string; url: string; mime_type: string } | null;
+  created_at: string;
+  updated_at: string | null;
 }
 
 export interface CreateUserPayload {
   first_name: string;
   last_name: string;
-  username?: string;
   email: string;
   password: string;
   role: Role;
+  tenant_id?: string | null;
   editor_id?: string | null;
   is_active?: boolean;
-  city?: string;
-  country?: string;
+}
+
+export interface UpdateUserPayload {
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  role?: Role;
+  tenant_id?: string | null;
+  is_active?: boolean;
+  profile_photo_media_id?: string | null;
 }
 
 export interface UserSearchParams {
   q?: string;
   role?: string;
-  status?: 'active' | 'inactive';
+  is_active?: boolean;
+  tenant_id?: string;
   sort_by?: string;
   sort_dir?: 'asc' | 'desc';
   page?: number;
@@ -38,25 +48,18 @@ export interface UserSearchParams {
 }
 
 export function normalizeUser(raw: Record<string, unknown>): User {
-  const first_name = String(raw.first_name ?? raw.firstName ?? '');
-  const last_name = String(raw.last_name ?? raw.lastName ?? '');
-  const username =
-    String(raw.username ?? '') ||
-    String(raw.full_name ?? '') ||
-    String(raw.name ?? '') ||
-    [first_name, last_name].filter(Boolean).join('.');
-
   return {
-    id: String(raw.id ?? raw._id ?? ''),
-    first_name,
-    last_name,
-    username: username || '—',
+    id: String(raw.id ?? ''),
+    tenant_id: (raw.tenant_id as string | null) ?? null,
+    editor_id: (raw.editor_id as string | null) ?? null,
+    first_name: String(raw.first_name ?? ''),
+    last_name: String(raw.last_name ?? ''),
+    full_name: String(raw.full_name ?? `${raw.first_name ?? ''} ${raw.last_name ?? ''}`.trim()),
     email: String(raw.email ?? ''),
-    role: (raw.role ?? raw.roleAlias ?? Role.TRAINEE) as Role,
-    isActive: Boolean(raw.isActive ?? raw.is_active ?? raw.active),
-    city: String(raw.city ?? ''),
-    country: String(raw.country ?? ''),
-    lastLogin: String(raw.lastLogin ?? raw.last_login ?? ''),
-    createdAt: String(raw.createdAt ?? raw.created_at ?? ''),
+    role: (raw.role ?? Role.TRAINEE) as Role,
+    is_active: Boolean(raw.is_active ?? raw.isActive ?? true),
+    profile_photo: (raw.profile_photo as User['profile_photo']) ?? null,
+    created_at: String(raw.created_at ?? ''),
+    updated_at: (raw.updated_at as string | null) ?? null,
   };
 }

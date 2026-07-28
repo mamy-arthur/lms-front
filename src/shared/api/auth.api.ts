@@ -12,6 +12,7 @@ interface BackendUser {
   email: string;
   role: Role;
   is_active: boolean;
+  profile_photo: { id: string; url: string; mime_type: string } | null;
   email_verified_at: string | null;
   created_at: string;
 }
@@ -38,6 +39,7 @@ function toAuthUser(raw: BackendUser): AuthUser {
     name: raw.full_name,
     email: raw.email,
     role: raw.role,
+    avatar: raw.profile_photo?.url ?? null,
   };
 }
 

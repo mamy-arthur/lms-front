@@ -2,12 +2,21 @@
 
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { UserSearch } from '@modules/shared/components/users';
+import { UserSearch, UsersFilter } from '@modules/shared/components/users';
 import { AdminUserFormDrawer } from './_components/admin-user-form-drawer';
 import { AdminUsersTable } from './_components/admin-users-table';
 import { useUsersQuery } from '../hooks/useUsersQuery';
 import type { User, UserSearchParams } from '../types';
 import { useUsersListController } from '@/modules/shared/hooks/useUsersListController';
+import { Role } from '@/shared/constants/roles';
+import { useToggleUserActive } from '../hooks/useToggleUserActive';
+
+const ROLE_OPTIONS = [
+  { value: Role.SUPER_ADMIN, label: 'Super admin' },
+  { value: Role.EDITOR, label: 'Éditeur' },
+  { value: Role.CLIENT_MANAGER, label: 'Responsable' },
+  { value: Role.TRAINEE, label: 'Stagiaire' },
+] as const;
 
 export function UsersList() {
   const {
@@ -15,10 +24,10 @@ export function UsersList() {
     editingUser,
     draftSearch,
     setDraftSearch,
-    // draftRole,
-    // setDraftRole,
-    // draftStatus,
-    // setDraftStatus,
+    draftRole,
+    setDraftRole,
+    draftStatus,
+    setDraftStatus,
     params,
     sort,
     handleSearch,
@@ -35,6 +44,7 @@ export function UsersList() {
   } = useUsersListController<User, UserSearchParams>({ defaultPageSize: 25 });
 
   const { data, isLoading } = useUsersQuery(params);
+  const toggleActive = useToggleUserActive();
 
   return (
     <div className="bg-background">
@@ -51,6 +61,14 @@ export function UsersList() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <UserSearch value={draftSearch} onChange={setDraftSearch} onSearch={handleSearch} />
           <div className="flex items-center gap-2 sm:ml-auto">
+            <UsersFilter
+              roleFilter={draftRole}
+              statusFilter={draftStatus}
+              onRoleFilterChange={setDraftRole}
+              onStatusFilterChange={setDraftStatus}
+              onSearch={handleSearch}
+              roleOptions={ROLE_OPTIONS}
+            />
             <Button
               onClick={handleOpenCreate}
               className="bg-(--color-primary) hover:bg-(--color-primary)/80 text-primary-foreground shrink-0"
@@ -72,9 +90,10 @@ export function UsersList() {
           onSort={handleSort}
           onPageChange={handlePageChange}
           onPageSizeChange={handlePageSizeChange}
-          onView={() => {}}
           onEdit={handleEdit}
-          onToggleActive={() => {}}
+          onToggleActive={(user) =>
+            toggleActive.mutate({ id: user.id, is_active: !user.is_active })
+          }
           onDelete={() => {}}
         />
       </div>

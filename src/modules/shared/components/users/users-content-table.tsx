@@ -9,22 +9,30 @@ import {
   type UsersTableColumn,
   type UsersTableSort,
 } from './';
-import { formatDate, formatDateWithTime } from '@/shared/lib/date';
+import { formatDate } from '@/shared/lib/date';
 import type { Role } from '@/shared/constants/roles';
 
 interface UsersContentRow {
   id: string;
-  username: string;
   first_name: string;
   last_name: string;
+  full_name: string;
   email: string;
   role: Role;
-  city: string;
-  country: string;
-  isActive: boolean;
-  lastLogin: string;
-  createdAt: string;
+  is_active: boolean;
+  created_at: string;
+  profile_photo?: { id: string; url: string; mime_type: string } | null;
+  // champs optionnels pour compatibilité rétroactive
+  username?: string;
+  city?: string;
+  country?: string;
+  lastLogin?: string;
+  createdAt?: string;
+  isActive?: boolean;
   tenantId?: string;
+  tenant_id?: string | null;
+  editor_id?: string | null;
+  updated_at?: string | null;
 }
 
 export interface UsersContentTableProps<T extends UsersContentRow = UsersContentRow> {
@@ -44,7 +52,6 @@ export interface UsersContentTableProps<T extends UsersContentRow = UsersContent
   onDelete?: (user: T) => void;
   tenantNames?: Record<string, string>;
   isActiveSortable?: boolean;
-  showTimeInLastLogin?: boolean;
   rowTestId?: string;
 }
 
@@ -65,16 +72,20 @@ export function UsersContentTable<T extends UsersContentRow = UsersContentRow>({
   onDelete,
   tenantNames,
   isActiveSortable = true,
-  showTimeInLastLogin = false,
   rowTestId,
 }: UsersContentTableProps<T>) {
   const columns: UsersTableColumn<T>[] = [
     {
-      key: 'username',
+      key: 'name',
       label: 'Utilisateur',
       sortable: true,
       render: (user) => (
-        <UserAvatar name={user.username} first_name={user.first_name} last_name={user.last_name} />
+        <UserAvatar
+          name={`${user.first_name} ${user.last_name}`.trim()}
+          first_name={user.first_name}
+          last_name={user.last_name}
+          photoUrl={user.profile_photo?.url ?? null}
+        />
       ),
       skeleton: (
         <div className="flex items-center gap-3">
@@ -92,60 +103,36 @@ export function UsersContentTable<T extends UsersContentRow = UsersContentRow>({
     {
       key: 'role',
       label: 'Rôle',
-      sortable: true,
+      sortable: false,
       render: (user) => <UserRoleBadge role={user.role} />,
     },
     ...(tenantNames
       ? [
           {
-            key: 'tenantId' as const,
+            key: 'tenant_id' as const,
             label: 'Tenant' as const,
-            sortable: true,
+            sortable: false,
             render: (user: T) => (
               <span className="text-xs text-muted-foreground">
-                {tenantNames[user.tenantId ?? ''] || user.tenantId || '—'}
+                {tenantNames[user.tenant_id ?? user.tenantId ?? ''] || '—'}
               </span>
             ),
           },
         ]
       : []),
     {
-      key: 'city',
-      label: 'Ville',
-      sortable: true,
-      render: (user) => <span className="text-xs text-muted-foreground">{user.city || '—'}</span>,
-    },
-    {
-      key: 'country',
-      label: 'Pays',
-      sortable: true,
-      render: (user) => (
-        <span className="text-xs text-muted-foreground">{user.country || '—'}</span>
-      ),
-    },
-    {
-      key: 'lastLogin',
-      label: 'Dernière connexion',
-      sortable: true,
-      render: (user) => (
-        <span className="text-xs text-muted-foreground tabular-nums">
-          {showTimeInLastLogin ? formatDateWithTime(user.lastLogin) : formatDate(user.lastLogin)}
-        </span>
-      ),
-    },
-    {
-      key: 'isActive',
+      key: 'is_active',
       label: 'Statut',
       sortable: isActiveSortable,
-      render: (user) => <UserActiveBadge isActive={user.isActive} />,
+      render: (user) => <UserActiveBadge isActive={user.is_active ?? user.isActive ?? true} />,
     },
     {
-      key: 'createdAt',
+      key: 'created_at',
       label: 'Création',
       sortable: true,
       render: (user) => (
         <span className="text-xs text-muted-foreground tabular-nums">
-          {formatDate(user.createdAt)}
+          {formatDate(user.created_at || user.createdAt || '')}
         </span>
       ),
     },
@@ -156,9 +143,9 @@ export function UsersContentTable<T extends UsersContentRow = UsersContentRow>({
       render: (user) => (
         <div className="text-right" onClick={(e) => e.stopPropagation()}>
           <UserActions
-            isActive={user.isActive}
-            userLabel={user.username}
-            onView={() => onView?.(user)}
+            isActive={user.is_active ?? user.isActive ?? true}
+            userLabel={user.full_name || `${user.first_name} ${user.last_name}`.trim()}
+            onView={onView ? () => onView(user) : undefined}
             onEdit={() => onEdit?.(user)}
             onToggleActive={() => onToggleActive?.(user)}
             onDelete={() => onDelete?.(user)}

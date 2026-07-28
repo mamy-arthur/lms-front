@@ -118,7 +118,8 @@ export function DataTable<T extends { id: string | number }>({
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
 
   const sortedData = useMemo(() => {
-    if (!sort) return data;
+    // Si onSort est défini, le tri est géré côté serveur — ne pas retrier côté client.
+    if (!sort || onSort) return data;
 
     return [...data].sort((a, b) => {
       const aVal = a[sort.column as keyof T];

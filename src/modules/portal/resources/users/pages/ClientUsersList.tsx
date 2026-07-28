@@ -9,6 +9,7 @@ import type { ClientUser, ClientUserSearchParams } from '../types';
 import { ClientUsersFilter } from './_components/client-users-filters';
 import { ClientUsersTable } from './_components/client-users-table';
 import { useUsersListController } from '@/modules/shared/hooks/useUsersListController';
+import { useToggleClientUserActive } from '../hooks/useToggleClientUserActive';
 
 export function ClientUserList() {
   const {
@@ -36,6 +37,7 @@ export function ClientUserList() {
   } = useUsersListController<ClientUser, ClientUserSearchParams>({ defaultPageSize: 12 });
 
   const { data: queryResult } = useClientUsersQuery(params);
+  const toggleActive = useToggleClientUserActive();
 
   return (
     <div className="bg-background">
@@ -79,9 +81,10 @@ export function ClientUserList() {
           onSort={handleSort}
           onPageChange={handlePageChange}
           onPageSizeChange={handlePageSizeChange}
-          onView={() => {}}
           onEdit={handleEdit}
-          onToggleActive={() => {}}
+          onToggleActive={(user) =>
+            toggleActive.mutate({ id: user.id, is_active: !user.is_active })
+          }
           onDelete={() => {}}
         />
       </div>

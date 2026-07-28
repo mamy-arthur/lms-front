@@ -25,19 +25,24 @@ interface UserAvatarProps {
   name: string;
   first_name?: string;
   last_name?: string;
+  photoUrl?: string | null;
 }
 
-export function UserAvatar({ name, first_name, last_name }: UserAvatarProps) {
+export function UserAvatar({ name, first_name, last_name, photoUrl }: UserAvatarProps) {
   const colors = hashColor(name);
   const displayName = [first_name, last_name].filter(Boolean).join(' ') || name;
 
   return (
     <div className="flex items-center gap-3">
       <div
-        className={`size-9 rounded-full flex items-center justify-center text-xs font-semibold shrink-0 ${colors.bg} ${colors.text}`}
+        className={`size-9 rounded-full flex items-center justify-center text-xs font-semibold shrink-0 overflow-hidden ${!photoUrl ? `${colors.bg} ${colors.text}` : ''}`}
         aria-hidden="true"
       >
-        {getInitials(first_name, last_name)}
+        {photoUrl ? (
+          <img src={photoUrl} alt={displayName} className="size-full object-cover" />
+        ) : (
+          getInitials(first_name, last_name)
+        )}
       </div>
       <div className="min-w-0">
         <p className="text-xs font-medium text-foreground truncate">{displayName}</p>

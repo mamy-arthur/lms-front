@@ -61,7 +61,6 @@ export function useFormDrawer({
   const onSubmit = useCallback(
     (values: FieldValues) => {
       if (isEdit && entity) {
-        console.log(values);
         updateMutation.mutate(buildUpdatePayload(values, entity.id), {
           onSuccess: () => {
             form.reset();

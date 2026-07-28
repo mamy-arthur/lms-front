@@ -10,6 +10,7 @@ export const ROUTES = {
   tenantNotFound: '/tenant-not-found',
   admin: {
     root: '/admin',
+    profile: '/admin/profile',
     users: '/admin/users',
     courses: '/admin/courses',
     modules: '/admin/modules',
