@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, Settings2, SlidersHorizontal, X } from 'lucide-react';
+import { Settings2, SlidersHorizontal, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -54,9 +54,9 @@ export function TransactionHistoryFilter({ onApplyFilters }: TransactionHistoryF
       }}
     >
       <PopoverTrigger asChild>
-        <Button variant="outline" size="sm" className="h-7 gap-1.5 text-xs">
-          <Settings2 className="size-3.5 " />
-          Rechercher / filtrer
+        <Button variant="outline" className="gap-1.5 text-xs">
+          <Settings2 />
+          Filtre
         </Button>
       </PopoverTrigger>
 
@@ -76,16 +76,6 @@ export function TransactionHistoryFilter({ onApplyFilters }: TransactionHistoryF
           </button>
         </div>
         <div className="flex flex-col gap-4 px-5 pb-4">
-          <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Rechercher un utilisateur, une description..."
-              value={draft.search}
-              onChange={(e) => setDraft((d) => ({ ...d, search: e.target.value }))}
-              className="pl-8 text-xs"
-            />
-          </div>
-
           <div>
             <p className="mb-2 text-[11px] py-2 font-medium uppercase tracking-wide text-muted-foreground">
               Type de transaction

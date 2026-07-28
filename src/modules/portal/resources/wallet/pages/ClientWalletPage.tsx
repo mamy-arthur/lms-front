@@ -15,6 +15,8 @@ import { useRequestStore } from '@/modules/shared/lib/request-store';
 import { WalletDepositDrawer } from './_components/WalletDepositDrawer';
 import { invoices } from './invoice-data';
 import type { ClientInvoice } from '../types';
+import { Search } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 
 const TABS: WalletTab[] = [
   { id: 'wallet', label: 'Portefeuille' },
@@ -67,42 +69,52 @@ export function ClientWalletPage() {
 
         {activeTab === 'wallet' ? (
           <>
-            <div>
-              <div className="min-h-112.5 space-y-3">
-                <div className="overflow-x-auto px-1 pb-1">
-                  <div className="flex justify-end w-full shrink-0 flex-col sm:w-auto sm:flex-row sm:items-center sm:gap-2">
-                    <div>
-                      <TransactionHistoryFilter onApplyFilters={ctrl.handleApplyFilters} />
-                    </div>
-                    <Button
-                      onClick={() => setDrawerOpen(true)}
-                      className="bg-(--color-primary) hover:bg-(--color-primary)/80 text-primary-foreground"
-                    >
-                      Créditer mon portefeuille
-                    </Button>
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  <WalletTransactionsTable
-                    data={data?.data ?? []}
-                    sort={ctrl.sort}
-                    page={ctrl.page}
-                    pageSize={ctrl.pageSize}
-                    total={data?.total ?? 0}
-                    hasQuery={ctrl.hasQuery}
-                    isLoading={isLoading}
-                    onSort={ctrl.handleSort}
-                    onPageChange={ctrl.handlePageChange}
-                    onPageSizeChange={ctrl.handlePageSizeChange}
+            <div className="mt-5 space-y-3">
+              <div className="flex justify-between w-full shrink-0 flex-col sm:w-auto sm:flex-row sm:items-center sm:gap-2">
+                <div className="relative w-full sm:max-w-sm">
+                  <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Rechercher par référence ou client ..."
+                    className="pl-8 text-xs"
                   />
                 </div>
+                <div className="flex items-center gap-1">
+                  <TransactionHistoryFilter onApplyFilters={ctrl.handleApplyFilters} />
+                  <Button
+                    onClick={() => setDrawerOpen(true)}
+                    className="bg-(--color-primary) hover:bg-(--color-primary)/80 text-primary-foreground"
+                  >
+                    Créditer mon portefeuille
+                  </Button>
+                </div>
+              </div>
+              <div className="space-y-3">
+                <WalletTransactionsTable
+                  data={data?.data ?? []}
+                  sort={ctrl.sort}
+                  page={ctrl.page}
+                  pageSize={ctrl.pageSize}
+                  total={data?.total ?? 0}
+                  hasQuery={ctrl.hasQuery}
+                  isLoading={isLoading}
+                  onSort={ctrl.handleSort}
+                  onPageChange={ctrl.handlePageChange}
+                  onPageSizeChange={ctrl.handlePageSizeChange}
+                />
               </div>
             </div>
           </>
         ) : (
-          <div className="min-h-112.5 space-y-3">
-            <div className="flex flex-row items-center justify-end pb-2">
-              <div className="flex items-center gap-2">
+          <div className="mt-5 space-y-3">
+            <div className="flex flex-row items-center justify-between">
+              <div className="relative w-full sm:max-w-sm">
+                <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Rechercher par référence ou client ..."
+                  className="pl-8 text-xs"
+                />
+              </div>
+              <div className="flex items-center gap-1">
                 <InvoiceFilters onApplyFilters={() => {}} />
                 <Button
                   onClick={() => setDemandeOpen(true)}
