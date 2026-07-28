@@ -2,6 +2,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { CartQuantityControls } from '@/modules/shared/components/store/CartQuantityControls';
 import {
   BookOpen,
   Building2,
@@ -26,6 +27,11 @@ export interface FormationCardProps {
   className?: string;
   onAddToCart?: (id: string) => void;
   onOpenDetails?: (id: string) => void;
+  /** Si défini, remplace le bouton d'ajout par le contrôle de quantité. */
+  cartQuantity?: number;
+  onIncreaseQuantity?: () => void;
+  onDecreaseQuantity?: () => void;
+  isCartMutating?: boolean;
 }
 
 function formatDate(iso: string): string {
@@ -58,9 +64,14 @@ export function FormationCard({
   className,
   onAddToCart,
   onOpenDetails,
+  cartQuantity,
+  onIncreaseQuantity,
+  onDecreaseQuantity,
+  isCartMutating = false,
 }: FormationCardProps) {
   const isFree = price === 0;
   const isClickable = Boolean(onOpenDetails && id);
+  const isInCart = typeof cartQuantity === 'number' && cartQuantity > 0;
 
   const handleOpenDetails = () => {
     if (!isClickable || !onOpenDetails) {
@@ -155,18 +166,32 @@ export function FormationCard({
             )}
           </div>
 
-          <div className="col-span-2 flex gap-2">
-            {onAddToCart && (
-              <Button
-                className="w-full gap-1.5 p-4 bg-(--color-primary) hover:bg-(--color-primary)/80"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onAddToCart(id ?? '');
-                }}
+          <div className="col-span-2 flex items-center justify-end gap-2">
+            {isInCart && onIncreaseQuantity && onDecreaseQuantity ? (
+              <div
+                onClick={(event) => event.stopPropagation()}
+                onKeyDown={(event) => event.stopPropagation()}
               >
-                <ShoppingCart className="size-3.5" />
-                Ajouter au panier
-              </Button>
+                <CartQuantityControls
+                  quantity={cartQuantity}
+                  onDecrease={onDecreaseQuantity}
+                  onIncrease={onIncreaseQuantity}
+                  disabled={isCartMutating}
+                />
+              </div>
+            ) : (
+              onAddToCart && (
+                <Button
+                  className="w-full gap-1.5 p-4 bg-(--color-primary) hover:bg-(--color-primary)/80"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onAddToCart(id ?? '');
+                  }}
+                >
+                  <ShoppingCart className="size-3.5" />
+                  Ajouter au panier
+                </Button>
+              )
             )}
           </div>
         </div>

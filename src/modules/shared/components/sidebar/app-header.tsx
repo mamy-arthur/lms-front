@@ -5,13 +5,15 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { CartDrawer } from '@/modules/portal/resources/cart/CartDrawer';
-import { useCartStore } from '@/modules/portal/resources/cart/CartStore';
+import { getCartItemCount } from '@/modules/portal/resources/cart/cart-utils';
+import { useCartQuery } from '@/modules/portal/resources/cart/hooks/useCartQuery';
 
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 export function AppHeader() {
   const [cartOpen, setCartOpen] = useState(false);
-  const cartCount = useCartStore((state) => state.cartCount);
+  const cartQuery = useCartQuery();
+  const cartCount = getCartItemCount(cartQuery.data?.data);
 
   return (
     <>

@@ -7,9 +7,10 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet';
+import { Skeleton } from '@/components/ui/skeleton';
 import { CartItem } from '@/modules/portal/resources/cart/CartItem';
 import { CartSummary } from '@/modules/portal/resources/cart/CartSummary';
-import { useCartStore } from '@/modules/portal/resources/cart/CartStore';
+import { useCartQuery } from '@/modules/portal/resources/cart/hooks/useCartQuery';
 
 interface CartDrawerProps {
   open: boolean;
@@ -17,7 +18,9 @@ interface CartDrawerProps {
 }
 
 export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
-  const cartItems = useCartStore((state) => state.cartItems);
+  const cartQuery = useCartQuery();
+  const cart = cartQuery.data?.data;
+  const cartItems = cart?.items ?? [];
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -31,7 +34,18 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
         </SheetHeader>
 
         <div className="flex min-h-0 flex-1 flex-col px-4 pb-4 sm:px-6 sm:pb-6">
-          {cartItems.length === 0 ? (
+          {cartQuery.isLoading ? (
+            <div className="space-y-3 py-4">
+              <Skeleton className="h-24 w-full" />
+              <Skeleton className="h-24 w-full" />
+              <Skeleton className="h-32 w-full" />
+            </div>
+          ) : cartQuery.isError ? (
+            <div className="flex flex-1 flex-col items-center justify-center text-center">
+              <p className="text-sm font-medium">Impossible de charger le panier</p>
+              <p className="mt-1 text-xs text-muted-foreground">Réessayez dans un instant.</p>
+            </div>
+          ) : cartItems.length === 0 ? (
             <div className="flex flex-1 flex-col items-center justify-center text-center">
               <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-muted">
                 <ShoppingCart className="size-5 text-muted-foreground" />
@@ -51,7 +65,7 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
                 </div>
 
                 <div className="lg:col-span-1 lg:sticky lg:top-0 lg:self-start">
-                  <CartSummary onPaid={() => onOpenChange(false)} />
+                  <CartSummary cart={cart!} />
                 </div>
               </div>
             </div>

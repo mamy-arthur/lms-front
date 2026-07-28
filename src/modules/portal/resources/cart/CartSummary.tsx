@@ -1,25 +1,20 @@
 import { Button } from '@/components/ui/button';
-import { useCartStore } from '@/modules/portal/resources/cart/CartStore';
-import { formatCurrency } from '@/modules/shared/lib/wallet-utils';
+import {
+  formatCartMoney,
+  getCartItemCount,
+  getCartSubtotal,
+} from '@/modules/portal/resources/cart/cart-utils';
+import type { ApiCart } from '@/shared/types/cart.types';
 
 interface CartSummaryProps {
-  onPaid?: () => void;
+  cart: ApiCart;
 }
 
-export function CartSummary({ onPaid }: CartSummaryProps) {
-  const subtotal = useCartStore((state) => state.subtotal);
-  const taxes = useCartStore((state) => state.taxes);
-  const total = useCartStore((state) => state.total);
-  const walletBalance = useCartStore((state) => state.walletBalance);
-  const cartCount = useCartStore((state) => state.cartCount);
-  const checkout = useCartStore((state) => state.checkout);
-
-  const handleCheckout = () => {
-    const result = checkout();
-    if (result.success) {
-      onPaid?.();
-    }
-  };
+export function CartSummary({ cart }: CartSummaryProps) {
+  const cartCount = getCartItemCount(cart);
+  const subtotal = getCartSubtotal(cart.items);
+  const total = cart.total;
+  const currency = cart.currency || 'EUR';
 
   return (
     <div className="space-y-3 pt-4 bg-gray-50 p-4 rounded-lg">
@@ -32,31 +27,20 @@ export function CartSummary({ onPaid }: CartSummaryProps) {
 
       <div className="flex items-center justify-between text-xs">
         <span className="text-muted-foreground">Sous-total</span>
-        <span className="font-medium">{formatCurrency(subtotal)}</span>
-      </div>
-
-      <div className="flex items-center justify-between text-xs">
-        <span className="text-muted-foreground">Taxes (20%)</span>
-        <span className="font-medium">{formatCurrency(taxes)}</span>
+        <span className="font-medium">{formatCartMoney(subtotal, currency)}</span>
       </div>
 
       <div className="h-px bg-border" />
 
       <div className="flex items-center justify-between text-sm">
-        <span className="font-semibold">Total TTC</span>
-        <span className="font-semibold">{formatCurrency(total)}</span>
-      </div>
-
-      <div className="flex items-center justify-between text-xs text-muted-foreground">
-        <span>Solde disponible</span>
-        <span>{formatCurrency(walletBalance)}</span>
+        <span className="font-semibold">Total</span>
+        <span className="font-semibold">{formatCartMoney(total, currency)}</span>
       </div>
 
       <Button
         type="button"
         className="w-full bg-(--color-primary) hover:bg-(--color-primary)/80"
-        disabled={cartCount === 0}
-        onClick={handleCheckout}
+        disabled
       >
         Payer
       </Button>
