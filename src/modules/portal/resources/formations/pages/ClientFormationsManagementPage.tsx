@@ -160,7 +160,6 @@ export function ClientFormationsManagementPage() {
         users={controller.users}
         groups={controller.groups}
         onUpdateDuration={controller.updateFormationDuration}
-        onRemoveUser={controller.removeEnrollment}
         onAssignUsers={(formationId, userIds, durationMonths) =>
           controller.assignToUsers({ formationId, userIds, durationMonths })
         }
@@ -170,6 +169,10 @@ export function ClientFormationsManagementPage() {
         onCreateGroup={(nextTenantId, name, userIds) =>
           controller.createGroup({ tenantId: nextTenantId, name, userIds })
         }
+        onEditGroup={(groupId, name, userIds) =>
+          controller.updateGroup({ id: groupId, name, userIds })
+        }
+        onDeleteGroup={controller.deleteGroup}
       />
     </RoleGuard>
   );

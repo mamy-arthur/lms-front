@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Plus, Check, Search } from 'lucide-react';
+import { Check, Search, Save } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -27,6 +27,9 @@ interface CreateGroupDialogProps {
   onOpenChange: (open: boolean) => void;
   allUsers: TenantAssignableUser[];
   onConfirm: (name: string, userIds: string[]) => void;
+  /** Pré-remplit le formulaire — active le mode édition. */
+  initialName?: string;
+  initialUserIds?: string[];
 }
 
 export function CreateGroupDialog({
@@ -34,18 +37,21 @@ export function CreateGroupDialog({
   onOpenChange,
   allUsers,
   onConfirm,
+  initialName,
+  initialUserIds,
 }: CreateGroupDialogProps) {
+  const isEditing = Boolean(initialName);
   const [groupName, setGroupName] = useState('');
   const [search, setSearch] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (open) {
-      setGroupName('');
+      setGroupName(initialName ?? '');
       setSearch('');
-      setSelectedIds(new Set());
+      setSelectedIds(initialUserIds ? new Set(initialUserIds) : new Set());
     }
-  }, [open]);
+  }, [open, initialName, initialUserIds]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -83,9 +89,11 @@ export function CreateGroupDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex flex-col gap-0 p-0 sm:max-w-lg">
         <DialogHeader className="border-b px-5 py-4">
-          <DialogTitle>Créer un groupe</DialogTitle>
+          <DialogTitle>{isEditing ? 'Modifier le groupe' : 'Créer un groupe'}</DialogTitle>
           <DialogDescription>
-            Donnez un nom au groupe et sélectionnez ses membres.
+            {isEditing
+              ? 'Modifiez le nom et les membres du groupe.'
+              : 'Donnez un nom au groupe et sélectionnez ses membres.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -160,8 +168,17 @@ export function CreateGroupDialog({
             disabled={!groupName.trim() || selectedIds.size === 0}
             className="gap-1.5 bg-(--color-primary) hover:bg-(--color-primary)/50 text-white"
           >
-            <Plus className="size-4" />
-            Créer le groupe
+            {isEditing ? (
+              <>
+                <Save className="size-4" />
+                Enregistrer
+              </>
+            ) : (
+              <>
+                <Save className="size-4" />
+                Créer le groupe
+              </>
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

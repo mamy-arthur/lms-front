@@ -248,6 +248,17 @@ export function useFormationManagementController({
     return group;
   }, []);
 
+  const updateGroup = useCallback(
+    ({ id, name, userIds }: { id: string; name: string; userIds: string[] }) => {
+      setGroups((current) => current.map((g) => (g.id === id ? { ...g, name, userIds } : g)));
+    },
+    [],
+  );
+
+  const deleteGroup = useCallback((groupId: string) => {
+    setGroups((current) => current.filter((g) => g.id !== groupId));
+  }, []);
+
   return {
     formationRows,
     groups,
@@ -257,5 +268,7 @@ export function useFormationManagementController({
     assignToUsers,
     assignToGroup,
     createGroup,
+    updateGroup,
+    deleteGroup,
   } as const;
 }

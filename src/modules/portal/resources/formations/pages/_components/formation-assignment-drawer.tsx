@@ -11,13 +11,9 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
-import { convertMonthsToDays } from '../../data/formations.mock';
 import type { FormationGroup, PurchasedFormationRow, TenantAssignableUser } from '../../types';
 import { AddUsersDialog } from './add-users-dialog';
 import { CreateGroupDialog } from './create-group-dialog';
@@ -32,10 +28,11 @@ interface FormationAssignmentDrawerProps {
   users: TenantAssignableUser[];
   groups: FormationGroup[];
   onUpdateDuration: (formationId: string, durationMonths: number) => void;
-  onRemoveUser: (formationId: string, userId: string) => void;
   onAssignUsers: (formationId: string, userIds: string[], durationMonths: number) => number;
   onAssignGroup: (formationId: string, groupId: string, durationMonths: number) => number;
   onCreateGroup: (tenantId: string, name: string, userIds: string[]) => FormationGroup;
+  onEditGroup: (groupId: string, name: string, userIds: string[]) => void;
+  onDeleteGroup: (groupId: string) => void;
 }
 
 export function FormationAssignmentDrawer({
@@ -45,17 +42,17 @@ export function FormationAssignmentDrawer({
   users,
   groups,
   onUpdateDuration,
-  onRemoveUser,
   onAssignUsers,
   onAssignGroup,
   onCreateGroup,
+  onEditGroup,
+  onDeleteGroup,
 }: FormationAssignmentDrawerProps) {
   const [durationMonths, setDurationMonths] = useState(1);
-  const durationDays = useMemo(() => convertMonthsToDays(durationMonths), [durationMonths]);
 
-  const [pendingRemoveIds, setPendingRemoveIds] = useState<Set<string>>(new Set());
   const [pendingAddIds, setPendingAddIds] = useState<Set<string>>(new Set());
   const [selectedGroupIds, setSelectedGroupIds] = useState<Set<string>>(new Set());
+  const [editingGroup, setEditingGroup] = useState<FormationGroup | null>(null);
 
   const [showAddUsers, setShowAddUsers] = useState(false);
   const [showCreateGroup, setShowCreateGroup] = useState(false);
@@ -63,9 +60,9 @@ export function FormationAssignmentDrawer({
   useEffect(() => {
     if (!formation || !open) return;
     setDurationMonths(formation.durationMonths);
-    setPendingRemoveIds(new Set());
     setPendingAddIds(new Set());
     setSelectedGroupIds(new Set());
+    setEditingGroup(null);
     setShowAddUsers(false);
     setShowCreateGroup(false);
   }, [formation, open]);
@@ -73,11 +70,6 @@ export function FormationAssignmentDrawer({
   const enrolledUserIds = useMemo(
     () => new Set(formation?.enrollments.map((e) => e.userId) ?? []),
     [formation],
-  );
-
-  const visibleEnrollments = useMemo(
-    () => formation?.enrollments.filter((e) => !pendingRemoveIds.has(e.userId)) ?? [],
-    [formation, pendingRemoveIds],
   );
 
   const availableToAdd = useMemo(
@@ -117,10 +109,6 @@ export function FormationAssignmentDrawer({
 
     onUpdateDuration(formation.id, durationMonths);
 
-    for (const userId of pendingRemoveIds) {
-      onRemoveUser(formation.id, userId);
-    }
-
     if (pendingAddIds.size > 0) {
       onAssignUsers(formation.id, [...pendingAddIds], durationMonths);
     }
@@ -132,7 +120,6 @@ export function FormationAssignmentDrawer({
 
     const parts: string[] = [];
     if (pendingAddIds.size > 0) parts.push(`${pendingAddIds.size} utilisateur(s) ajouté(s)`);
-    if (pendingRemoveIds.size > 0) parts.push(`${pendingRemoveIds.size} retiré(s)`);
     if (groupCount > 0) parts.push(`${groupCount} membre(s) de groupe assigné(s)`);
 
     if (parts.length === 0) {
@@ -158,6 +145,21 @@ export function FormationAssignmentDrawer({
         allUsers={users}
         onConfirm={handleCreateGroupConfirm}
       />
+      <CreateGroupDialog
+        open={Boolean(editingGroup)}
+        onOpenChange={(open) => {
+          if (!open) setEditingGroup(null);
+        }}
+        allUsers={users}
+        initialName={editingGroup?.name}
+        initialUserIds={editingGroup?.userIds}
+        onConfirm={(name, userIds) => {
+          if (editingGroup) {
+            onEditGroup(editingGroup.id, name, userIds);
+            setEditingGroup(null);
+          }
+        }}
+      />
 
       <Sheet open={open} onOpenChange={onOpenChange}>
         <SheetContent
@@ -174,30 +176,6 @@ export function FormationAssignmentDrawer({
 
           <ScrollArea className="flex-1">
             <div className="space-y-6 px-5 py-5">
-              {/* ── Durée ─────────────────────────────────────────────────── */}
-              <section className="space-y-3">
-                <h3 className="text-sm font-semibold">Durée de la formation</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="drawer-duration-months">Durée en mois</Label>
-                    <Input
-                      id="drawer-duration-months"
-                      type="number"
-                      min={1}
-                      max={24}
-                      value={durationMonths}
-                      onChange={(e) => setDurationMonths(Math.max(1, Number(e.target.value) || 1))}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Durée théorique en jours</Label>
-                    <Input type="number" value={durationDays} disabled />
-                  </div>
-                </div>
-              </section>
-
-              <Separator />
-
               {/* ── Utilisateurs ──────────────────────────────────────────── */}
               <section className="space-y-3">
                 <div className="flex items-center justify-between">
@@ -207,7 +185,7 @@ export function FormationAssignmentDrawer({
                       variant="secondary"
                       className="ml-2 bg-(--color-primary)/20 text-(--color-primary)"
                     >
-                      {visibleEnrollments.length + pendingAddIds.size}
+                      {(formation?.enrollments.length ?? 0) + pendingAddIds.size}
                     </Badge>
                   </h3>
                   <Button
@@ -223,16 +201,13 @@ export function FormationAssignmentDrawer({
                   </Button>
                 </div>
 
-                {visibleEnrollments.length > 0 || pendingAddIds.size > 0 ? (
+                {(formation?.enrollments.length ?? 0) > 0 || pendingAddIds.size > 0 ? (
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                    {visibleEnrollments.map((enrollment) => (
+                    {formation?.enrollments.map((enrollment) => (
                       <UserCard
                         key={enrollment.userId}
                         id={enrollment.userId}
                         fullName={enrollment.fullName}
-                        onRemove={() =>
-                          setPendingRemoveIds((prev) => new Set([...prev, enrollment.userId]))
-                        }
                       />
                     ))}
                     {[...pendingAddIds].map((userId) => {
@@ -261,8 +236,6 @@ export function FormationAssignmentDrawer({
                   </p>
                 )}
               </section>
-
-              <Separator />
 
               {/* ── Groupes ───────────────────────────────────────────────── */}
               <section className="space-y-3">
@@ -300,6 +273,15 @@ export function FormationAssignmentDrawer({
                         users={users}
                         selected={selectedGroupIds.has(group.id)}
                         onClick={() => toggleGroupSelection(group.id)}
+                        onEdit={() => setEditingGroup(group)}
+                        onDelete={() => {
+                          onDeleteGroup(group.id);
+                          setSelectedGroupIds((prev) => {
+                            const next = new Set(prev);
+                            next.delete(group.id);
+                            return next;
+                          });
+                        }}
                       />
                     ))}
                   </div>
@@ -309,7 +291,7 @@ export function FormationAssignmentDrawer({
           </ScrollArea>
 
           <SheetFooter className="border-t px-5 py-4">
-            <div className="flex justify-end">
+            <div className="flex justify-end gap-3">
               <Button size="lg" variant={'outline'}>
                 Annuler
               </Button>

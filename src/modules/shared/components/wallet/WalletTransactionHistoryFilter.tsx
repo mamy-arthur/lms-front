@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Filter, Search, SlidersHorizontal, X } from 'lucide-react';
+import { Search, Settings2, SlidersHorizontal, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -54,12 +54,8 @@ export function TransactionHistoryFilter({ onApplyFilters }: TransactionHistoryF
       }}
     >
       <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-7 gap-1.5 text-xs  text-(--color-primary) hover:text-(--color-primary)"
-        >
-          <Filter className="size-3.5 " />
+        <Button variant="outline" size="sm" className="h-7 gap-1.5 text-xs">
+          <Settings2 className="size-3.5 " />
           Rechercher / filtrer
         </Button>
       </PopoverTrigger>
@@ -214,7 +210,6 @@ export function TransactionHistoryFilter({ onApplyFilters }: TransactionHistoryF
         <div className="flex gap-2 border-t bg-muted/40 px-5 py-3">
           <Button
             variant="outline"
-            size="sm"
             className="flex-1 text-xs"
             onClick={() => {
               setDraft(defaultFilters);
@@ -225,7 +220,6 @@ export function TransactionHistoryFilter({ onApplyFilters }: TransactionHistoryF
             Réinitialiser
           </Button>
           <Button
-            size="sm"
             className="flex-1 bg-(--color-primary) text-xs text-white hover:bg-(--color-primary)/90"
             onClick={() => {
               setFilters(draft);
