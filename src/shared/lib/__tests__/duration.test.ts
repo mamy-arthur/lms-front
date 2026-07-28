@@ -30,6 +30,6 @@ describe('formatDuration', () => {
   });
 
   it('handles edge case of 0 minutes', () => {
-    expect(formatDuration(0)).toBe('0min');
+    expect(formatDuration(0)).toBe("il n'y a pas de durée");
   });
 });

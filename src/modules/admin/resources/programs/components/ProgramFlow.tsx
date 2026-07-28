@@ -439,7 +439,7 @@ export type ProgramFlowProps = {
 };
 
 const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function ProgramFlow(
-  { initialNodes, initialEdges, initialNodeOrder, onUnlinkCompetency, learningPathId },
+  { initialNodes, initialEdges, initialNodeOrder, onUnlinkCompetency },
   ref,
 ) {
   const [nodes, setNodes] = useState<StepNode[]>(initialNodes ?? [initialEmailNode]);
