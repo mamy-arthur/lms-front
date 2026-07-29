@@ -164,9 +164,9 @@ export function AddressAutocomplete({
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <ul role="listbox" className="max-h-56 overflow-y-auto py-1">
-          {suggestions.map((s) => (
+          {suggestions.map((s, i) => (
             <li
-              key={s.place_id}
+              key={`${s.place_id}-${i}`}
               role="option"
               aria-selected={false}
               className="flex cursor-pointer items-start gap-2 px-3 py-2 text-xs hover:bg-accent"

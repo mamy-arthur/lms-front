@@ -46,7 +46,6 @@ const profileFieldsSchema = z.object({
   zip_code: z.string().max(20).nullable().optional(),
   city: z.string().max(100).nullable().optional(),
   country: z.string().length(2).nullable().optional(),
-  biography: z.string().max(2000, 'Maximum 2000 caractères').nullable().optional(),
   timezone: z.string().nullable().optional(),
   preferred_language: z.string().nullable().optional(),
 });
@@ -94,7 +93,6 @@ const ROLE_DEFAULTS: z.infer<typeof createSchema> = {
   zip_code: null,
   city: null,
   country: null,
-  biography: null,
   timezone: null,
   preferred_language: null,
 };
@@ -138,7 +136,6 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
         zip_code: u.zip_code ?? null,
         city: u.city ?? null,
         country: u.country ?? null,
-        biography: u.biography ?? null,
         timezone: u.timezone ?? null,
         preferred_language: u.preferred_language ?? null,
       };
@@ -171,7 +168,6 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
         zip_code: values.zip_code ?? null,
         city: values.city ?? null,
         country: values.country ?? null,
-        biography: values.biography ?? null,
         timezone: values.timezone ?? null,
         preferred_language: values.preferred_language ?? null,
       }) as CreateUserPayload,
@@ -188,7 +184,6 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
         zip_code: values.zip_code ?? null,
         city: values.city ?? null,
         country: values.country ?? null,
-        biography: values.biography ?? null,
         timezone: values.timezone ?? null,
         preferred_language: values.preferred_language ?? null,
         // profile_photo_media_id géré après upload dans onSubmitWithPhoto
@@ -227,7 +222,6 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
               zip_code: (values.zip_code as string | null) ?? null,
               city: (values.city as string | null) ?? null,
               country: (values.country as string | null) ?? null,
-              biography: (values.biography as string | null) ?? null,
               timezone: (values.timezone as string | null) ?? null,
               preferred_language: (values.preferred_language as string | null) ?? null,
             } as UpdateUserPayload,
@@ -254,7 +248,6 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
             zip_code: (values.zip_code as string | null) ?? null,
             city: (values.city as string | null) ?? null,
             country: (values.country as string | null) ?? null,
-            biography: (values.biography as string | null) ?? null,
             timezone: (values.timezone as string | null) ?? null,
             preferred_language: (values.preferred_language as string | null) ?? null,
           } as CreateUserPayload);

@@ -10,7 +10,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { COUNTRIES } from '@/shared/constants/countries';
 import { LANGUAGES } from '@/shared/constants/languages';
@@ -22,7 +21,6 @@ interface ProfileFormValues {
   address?: string | null;
   zip_code?: string | null;
   city?: string | null;
-  biography?: string | null;
   timezone?: string | null;
   preferred_language?: string | null;
 }
@@ -152,32 +150,6 @@ export function UserProfileFields({ form }: { form: UseFormReturn<any> }) {
       </div>
 
       <Separator className="my-1" />
-
-      {/* ── Profil ── */}
-      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Profil</p>
-
-      {/* Biographie */}
-      <FieldRoot
-        control={form.control}
-        name="biography"
-        render={({ field }) => (
-          <FieldGroup>
-            <FieldLabel className="text-xs">Biographie</FieldLabel>
-            <FieldContent>
-              <Textarea
-                aria-label="Biographie"
-                className="text-xs resize-none"
-                rows={3}
-                maxLength={2000}
-                placeholder="Quelques mots sur cet utilisateur…"
-                {...field}
-                value={field.value ?? ''}
-              />
-            </FieldContent>
-            <FieldError />
-          </FieldGroup>
-        )}
-      />
 
       {/* Fuseau horaire + Langue */}
       <div className="flex gap-3">

@@ -1,14 +1,13 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Camera, Eye, EyeOff, Loader2, Pencil, Save, X } from 'lucide-react';
+import { Camera, Eye, EyeOff, Loader2, Save } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -33,7 +32,6 @@ interface FullUser {
   zip_code?: string | null;
   city?: string | null;
   country?: string | null;
-  biography?: string | null;
   timezone?: string | null;
   preferred_language?: string | null;
 }
@@ -64,14 +62,8 @@ export default function ProfileContent({
   const [zipCode, setZipCode] = useState('');
   const [city, setCity] = useState('');
   const [country, setCountry] = useState('');
-  const [biography, setBiography] = useState('');
   const [timezone, setTimezone] = useState('');
   const [preferredLanguage, setPreferredLanguage] = useState('');
-
-  // Biography inline edit (left card)
-  const [editingBio, setEditingBio] = useState(false);
-  const [bioTemp, setBioTemp] = useState('');
-  const [bioSaving, setBioSaving] = useState(false);
 
   // Security
   const [newPassword, setNewPassword] = useState('');
@@ -93,7 +85,6 @@ export default function ProfileContent({
         setZipCode(data.zip_code ?? '');
         setCity(data.city ?? '');
         setCountry(data.country ?? '');
-        setBiography(data.biography ?? '');
         setTimezone(data.timezone ?? '');
         setPreferredLanguage(data.preferred_language ?? '');
       })
@@ -132,7 +123,6 @@ export default function ProfileContent({
         zip_code: zipCode || null,
         city: city || null,
         country: country || null,
-        biography: biography || null,
         timezone: timezone || null,
         preferred_language: preferredLanguage || null,
       });
@@ -145,22 +135,6 @@ export default function ProfileContent({
       toast.error('Échec de la mise à jour du profil');
     } finally {
       setSaving(false);
-    }
-  };
-
-  const saveBio = async () => {
-    if (!user) return;
-    setBioSaving(true);
-    try {
-      await apiPatch(`${patchPath}/${user.id}`, { biography: bioTemp || null });
-      setBiography(bioTemp);
-      setEditingBio(false);
-      toast.success('Biographie mise à jour');
-    } catch {
-      toast.error('Échec de la mise à jour de la biographie');
-      // keep editing open on error
-    } finally {
-      setBioSaving(false);
     }
   };
 
@@ -247,68 +221,6 @@ export default function ProfileContent({
                 <p className="text-xs text-destructive text-center">{uploadError}</p>
               )}
               {uploading && <p className="text-xs text-muted-foreground">Upload en cours…</p>}
-
-              {/* Biography */}
-              <div className="w-full border-t pt-3 mt-1">
-                {editingBio ? (
-                  <div className="space-y-2">
-                    <Textarea
-                      value={bioTemp}
-                      onChange={(e) => setBioTemp(e.target.value)}
-                      className="text-xs resize-none w-full"
-                      rows={4}
-                      maxLength={2000}
-                      placeholder="Quelques mots sur vous…"
-                      autoFocus
-                    />
-                    <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        size="sm"
-                        onClick={saveBio}
-                        disabled={bioSaving}
-                        className="h-7 text-xs bg-(--color-primary) text-primary-foreground flex-1"
-                      >
-                        {bioSaving && <Loader2 className="size-3 animate-spin mr-1" />}
-                        Enregistrer
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => setEditingBio(false)}
-                        className="h-7 w-7 p-0"
-                        aria-label="Annuler"
-                      >
-                        <X className="size-3" />
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="group relative">
-                    {biography ? (
-                      <p className="text-xs text-muted-foreground text-center leading-relaxed pr-5">
-                        {biography}
-                      </p>
-                    ) : (
-                      <p className="text-xs text-muted-foreground/50 italic text-center pr-5">
-                        Ajouter une biographie…
-                      </p>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setBioTemp(biography);
-                        setEditingBio(true);
-                      }}
-                      className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground"
-                      aria-label="Modifier la biographie"
-                    >
-                      <Pencil className="size-3" />
-                    </button>
-                  </div>
-                )}
-              </div>
             </CardContent>
           </Card>
         </div>
@@ -514,7 +426,7 @@ export default function ProfileContent({
                     type="button"
                     onClick={handleSave}
                     disabled={saving}
-                    className="bg-(--color-primary) text-primary-foreground"
+                    className="bg-(--color-primary) hover:bg-(--color-primary)/80 text-primary-foreground"
                   >
                     {saving ? (
                       <Loader2 className="size-4 animate-spin" />
@@ -598,7 +510,7 @@ export default function ProfileContent({
                     type="button"
                     onClick={handleChangePassword}
                     disabled={pwdSaving || !newPassword || !confirmPassword}
-                    className="bg-(--color-primary) text-primary-foreground"
+                    className="bg-(--color-primary) hover:bg-(--color-primary)/80 text-primary-foreground"
                   >
                     {pwdSaving ? (
                       <Loader2 className="size-4 animate-spin" />

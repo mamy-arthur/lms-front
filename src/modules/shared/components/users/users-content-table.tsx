@@ -28,7 +28,6 @@ interface UsersContentRow {
   zip_code?: string | null;
   city?: string | null;
   country?: string | null;
-  biography?: string | null;
   timezone?: string | null;
   preferred_language?: string | null;
   lastLogin?: string;

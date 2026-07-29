@@ -15,7 +15,6 @@ export interface User {
   zip_code: string | null;
   city: string | null;
   country: string | null;
-  biography: string | null;
   timezone: string | null;
   preferred_language: string | null;
   created_at: string;
@@ -35,7 +34,6 @@ export interface CreateUserPayload {
   zip_code?: string | null;
   city?: string | null;
   country?: string | null;
-  biography?: string | null;
   timezone?: string | null;
   preferred_language?: string | null;
 }
@@ -52,7 +50,6 @@ export interface UpdateUserPayload {
   zip_code?: string | null;
   city?: string | null;
   country?: string | null;
-  biography?: string | null;
   timezone?: string | null;
   preferred_language?: string | null;
 }
@@ -84,7 +81,6 @@ export function normalizeUser(raw: Record<string, unknown>): User {
     zip_code: (raw.zip_code as string | null) ?? null,
     city: (raw.city as string | null) ?? null,
     country: (raw.country as string | null) ?? null,
-    biography: (raw.biography as string | null) ?? null,
     timezone: (raw.timezone as string | null) ?? null,
     preferred_language: (raw.preferred_language as string | null) ?? null,
     created_at: String(raw.created_at ?? ''),

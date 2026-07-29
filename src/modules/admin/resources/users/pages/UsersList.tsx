@@ -76,7 +76,7 @@ export function UsersList() {
             />
             <Button
               onClick={handleOpenCreate}
-              className="bg-(--color-primary) hover:bg-primary/80 text-primary-foreground shrink-0"
+              className="bg-(--color-primary) hover:bg-(--color-primary)/80 text-primary-foreground shrink-0"
             >
               <Plus className="size-4" />
               Nouveau

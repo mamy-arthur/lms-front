@@ -55,7 +55,7 @@ export function PortalCertificatesList() {
           />
           <Button
             onClick={ctrl.handleOpenCreate}
-            className="bg-(--color-primary) hover:bg-primary/80 text-primary-foreground shrink-0"
+            className="bg-(--color-primary) hover:bg-(--color-primary)/80 text-primary-foreground shrink-0"
           >
             <Plus className="size-4" />
             Nouvelle attestation
@@ -101,7 +101,7 @@ export function PortalCertificatesList() {
         title="Supprimer l'attestation"
         description={
           deletingItem
-            ? `Êtes-vous sûr de vouloir supprimer « ${deletingItem.name} » ? Cette action est irréversible.`
+            ? `Êtes-vous sûr de vouloir supprimer «${deletingItem.name}» ? Cette action est irréversible.`
             : undefined
         }
         confirmLabel="Supprimer"
