@@ -1,7 +1,7 @@
 import { Trash2, ImageIcon } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { formatCartMoney } from '@/modules/portal/resources/cart/cart-utils';
+import { formatCartMoney, getCartItemCoverImage } from '@/modules/portal/resources/cart/cart-utils';
 import { useCartActions } from '@/modules/portal/resources/cart/hooks/useCartActions';
 import { CartQuantityControls } from '@/modules/shared/components/store/CartQuantityControls';
 import type { ApiCartItem } from '@/shared/types/cart.types';
@@ -11,16 +11,21 @@ interface CartItemProps {
 }
 
 export function CartItem({ item }: CartItemProps) {
-  const { increase, decrease, remove, isMutatingFor } = useCartActions();
+  const { increase, decrease, remove, setQuantity, isMutatingFor } = useCartActions();
   const isMutating = isMutatingFor({ cartItemId: item.id });
+  const coverImage = getCartItemCoverImage(item);
 
   return (
     <div className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-4 rounded-lg bg-gray-50 p-4">
       <div className="flex gap-3">
         <div className="h-18 w-24 shrink-0 overflow-hidden rounded-md bg-muted">
-          <div className="flex h-full w-full items-center justify-center text-muted-foreground/40">
-            <ImageIcon className="size-5" strokeWidth={1.5} />
-          </div>
+          {coverImage ? (
+            <img src={coverImage} alt={item.name} className="h-full w-full object-cover" />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-muted-foreground/40">
+              <ImageIcon className="size-5" strokeWidth={1.5} />
+            </div>
+          )}
         </div>
 
         <div className="min-w-0 flex-1">
@@ -33,8 +38,9 @@ export function CartItem({ item }: CartItemProps) {
 
       <CartQuantityControls
         quantity={item.quantity}
-        onDecrease={() => decrease(item.id, item.quantity)}
+        onDecrease={() => decrease(item.id)}
         onIncrease={() => increase(item.id)}
+        onQuantityChange={(quantity) => setQuantity(item.id, quantity)}
         disabled={isMutating}
       />
       <div>

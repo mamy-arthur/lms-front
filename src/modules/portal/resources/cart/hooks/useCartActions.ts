@@ -7,6 +7,7 @@ import {
   useUpdateCartItem,
 } from '@/modules/portal/resources/cart/hooks/useCartMutations';
 import { useCartQuery } from '@/modules/portal/resources/cart/hooks/useCartQuery';
+import { useDebouncedCartQuantity } from '@/modules/portal/resources/cart/hooks/useDebouncedCartQuantity';
 import { getApiErrorMessage } from '@/shared/lib/errors';
 
 interface MutatingForOptions {
@@ -19,6 +20,10 @@ export function useCartActions() {
   const addCartItem = useAddCartItem();
   const updateCartItem = useUpdateCartItem();
   const removeCartItem = useRemoveCartItem();
+  const quantityChanges = useDebouncedCartQuantity({
+    updateItem: (args) => updateCartItem.mutateAsync(args),
+    removeItem: (itemId) => removeCartItem.mutateAsync(itemId),
+  });
 
   const cart = cartQuery.data?.data;
 
@@ -37,28 +42,20 @@ export function useCartActions() {
     }
   };
 
-  const increase = async (cartItemId: string) => {
-    try {
-      await updateCartItem.mutateAsync({ itemId: cartItemId, delta: 1 });
-      return true;
-    } catch (err) {
-      toast.error(getApiErrorMessage(err, 'Impossible d’augmenter la quantité.'));
-      return false;
-    }
+  const increase = (cartItemId: string) => {
+    quantityChanges.schedule(cartItemId, 1);
   };
 
-  const decrease = async (cartItemId: string, quantity: number) => {
-    if (quantity <= 1) return false;
-    try {
-      await updateCartItem.mutateAsync({ itemId: cartItemId, delta: -1 });
-      return true;
-    } catch (err) {
-      toast.error(getApiErrorMessage(err, 'Impossible de diminuer la quantité.'));
-      return false;
-    }
+  const decrease = (cartItemId: string) => {
+    quantityChanges.schedule(cartItemId, -1);
+  };
+
+  const setQuantity = (cartItemId: string, quantity: number) => {
+    quantityChanges.scheduleQuantity(cartItemId, quantity);
   };
 
   const remove = async (cartItemId: string) => {
+    quantityChanges.clearPending(cartItemId);
     try {
       await removeCartItem.mutateAsync(cartItemId);
       toast.success('Formation retirée du panier.');
@@ -71,17 +68,18 @@ export function useCartActions() {
 
   const isMutatingFor = ({ learningPathId, cartItemId }: MutatingForOptions) => {
     const adding =
-      Boolean(learningPathId) &&
+      learningPathId != null &&
       addCartItem.isPending &&
       addCartItem.variables?.learning_path_id === learningPathId;
     const updating =
-      Boolean(cartItemId) &&
+      cartItemId != null &&
       updateCartItem.isPending &&
       updateCartItem.variables?.itemId === cartItemId;
     const removing =
-      Boolean(cartItemId) && removeCartItem.isPending && removeCartItem.variables === cartItemId;
+      cartItemId != null && removeCartItem.isPending && removeCartItem.variables === cartItemId;
+    const syncing = cartItemId != null && quantityChanges.isSyncing(cartItemId);
 
-    return adding || updating || removing;
+    return adding || updating || removing || syncing;
   };
 
   return {
@@ -91,6 +89,7 @@ export function useCartActions() {
     add,
     increase,
     decrease,
+    setQuantity,
     remove,
     isMutatingFor,
   };

@@ -130,7 +130,7 @@ describe('cartsApi', () => {
   // ── updateItem ──────────────────────────────────────────────────────────────
 
   describe('updateItem(itemId, payload)', () => {
-    it('appelle PATCH carts/items/{id} avec delta +1', async () => {
+    it('appelle PATCH carts/items/{id} avec quantity', async () => {
       mockApiPatch.mockResolvedValue({
         data: {
           ...MOCK_CART,
@@ -139,17 +139,17 @@ describe('cartsApi', () => {
         },
       });
 
-      await cartsApi.updateItem('item-1', { delta: 1 });
+      await cartsApi.updateItem('item-1', { quantity: 2 });
 
-      expect(mockApiPatch).toHaveBeenCalledWith('carts/items/item-1', { delta: 1 });
+      expect(mockApiPatch).toHaveBeenCalledWith('carts/items/item-1', { quantity: 2 });
     });
 
-    it('appelle PATCH carts/items/{id} avec delta -1', async () => {
+    it('appelle PATCH carts/items/{id} avec une quantité réduite', async () => {
       mockApiPatch.mockResolvedValue(MOCK_RESPONSE);
 
-      await cartsApi.updateItem('item-1', { delta: -1 });
+      await cartsApi.updateItem('item-1', { quantity: 1 });
 
-      expect(mockApiPatch).toHaveBeenCalledWith('carts/items/item-1', { delta: -1 });
+      expect(mockApiPatch).toHaveBeenCalledWith('carts/items/item-1', { quantity: 1 });
     });
 
     it('retourne le panier recalculé', async () => {
@@ -162,7 +162,7 @@ describe('cartsApi', () => {
       };
       mockApiPatch.mockResolvedValue(updated);
 
-      const result = await cartsApi.updateItem('item-1', { delta: 1 });
+      const result = await cartsApi.updateItem('item-1', { quantity: 2 });
 
       expect(result.data.items[0].quantity).toBe(2);
       expect(result.data.total).toBe(299.98);
@@ -173,7 +173,7 @@ describe('cartsApi', () => {
         Object.assign(new Error('Unprocessable Content'), { status: 422 }),
       );
 
-      await expect(cartsApi.updateItem('item-1', { delta: -1 })).rejects.toMatchObject({
+      await expect(cartsApi.updateItem('item-1', { quantity: 0 })).rejects.toMatchObject({
         status: 422,
       });
     });
@@ -181,7 +181,7 @@ describe('cartsApi', () => {
     it('propage les erreurs 404 (item introuvable)', async () => {
       mockApiPatch.mockRejectedValue(Object.assign(new Error('Not Found'), { status: 404 }));
 
-      await expect(cartsApi.updateItem('unknown', { delta: 1 })).rejects.toMatchObject({
+      await expect(cartsApi.updateItem('unknown', { quantity: 1 })).rejects.toMatchObject({
         status: 404,
       });
     });

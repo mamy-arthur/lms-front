@@ -1,10 +1,10 @@
 /**
  * Tests unitaires — useCartActions
  *
- * On mocke useCartQuery / useCartMutations / toast pour vérifier :
- *  - add / increase / decrease / remove (succès + erreurs)
+ * On mocke useCartQuery / useCartMutations / toast / queryClient pour vérifier :
+ *  - add / remove (succès + erreurs)
+ *  - increase / decrease debouncés (quantity cible + suppression à 0)
  *  - silentSuccess sur add
- *  - garde quantity <= 1 sur decrease
  *  - findItem
  *  - isMutatingFor
  */
@@ -27,12 +27,24 @@ jest.mock('@/modules/portal/resources/cart/hooks/useCartMutations', () => ({
   useRemoveCartItem: jest.fn(),
 }));
 
+const mockSetQueryData = jest.fn();
+const mockInvalidateQueries = jest.fn();
+const mockGetQueryData = jest.fn();
+
+jest.mock('@tanstack/react-query', () => ({
+  useQueryClient: () => ({
+    setQueryData: mockSetQueryData,
+    invalidateQueries: mockInvalidateQueries,
+    getQueryData: mockGetQueryData,
+  }),
+}));
+
 import { renderHook, act } from '@testing-library/react';
 import { toast } from 'sonner';
 import { useCartActions } from '../useCartActions';
 import { useCartQuery } from '../useCartQuery';
 import { useAddCartItem, useUpdateCartItem, useRemoveCartItem } from '../useCartMutations';
-import type { ApiCart, ApiCartItem } from '@/shared/types/cart.types';
+import type { ApiCart, ApiCartItem, ApiCartResponse } from '@/shared/types/cart.types';
 
 const mockUseCartQuery = jest.mocked(useCartQuery);
 const mockUseAddCartItem = jest.mocked(useAddCartItem);
@@ -64,13 +76,15 @@ const CART: ApiCart = {
   updated_at: '2026-07-27T10:00:00+00:00',
 };
 
+const CART_RESPONSE: ApiCartResponse = { data: CART };
+
 function mockMutation(overrides: {
   mutateAsync?: jest.Mock;
   isPending?: boolean;
   variables?: unknown;
 }) {
   return {
-    mutateAsync: overrides.mutateAsync ?? jest.fn().mockResolvedValue({ data: CART }),
+    mutateAsync: overrides.mutateAsync ?? jest.fn().mockResolvedValue(CART_RESPONSE),
     isPending: overrides.isPending ?? false,
     variables: overrides.variables,
   } as unknown as ReturnType<typeof useAddCartItem>;
@@ -83,13 +97,23 @@ describe('useCartActions', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    jest.useFakeTimers();
 
     mockUseCartQuery.mockReturnValue({
-      data: { data: CART },
+      data: CART_RESPONSE,
     } as unknown as ReturnType<typeof useCartQuery>);
 
-    addMutateAsync.mockResolvedValue({ data: CART });
-    updateMutateAsync.mockResolvedValue({ data: CART });
+    mockGetQueryData.mockReturnValue(CART_RESPONSE);
+    mockSetQueryData.mockImplementation((_key, updater) => {
+      if (typeof updater === 'function') {
+        return updater(CART_RESPONSE);
+      }
+      return updater;
+    });
+    mockInvalidateQueries.mockResolvedValue(undefined);
+
+    addMutateAsync.mockResolvedValue(CART_RESPONSE);
+    updateMutateAsync.mockResolvedValue(CART_RESPONSE);
     removeMutateAsync.mockResolvedValue({ data: { ...CART, items: [], total: 0 } });
 
     mockUseAddCartItem.mockReturnValue(mockMutation({ mutateAsync: addMutateAsync }));
@@ -103,6 +127,11 @@ describe('useCartActions', () => {
         typeof useRemoveCartItem
       >,
     );
+  });
+
+  afterEach(() => {
+    jest.runOnlyPendingTimers();
+    jest.useRealTimers();
   });
 
   // ── findItem ────────────────────────────────────────────────────────────────
@@ -164,72 +193,115 @@ describe('useCartActions', () => {
   // ── increase ────────────────────────────────────────────────────────────────
 
   describe('increase', () => {
-    it('appelle update avec delta +1', async () => {
+    it('debounce et envoie la quantité cible accumulée', async () => {
       const { result } = renderHook(() => useCartActions());
 
-      await act(async () => {
-        await result.current.increase('item-1');
+      act(() => {
+        result.current.increase('item-1');
+        result.current.increase('item-1');
+        result.current.increase('item-1');
       });
 
-      expect(updateMutateAsync).toHaveBeenCalledWith({ itemId: 'item-1', delta: 1 });
+      expect(updateMutateAsync).not.toHaveBeenCalled();
+
+      await act(async () => {
+        jest.advanceTimersByTime(300);
+      });
+
+      expect(updateMutateAsync).toHaveBeenCalledTimes(1);
+      expect(updateMutateAsync).toHaveBeenCalledWith({ itemId: 'item-1', quantity: 5 });
     });
 
-    it('toast erreur et false si l’API échoue', async () => {
+    it('toast erreur et invalide le panier si l’API échoue', async () => {
       updateMutateAsync.mockRejectedValue(
         Object.assign(new Error('Unprocessable Content'), { status: 422 }),
       );
       const { result } = renderHook(() => useCartActions());
 
-      let ok = true;
-      await act(async () => {
-        ok = await result.current.increase('item-1');
+      act(() => {
+        result.current.increase('item-1');
       });
 
-      expect(mockToast.error).toHaveBeenCalledWith('Impossible d’augmenter la quantité.');
-      expect(ok).toBe(false);
+      await act(async () => {
+        jest.advanceTimersByTime(300);
+      });
+
+      expect(mockToast.error).toHaveBeenCalledWith('Impossible de mettre à jour la quantité.');
+      expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['carts', 'active'] });
+    });
+  });
+
+  // ── setQuantity ─────────────────────────────────────────────────────────────
+
+  describe('setQuantity', () => {
+    it('debounce et envoie la quantité cible saisie', async () => {
+      const { result } = renderHook(() => useCartActions());
+
+      act(() => {
+        result.current.setQuantity('item-1', 7);
+      });
+
+      expect(updateMutateAsync).not.toHaveBeenCalled();
+
+      await act(async () => {
+        jest.advanceTimersByTime(300);
+      });
+
+      expect(updateMutateAsync).toHaveBeenCalledTimes(1);
+      expect(updateMutateAsync).toHaveBeenCalledWith({ itemId: 'item-1', quantity: 7 });
     });
   });
 
   // ── decrease ────────────────────────────────────────────────────────────────
 
   describe('decrease', () => {
-    it('n’appelle pas l’API si quantity <= 1', async () => {
+    it('supprime après debounce si la quantité cible tombe à 0', async () => {
       const { result } = renderHook(() => useCartActions());
 
-      let ok = true;
+      act(() => {
+        result.current.decrease('item-1');
+        result.current.decrease('item-1');
+      });
+
       await act(async () => {
-        ok = await result.current.decrease('item-1', 1);
+        jest.advanceTimersByTime(300);
       });
 
       expect(updateMutateAsync).not.toHaveBeenCalled();
-      expect(ok).toBe(false);
+      expect(removeMutateAsync).toHaveBeenCalledWith('item-1');
+      expect(mockToast.success).toHaveBeenCalledWith('Formation retirée du panier.');
     });
 
-    it('appelle update avec delta -1 si quantity > 1', async () => {
+    it('appelle update avec la quantité cible si elle reste > 0', async () => {
       const { result } = renderHook(() => useCartActions());
 
-      let ok = false;
-      await act(async () => {
-        ok = await result.current.decrease('item-1', 2);
+      act(() => {
+        result.current.decrease('item-1');
       });
 
-      expect(updateMutateAsync).toHaveBeenCalledWith({ itemId: 'item-1', delta: -1 });
-      expect(ok).toBe(true);
+      await act(async () => {
+        jest.advanceTimersByTime(300);
+      });
+
+      expect(updateMutateAsync).toHaveBeenCalledWith({ itemId: 'item-1', quantity: 1 });
+      expect(removeMutateAsync).not.toHaveBeenCalled();
     });
 
-    it('toast erreur et false si l’API échoue', async () => {
+    it('toast erreur si l’API échoue', async () => {
       updateMutateAsync.mockRejectedValue({
         json: { message: 'Quantité minimale atteinte' },
       });
       const { result } = renderHook(() => useCartActions());
 
-      let ok = true;
+      act(() => {
+        result.current.decrease('item-1');
+      });
+
       await act(async () => {
-        ok = await result.current.decrease('item-1', 2);
+        jest.advanceTimersByTime(300);
       });
 
       expect(mockToast.error).toHaveBeenCalledWith('Quantité minimale atteinte');
-      expect(ok).toBe(false);
     });
   });
 
@@ -247,6 +319,25 @@ describe('useCartActions', () => {
       expect(removeMutateAsync).toHaveBeenCalledWith('item-1');
       expect(mockToast.success).toHaveBeenCalledWith('Formation retirée du panier.');
       expect(ok).toBe(true);
+    });
+
+    it('annule un debounce en cours avant suppression', async () => {
+      const { result } = renderHook(() => useCartActions());
+
+      act(() => {
+        result.current.increase('item-1');
+      });
+
+      await act(async () => {
+        await result.current.remove('item-1');
+      });
+
+      await act(async () => {
+        jest.advanceTimersByTime(300);
+      });
+
+      expect(updateMutateAsync).not.toHaveBeenCalled();
+      expect(removeMutateAsync).toHaveBeenCalledWith('item-1');
     });
 
     it('toast erreur et false si l’API échoue', async () => {
@@ -286,7 +377,7 @@ describe('useCartActions', () => {
         mockMutation({
           mutateAsync: updateMutateAsync,
           isPending: true,
-          variables: { itemId: 'item-1', delta: 1 },
+          variables: { itemId: 'item-1', quantity: 3 },
         }) as unknown as ReturnType<typeof useUpdateCartItem>,
       );
 
