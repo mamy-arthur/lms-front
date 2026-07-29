@@ -1,6 +1,6 @@
 'use client';
 
-import { Loader2 } from 'lucide-react';
+import { Loader2, Save } from 'lucide-react';
 import type { ReactNode } from 'react';
 import type { FieldValues, UseFormReturn } from 'react-hook-form';
 import type { Editor } from '@tiptap/react';
@@ -174,22 +174,28 @@ export function MailTemplateForm({
         </div>
 
         {/* Pied de page */}
-        <div className="flex justify-end gap-2 border-t px-6 py-4">
+        <div className="flex items-center justify-end gap-3 border-t bg-background px-6 py-4 shrink-0">
           <Button
             type="button"
             variant="outline"
             onClick={handleClose}
             disabled={mutation.isPending}
+            size="lg"
           >
             Annuler
           </Button>
           <Button
             type="submit"
             disabled={mutation.isPending}
-            className="bg-(--color-primary) hover:bg-primary/80 text-primary-foreground"
+            size="lg"
+            className="bg-(--color-primary) hover:bg-(--color-primary)/80"
           >
-            {mutation.isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
-            {isEdit ? 'Enregistrer' : 'Ajouter'}
+            {mutation.isPending ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Save className="size-4" />
+            )}
+            {mutation.isPending ? 'Enregistrement…' : 'Enregistrer'}
           </Button>
         </div>
       </form>

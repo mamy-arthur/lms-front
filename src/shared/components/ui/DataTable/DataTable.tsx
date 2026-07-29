@@ -32,6 +32,7 @@ export interface DataTableColumn<T> {
   label: string;
   sortable?: boolean;
   headerClassName?: string;
+  cellClassName?: string;
   render: (row: T) => React.ReactNode;
   skeleton?: React.ReactNode;
 }
@@ -60,6 +61,7 @@ interface DataTableProps<T extends { id: string | number }> {
   onRowClick?: (row: T) => void;
   emptyState?: DataTableEmptyState;
   rowTestId?: string;
+  tableClassName?: string;
 }
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100] as const;
@@ -114,6 +116,7 @@ export function DataTable<T extends { id: string | number }>({
   onRowClick,
   emptyState,
   rowTestId,
+  tableClassName,
 }: DataTableProps<T>) {
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
 
@@ -161,7 +164,7 @@ export function DataTable<T extends { id: string | number }>({
 
   return (
     <div className="overflow-hidden rounded-xl border bg-card">
-      <Table>
+      <Table className={tableClassName}>
         <TableHeader>
           <TableRow className="bg-muted/50 hover:bg-muted/50">
             {columns.map((col) => (
@@ -170,13 +173,14 @@ export function DataTable<T extends { id: string | number }>({
                 className={cn(
                   'text-xs font-medium uppercase tracking-wide text-muted-foreground',
                   col.sortable && onSort && 'cursor-pointer select-none hover:text-foreground',
+                  col.headerClassName,
                 )}
                 onClick={() => {
                   if (col.sortable) onSort?.(col.key);
                 }}
               >
                 <span className="inline-flex items-center gap-1">
-                  <span className={cn('block', col.headerClassName)} title={col.label}>
+                  <span className="block" title={col.label}>
                     {col.label}
                   </span>
                   {col.sortable && <SortIcon column={col.key} sort={sort} />}
@@ -206,7 +210,9 @@ export function DataTable<T extends { id: string | number }>({
                 onClick={() => onRowClick?.(row)}
               >
                 {columns.map((col) => (
-                  <TableCell key={col.key}>{col.render(row)}</TableCell>
+                  <TableCell key={col.key} className={col.cellClassName}>
+                    {col.render(row)}
+                  </TableCell>
                 ))}
               </TableRow>
             ))

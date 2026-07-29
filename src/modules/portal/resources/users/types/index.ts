@@ -11,6 +11,13 @@ export interface ClientUser {
   role: Role;
   is_active: boolean;
   profile_photo: { id: string; url: string; mime_type: string } | null;
+  address: string | null;
+  zip_code: string | null;
+  city: string | null;
+  country: string | null;
+  biography: string | null;
+  timezone: string | null;
+  preferred_language: string | null;
   created_at: string;
   updated_at: string | null;
 }
@@ -23,6 +30,13 @@ export interface CreateClientUserPayload {
   role: Role;
   tenant_id?: string | null;
   is_active?: boolean;
+  address?: string | null;
+  zip_code?: string | null;
+  city?: string | null;
+  country?: string | null;
+  biography?: string | null;
+  timezone?: string | null;
+  preferred_language?: string | null;
 }
 
 export interface UpdateClientUserPayload {
@@ -32,6 +46,13 @@ export interface UpdateClientUserPayload {
   role?: Role;
   is_active?: boolean;
   profile_photo_media_id?: string | null;
+  address?: string | null;
+  zip_code?: string | null;
+  city?: string | null;
+  country?: string | null;
+  biography?: string | null;
+  timezone?: string | null;
+  preferred_language?: string | null;
 }
 
 export const TENANT_USER_ROLES: readonly Role[] = TENANT_ROLES;
@@ -58,6 +79,13 @@ export function normalizeClientUser(raw: Record<string, unknown>): ClientUser {
     role: (raw.role ?? Role.TRAINEE) as Role,
     is_active: Boolean(raw.is_active ?? raw.isActive ?? true),
     profile_photo: (raw.profile_photo as ClientUser['profile_photo']) ?? null,
+    address: (raw.address as string | null) ?? null,
+    zip_code: (raw.zip_code as string | null) ?? null,
+    city: (raw.city as string | null) ?? null,
+    country: (raw.country as string | null) ?? null,
+    biography: (raw.biography as string | null) ?? null,
+    timezone: (raw.timezone as string | null) ?? null,
+    preferred_language: (raw.preferred_language as string | null) ?? null,
     created_at: String(raw.created_at ?? ''),
     updated_at: (raw.updated_at as string | null) ?? null,
   };

@@ -1,6 +1,6 @@
 'use client';
 
-import { Filter, Search } from 'lucide-react';
+import { Search, Settings2 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -41,7 +41,7 @@ export function UsersFilter({
     <Popover>
       <PopoverTrigger asChild>
         <Button variant="outline" size="sm">
-          <Filter className="size-4" />
+          <Settings2 className="size-4" />
           Filtres
         </Button>
       </PopoverTrigger>

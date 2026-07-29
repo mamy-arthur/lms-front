@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
-import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, Loader2, Save } from 'lucide-react';
 import type { ReactNode } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
@@ -35,6 +35,7 @@ export interface UserFormProps {
   roleLabels: Record<string, string>;
   lastLogin?: string;
   extraFields?: ReactNode;
+  topFields?: ReactNode;
 }
 
 export function UserForm({
@@ -48,10 +49,15 @@ export function UserForm({
   roleLabels,
   lastLogin,
   extraFields,
+  topFields,
 }: UserFormProps) {
   return (
     <Field {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-1 flex-col" noValidate>
+      <form
+        onSubmit={form.handleSubmit(onSubmit)}
+        className="flex flex-1 flex-col min-h-0"
+        noValidate
+      >
         <div className="flex-1 space-y-5 overflow-y-auto px-6 py-4">
           {mutation.isError && (
             <div
@@ -61,6 +67,8 @@ export function UserForm({
               {extractApiError(mutation.error, isEdit)}
             </div>
           )}
+
+          {topFields}
 
           <div className="flex flex-row gap-4">
             <FieldRoot
@@ -198,14 +206,12 @@ export function UserForm({
             size="lg"
             className="bg-(--color-primary) hover:bg-(--color-primary)/80"
           >
-            {mutation.isPending && <Loader2 className="size-4 animate-spin" />}
-            {mutation.isPending
-              ? isEdit
-                ? 'Enregistrement…'
-                : 'Création…'
-              : isEdit
-                ? 'Enregistrer'
-                : 'Créer'}
+            {mutation.isPending ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Save className="size-4" />
+            )}
+            {mutation.isPending ? 'Enregistrement…' : 'Enregistrer'}
           </Button>
         </div>
       </form>

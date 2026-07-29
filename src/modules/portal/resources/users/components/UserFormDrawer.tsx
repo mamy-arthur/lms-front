@@ -20,6 +20,7 @@ import type { CreateClientUserPayload, ClientUser, UpdateClientUserPayload } fro
 import { Switch } from '@/components/ui/switch';
 import { FieldGroup, FieldLabel, FieldRoot } from '@/components/ui/field';
 import { UserPhotoField } from '@modules/shared/components/users/user-photo-field';
+import { UserProfileFields } from '@modules/shared/components/users/user-profile-fields';
 import { uploadUserProfilePhoto } from '@/modules/shared/lib/uploadUserProfilePhoto';
 
 const passwordSchema = z
@@ -30,22 +31,36 @@ const passwordSchema = z
   .regex(/[0-9]/, 'Au moins un chiffre')
   .max(255);
 
-const createSchema = z.object({
-  first_name: z.string().min(1, 'Prénom requis').max(120),
-  last_name: z.string().min(1, 'Nom requis').max(120),
-  email: z.string().email('Email invalide').max(255),
-  password: passwordSchema,
-  role: z.enum(['CLIENT_MANAGER', 'TRAINEE']),
-  is_active: z.boolean().default(true),
+const profileFieldsSchema = z.object({
+  address: z.string().max(255).nullable().optional(),
+  zip_code: z.string().max(20).nullable().optional(),
+  city: z.string().max(100).nullable().optional(),
+  country: z.string().length(2).nullable().optional(),
+  biography: z.string().max(2000, 'Maximum 2000 caractères').nullable().optional(),
+  timezone: z.string().nullable().optional(),
+  preferred_language: z.string().nullable().optional(),
 });
 
-const updateSchema = z.object({
-  first_name: z.string().min(1, 'Prénom requis').max(120),
-  last_name: z.string().min(1, 'Nom requis').max(120),
-  email: z.string().email('Email invalide').max(255),
-  role: z.enum(['CLIENT_MANAGER', 'TRAINEE']),
-  is_active: z.boolean(),
-});
+const createSchema = z
+  .object({
+    first_name: z.string().min(1, 'Prénom requis').max(120),
+    last_name: z.string().min(1, 'Nom requis').max(120),
+    email: z.string().email('Email invalide').max(255),
+    password: passwordSchema,
+    role: z.enum(['CLIENT_MANAGER', 'TRAINEE']),
+    is_active: z.boolean().default(true),
+  })
+  .merge(profileFieldsSchema);
+
+const updateSchema = z
+  .object({
+    first_name: z.string().min(1, 'Prénom requis').max(120),
+    last_name: z.string().min(1, 'Nom requis').max(120),
+    email: z.string().email('Email invalide').max(255),
+    role: z.enum(['CLIENT_MANAGER', 'TRAINEE']),
+    is_active: z.boolean(),
+  })
+  .merge(profileFieldsSchema);
 
 const ROLE_LABELS: Record<string, string> = {
   CLIENT_MANAGER: 'Responsable',
@@ -59,6 +74,13 @@ const CREATE_DEFAULTS: z.infer<typeof createSchema> = {
   password: '',
   role: 'TRAINEE',
   is_active: true,
+  address: null,
+  zip_code: null,
+  city: null,
+  country: null,
+  biography: null,
+  timezone: null,
+  preferred_language: null,
 };
 
 export interface UserFormDrawerProps {
@@ -87,6 +109,13 @@ function UserFormDrawerBase({ open, onClose, onSuccess, user }: UserFormDrawerPr
         email: u.email,
         role: u.role as 'CLIENT_MANAGER' | 'TRAINEE',
         is_active: u.is_active,
+        address: u.address ?? null,
+        zip_code: u.zip_code ?? null,
+        city: u.city ?? null,
+        country: u.country ?? null,
+        biography: u.biography ?? null,
+        timezone: u.timezone ?? null,
+        preferred_language: u.preferred_language ?? null,
       };
     }
     return CREATE_DEFAULTS;
@@ -113,6 +142,13 @@ function UserFormDrawerBase({ open, onClose, onSuccess, user }: UserFormDrawerPr
         role: values.role as CreateClientUserPayload['role'],
         tenant_id: tenantId,
         is_active: values.is_active,
+        address: values.address ?? null,
+        zip_code: values.zip_code ?? null,
+        city: values.city ?? null,
+        country: values.country ?? null,
+        biography: values.biography ?? null,
+        timezone: values.timezone ?? null,
+        preferred_language: values.preferred_language ?? null,
       }) as CreateClientUserPayload,
     buildUpdatePayload: (values, id) => ({
       id,
@@ -122,6 +158,13 @@ function UserFormDrawerBase({ open, onClose, onSuccess, user }: UserFormDrawerPr
         email: values.email,
         role: values.role as UpdateClientUserPayload['role'],
         is_active: values.is_active,
+        address: values.address ?? null,
+        zip_code: values.zip_code ?? null,
+        city: values.city ?? null,
+        country: values.country ?? null,
+        biography: values.biography ?? null,
+        timezone: values.timezone ?? null,
+        preferred_language: values.preferred_language ?? null,
       } as UpdateClientUserPayload,
     }),
   });
@@ -147,6 +190,13 @@ function UserFormDrawerBase({ open, onClose, onSuccess, user }: UserFormDrawerPr
               role: values.role as UpdateClientUserPayload['role'],
               is_active: values.is_active as boolean,
               profile_photo_media_id: mediaId,
+              address: (values.address as string | null) ?? null,
+              zip_code: (values.zip_code as string | null) ?? null,
+              city: (values.city as string | null) ?? null,
+              country: (values.country as string | null) ?? null,
+              biography: (values.biography as string | null) ?? null,
+              timezone: (values.timezone as string | null) ?? null,
+              preferred_language: (values.preferred_language as string | null) ?? null,
             } as UpdateClientUserPayload,
           });
           pendingPhotoRef.current = null;
@@ -166,6 +216,13 @@ function UserFormDrawerBase({ open, onClose, onSuccess, user }: UserFormDrawerPr
             role: values.role as CreateClientUserPayload['role'],
             tenant_id: tenantId,
             is_active: values.is_active as boolean,
+            address: (values.address as string | null) ?? null,
+            zip_code: (values.zip_code as string | null) ?? null,
+            city: (values.city as string | null) ?? null,
+            country: (values.country as string | null) ?? null,
+            biography: (values.biography as string | null) ?? null,
+            timezone: (values.timezone as string | null) ?? null,
+            preferred_language: (values.preferred_language as string | null) ?? null,
           } as CreateClientUserPayload);
           const newUserId = (res as { data: { id: string } }).data.id;
           await uploadUserProfilePhoto(newUserId, pendingPhotoRef.current, 'users');
@@ -206,7 +263,7 @@ function UserFormDrawerBase({ open, onClose, onSuccess, user }: UserFormDrawerPr
   return (
     <Sheet open={open} onOpenChange={(nextOpen) => !nextOpen && formState.handleClose()}>
       <SheetContent
-        className="flex w-full flex-col gap-0 p-0 sm:max-w-2xl lg:max-w-4xl"
+        className="flex w-full flex-col gap-0 p-0 overflow-hidden sm:max-w-150! lg:max-w-200!"
         showCloseButton={true}
         onInteractOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
@@ -224,16 +281,19 @@ function UserFormDrawerBase({ open, onClose, onSuccess, user }: UserFormDrawerPr
           showPassword={formState.showPassword}
           togglePasswordVisibility={formState.togglePasswordVisibility}
           roleLabels={ROLE_LABELS}
+          topFields={
+            <UserPhotoField
+              currentPhotoUrl={user?.profile_photo?.url ?? null}
+              fullName={user ? `${user.first_name} ${user.last_name}` : ''}
+              onFileSelected={(file) => {
+                pendingPhotoRef.current = file;
+              }}
+            />
+          }
           extraFields={
             <>
-              <UserPhotoField
-                currentPhotoUrl={user?.profile_photo?.url ?? null}
-                fullName={user ? `${user.first_name} ${user.last_name}` : ''}
-                onFileSelected={(file) => {
-                  pendingPhotoRef.current = file;
-                }}
-              />
               {activeField}
+              <UserProfileFields form={formState.form} />
             </>
           }
         />
