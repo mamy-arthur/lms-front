@@ -77,3 +77,18 @@ export const learningPathCompetencyAssociationKeys = {
   all: ['learning-path-competency-associations'] as const,
   lists: () => [...learningPathCompetencyAssociationKeys.all, 'list'] as const,
 };
+
+export const questionBankKeys = {
+  all: ['question-banks'] as const,
+  lists: () => [...questionBankKeys.all, 'list'] as const,
+  list: (filters: object) => [...questionBankKeys.lists(), filters] as const,
+  detail: (id: string) => [...questionBankKeys.all, 'detail', id] as const,
+};
+
+export const quizItemKeys = {
+  all: ['quiz-items'] as const,
+  lists: () => [...quizItemKeys.all, 'list'] as const,
+  listByBank: (bankId: string, filters?: object) =>
+    [...quizItemKeys.lists(), bankId, filters ?? {}] as const,
+  detail: (id: string) => [...quizItemKeys.all, 'detail', id] as const,
+};

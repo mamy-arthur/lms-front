@@ -1,33 +1,23 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import type { Quiz, UpdateQuizPayload } from '../types';
-import { normalizeQuiz } from '../types';
-import { ADMIN_QUIZZES_QUERY_KEY } from './useQuizzesQuery';
+import { toast } from 'sonner';
+import { questionBanksApi } from '@/shared/api/question-banks.api';
+import { questionBankKeys } from '@/shared/queries/keys';
+import { getApiErrorMessage } from '@/shared/lib/errors';
+import type { UpdateQuizPayload } from '../types';
 
 export function useUpdateQuiz() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: UpdateQuizPayload }) => {
-      const mockRaw: Record<string, unknown> = {
-        id,
-        title: data.title,
-        slug: data.slug,
-        description: data.description ?? '',
-        isFinalEvaluation: data.is_final_evaluation,
-        formationId: data.formation_id,
-        updatedAt: new Date().toISOString(),
-      };
-      return Promise.resolve({ data: mockRaw });
+    mutationFn: ({ id, data }: { id: string; data: UpdateQuizPayload }) =>
+      questionBanksApi.update(id, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: questionBankKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: questionBankKeys.detail(variables.id) });
+      toast.success('Banque de questions mise à jour.');
     },
-    onSuccess: ({ data: rawQuiz }) => {
-      const updated = normalizeQuiz(rawQuiz as unknown as Record<string, unknown>);
-      queryClient.setQueryData<{ data: Quiz[]; total: number }>(
-        ADMIN_QUIZZES_QUERY_KEY,
-        (prev) => ({
-          data: (prev?.data ?? []).map((q) => (q.id === updated.id ? updated : q)),
-          total: prev?.total ?? 0,
-        }),
-      );
+    onError: (err: unknown) => {
+      toast.error(getApiErrorMessage(err, 'Erreur lors de la mise à jour.'));
     },
   });
 }

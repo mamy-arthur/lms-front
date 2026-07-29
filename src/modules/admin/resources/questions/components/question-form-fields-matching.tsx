@@ -24,27 +24,16 @@ export function QuestionFormFieldsMatching({ form }: MatchingFieldsProps) {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex items-end justify-between border-b border-border/10 pl-3">
+      <div className="flex items-end justify-between border-b border-border/10 pl-3 pb-4">
         <div>
-          <p className="text-xs font-semibold uppercase text-muted-foreground">
-            Réponses et explications
-          </p>
-          <p className="mt-2 text-xs text-foreground/80">
-            Ajoutez des paires et associez vos réponses rapidement.
-          </p>
+          <p className="text-xs font-semibold uppercase text-muted-foreground">Paires</p>
         </div>
         <Button
           type="button"
           variant="outline"
           size="xs"
           className="text-(--color-primary) hover:text-(--color-primary)"
-          onClick={() =>
-            appendPair({
-              id: `pair-${Date.now()}-${Math.random()}`,
-              question: '',
-              answer: '',
-            })
-          }
+          onClick={() => appendPair({ left: '', right: '' })}
         >
           <Plus className="mr-1 size-3" />
           Ajouter une paire
@@ -61,30 +50,17 @@ export function QuestionFormFieldsMatching({ form }: MatchingFieldsProps) {
               {pairFields.map((field, index) => (
                 <div
                   key={field.id}
-                  className="space-y-3 rounded-3xl bg-background/95 p-4 ring-1 ring-border/10"
+                  className="grid grid-cols-[1fr_1fr_auto] items-end gap-3 rounded-3xl bg-background/95 p-3 ring-1 ring-border/10"
                 >
-                  <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
-                    <span>Pair {index + 1}</span>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="size-6 text-(--color-primary)"
-                      onClick={() => removePair(index)}
-                    >
-                      <Trash2 className="size-3" />
-                    </Button>
-                  </div>
-
                   <FieldRoot
                     control={form.control}
-                    name={`pairs.${index}.question`}
+                    name={`pairs.${index}.left`}
                     render={({ field: f }) => (
-                      <FieldGroup className="space-y-2">
-                        <FieldLabel className="text-xs">Question *</FieldLabel>
+                      <FieldGroup className="space-y-1">
+                        <FieldLabel className="text-xs">Gauche *</FieldLabel>
                         <FieldContent>
                           <Input
-                            aria-label={`Question ${index + 1}`}
+                            aria-label={`Gauche ${index + 1}`}
                             {...f}
                             className="text-foreground/70"
                           />
@@ -96,13 +72,13 @@ export function QuestionFormFieldsMatching({ form }: MatchingFieldsProps) {
 
                   <FieldRoot
                     control={form.control}
-                    name={`pairs.${index}.answer`}
+                    name={`pairs.${index}.right`}
                     render={({ field: f }) => (
-                      <FieldGroup className="space-y-2">
-                        <FieldLabel className="text-xs">Réponse *</FieldLabel>
+                      <FieldGroup className="space-y-1">
+                        <FieldLabel className="text-xs">Droite *</FieldLabel>
                         <FieldContent>
                           <Input
-                            aria-label={`Réponse ${index + 1}`}
+                            aria-label={`Droite ${index + 1}`}
                             {...f}
                             className="text-foreground/70"
                           />
@@ -111,6 +87,17 @@ export function QuestionFormFieldsMatching({ form }: MatchingFieldsProps) {
                       </FieldGroup>
                     )}
                   />
+
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="mb-1 size-7 text-muted-foreground hover:text-destructive"
+                    aria-label={`Supprimer la paire ${index + 1}`}
+                    onClick={() => removePair(index)}
+                  >
+                    <Trash2 className="size-3.5" />
+                  </Button>
                 </div>
               ))}
             </div>

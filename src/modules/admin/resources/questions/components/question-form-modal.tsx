@@ -57,7 +57,7 @@ function QuestionFormModalBase({
   const [selectedType, setSelectedType] = useState<string>((question ?? duplicateFrom)?.type ?? '');
 
   const createMutation = useCreateQuestion();
-  const updateMutation = useUpdateQuestion();
+  const updateMutation = useUpdateQuestion(question?.quizId ?? defaultQuizId);
   const createDefaults = getCreateDefaults();
 
   const defaultValues = useMemo(() => {
@@ -65,29 +65,18 @@ function QuestionFormModalBase({
     if (source) {
       return {
         type: source.type,
-        name: source.name,
-        text: source.text,
-        generalFeedback: source.generalFeedback,
-        referenceNumber: source.referenceNumber,
-        isActive: source.isActive,
-        hasDuration: !!source.duration,
-        durationValue: source.duration?.value ?? '',
-        durationUnit: source.duration?.unit ?? 'minute',
-        moduleId: source.moduleId,
+        question: source.text,
+        commentIfCorrect: source.feedbackTrue || null,
+        commentIfIncorrect: source.feedbackFalse || null,
         correctAnswer: source.correctAnswer,
-        feedbackTrue: source.feedbackTrue,
-        feedbackFalse: source.feedbackFalse,
-        options: source.options.map((option) => ({
-          id: option.id,
-          label: option.label,
-          isCorrect: option.isCorrect,
-          score: option.score,
-          feedback: option.feedback,
+        options: source.options.map((o) => ({
+          id: o.id,
+          label: o.label,
+          isCorrect: o.isCorrect,
         })),
-        pairs: source.pairs.map((pair) => ({
-          id: pair.id,
-          question: pair.question,
-          answer: pair.answer,
+        pairs: source.pairs.map((p) => ({
+          left: p.question,
+          right: p.answer,
         })),
       };
     }

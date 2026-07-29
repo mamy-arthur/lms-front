@@ -1,16 +1,20 @@
 import { useQuery } from '@tanstack/react-query';
-import { MOCK_QUIZZES } from '@modules/shared/components/quizzes/mocks/quizzes.mock';
-import type { Quiz, QuizSearchParams } from '../types';
+import { questionBanksApi } from '@/shared/api/question-banks.api';
+import { questionBankKeys } from '@/shared/queries/keys';
+import type { QuizSearchParams } from '../types';
 import { normalizeQuiz } from '../types';
 
-export const ADMIN_QUIZZES_QUERY_KEY = ['admin', 'quizzes'] as const;
+export const ADMIN_QUIZZES_QUERY_KEY = questionBankKeys.lists();
 
-export function useQuizzesQuery(params?: QuizSearchParams) {
+export function useQuizzesQuery(_params?: QuizSearchParams) {
   return useQuery({
-    queryKey: [...ADMIN_QUIZZES_QUERY_KEY, params],
-    queryFn: () => {
-      const data: Quiz[] = MOCK_QUIZZES.map((q) => normalizeQuiz(q));
-      return { data, total: data.length };
+    queryKey: questionBankKeys.lists(),
+    queryFn: async () => {
+      const res = await questionBanksApi.list();
+      return {
+        data: res.data.map((raw) => normalizeQuiz(raw as unknown as Record<string, unknown>)),
+        total: res.data.length,
+      };
     },
     placeholderData: (prev) => prev,
   });

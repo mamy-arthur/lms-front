@@ -2,34 +2,23 @@ import { z } from 'zod';
 import type { QuestionPayload } from '../types';
 
 const optionSchema = z.object({
-  id: z.string(),
+  id: z.string().optional(),
   label: z.string().min(1, 'Libellé requis'),
   isCorrect: z.boolean(),
-  score: z.number().min(0).max(100),
-  feedback: z.string(),
 });
 
 const pairSchema = z.object({
-  id: z.string(),
-  question: z.string().min(1, 'Question requise'),
-  answer: z.string().min(1, 'Réponse requise'),
+  left: z.string().min(1, 'Gauche requis'),
+  right: z.string().min(1, 'Droite requise'),
 });
 
 export const formSchema = z
   .object({
     type: z.string().min(1, 'Type requis'),
-    name: z.string().min(1, 'Nom requis').max(255),
-    text: z.string().min(1, 'Texte requis'),
-    generalFeedback: z.string(),
-    referenceNumber: z.string(),
-    isActive: z.boolean(),
-    hasDuration: z.boolean(),
-    durationValue: z.union([z.string(), z.number()]).optional(),
-    durationUnit: z.string().optional(),
-    moduleId: z.string(),
+    question: z.string().min(1, 'Question requise'),
+    commentIfCorrect: z.string().nullable().optional(),
+    commentIfIncorrect: z.string().nullable().optional(),
     correctAnswer: z.boolean(),
-    feedbackTrue: z.string(),
-    feedbackFalse: z.string(),
     options: z.array(optionSchema),
     pairs: z.array(pairSchema),
   })
@@ -44,11 +33,21 @@ export const formSchema = z
       }
     }
     if (data.type === 'single_choice') {
-      const correctCount = data.options.filter((o) => o.score >= 100).length;
+      const correctCount = data.options.filter((o) => o.isCorrect).length;
       if (correctCount !== 1) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: 'Un seul choix doit avoir un score de 100%',
+          message: 'Exactement un choix doit être correct',
+          path: ['options'],
+        });
+      }
+    }
+    if (data.type === 'multiple_choice') {
+      const correctCount = data.options.filter((o) => o.isCorrect).length;
+      if (correctCount < 1) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Au moins un choix doit être correct',
           path: ['options'],
         });
       }
@@ -66,26 +65,19 @@ export const formSchema = z
 
 export type FormValues = z.infer<typeof formSchema>;
 
-export function buildQuestionPayload(values: FormValues, quizId: string): QuestionPayload {
+export function buildQuestionPayload(values: FormValues, questionBankId: string): QuestionPayload {
   return {
-    quizId,
-    name: values.name,
-    text: values.text,
+    questionBankId,
     type: values.type,
-    generalFeedback: values.generalFeedback,
-    referenceNumber: values.referenceNumber,
-    isActive: values.isActive,
-    duration: values.hasDuration
-      ? {
-          value: Number(values.durationValue),
-          unit: values.durationUnit ?? 'minute',
-        }
-      : null,
-    moduleId: values.moduleId,
+    question: values.question,
+    commentIfCorrect: values.commentIfCorrect ?? null,
+    commentIfIncorrect: values.commentIfIncorrect ?? null,
     correctAnswer: values.correctAnswer,
-    feedbackTrue: values.feedbackTrue,
-    feedbackFalse: values.feedbackFalse,
-    options: values.options,
+    options: values.options.map((o) => ({
+      ...(o.id ? { id: o.id } : {}),
+      label: o.label,
+      isCorrect: o.isCorrect,
+    })),
     pairs: values.pairs,
   };
 }
@@ -93,18 +85,10 @@ export function buildQuestionPayload(values: FormValues, quizId: string): Questi
 export function getCreateDefaults(): FormValues {
   return {
     type: '',
-    name: '',
-    text: '',
-    generalFeedback: '',
-    referenceNumber: '',
-    isActive: true,
-    hasDuration: false,
-    durationValue: '',
-    durationUnit: 'minute',
-    moduleId: '',
+    question: '',
+    commentIfCorrect: null,
+    commentIfIncorrect: null,
     correctAnswer: true,
-    feedbackTrue: '',
-    feedbackFalse: '',
     options: [],
     pairs: [],
   };

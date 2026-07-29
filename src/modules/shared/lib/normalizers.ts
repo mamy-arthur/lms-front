@@ -14,28 +14,25 @@ export interface Module {
 export interface Quiz {
   id: string;
   title: string;
-  slug: string;
   description: string;
-  isFinalEvaluation: boolean;
-  formationId: string;
-  questionCount: number;
-  activeQuestionCount: number;
-  tenantId: string;
+  idnumber: string;
+  learningPathIds: string[];
+  isActive: boolean;
+  createdAt: string;
   updatedAt: string;
 }
 
 export function normalizeQuiz(raw: Record<string, unknown>): Quiz {
+  const rawIds = raw.learning_path_ids;
   return {
-    id: String(raw.id ?? raw._id ?? ''),
+    id: String(raw.id ?? ''),
     title: String(raw.title ?? ''),
-    slug: String(raw.slug ?? ''),
     description: String(raw.description ?? ''),
-    isFinalEvaluation: Boolean(raw.isFinalEvaluation ?? raw.is_final_evaluation ?? false),
-    formationId: String(raw.formationId ?? raw.formation_id ?? ''),
-    questionCount: Number(raw.questionCount ?? raw.question_count ?? 0),
-    activeQuestionCount: Number(raw.activeQuestionCount ?? raw.active_question_count ?? 0),
-    tenantId: String(raw.tenantId ?? raw.tenant_id ?? ''),
-    updatedAt: String(raw.updatedAt ?? raw.updated_at ?? ''),
+    idnumber: String(raw.idnumber ?? ''),
+    learningPathIds: Array.isArray(rawIds) ? rawIds.map(String) : [],
+    isActive: Boolean(raw.is_active ?? true),
+    createdAt: String(raw.created_at ?? raw.createdAt ?? ''),
+    updatedAt: String(raw.updated_at ?? raw.updatedAt ?? ''),
   };
 }
 

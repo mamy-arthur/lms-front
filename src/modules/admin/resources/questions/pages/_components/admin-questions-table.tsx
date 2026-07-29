@@ -1,7 +1,8 @@
 'use client';
 
 import React, { memo, useCallback, useMemo } from 'react';
-import { Copy, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -10,7 +11,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Switch } from '@/components/ui/switch';
 import {
   DataTable,
   type DataTableColumn,
@@ -34,9 +34,7 @@ interface AdminQuestionsTableProps {
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
   onEdit?: (question: Question) => void;
-  onDuplicate?: (question: Question) => void;
   onDelete?: (question: Question) => void;
-  onToggleActive?: (question: Question) => void;
 }
 
 function AdminQuestionsTableBase({
@@ -51,9 +49,7 @@ function AdminQuestionsTableBase({
   onPageChange,
   onPageSizeChange,
   onEdit,
-  onDuplicate,
   onDelete,
-  onToggleActive,
 }: AdminQuestionsTableProps) {
   const ActionMenu = useCallback(
     function ActionMenu({ item }: { item: Question }) {
@@ -65,7 +61,7 @@ function AdminQuestionsTableBase({
                 variant="ghost"
                 size="icon"
                 className="size-8 text-muted-foreground hover:text-foreground data-[state=open]:bg-muted"
-                aria-label={`Actions pour ${item.name}`}
+                aria-label={`Actions pour la question`}
               >
                 <MoreHorizontal className="size-4" />
               </Button>
@@ -74,10 +70,6 @@ function AdminQuestionsTableBase({
               <DropdownMenuItem onClick={() => onEdit?.(item)}>
                 <Pencil className="mr-2 size-3.5 text-muted-foreground" />
                 Modifier
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onDuplicate?.(item)}>
-                <Copy className="mr-2 size-3.5 text-muted-foreground" />
-                Dupliquer
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
@@ -92,21 +84,7 @@ function AdminQuestionsTableBase({
         </div>
       );
     },
-    [onEdit, onDuplicate, onDelete],
-  );
-
-  const ToggleActive = useCallback(
-    function ToggleActive({ item }: { item: Question }) {
-      return (
-        <Switch
-          checked={item.isActive}
-          onCheckedChange={() => onToggleActive?.(item)}
-          size="sm"
-          className="data-[state=checked]:bg-(--color-primary)"
-        />
-      );
-    },
-    [onToggleActive],
+    [onEdit, onDelete],
   );
 
   const columns: DataTableColumn<Question>[] = useMemo(
@@ -115,41 +93,37 @@ function AdminQuestionsTableBase({
         key: 'referenceNumber',
         label: 'Référence',
         sortable: true,
-        render: (question) => (
-          <span className="text-xs font-medium text-foreground">{question.referenceNumber}</span>
-        ),
-      },
-      {
-        key: 'name',
-        label: 'Nom',
-        sortable: true,
-        render: (question) => (
-          <span className="text-xs text-muted-foreground">{question.name}</span>
+        render: (q) => (
+          <span className="font-mono text-xs font-medium text-foreground">{q.referenceNumber}</span>
         ),
       },
       {
         key: 'type',
         label: 'Type',
         sortable: true,
-        render: (question) => (
-          <span className="text-xs text-muted-foreground">
-            {QUESTION_TYPE_LABELS[question.type] ?? question.type}
-          </span>
+        render: (q) => (
+          <Badge variant="outline" className="text-xs">
+            {QUESTION_TYPE_LABELS[q.type] ?? q.type}
+          </Badge>
         ),
       },
       {
-        key: 'isActive',
-        label: 'Actif',
-        sortable: true,
-        render: (question) => <ToggleActive item={question} />,
+        key: 'text',
+        label: 'Question',
+        sortable: false,
+        render: (q) => (
+          <span className="line-clamp-2 max-w-sm text-xs text-muted-foreground">
+            {q.text.replace(/<[^>]*>/g, '')}
+          </span>
+        ),
       },
       {
         key: 'updatedAt',
         label: 'Dernière modification',
         sortable: true,
-        render: (question) => (
+        render: (q) => (
           <span className="text-xs text-muted-foreground tabular-nums">
-            {question.updatedAt ? formatDate(question.updatedAt) : '—'}
+            {q.updatedAt ? formatDate(q.updatedAt) : '—'}
           </span>
         ),
       },
@@ -157,10 +131,10 @@ function AdminQuestionsTableBase({
         key: 'actions',
         label: '',
         sortable: false,
-        render: (question) => <ActionMenu item={question} />,
+        render: (q) => <ActionMenu item={q} />,
       },
     ],
-    [onEdit, onDuplicate, onDelete, onToggleActive],
+    [onEdit, onDelete],
   );
 
   return (
@@ -179,7 +153,7 @@ function AdminQuestionsTableBase({
       rowTestId="admin-question-row"
       emptyState={{
         title: 'Aucune question',
-        description: 'Aucune question pour le moment.',
+        description: 'Ajoutez votre première question à cette banque.',
       }}
     />
   );

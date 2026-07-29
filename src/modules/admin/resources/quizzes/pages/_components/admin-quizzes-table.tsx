@@ -2,7 +2,8 @@
 
 import React, { memo, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { Copy, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { Copy, MoreHorizontal, Pencil, PowerOff } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -17,7 +18,6 @@ import {
   type DataTableSort,
 } from '@/shared/components/ui/DataTable';
 import { formatDate } from '@/shared/lib/date';
-import { getFormationName } from '@/shared/lib/formations';
 import { ROUTES } from '@/shared/constants/routes';
 import type { Quiz } from '../../types';
 
@@ -87,14 +87,18 @@ function AdminQuizzesTableBase({
                 <Copy className="mr-2 size-3.5 text-muted-foreground" />
                 Dupliquer
               </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={() => onDelete?.(item)}
-                className="text-destructive focus:text-destructive"
-              >
-                <Trash2 className="mr-2 size-3.5" />
-                Supprimer
-              </DropdownMenuItem>
+              {item.isActive && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => onDelete?.(item)}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <PowerOff className="mr-2 size-3.5" />
+                    Désactiver
+                  </DropdownMenuItem>
+                </>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -106,10 +110,12 @@ function AdminQuizzesTableBase({
   const columns: DataTableColumn<Quiz>[] = useMemo(
     () => [
       {
-        key: 'slug',
+        key: 'idnumber',
         label: 'Référence',
         sortable: true,
-        render: (quiz) => <span className="text-xs font-medium text-foreground">{quiz.slug}</span>,
+        render: (quiz) => (
+          <span className="font-mono text-xs font-medium text-foreground">{quiz.idnumber}</span>
+        ),
       },
       {
         key: 'title',
@@ -118,30 +124,33 @@ function AdminQuizzesTableBase({
         render: (quiz) => <span className="text-xs text-muted-foreground">{quiz.title}</span>,
       },
       {
-        key: 'formationId',
-        label: 'Formation',
-        sortable: true,
-        render: (quiz) => (
-          <span className="text-xs text-muted-foreground">
-            {getFormationName(quiz.formationId) || '—'}
-          </span>
-        ),
+        key: 'isActive',
+        label: 'Statut',
+        sortable: false,
+        render: (quiz) =>
+          quiz.isActive ? (
+            <Badge
+              variant="outline"
+              className="border-emerald-500/40 bg-emerald-500/10 text-emerald-600 text-xs"
+            >
+              Active
+            </Badge>
+          ) : (
+            <Badge
+              variant="outline"
+              className="border-destructive/40 bg-destructive/10 text-destructive text-xs"
+            >
+              Désactivée
+            </Badge>
+          ),
       },
       {
-        key: 'questionCount',
-        label: 'Nb questions',
-        sortable: true,
-        render: (quiz) => (
-          <span className="text-xs text-muted-foreground tabular-nums">{quiz.questionCount}</span>
-        ),
-      },
-      {
-        key: 'activeQuestionCount',
-        label: 'Actives',
-        sortable: true,
+        key: 'learningPathIds',
+        label: 'Parcours liés',
+        sortable: false,
         render: (quiz) => (
           <span className="text-xs text-muted-foreground tabular-nums">
-            {quiz.activeQuestionCount}
+            {quiz.learningPathIds.length}
           </span>
         ),
       },
@@ -181,8 +190,8 @@ function AdminQuizzesTableBase({
       rowTestId="admin-quiz-row"
       onRowClick={handleRowClick}
       emptyState={{
-        title: 'Aucun quiz',
-        description: 'Aucun quiz pour le moment.',
+        title: 'Aucune banque de questions',
+        description: 'Créez votre première banque pour commencer.',
       }}
     />
   );
