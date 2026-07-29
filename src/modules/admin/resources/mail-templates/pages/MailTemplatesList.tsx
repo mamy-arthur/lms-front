@@ -15,6 +15,7 @@ import type { MailTemplate } from '../types';
 import { AdminMailTemplateFormDrawer } from './_components/admin-mail-template-form-drawer';
 import { AdminMailTemplatesFilter } from './_components/admin-mail-templates-filter';
 import { AdminMailTemplatesTable } from './_components/admin-mail-templates-table';
+import { ConfirmDialog } from '@/shared/components/confirm-dialog/ConfirmDialog';
 
 export function MailTemplatesList() {
   const ctrl = useModuleListController<MailTemplate>({
@@ -28,6 +29,7 @@ export function MailTemplatesList() {
   const { data, isLoading } = useMailTemplatesQuery(ctrl.params);
   const { mutate: deleteTemplate } = useDeleteMailTemplate();
   const [previewTemplate, setPreviewTemplate] = useState<MailTemplate | null>(null);
+  const [deletingItem, setDeletingItem] = useState<MailTemplate | null>(null);
 
   const tenantNames = useMemo(() => {
     const map: Record<string, string> = {};
@@ -65,7 +67,7 @@ export function MailTemplatesList() {
           />
           <Button
             onClick={ctrl.handleOpenCreate}
-            className="bg-(--color-primary) hover:bg-(--color-primary)/80 text-primary-foreground shrink-0"
+            className="bg-(--color-primary) hover:bg-primary/80 text-primary-foreground shrink-0"
           >
             <Plus className="size-4" />
             Nouveau template
@@ -85,7 +87,7 @@ export function MailTemplatesList() {
         onPageChange={ctrl.handlePageChange}
         onPageSizeChange={ctrl.handlePageSizeChange}
         onEdit={ctrl.handleEdit}
-        onDelete={(tpl) => deleteTemplate(tpl.id)}
+        onDelete={(tpl) => setDeletingItem(tpl)}
         onPreview={setPreviewTemplate}
         tenantNames={tenantNames}
       />
@@ -106,6 +108,22 @@ export function MailTemplatesList() {
           body={previewTemplate.body}
         />
       )}
+
+      <ConfirmDialog
+        open={deletingItem !== null}
+        title="Supprimer le template"
+        description={
+          deletingItem
+            ? `Êtes-vous sûr de vouloir supprimer « ${deletingItem.name} » ? Cette action est irréversible.`
+            : undefined
+        }
+        confirmLabel="Supprimer"
+        confirmClassName="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+        onClose={() => setDeletingItem(null)}
+        onConfirm={() => {
+          if (deletingItem) deleteTemplate(deletingItem.id);
+        }}
+      />
     </div>
   );
 }

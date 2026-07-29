@@ -5,4 +5,5 @@ import { ADMIN_MAIL_TEMPLATES_QUERY_KEY } from './useMailTemplatesQuery';
 export const useDuplicateMailTemplate = makeDuplicateMutation(
   adminMailTemplatesApi,
   ADMIN_MAIL_TEMPLATES_QUERY_KEY,
+  { success: 'Template dupliqué', error: 'Échec de la duplication du template' },
 );

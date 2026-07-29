@@ -20,6 +20,7 @@ import { useAuthStore } from '@/shared/stores/auth.store';
 import { getInitials } from '@/shared/lib/string/getInitials';
 import { apiGet, apiPatch } from '@/shared/lib/apiClient';
 import { uploadUserProfilePhoto } from '@/modules/shared/lib/uploadUserProfilePhoto';
+import { toast } from 'sonner';
 import { COUNTRIES } from '@/shared/constants/countries';
 import { TIMEZONES } from '@/shared/constants/timezones';
 import { LANGUAGES } from '@/shared/constants/languages';
@@ -138,8 +139,10 @@ export default function ProfileContent({
       setAuth({ ...user, name: `${firstName} ${lastName}`.trim() });
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
+      toast.success('Profil mis à jour');
     } catch {
       setSaveError('Échec de la mise à jour.');
+      toast.error('Échec de la mise à jour du profil');
     } finally {
       setSaving(false);
     }
@@ -152,7 +155,9 @@ export default function ProfileContent({
       await apiPatch(`${patchPath}/${user.id}`, { biography: bioTemp || null });
       setBiography(bioTemp);
       setEditingBio(false);
+      toast.success('Biographie mise à jour');
     } catch {
+      toast.error('Échec de la mise à jour de la biographie');
       // keep editing open on error
     } finally {
       setBioSaving(false);
@@ -178,8 +183,10 @@ export default function ProfileContent({
       setConfirmPassword('');
       setPwdSuccess(true);
       setTimeout(() => setPwdSuccess(false), 3000);
+      toast.success('Mot de passe modifié');
     } catch {
       setPwdError('Échec du changement de mot de passe.');
+      toast.error('Échec du changement de mot de passe');
     } finally {
       setPwdSaving(false);
     }

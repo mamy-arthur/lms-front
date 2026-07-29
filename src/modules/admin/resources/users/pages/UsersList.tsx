@@ -1,7 +1,9 @@
 'use client';
 
+import { useState } from 'react';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/shared/components/confirm-dialog/ConfirmDialog';
 import { UserSearch, UsersFilter } from '@modules/shared/components/users';
 import { AdminUserFormDrawer } from './_components/admin-user-form-drawer';
 import { AdminUsersTable } from './_components/admin-users-table';
@@ -10,6 +12,7 @@ import type { User, UserSearchParams } from '../types';
 import { useUsersListController } from '@/modules/shared/hooks/useUsersListController';
 import { Role } from '@/shared/constants/roles';
 import { useToggleUserActive } from '../hooks/useToggleUserActive';
+import { useDeleteUser } from '../hooks/useDeleteUser';
 
 const ROLE_OPTIONS = [
   { value: Role.SUPER_ADMIN, label: 'Super admin' },
@@ -45,6 +48,8 @@ export function UsersList() {
 
   const { data, isLoading } = useUsersQuery(params);
   const toggleActive = useToggleUserActive();
+  const deleteUser = useDeleteUser();
+  const [deletingUser, setDeletingUser] = useState<User | null>(null);
 
   return (
     <div className="bg-background">
@@ -71,7 +76,7 @@ export function UsersList() {
             />
             <Button
               onClick={handleOpenCreate}
-              className="bg-(--color-primary) hover:bg-(--color-primary)/80 text-primary-foreground shrink-0"
+              className="bg-(--color-primary) hover:bg-primary/80 text-primary-foreground shrink-0"
             >
               <Plus className="size-4" />
               Nouveau
@@ -94,7 +99,7 @@ export function UsersList() {
           onToggleActive={(user) =>
             toggleActive.mutate({ id: user.id, is_active: !user.is_active })
           }
-          onDelete={() => {}}
+          onDelete={(user) => setDeletingUser(user)}
         />
       </div>
 
@@ -103,6 +108,22 @@ export function UsersList() {
         onClose={handleCloseDrawer}
         onSuccess={handleSuccess}
         user={editingUser}
+      />
+
+      <ConfirmDialog
+        open={deletingUser !== null}
+        title="Supprimer l'utilisateur"
+        description={
+          deletingUser
+            ? `Êtes-vous sûr de vouloir supprimer « ${deletingUser.full_name || `${deletingUser.first_name} ${deletingUser.last_name}`.trim()} » ? Cette action est irréversible.`
+            : undefined
+        }
+        confirmLabel="Supprimer"
+        confirmClassName="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+        onClose={() => setDeletingUser(null)}
+        onConfirm={() => {
+          if (deletingUser) deleteUser.mutate(deletingUser.id);
+        }}
       />
     </div>
   );

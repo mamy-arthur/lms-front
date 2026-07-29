@@ -1,4 +1,12 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
+
+interface MutationMessages {
+  success?: string;
+  error?: string;
+}
+
+const DEFAULT_ERROR = 'Une erreur est survenue';
 
 interface ResourceApi<TCreate, TUpdate> {
   create: (data: TCreate) => Promise<unknown>;
@@ -18,12 +26,17 @@ interface ResourceApi<TCreate, TUpdate> {
 export function makeCreateMutation<TCreate>(
   api: Pick<ResourceApi<TCreate, unknown>, 'create'>,
   queryKey: readonly unknown[],
+  messages?: MutationMessages,
 ) {
   return function useCreateResource() {
     const queryClient = useQueryClient();
     return useMutation({
       mutationFn: (data: TCreate) => api.create(data),
-      onSuccess: () => queryClient.invalidateQueries({ queryKey }),
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey });
+        if (messages?.success) toast.success(messages.success);
+      },
+      onError: () => toast.error(messages?.error ?? DEFAULT_ERROR),
     });
   };
 }
@@ -31,12 +44,17 @@ export function makeCreateMutation<TCreate>(
 export function makeUpdateMutation<TUpdate>(
   api: Pick<ResourceApi<unknown, TUpdate>, 'update'>,
   queryKey: readonly unknown[],
+  messages?: MutationMessages,
 ) {
   return function useUpdateResource() {
     const queryClient = useQueryClient();
     return useMutation({
       mutationFn: ({ id, data }: { id: string; data: TUpdate }) => api.update(id, data),
-      onSuccess: () => queryClient.invalidateQueries({ queryKey }),
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey });
+        if (messages?.success) toast.success(messages.success);
+      },
+      onError: () => toast.error(messages?.error ?? DEFAULT_ERROR),
     });
   };
 }
@@ -44,12 +62,17 @@ export function makeUpdateMutation<TUpdate>(
 export function makeDeleteMutation(
   api: Pick<ResourceApi<unknown, unknown>, 'remove'>,
   queryKey: readonly unknown[],
+  messages?: MutationMessages,
 ) {
   return function useDeleteResource() {
     const queryClient = useQueryClient();
     return useMutation({
       mutationFn: (id: string) => api.remove(id),
-      onSuccess: () => queryClient.invalidateQueries({ queryKey }),
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey });
+        if (messages?.success) toast.success(messages.success);
+      },
+      onError: () => toast.error(messages?.error ?? DEFAULT_ERROR),
     });
   };
 }
@@ -57,12 +80,17 @@ export function makeDeleteMutation(
 export function makeDuplicateMutation(
   api: Pick<ResourceApi<unknown, unknown>, 'duplicate'>,
   queryKey: readonly unknown[],
+  messages?: MutationMessages,
 ) {
   return function useDuplicateResource() {
     const queryClient = useQueryClient();
     return useMutation({
       mutationFn: (id: string) => api.duplicate(id),
-      onSuccess: () => queryClient.invalidateQueries({ queryKey }),
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey });
+        if (messages?.success) toast.success(messages.success);
+      },
+      onError: () => toast.error(messages?.error ?? DEFAULT_ERROR),
     });
   };
 }

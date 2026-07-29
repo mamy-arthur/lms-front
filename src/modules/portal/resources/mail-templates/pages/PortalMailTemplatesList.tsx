@@ -14,6 +14,7 @@ import type { MailTemplate } from '../types';
 import { MailTemplatesFilter } from '@modules/shared/components/mail-templates/mail-templates-filter';
 import { PortalMailTemplateFormDrawer } from './_components/portal-mail-template-form-drawer';
 import { PortalMailTemplatesTable } from './_components/portal-mail-templates-table';
+import { ConfirmDialog } from '@/shared/components/confirm-dialog/ConfirmDialog';
 
 export function PortalMailTemplatesList() {
   const ctrl = useModuleListController<MailTemplate>({
@@ -23,6 +24,7 @@ export function PortalMailTemplatesList() {
   const { data, isLoading } = usePortalMailTemplatesQuery(ctrl.params);
   const { mutate: deleteTemplate } = useDeletePortalMailTemplate();
   const [previewTemplate, setPreviewTemplate] = useState<MailTemplate | null>(null);
+  const [deletingItem, setDeletingItem] = useState<MailTemplate | null>(null);
 
   return (
     <div className="bg-background">
@@ -53,7 +55,7 @@ export function PortalMailTemplatesList() {
           />
           <Button
             onClick={ctrl.handleOpenCreate}
-            className="bg-(--color-primary) hover:bg-(--color-primary)/80 text-primary-foreground shrink-0"
+            className="bg-(--color-primary) hover:bg-primary/80 text-primary-foreground shrink-0"
           >
             <Plus className="size-4" />
             Nouveau template
@@ -73,7 +75,7 @@ export function PortalMailTemplatesList() {
         onPageChange={ctrl.handlePageChange}
         onPageSizeChange={ctrl.handlePageSizeChange}
         onEdit={ctrl.handleEdit}
-        onDelete={(tpl) => deleteTemplate(tpl.id)}
+        onDelete={(tpl) => setDeletingItem(tpl)}
         onPreview={setPreviewTemplate}
       />
 
@@ -93,6 +95,22 @@ export function PortalMailTemplatesList() {
           body={previewTemplate.body}
         />
       )}
+
+      <ConfirmDialog
+        open={deletingItem !== null}
+        title="Supprimer le template"
+        description={
+          deletingItem
+            ? `Êtes-vous sûr de vouloir supprimer « ${deletingItem.name} » ? Cette action est irréversible.`
+            : undefined
+        }
+        confirmLabel="Supprimer"
+        confirmClassName="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+        onClose={() => setDeletingItem(null)}
+        onConfirm={() => {
+          if (deletingItem) deleteTemplate(deletingItem.id);
+        }}
+      />
     </div>
   );
 }

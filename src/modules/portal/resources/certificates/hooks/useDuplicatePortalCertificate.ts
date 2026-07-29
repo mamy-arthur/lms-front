@@ -5,4 +5,5 @@ import { PORTAL_CERTIFICATES_QUERY_KEY } from './usePortalCertificatesQuery';
 export const useDuplicatePortalCertificate = makeDuplicateMutation(
   portalCertificatesApi,
   PORTAL_CERTIFICATES_QUERY_KEY,
+  { success: 'Attestation dupliquée', error: 'Échec de la duplication de l’attestation' },
 );

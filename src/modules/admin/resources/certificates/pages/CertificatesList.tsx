@@ -15,6 +15,7 @@ import { useDeleteCertificate } from '../hooks/useDeleteCertificate';
 import type { Certificate } from '../types';
 import { AdminCertificateFormDrawer } from './_components/admin-certificate-form-drawer';
 import { AdminCertificatesTable } from './_components/admin-certificates-table';
+import { ConfirmDialog } from '@/shared/components/confirm-dialog/ConfirmDialog';
 
 export function CertificatesList() {
   const ctrl = useModuleListController<Certificate>({
@@ -28,6 +29,7 @@ export function CertificatesList() {
   const { data, isLoading } = useCertificatesQuery(ctrl.params);
   const deleteMutation = useDeleteCertificate();
   const [previewCert, setPreviewCert] = useState<Certificate | null>(null);
+  const [deletingItem, setDeletingItem] = useState<Certificate | null>(null);
 
   const tenantNames = useMemo(() => {
     const map: Record<string, string> = {};
@@ -65,7 +67,7 @@ export function CertificatesList() {
           />
           <Button
             onClick={ctrl.handleOpenCreate}
-            className="bg-(--color-primary) hover:bg-(--color-primary)/80 text-primary-foreground shrink-0"
+            className="bg-(--color-primary) hover:bg-primary/80 text-primary-foreground shrink-0"
           >
             <Plus className="size-4" />
             Nouvelle attestation
@@ -85,7 +87,7 @@ export function CertificatesList() {
         onPageChange={ctrl.handlePageChange}
         onPageSizeChange={ctrl.handlePageSizeChange}
         onEdit={ctrl.handleEdit}
-        onDelete={(cert) => deleteMutation.mutate(cert.id)}
+        onDelete={(cert) => setDeletingItem(cert)}
         onPreview={setPreviewCert}
         tenantNames={tenantNames}
       />
@@ -106,6 +108,22 @@ export function CertificatesList() {
           body={previewCert.body}
         />
       )}
+
+      <ConfirmDialog
+        open={deletingItem !== null}
+        title="Supprimer l'attestation"
+        description={
+          deletingItem
+            ? `Êtes-vous sûr de vouloir supprimer « ${deletingItem.name} » ? Cette action est irréversible.`
+            : undefined
+        }
+        confirmLabel="Supprimer"
+        confirmClassName="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+        onClose={() => setDeletingItem(null)}
+        onConfirm={() => {
+          if (deletingItem) deleteMutation.mutate(deletingItem.id);
+        }}
+      />
     </div>
   );
 }

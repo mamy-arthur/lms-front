@@ -1,4 +1,4 @@
-import { apiGet, apiPatch, apiPost } from '@/shared/lib/apiClient';
+import { apiDelete, apiGet, apiPatch, apiPost } from '@/shared/lib/apiClient';
 import type {
   ClientUser,
   ClientUserSearchParams,
@@ -30,4 +30,6 @@ export const ClientUsersApi = {
 
   update: (id: string, data: UpdateClientUserPayload): Promise<{ data: ClientUser }> =>
     apiPatch<{ data: ClientUser }>(`users/${id}`, data),
+
+  remove: (id: string): Promise<void> => apiDelete(`users/${id}`),
 } as const;
