@@ -2,6 +2,7 @@
 
 import { memo, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { TENANT_USERS_QUERY_KEY } from '../hooks/useClientUsersQuery';
 import { z } from 'zod';
 import {
@@ -179,8 +180,15 @@ function UserFormDrawerBase({ open, onClose, onSuccess, user }: UserFormDrawerPr
   const onSubmitWithPhoto = useCallback(
     async (values: Record<string, unknown>) => {
       if (isEdit && user && pendingPhotoRef.current) {
+        let mediaId: string;
         try {
-          const mediaId = await uploadUserProfilePhoto(user.id, pendingPhotoRef.current, 'users');
+          const media = await uploadUserProfilePhoto(user.id, pendingPhotoRef.current, 'users');
+          mediaId = media.id;
+        } catch {
+          toast.error("Échec de l'upload photo. Réessayez.");
+          return;
+        }
+        try {
           await updateMutation.mutateAsync({
             id: user.id,
             data: {
@@ -203,10 +211,11 @@ function UserFormDrawerBase({ open, onClose, onSuccess, user }: UserFormDrawerPr
           onSuccess?.();
           onClose();
         } catch {
-          /* mutation error handled */
+          toast.error("Échec de la mise à jour de l'utilisateur.");
         }
       } else if (!isEdit && pendingPhotoRef.current) {
         // Création : créer d'abord l'utilisateur, puis uploader la photo
+        let newUserId: string;
         try {
           const res = await createMutation.mutateAsync({
             first_name: values.first_name as string,
@@ -224,16 +233,21 @@ function UserFormDrawerBase({ open, onClose, onSuccess, user }: UserFormDrawerPr
             timezone: (values.timezone as string | null) ?? null,
             preferred_language: (values.preferred_language as string | null) ?? null,
           } as CreateClientUserPayload);
-          const newUserId = (res as { data: { id: string } }).data.id;
-          await uploadUserProfilePhoto(newUserId, pendingPhotoRef.current, 'users');
-          // Invalider après l'upload pour que la photo soit incluse dans le refetch
-          await queryClient.invalidateQueries({ queryKey: TENANT_USERS_QUERY_KEY });
-          pendingPhotoRef.current = null;
-          onSuccess?.();
-          onClose();
+          newUserId = (res as { data: { id: string } }).data.id;
         } catch {
-          /* mutation error handled */
+          toast.error("Échec de la création de l'utilisateur.");
+          return;
         }
+        // Upload séparé — l'utilisateur est déjà créé, l'échec photo ne bloque pas
+        try {
+          await uploadUserProfilePhoto(newUserId, pendingPhotoRef.current, 'users');
+        } catch {
+          toast.error("Utilisateur créé, mais l'upload photo a échoué.");
+        }
+        await queryClient.invalidateQueries({ queryKey: TENANT_USERS_QUERY_KEY });
+        pendingPhotoRef.current = null;
+        onSuccess?.();
+        onClose();
       } else {
         formState.onSubmit(values);
       }

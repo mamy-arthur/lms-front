@@ -18,17 +18,16 @@ import {
 } from '@/components/ui/select';
 import { useAuthStore } from '@/shared/stores/auth.store';
 import { getInitials } from '@/shared/lib/string/getInitials';
-import { apiGet, apiPatch, apiUpload } from '@/shared/lib/apiClient';
+import { apiGet, apiPatch } from '@/shared/lib/apiClient';
+import { uploadUserProfilePhoto } from '@/modules/shared/lib/uploadUserProfilePhoto';
 import { COUNTRIES } from '@/shared/constants/countries';
 import { TIMEZONES } from '@/shared/constants/timezones';
 import { LANGUAGES } from '@/shared/constants/languages';
 import { AddressAutocomplete } from '@modules/shared/components/users/address-autocomplete';
 
-interface MediaResponse {
-  data: { id: string; url: string; mime_type: string };
-}
-
 interface FullUser {
+  first_name?: string;
+  last_name?: string;
   address?: string | null;
   zip_code?: string | null;
   city?: string | null;
@@ -56,9 +55,8 @@ export default function ProfileContent({
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  const parts = user?.name.split(' ') ?? [];
-  const [firstName, setFirstName] = useState(parts[0] ?? '');
-  const [lastName, setLastName] = useState(parts.slice(1).join(' '));
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
 
   // Profile fields
   const [address, setAddress] = useState('');
@@ -88,6 +86,8 @@ export default function ProfileContent({
     if (!user?.id) return;
     apiGet<{ data: FullUser }>(`${patchPath}/${user.id}`)
       .then(({ data }) => {
+        if (data.first_name !== undefined) setFirstName(data.first_name);
+        if (data.last_name !== undefined) setLastName(data.last_name);
         setAddress(data.address ?? '');
         setZipCode(data.zip_code ?? '');
         setCity(data.city ?? '');
@@ -107,13 +107,9 @@ export default function ProfileContent({
     setUploadError(null);
     setUploading(true);
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      const res = await apiUpload<MediaResponse>(
-        `${uploadPath}/${user.id}/profile-photo`,
-        formData,
-      );
-      setAuth({ ...user, avatar: res.data.url });
+      const routePrefix = uploadPath as 'platform/users' | 'users';
+      const media = await uploadUserProfilePhoto(user.id, file, routePrefix);
+      setAuth({ ...user, avatar: media.url });
     } catch {
       setUploadError("Échec de l'upload.");
     } finally {

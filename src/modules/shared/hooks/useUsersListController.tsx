@@ -49,22 +49,66 @@ export function useUsersListController<TUser, TParams = Record<string, unknown>>
     [includeTenantFilter],
   );
 
-  // Debounce sur la recherche texte
+  // Refs pour capturer les valeurs courantes de filtres dans le callback debounce
+  const draftRoleRef = useRef(draftRole);
+  const draftStatusRef = useRef(draftStatus);
+  const draftTenantRef = useRef(draftTenant);
+  useEffect(() => {
+    draftRoleRef.current = draftRole;
+  }, [draftRole]);
+  useEffect(() => {
+    draftStatusRef.current = draftStatus;
+  }, [draftStatus]);
+  useEffect(() => {
+    draftTenantRef.current = draftTenant;
+  }, [draftTenant]);
+
+  // Debounce uniquement sur la recherche texte — les filtres select s'appliquent immédiatement
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
     debounceTimer.current = setTimeout(() => {
-      applySearch(draftSearch, draftRole, draftStatus, draftTenant);
+      applySearch(
+        draftSearch,
+        draftRoleRef.current,
+        draftStatusRef.current,
+        draftTenantRef.current,
+      );
     }, debounceMs);
     return () => {
       if (debounceTimer.current) clearTimeout(debounceTimer.current);
     };
-  }, [draftSearch, draftRole, draftStatus, draftTenant, debounceMs, applySearch]);
+  }, [draftSearch, debounceMs, applySearch]);
 
-  // Application immédiate pour les filtres (rôle, statut, tenant)
+  // Handlers immédiats pour les filtres (rôle, statut, tenant)
+  const handleRoleChange = useCallback(
+    (role: string) => {
+      setDraftRole(role);
+      applySearch(draftSearch, role, draftStatusRef.current, draftTenantRef.current);
+    },
+    [applySearch, draftSearch],
+  );
+
+  const handleStatusChange = useCallback(
+    (status: string) => {
+      setDraftStatus(status);
+      applySearch(draftSearch, draftRoleRef.current, status, draftTenantRef.current);
+    },
+    [applySearch, draftSearch],
+  );
+
+  const handleTenantChange = useCallback(
+    (tenant: string) => {
+      setDraftTenant(tenant);
+      applySearch(draftSearch, draftRoleRef.current, draftStatusRef.current, tenant);
+    },
+    [applySearch, draftSearch],
+  );
+
+  // Application explicite (bouton submit ou touche entrée)
   const handleSearch = useCallback(() => {
-    applySearch(draftSearch, draftRole, draftStatus, draftTenant);
-  }, [applySearch, draftSearch, draftRole, draftStatus, draftTenant]);
+    applySearch(draftSearch, draftRoleRef.current, draftStatusRef.current, draftTenantRef.current);
+  }, [applySearch, draftSearch]);
 
   const handleSort = useCallback((column: string) => {
     setParams((prev) => ({
@@ -123,11 +167,11 @@ export function useUsersListController<TUser, TParams = Record<string, unknown>>
     draftSearch,
     setDraftSearch,
     draftRole,
-    setDraftRole,
+    setDraftRole: handleRoleChange,
     draftStatus,
-    setDraftStatus,
+    setDraftStatus: handleStatusChange,
     draftTenant,
-    setDraftTenant,
+    setDraftTenant: handleTenantChange,
     params,
     setParams,
     sort,

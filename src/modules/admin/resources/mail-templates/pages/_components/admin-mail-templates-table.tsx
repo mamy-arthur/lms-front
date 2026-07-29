@@ -52,14 +52,23 @@ export function AdminMailTemplatesTable({
       key: 'name',
       label: 'Nom',
       sortable: true,
-      render: (tpl) => <span className="text-xs font-medium text-foreground">{tpl.name}</span>,
+      cellClassName: 'w-1/3',
+      render: (tpl) => (
+        <div className="text-wrap">
+          <span className="text-xs font-medium text-foreground wrap-break-word">{tpl.name}</span>
+        </div>
+      ),
     },
     {
       key: 'subject',
       label: 'Sujet',
       sortable: false,
+      headerClassName: 'text-center',
+      cellClassName: 'text-center',
       render: (tpl) => (
-        <span className="text-xs text-muted-foreground truncate max-w-xs block">{tpl.subject}</span>
+        <div className="text-wrap">
+          <span className="text-xs text-muted-foreground wrap-break-word">{tpl.subject}</span>
+        </div>
       ),
     },
     {
@@ -76,6 +85,8 @@ export function AdminMailTemplatesTable({
       key: 'isActive',
       label: 'Statut',
       sortable: false,
+      headerClassName: 'text-center',
+      cellClassName: 'text-center',
       render: (tpl) =>
         tpl.isActive ? (
           <Badge
@@ -94,10 +105,10 @@ export function AdminMailTemplatesTable({
     },
     {
       key: 'id',
-      label: 'Actions',
+      label: '',
       sortable: false,
       render: (tpl) => (
-        <div onClick={(e) => e.stopPropagation()}>
+        <div className="text-right" onClick={(e) => e.stopPropagation()}>
           <MailTemplateActions
             templateLabel={tpl.name}
             onPreview={() => onPreview(tpl)}
@@ -125,6 +136,7 @@ export function AdminMailTemplatesTable({
         onPageChange={onPageChange}
         onPageSizeChange={onPageSizeChange}
         onRowClick={(tpl) => onPreview(tpl)}
+        tableClassName="table-fixed"
         emptyState={{
           icon: <Mail className="size-8 text-muted-foreground" />,
           title: 'Aucun template mail',

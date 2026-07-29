@@ -1,5 +1,3 @@
-'use client';
-
 import ProfileContent from '@/modules/shared/components/profile/ProfileContent';
 
 export default function ProfilePage() {

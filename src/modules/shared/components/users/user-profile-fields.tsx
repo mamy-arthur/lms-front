@@ -76,7 +76,7 @@ export function UserProfileFields({ form }: { form: UseFormReturn<any> }) {
         )}
       />
 
-      {/* Adresse — autocomplétion Google activée si pays renseigné */}
+      {/* Adresse — autocomplétion LocationIQ activée si pays renseigné */}
       <FieldRoot
         control={form.control}
         name="address"

@@ -30,6 +30,7 @@ import { Switch } from '@/components/ui/switch';
 import { UserPhotoField } from '@modules/shared/components/users/user-photo-field';
 import { UserProfileFields } from '@modules/shared/components/users/user-profile-fields';
 import { uploadUserProfilePhoto } from '@/modules/shared/lib/uploadUserProfilePhoto';
+import { toast } from 'sonner';
 import { ADMIN_USERS_QUERY_KEY } from '../../hooks/useUsersQuery';
 
 const passwordSchema = z
@@ -199,12 +200,19 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
   const onSubmitWithPhoto = useCallback(
     async (values: Record<string, unknown>) => {
       if (isEdit && user && pendingPhotoRef.current) {
+        let mediaId: string;
         try {
-          const mediaId = await uploadUserProfilePhoto(
+          const media = await uploadUserProfilePhoto(
             user.id,
             pendingPhotoRef.current,
             'platform/users',
           );
+          mediaId = media.id;
+        } catch {
+          toast.error("Échec de l'upload photo. Réessayez.");
+          return;
+        }
+        try {
           await updateMutation.mutateAsync({
             id: user.id,
             data: {
@@ -228,10 +236,11 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
           onSuccess?.();
           onClose();
         } catch {
-          // laisser l'erreur remonter via la mutation
+          toast.error("Échec de la mise à jour de l'utilisateur.");
         }
       } else if (!isEdit && pendingPhotoRef.current) {
         // Création : créer d'abord l'utilisateur, puis uploader la photo
+        let newUserId: string;
         try {
           const res = await createMutation.mutateAsync({
             first_name: values.first_name as string,
@@ -249,16 +258,21 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
             timezone: (values.timezone as string | null) ?? null,
             preferred_language: (values.preferred_language as string | null) ?? null,
           } as CreateUserPayload);
-          const newUserId = (res as { data: { id: string } }).data.id;
-          await uploadUserProfilePhoto(newUserId, pendingPhotoRef.current, 'platform/users');
-          // Invalider après l'upload pour que la photo soit incluse dans le refetch
-          await queryClient.invalidateQueries({ queryKey: ADMIN_USERS_QUERY_KEY });
-          pendingPhotoRef.current = null;
-          onSuccess?.();
-          onClose();
+          newUserId = (res as { data: { id: string } }).data.id;
         } catch {
-          // laisser l'erreur remonter via la mutation
+          toast.error("Échec de la création de l'utilisateur.");
+          return;
         }
+        // Upload séparé — l'utilisateur est déjà créé, l'échec photo ne bloque pas
+        try {
+          await uploadUserProfilePhoto(newUserId, pendingPhotoRef.current, 'platform/users');
+        } catch {
+          toast.error("Utilisateur créé, mais l'upload photo a échoué.");
+        }
+        await queryClient.invalidateQueries({ queryKey: ADMIN_USERS_QUERY_KEY });
+        pendingPhotoRef.current = null;
+        onSuccess?.();
+        onClose();
       } else {
         formState.onSubmit(values);
       }

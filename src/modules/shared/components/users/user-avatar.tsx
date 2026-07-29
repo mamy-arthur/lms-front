@@ -1,3 +1,5 @@
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+
 function getInitials(first_name?: string, last_name?: string): string {
   const first = first_name ? first_name[0] : '';
   const last = last_name ? last_name[0] : '';
@@ -34,16 +36,15 @@ export function UserAvatar({ name, first_name, last_name, photoUrl }: UserAvatar
 
   return (
     <div className="flex items-center gap-3">
-      <div
-        className={`size-9 rounded-full flex items-center justify-center text-xs font-semibold shrink-0 overflow-hidden ${!photoUrl ? `${colors.bg} ${colors.text}` : ''}`}
-        aria-hidden="true"
-      >
-        {photoUrl ? (
-          <img src={photoUrl} alt={displayName} className="size-full object-cover" />
-        ) : (
-          getInitials(first_name, last_name)
-        )}
-      </div>
+      <Avatar className="size-9 rounded-full">
+        <AvatarImage src={photoUrl ?? undefined} alt={displayName} />
+        <AvatarFallback
+          className={`text-xs font-semibold ${colors.bg} ${colors.text}`}
+          aria-hidden="true"
+        >
+          {getInitials(first_name, last_name)}
+        </AvatarFallback>
+      </Avatar>
       <div className="min-w-0">
         <p className="text-xs font-medium text-foreground truncate">{displayName}</p>
       </div>
