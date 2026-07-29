@@ -59,7 +59,7 @@ export function useUsersListController<TUser, TParams = Record<string, unknown>>
     return () => {
       if (debounceTimer.current) clearTimeout(debounceTimer.current);
     };
-  }, [draftSearch, debounceMs]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [draftSearch, draftRole, draftStatus, draftTenant, debounceMs, applySearch]);
 
   // Application immédiate pour les filtres (rôle, statut, tenant)
   const handleSearch = useCallback(() => {

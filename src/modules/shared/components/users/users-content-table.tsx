@@ -24,8 +24,13 @@ interface UsersContentRow {
   profile_photo?: { id: string; url: string; mime_type: string } | null;
   // champs optionnels pour compatibilité rétroactive
   username?: string;
-  city?: string;
-  country?: string;
+  address?: string | null;
+  zip_code?: string | null;
+  city?: string | null;
+  country?: string | null;
+  biography?: string | null;
+  timezone?: string | null;
+  preferred_language?: string | null;
   lastLogin?: string;
   createdAt?: string;
   isActive?: boolean;
