@@ -5,6 +5,7 @@ import {
   forwardRef,
   useCallback,
   useContext,
+  useEffect,
   useImperativeHandle,
   useMemo,
   useRef,
@@ -435,11 +436,12 @@ export type ProgramFlowProps = {
   initialEdges?: Edge<EdgeRuleData>[];
   initialNodeOrder?: string[];
   onUnlinkCompetency?: (competencyId: string) => void;
+  onModulesChange?: (hasModules: boolean) => void;
   learningPathId?: string;
 };
 
 const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function ProgramFlow(
-  { initialNodes, initialEdges, initialNodeOrder, onUnlinkCompetency },
+  { initialNodes, initialEdges, initialNodeOrder, onUnlinkCompetency, onModulesChange },
   ref,
 ) {
   const [nodes, setNodes] = useState<StepNode[]>(initialNodes ?? [initialEmailNode]);
@@ -504,6 +506,11 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
     }),
     [nodes],
   );
+
+  // Notify parent whenever the presence of module nodes changes
+  useEffect(() => {
+    onModulesChange?.(hasModule);
+  }, [hasModule, onModulesChange]);
 
   // ── IDs of modules already present in the flow ──
   const usedModuleIds = useMemo(

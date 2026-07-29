@@ -3,7 +3,6 @@
 import { useCallback, useState } from 'react';
 import { usePathname, useSearchParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { WalletSummaryCards } from '@/modules/shared/components/wallet/WalletSummaryCards';
 import { WalletTransactionsTable } from '@/modules/shared/components/wallet/WalletTransactionsTable';
 import { TransactionHistoryFilter } from '@/modules/shared/components/wallet/WalletTransactionHistoryFilter';
 import { WalletTabs, type WalletTab } from '@/modules/shared/components/wallet/WalletTabs';
@@ -16,6 +15,8 @@ import { useRequestStore } from '@/modules/shared/lib/request-store';
 import { WalletDepositDrawer } from './_components/WalletDepositDrawer';
 import { invoices } from './invoice-data';
 import type { ClientInvoice } from '../types';
+import { Search } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 
 const TABS: WalletTab[] = [
   { id: 'wallet', label: 'Portefeuille' },
@@ -34,12 +35,6 @@ export function ClientWalletPage() {
   const ctrl = useWalletController();
   const { data, isLoading } = useWalletTransactionsQuery(ctrl.params);
 
-  const walletBalances = {
-    totalPoints: 24800,
-    principalBalance: 32450,
-    nonRefundableBalance: 5950,
-  } as const;
-
   const handleTabChange = useCallback(
     (tabId: string) => {
       const params = new URLSearchParams(searchParams.toString());
@@ -57,7 +52,7 @@ export function ClientWalletPage() {
 
   return (
     <div className="bg-background">
-      <div className="space-y-6">
+      <div>
         <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Portefeuille</h1>
@@ -67,79 +62,67 @@ export function ClientWalletPage() {
                 : 'Consultez vos factures.'}
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            {activeTab === 'wallet' && (
-              <Button
-                onClick={() => setDrawerOpen(true)}
-                className="bg-(--color-primary) hover:bg-(--color-primary)/80 text-primary-foreground"
-              >
-                Créditer mon portefeuille
-              </Button>
-            )}
-            {activeTab === 'invoice' && (
-              <Button
-                onClick={() => setDemandeOpen(true)}
-                className="bg-(--color-primary) hover:bg-(--color-primary)/80 text-primary-foreground"
-              >
-                Faire une demande
-              </Button>
-            )}
-          </div>
         </header>
-
-        <WalletTabs tabs={TABS} activeTab={activeTab} onTabChange={handleTabChange} />
+        <div className="mt-5">
+          <WalletTabs tabs={TABS} activeTab={activeTab} onTabChange={handleTabChange} />
+        </div>
 
         {activeTab === 'wallet' ? (
           <>
-            <div className="space-y-4">
-              <div className="min-h-112.5 space-y-3  px-4  sm:px-6">
-                <div className="-mx-1 overflow-x-auto px-1 pb-1">
-                  <div className="flex min-w-max flex-col items-start gap-2 sm:min-w-0 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-                    <div className="shrink-0">
-                      <h2 className="text-base font-semibold">Historiques des transactions</h2>
-                      <p className="mt-0.5 hidden text-xs text-muted-foreground sm:block">
-                        Suivez l'historique des transactions dans votre portefeuille.
-                      </p>
-                    </div>
-                    <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-4">
-                      <div className="w-full overflow-x-auto sm:w-auto sm:overflow-visible">
-                        <div>
-                          <WalletSummaryCards {...walletBalances} />
-                        </div>
-                      </div>
-                      <div className="self-end sm:self-auto">
-                        <TransactionHistoryFilter onApplyFilters={ctrl.handleApplyFilters} />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  <WalletTransactionsTable
-                    data={data?.data ?? []}
-                    sort={ctrl.sort}
-                    page={ctrl.page}
-                    pageSize={ctrl.pageSize}
-                    total={data?.total ?? 0}
-                    hasQuery={ctrl.hasQuery}
-                    isLoading={isLoading}
-                    onSort={ctrl.handleSort}
-                    onPageChange={ctrl.handlePageChange}
-                    onPageSizeChange={ctrl.handlePageSizeChange}
+            <div className="mt-5 space-y-3">
+              <div className="flex justify-between w-full shrink-0 flex-col sm:w-auto sm:flex-row sm:items-center sm:gap-2">
+                <div className="relative w-full sm:max-w-sm">
+                  <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Rechercher par référence ou client ..."
+                    className="pl-8 text-xs"
                   />
                 </div>
+                <div className="flex items-center gap-1">
+                  <TransactionHistoryFilter onApplyFilters={ctrl.handleApplyFilters} />
+                  <Button
+                    onClick={() => setDrawerOpen(true)}
+                    className="bg-(--color-primary) hover:bg-(--color-primary)/80 text-primary-foreground"
+                  >
+                    Créditer mon portefeuille
+                  </Button>
+                </div>
+              </div>
+              <div className="space-y-3">
+                <WalletTransactionsTable
+                  data={data?.data ?? []}
+                  sort={ctrl.sort}
+                  page={ctrl.page}
+                  pageSize={ctrl.pageSize}
+                  total={data?.total ?? 0}
+                  hasQuery={ctrl.hasQuery}
+                  isLoading={isLoading}
+                  onSort={ctrl.handleSort}
+                  onPageChange={ctrl.handlePageChange}
+                  onPageSizeChange={ctrl.handlePageSizeChange}
+                />
               </div>
             </div>
           </>
         ) : (
-          <div className="min-h-112.5 space-y-3  px-4  sm:px-6">
-            <div className="flex flex-row items-center justify-between pb-2">
-              <div>
-                <h2 className="text-base font-semibold">Factures</h2>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  Consultez et téléchargez vos documents de facturation.
-                </p>
+          <div className="mt-5 space-y-3">
+            <div className="flex flex-row items-center justify-between">
+              <div className="relative w-full sm:max-w-sm">
+                <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Rechercher par référence ou client ..."
+                  className="pl-8 text-xs"
+                />
               </div>
-              <InvoiceFilters onApplyFilters={() => {}} />
+              <div className="flex items-center gap-1">
+                <InvoiceFilters onApplyFilters={() => {}} />
+                <Button
+                  onClick={() => setDemandeOpen(true)}
+                  className="bg-(--color-primary) hover:bg-(--color-primary)/80 text-primary-foreground"
+                >
+                  Faire une demande
+                </Button>
+              </div>
             </div>
             <div>
               <InvoiceTabContent

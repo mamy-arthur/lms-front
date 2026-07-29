@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Filter, Search, SlidersHorizontal, X } from 'lucide-react';
+import { Settings2, SlidersHorizontal, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -52,13 +52,9 @@ export function InvoiceFilters({ onApplyFilters }: InvoiceFiltersProps) {
       }}
     >
       <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-7 gap-1.5 text-xs  text-(--color-primary) hover:text-(--color-primary)"
-        >
-          <Filter className="size-3.5" />
-          Rechercher / filtrer
+        <Button variant="outline" className="gap-1.5 text-xs">
+          <Settings2 />
+          Filtre
         </Button>
       </PopoverTrigger>
 
@@ -79,16 +75,6 @@ export function InvoiceFilters({ onApplyFilters }: InvoiceFiltersProps) {
         </div>
 
         <div className="flex flex-col gap-4 px-5 pb-4">
-          <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Rechercher par référence ou client..."
-              value={draft.search}
-              onChange={(e) => setDraft((d) => ({ ...d, search: e.target.value }))}
-              className="pl-8 text-xs"
-            />
-          </div>
-
           <div>
             <p className="mb-2 text-[11px] py-2 font-medium uppercase tracking-wide text-muted-foreground">
               Type de facture
@@ -184,7 +170,6 @@ export function InvoiceFilters({ onApplyFilters }: InvoiceFiltersProps) {
         <div className="flex gap-2 border-t bg-muted/40 px-5 py-3">
           <Button
             variant="outline"
-            size="sm"
             className="flex-1 text-xs"
             onClick={() => {
               setDraft(defaultInvoiceFilters);
@@ -195,7 +180,6 @@ export function InvoiceFilters({ onApplyFilters }: InvoiceFiltersProps) {
             Réinitialiser
           </Button>
           <Button
-            size="sm"
             className="flex-1 bg-(--color-primary) text-xs text-white hover:bg-(--color-primary)/90"
             onClick={() => {
               setFilters(draft);

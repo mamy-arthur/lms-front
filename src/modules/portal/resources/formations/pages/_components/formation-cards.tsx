@@ -1,7 +1,14 @@
 'use client';
 
-import { X, Check, Users } from 'lucide-react';
+import { X, Check, Users, Pencil, Trash2, MoreVertical } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarGroup, AvatarGroupCount } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import type { FormationGroup, TenantAssignableUser } from '../../types';
@@ -13,7 +20,8 @@ interface UserCardProps {
   id: string;
   fullName: string;
   pending?: boolean;
-  onRemove: () => void;
+  /** Si absent, l'utilisateur est en lecture seule (déjà assigné). */
+  onRemove?: () => void;
 }
 
 export function UserCard({ fullName, pending = false, onRemove }: UserCardProps) {
@@ -24,23 +32,31 @@ export function UserCard({ fullName, pending = false, onRemove }: UserCardProps)
         pending ? 'border-primary/40 bg-primary/5' : 'bg-card',
       )}
     >
-      <Avatar className={cn('size-8 shrink-0')}>
-        <AvatarFallback className={cn('text-xs  text-black')}>
-          {getInitials(fullName)}
-        </AvatarFallback>
+      <Avatar className="size-8 shrink-0">
+        <AvatarFallback className="text-xs text-black">{getInitials(fullName)}</AvatarFallback>
       </Avatar>
       <div className="min-w-0 flex-1">
         <p className="truncate text-xs font-medium">{fullName}</p>
         {pending && <p className="text-xs text-primary">À ajouter</p>}
+        {!pending && !onRemove && (
+          <Badge
+            variant="secondary"
+            className="mt-0.5 h-4 px-1 text-[10px] bg-amber-500 text-white"
+          >
+            Déjà assigné
+          </Badge>
+        )}
       </div>
-      <button
-        type="button"
-        onClick={onRemove}
-        className="shrink-0 rounded-md p-1 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-        aria-label={`Retirer ${fullName}`}
-      >
-        <X className="size-3.5" />
-      </button>
+      {onRemove && (
+        <button
+          type="button"
+          onClick={onRemove}
+          className="shrink-0 rounded-md p-1 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+          aria-label={`Retirer ${fullName}`}
+        >
+          <X className="size-3.5" />
+        </button>
+      )}
     </div>
   );
 }
@@ -52,34 +68,79 @@ interface GroupCardProps {
   users: TenantAssignableUser[];
   selected: boolean;
   onClick: () => void;
+  onEdit?: () => void;
+  onDelete?: () => void;
 }
 
 const MAX_VISIBLE_AVATARS = 4;
 
-export function GroupCard({ group, users, selected, onClick }: GroupCardProps) {
+export function GroupCard({ group, users, selected, onClick, onEdit, onDelete }: GroupCardProps) {
   const members = users.filter((u) => group.userIds.includes(u.id));
   const visible = members.slice(0, MAX_VISIBLE_AVATARS);
   const overflow = members.length - MAX_VISIBLE_AVATARS;
+
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick();
+        }
+      }}
       className={cn(
-        'relative flex w-full cursor-pointer flex-col items-start gap-1.5 rounded-lg border p-3 text-left transition-all',
+        'flex w-full cursor-pointer flex-col items-start gap-1.5 rounded-lg border p-3 text-left transition-all',
         selected
           ? 'border-(--color-primary) bg-primary/5 ring-1 ring-primary/30'
           : 'hover:border-border/80 hover:bg-muted/40',
       )}
     >
-      {selected && (
-        <span className="absolute right-2.5 top-2.5 flex size-5 items-center justify-center rounded-full bg-(--color-primary) text-white">
-          <Check className="size-3" />
-        </span>
-      )}
-      <div className="flex items-center gap-2">
+      {/* Header : icône + nom + indicateur sélection + menu */}
+      <div className="flex w-full items-center gap-2">
         <Users className="size-4 shrink-0 text-muted-foreground" />
-        <span className="text-xs font-medium">{group.name}</span>
+        <span className="min-w-0 flex-1 truncate text-xs font-medium">{group.name}</span>
+        {selected && (
+          <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-(--color-primary) text-white">
+            <Check className="size-3" />
+          </span>
+        )}
+        {(onEdit || onDelete) && (
+          <div onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="flex size-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                  aria-label={`Actions pour ${group.name}`}
+                >
+                  <MoreVertical className="size-3.5" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-40">
+                {onEdit && (
+                  <DropdownMenuItem onClick={onEdit}>
+                    <Pencil className="mr-2 size-3.5" />
+                    Modifier
+                  </DropdownMenuItem>
+                )}
+                {onDelete && (
+                  <DropdownMenuItem
+                    onClick={onDelete}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <Trash2 className="mr-2 size-3.5" />
+                    Supprimer
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )}
       </div>
+
+      {/* Avatars membres */}
       {members.length > 0 && (
         <Popover>
           <PopoverTrigger asChild>
@@ -93,7 +154,7 @@ export function GroupCard({ group, users, selected, onClick }: GroupCardProps) {
               <AvatarGroup>
                 {visible.map((u) => (
                   <Avatar key={u.id}>
-                    <AvatarFallback className="text-[9px] text-black font-semibold">
+                    <AvatarFallback className="text-[9px] font-semibold text-black">
                       {getInitials(u.fullName)}
                     </AvatarFallback>
                   </Avatar>
@@ -123,6 +184,6 @@ export function GroupCard({ group, users, selected, onClick }: GroupCardProps) {
           </PopoverContent>
         </Popover>
       )}
-    </button>
+    </div>
   );
 }
