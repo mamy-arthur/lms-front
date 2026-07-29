@@ -31,6 +31,7 @@ export interface FormationCardProps {
   cartQuantity?: number;
   onIncreaseQuantity?: () => void;
   onDecreaseQuantity?: () => void;
+  onQuantityChange?: (quantity: number) => void;
   isCartMutating?: boolean;
 }
 
@@ -67,6 +68,7 @@ export function FormationCard({
   cartQuantity,
   onIncreaseQuantity,
   onDecreaseQuantity,
+  onQuantityChange,
   isCartMutating = false,
 }: FormationCardProps) {
   const isFree = price === 0;
@@ -176,6 +178,7 @@ export function FormationCard({
                   quantity={cartQuantity}
                   onDecrease={onDecreaseQuantity}
                   onIncrease={onIncreaseQuantity}
+                  onQuantityChange={onQuantityChange}
                   disabled={isCartMutating}
                 />
               </div>

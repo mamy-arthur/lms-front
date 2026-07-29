@@ -4,7 +4,6 @@ import { cartKeys } from '@/shared/queries/keys';
 import type {
   AddCartItemPayload,
   ApiCartResponse,
-  CartItemQuantityDelta,
 } from '@/shared/types/cart.types';
 
 function useSetCartCache() {
@@ -28,8 +27,8 @@ export function useUpdateCartItem() {
   const setCartCache = useSetCartCache();
 
   return useMutation({
-    mutationFn: ({ itemId, delta }: { itemId: string; delta: CartItemQuantityDelta }) =>
-      cartsApi.updateItem(itemId, { delta }),
+    mutationFn: ({ itemId, quantity }: { itemId: string; quantity: number }) =>
+      cartsApi.updateItem(itemId, { quantity }),
     onSuccess: setCartCache,
   });
 }
