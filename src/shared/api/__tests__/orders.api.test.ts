@@ -43,19 +43,18 @@ describe('ordersApi', () => {
       expect(mockApiPost).toHaveBeenCalledWith('orders', { payment_method: 'cash' });
     });
 
-    it.each([
-      ['cash' as const],
-      ['card' as const],
-      ['bank_transfer' as const],
-    ])('accepte le mode de paiement %s', async (paymentMethod) => {
-      mockApiPost.mockResolvedValue({
-        data: { ...MOCK_RESPONSE.data, payment_method: paymentMethod },
-      });
+    it.each([['cash' as const], ['card' as const], ['bank_transfer' as const]])(
+      'accepte le mode de paiement %s',
+      async (paymentMethod) => {
+        mockApiPost.mockResolvedValue({
+          data: { ...MOCK_RESPONSE.data, payment_method: paymentMethod },
+        });
 
-      await ordersApi.create({ payment_method: paymentMethod });
+        await ordersApi.create({ payment_method: paymentMethod });
 
-      expect(mockApiPost).toHaveBeenCalledWith('orders', { payment_method: paymentMethod });
-    });
+        expect(mockApiPost).toHaveBeenCalledWith('orders', { payment_method: paymentMethod });
+      },
+    );
 
     it('retourne la commande créée telle quelle', async () => {
       mockApiPost.mockResolvedValue(MOCK_RESPONSE);

@@ -1,10 +1,7 @@
 import { Trash2, ImageIcon } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import {
-  formatCartMoney,
-  getCartItemCoverImage,
-} from '@/modules/portal/resources/cart/cart-utils';
+import { formatCartMoney, getCartItemCoverImage } from '@/modules/portal/resources/cart/cart-utils';
 import { useCartActions } from '@/modules/portal/resources/cart/hooks/useCartActions';
 import { CartQuantityControls } from '@/modules/shared/components/store/CartQuantityControls';
 import type { ApiCartItem } from '@/shared/types/cart.types';

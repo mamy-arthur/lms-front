@@ -1,10 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { cartsApi } from '@/shared/api/carts.api';
 import { cartKeys } from '@/shared/queries/keys';
-import type {
-  AddCartItemPayload,
-  ApiCartResponse,
-} from '@/shared/types/cart.types';
+import type { AddCartItemPayload, ApiCartResponse } from '@/shared/types/cart.types';
 
 function useSetCartCache() {
   const queryClient = useQueryClient();
