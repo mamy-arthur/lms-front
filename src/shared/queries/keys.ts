@@ -67,3 +67,13 @@ export const shopLearningPathKeys = {
   list: (filters: object) => [...shopLearningPathKeys.lists(), filters] as const,
   detail: (id: string) => [...shopLearningPathKeys.all, 'detail', id] as const,
 };
+
+export const cartKeys = {
+  all: ['carts'] as const,
+  active: () => [...cartKeys.all, 'active'] as const,
+};
+
+export const learningPathCompetencyAssociationKeys = {
+  all: ['learning-path-competency-associations'] as const,
+  lists: () => [...learningPathCompetencyAssociationKeys.all, 'list'] as const,
+};

@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { learningPathsApi } from '../api';
-import { learningPathKeys } from '@/shared/queries/keys';
+import { learningPathKeys, shopLearningPathKeys } from '@/shared/queries/keys';
 import type { UpdateLearningPathPayload } from '../types';
 
 export function useUpdateLearningPath() {
@@ -12,6 +12,7 @@ export function useUpdateLearningPath() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: learningPathKeys.lists() });
       queryClient.invalidateQueries({ queryKey: learningPathKeys.detail(variables.id) });
+      queryClient.invalidateQueries({ queryKey: shopLearningPathKeys.all });
     },
   });
 }

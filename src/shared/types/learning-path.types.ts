@@ -64,6 +64,16 @@ export interface ApiLearningPathCategory {
   updated_at: string;
 }
 
+/** Single row from the learning_path_competency pivot table */
+export interface ApiLpCompetencyItem {
+  id: string;
+  shortname: string;
+  category_id: string | null;
+  courses: Array<{ id: string }>;
+  courses_count: number;
+  is_linked: boolean;
+}
+
 export interface ApiUploadedMedia {
   id: string;
   url: string;

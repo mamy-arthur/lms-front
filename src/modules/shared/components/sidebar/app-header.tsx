@@ -5,13 +5,15 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { CartDrawer } from '@/modules/portal/resources/cart/CartDrawer';
-import { useCartStore } from '@/modules/portal/resources/cart/CartStore';
+import { getCartItemCount } from '@/modules/portal/resources/cart/cart-utils';
+import { useCartQuery } from '@/modules/portal/resources/cart/hooks/useCartQuery';
 
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 export function AppHeader() {
   const [cartOpen, setCartOpen] = useState(false);
-  const cartCount = useCartStore((state) => state.cartCount);
+  const cartQuery = useCartQuery();
+  const cartCount = getCartItemCount(cartQuery.data?.data);
 
   return (
     <>
@@ -23,13 +25,13 @@ export function AppHeader() {
         </div>
 
         {/* RIGHT */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center">
           <Popover>
             <PopoverTrigger asChild>
               <Button
                 variant="ghost"
                 size="icon"
-                className="relative h-9 w-9 rounded-full hover:bg-accent bg-gray-100"
+                className="relative h-9 w-9 hover:bg-accent"
                 aria-label="Notifications"
               >
                 <Bell className="h-5 w-5" />
@@ -67,7 +69,7 @@ export function AppHeader() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="relative h-9 w-9 rounded-full hover:bg-accent bg-gray-100"
+                className="relative h-9 w-9 hover:bg-accent"
                 aria-label="Alertes"
               >
                 <AlertTriangle className="h-4.5 w-4.5" />
@@ -100,7 +102,7 @@ export function AppHeader() {
           <Button
             variant="ghost"
             size="icon"
-            className="relative h-9 w-9 rounded-full hover:bg-accent bg-gray-100"
+            className="relative h-9 w-9 hover:bg-accent"
             aria-label="Panier"
             onClick={() => setCartOpen(true)}
           >

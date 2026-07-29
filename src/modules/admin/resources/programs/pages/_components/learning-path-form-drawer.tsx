@@ -2,7 +2,7 @@
 
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { BookOpen, CalendarIcon, Image, Loader2, Save, X } from 'lucide-react';
+import { AlertCircle, BookOpen, CalendarIcon, Image, Loader2, Save, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -161,6 +161,7 @@ type Props = {
 
 export function LearningPathFormDrawer({ open, onOpenChange, learningPath, categories }: Props) {
   const isEdit = !!learningPath;
+  const hasCompetencies = isEdit && (learningPath?.competencies?.length ?? 0) > 0;
 
   const createMutation = useCreateLearningPath();
   const updateMutation = useUpdateLearningPath();
@@ -496,6 +497,7 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPath, categ
                 initialEdges={initialFlow?.edges}
                 initialNodeOrder={initialFlow?.nodeOrder}
                 onUnlinkCompetency={isEdit ? handleUnlinkCompetency : undefined}
+                learningPathId={learningPath?.id}
               />
             )}
           </div>
@@ -588,7 +590,7 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPath, categ
                         >
                           <Badge
                             variant={isSelected ? 'default' : 'outline'}
-                            className={`cursor-pointer text-xs px-2.5 py-1 h-auto rounded-full transition-colors ${isSelected ? 'bg-(--color-primary) text-primary-foreground' : 'bg-muted/10 text-muted-foreground'}`}
+                            className={`cursor-pointer text-xs px-2.5 py-1 h-auto rounded-lg transition-colors ${isSelected ? 'bg-(--color-primary) text-primary-foreground' : 'bg-muted/10 text-muted-foreground'}`}
                           >
                             {cat.name}
                           </Badge>
@@ -690,17 +692,27 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPath, categ
                   />
                 </div>
                 {/* Visible en boutique */}
-                <div className="flex items-center justify-between rounded-lg border p-3">
-                  <div>
-                    <p className="text-xs font-medium">Visible en boutique</p>
-                    <p className="text-xs text-muted-foreground">
-                      Afficher ce parcours dans la boutique
-                    </p>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between rounded-lg border p-3">
+                    <div>
+                      <p className="text-xs font-medium">Visible en boutique</p>
+                      <p className="text-xs text-muted-foreground">
+                        Afficher ce parcours dans la boutique
+                      </p>
+                    </div>
+                    <Switch
+                      checked={watch('show_in_shop') ?? false}
+                      onCheckedChange={(v) => setValue('show_in_shop', v)}
+                      disabled={!hasCompetencies}
+                    />
                   </div>
-                  <Switch
-                    checked={watch('show_in_shop') ?? false}
-                    onCheckedChange={(v) => setValue('show_in_shop', v)}
-                  />
+                  {!hasCompetencies && (
+                    <p className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-500 mt-5">
+                      <AlertCircle className="size-3.5 shrink-0" />
+                      Ce parcours ne contient aucune compétence et ne peut pas être publié dans la
+                      boutique.
+                    </p>
+                  )}
                 </div>
               </div>
             </form>

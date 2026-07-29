@@ -1,5 +1,6 @@
 import type { ApiShopLearningPath, ApiShopCompetency } from '@/shared/types/learning-path.types';
 import type { StoreFormationDetails, StoreProgramStep } from '@/shared/mocks/store.mock';
+import { formatDuration } from './duration';
 
 /**
  * Converts an array of enriched shop competencies into sorted StoreProgramStep[].
@@ -43,7 +44,7 @@ export function toShopFormationDetails(
     shortDescription: lp.description ?? '',
     fullDescription: lp.description ?? '',
     level: 'Débutant',
-    duration: '',
+    duration: formatDuration(lp.duration ?? 0),
     language: 'Français',
     certificate: false,
     learningObjectives: [],

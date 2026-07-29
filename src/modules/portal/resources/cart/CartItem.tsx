@@ -1,70 +1,45 @@
-import { Minus, Plus, Trash2, ImageIcon } from 'lucide-react';
+import { Trash2, ImageIcon } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import {
-  useCartStore,
-  type CartItem as CartLineItem,
-} from '@/modules/portal/resources/cart/CartStore';
-import { formatCurrency } from '@/modules/shared/lib/wallet-utils';
+import { formatCartMoney } from '@/modules/portal/resources/cart/cart-utils';
+import { useCartActions } from '@/modules/portal/resources/cart/hooks/useCartActions';
+import { CartQuantityControls } from '@/modules/shared/components/store/CartQuantityControls';
+import type { ApiCartItem } from '@/shared/types/cart.types';
 
 interface CartItemProps {
-  item: CartLineItem;
+  item: ApiCartItem;
 }
 
 export function CartItem({ item }: CartItemProps) {
-  const increaseQuantity = useCartStore((state) => state.increaseQuantity);
-  const decreaseQuantity = useCartStore((state) => state.decreaseQuantity);
-  const removeFromCart = useCartStore((state) => state.removeFromCart);
+  const { increase, decrease, remove, isMutatingFor } = useCartActions();
+  const isMutating = isMutatingFor({ cartItemId: item.id });
 
   return (
     <div className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-4 rounded-lg bg-gray-50 p-4">
       <div className="flex gap-3">
         <div className="h-18 w-24 shrink-0 overflow-hidden rounded-md bg-muted">
-          {item.coverImage ? (
-            <img src={item.coverImage} alt={item.title} className="h-full w-full object-cover" />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center text-muted-foreground/40">
-              <ImageIcon className="size-5" strokeWidth={1.5} />
-            </div>
-          )}
+          <div className="flex h-full w-full items-center justify-center text-muted-foreground/40">
+            <ImageIcon className="size-5" strokeWidth={1.5} />
+          </div>
         </div>
 
         <div className="min-w-0 flex-1">
-          <p className="line-clamp-2 text-sm font-semibold text-foreground">{item.title}</p>
-          <div className="flex gap-2 text-xs text-muted-foreground mt-1">
-            <span>3 modules</span>
-            <span>2 examens</span>
-          </div>
+          <p className="line-clamp-2 text-sm font-semibold text-foreground">{item.name}</p>
           <p className="mt-1 text-xs text-muted-foreground">
-            Prix unitaire: {formatCurrency(item.price)}
+            Prix unitaire: {formatCartMoney(item.price, item.currency)}
           </p>
         </div>
       </div>
 
-      <div className="inline-flex items-center gap-2 rounded-md border border-border p-1">
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          onClick={() => decreaseQuantity(item.id)}
-          aria-label="Diminuer la quantité"
-        >
-          <Minus className="size-3" />
-        </Button>
-        <span className="min-w-6 text-center text-xs font-semibold">{item.quantity}</span>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          onClick={() => increaseQuantity(item.id)}
-          aria-label="Augmenter la quantité"
-        >
-          <Plus className="size-3" />
-        </Button>
-      </div>
+      <CartQuantityControls
+        quantity={item.quantity}
+        onDecrease={() => decrease(item.id, item.quantity)}
+        onIncrease={() => increase(item.id)}
+        disabled={isMutating}
+      />
       <div>
         <p className="text-xs font-medium">
-          Sous-total: {formatCurrency(item.price * item.quantity)}
+          Sous-total: {formatCartMoney(item.price * item.quantity, item.currency)}
         </p>
       </div>
       <div>
@@ -73,7 +48,8 @@ export function CartItem({ item }: CartItemProps) {
           variant="ghost"
           size="sm"
           className="h-8 px-2 text-destructive hover:text-destructive"
-          onClick={() => removeFromCart(item.id)}
+          onClick={() => remove(item.id)}
+          disabled={isMutating}
         >
           <Trash2 className="size-3.5" />
         </Button>
