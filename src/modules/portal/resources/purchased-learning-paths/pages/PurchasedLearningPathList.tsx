@@ -106,7 +106,7 @@ export function PurchasedLearningPathList() {
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Gestion des formations</h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Gere formations achetees par votre tenant et les assignations des utilisateurs.
+              Gérez vos formations et les assignations aux utilisateurs.
             </p>
           </div>
         </header>
