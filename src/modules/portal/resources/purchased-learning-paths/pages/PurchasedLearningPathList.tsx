@@ -5,46 +5,50 @@ import { RoleGuard } from '@/modules/auth/guards/RoleGuard';
 import { ACCESS } from '@/shared/auth/permissions';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useFormationManagementQuery } from '../hooks/useFormationManagementQuery';
+import { usePurchasedLearningPathsQuery } from '../hooks/usePurchasedLearningPathsQuery';
 import {
   filterEnrollmentsByStat,
-  useFormationManagementController,
-} from '../hooks/useFormationManagementController';
-import type { FormationStatKey, PurchasedFormationRow } from '../types';
-import { FormationsTable } from './_components/formations-table';
-import { FormationStatsUsersDrawer } from './_components/formation-stats-users-drawer';
-import { FormationAssignmentDrawer } from './_components/formation-assignment-drawer';
+  usePurchasedLearningPathsController,
+} from '../hooks/usePurchasedLearningPathsController';
+import type { PurchasedLearningPathRow, PurchasedLearningPathStatKey } from '../types';
+import { PurchasedLearningPathsTable } from './_components/paths-table';
+import { PurchasedLearningPathStatsUsersDrawer } from './_components/stats-users-drawer';
+import { PurchasedLearningPathAssignmentDrawer } from './_components/assignment-drawer';
 
 interface SortState {
   column: 'name';
   direction: 'asc' | 'desc';
 }
 
-export function ClientFormationsManagementPage() {
+export function PurchasedLearningPathList() {
   const [sort, setSort] = useState<SortState>({ column: 'name', direction: 'asc' });
+  /** Index 0-based pour DataTable ; l’API attend page 1-based. */
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(25);
 
   const [statsDrawer, setStatsDrawer] = useState<{
-    formation: PurchasedFormationRow | null;
-    stat: FormationStatKey;
+    purchasedLearningPath: PurchasedLearningPathRow | null;
+    stat: PurchasedLearningPathStatKey;
   }>({
-    formation: null,
+    purchasedLearningPath: null,
     stat: 'cumulative',
   });
 
-  const [assignmentTarget, setAssignmentTarget] = useState<PurchasedFormationRow | null>(null);
+  const [assignmentTarget, setAssignmentTarget] = useState<PurchasedLearningPathRow | null>(null);
 
-  const { data, isLoading } = useFormationManagementQuery();
+  const { data, isLoading } = usePurchasedLearningPathsQuery({
+    page: page + 1,
+    perPage: pageSize,
+  });
 
-  const controller = useFormationManagementController({
-    formations: data?.formations ?? [],
+  const controller = usePurchasedLearningPathsController({
+    purchasedLearningPaths: data?.purchasedLearningPaths ?? [],
     users: data?.users ?? [],
     groups: data?.groups ?? [],
   });
 
   const sortedRows = useMemo(() => {
-    const rows = [...controller.formationRows];
+    const rows = [...controller.purchasedLearningPathRows];
 
     rows.sort((a, b) => {
       const compareResult = a.name.localeCompare(b.name);
@@ -53,21 +57,16 @@ export function ClientFormationsManagementPage() {
     });
 
     return rows;
-  }, [controller.formationRows, sort]);
+  }, [controller.purchasedLearningPathRows, sort]);
 
-  const total = sortedRows.length;
-
-  const paginatedRows = useMemo(() => {
-    const start = page * pageSize;
-    return sortedRows.slice(start, start + pageSize);
-  }, [page, pageSize, sortedRows]);
+  const total = data?.meta.total ?? 0;
 
   const statsUsers = useMemo(() => {
-    if (!statsDrawer.formation) {
+    if (!statsDrawer.purchasedLearningPath) {
       return [];
     }
 
-    return filterEnrollmentsByStat(statsDrawer.formation, statsDrawer.stat);
+    return filterEnrollmentsByStat(statsDrawer.purchasedLearningPath, statsDrawer.stat);
   }, [statsDrawer]);
 
   const handleSort = (column: string) => {
@@ -107,7 +106,7 @@ export function ClientFormationsManagementPage() {
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Gestion des formations</h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Gere uniquement les formations achetees par votre tenant et les assignations des
+              Gere  formations achetees par votre tenant et les assignations des
               utilisateurs.
             </p>
           </div>
@@ -122,8 +121,8 @@ export function ClientFormationsManagementPage() {
             </CardContent>
           </Card>
         ) : (
-          <FormationsTable
-            formations={paginatedRows}
+          <PurchasedLearningPathsTable
+            purchasedLearningPaths={sortedRows}
             page={page}
             pageSize={pageSize}
             total={total}
@@ -131,40 +130,41 @@ export function ClientFormationsManagementPage() {
             onSort={handleSort}
             onPageChange={setPage}
             onPageSizeChange={handlePageSizeChange}
-            onStatClick={(formation, stat) => setStatsDrawer({ formation, stat })}
-            onAssign={(formation) => setAssignmentTarget(formation)}
+            onStatClick={(purchasedLearningPath, stat) =>
+              setStatsDrawer({ purchasedLearningPath, stat })
+            }
+            onAssign={(purchasedLearningPath) => setAssignmentTarget(purchasedLearningPath)}
           />
         )}
       </div>
 
-      <FormationStatsUsersDrawer
-        open={Boolean(statsDrawer.formation)}
+      <PurchasedLearningPathStatsUsersDrawer
+        open={Boolean(statsDrawer.purchasedLearningPath)}
         onOpenChange={(open) => {
           if (!open) {
-            setStatsDrawer({ formation: null, stat: 'cumulative' });
+            setStatsDrawer({ purchasedLearningPath: null, stat: 'cumulative' });
           }
         }}
-        formationName={statsDrawer.formation?.name ?? ''}
+        purchasedLearningPathName={statsDrawer.purchasedLearningPath?.name ?? ''}
         stat={statsDrawer.stat}
         users={statsUsers}
       />
 
-      <FormationAssignmentDrawer
+      <PurchasedLearningPathAssignmentDrawer
         open={Boolean(assignmentTarget)}
         onOpenChange={(open) => {
           if (!open) {
             setAssignmentTarget(null);
           }
         }}
-        formation={assignmentTarget}
+        purchasedLearningPath={assignmentTarget}
         users={controller.users}
         groups={controller.groups}
-        onUpdateDuration={controller.updateFormationDuration}
-        onAssignUsers={(formationId, userIds, durationMonths) =>
-          controller.assignToUsers({ formationId, userIds, durationMonths })
+        onAssignUsers={(purchasedLearningPathId, userIds) =>
+          controller.assignToUsers({ purchasedLearningPathId, userIds })
         }
-        onAssignGroup={(formationId, groupId, durationMonths) =>
-          controller.assignToGroup({ formationId, groupId, durationMonths })
+        onAssignGroup={(purchasedLearningPathId, groupId) =>
+          controller.assignToGroup({ purchasedLearningPathId, groupId })
         }
         onCreateGroup={(nextTenantId, name, userIds) =>
           controller.createGroup({ tenantId: nextTenantId, name, userIds })

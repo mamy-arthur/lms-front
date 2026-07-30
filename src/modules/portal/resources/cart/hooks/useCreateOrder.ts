@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ordersApi } from '@/shared/api/orders.api';
-import { cartKeys } from '@/shared/queries/keys';
+import { cartKeys, purchasedLearningPathKeys } from '@/shared/queries/keys';
 import type { CreateOrderPayload } from '@/shared/types/order.types';
 
 export function useCreateOrder() {
@@ -9,7 +9,10 @@ export function useCreateOrder() {
   return useMutation({
     mutationFn: (data: CreateOrderPayload) => ordersApi.create(data),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: cartKeys.active() });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: cartKeys.active() }),
+        queryClient.invalidateQueries({ queryKey: purchasedLearningPathKeys.all }),
+      ]);
     },
   });
 }

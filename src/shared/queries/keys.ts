@@ -73,6 +73,13 @@ export const cartKeys = {
   active: () => [...cartKeys.all, 'active'] as const,
 };
 
+/** Parcours achetés (API backend: purchased-learning-paths) */
+export const purchasedLearningPathKeys = {
+  all: ['purchased-learning-paths'] as const,
+  lists: () => [...purchasedLearningPathKeys.all, 'list'] as const,
+  list: (filters: object) => [...purchasedLearningPathKeys.lists(), filters] as const,
+};
+
 export const learningPathCompetencyAssociationKeys = {
   all: ['learning-path-competency-associations'] as const,
   lists: () => [...learningPathCompetencyAssociationKeys.all, 'list'] as const,

@@ -3,7 +3,7 @@
  *
  * On vérifie :
  *  - la mutation appelle ordersApi.create avec le payload
- *  - le panier actif est invalidé après succès
+ *  - le panier actif et les parcours achetés sont invalidés après succès
  *  - les erreurs API sont propagées
  */
 
@@ -17,7 +17,7 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { ordersApi } from '@/shared/api/orders.api';
-import { cartKeys } from '@/shared/queries/keys';
+import { cartKeys, purchasedLearningPathKeys } from '@/shared/queries/keys';
 import { useCreateOrder } from '../useCreateOrder';
 
 const mockCreate = jest.mocked(ordersApi.create);
@@ -64,7 +64,7 @@ describe('useCreateOrder', () => {
     expect(mockCreate).toHaveBeenCalledWith({ payment_method: 'cash' });
   });
 
-  it('invalide le panier actif après succès', async () => {
+  it('invalide le panier actif et les parcours achetés après succès', async () => {
     mockCreate.mockResolvedValue({
       data: {
         id: 'order-1',
@@ -84,6 +84,7 @@ describe('useCreateOrder', () => {
 
     await waitFor(() => {
       expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: cartKeys.active() });
+      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: purchasedLearningPathKeys.all });
     });
   });
 
