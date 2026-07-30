@@ -11,7 +11,7 @@ interface UserListResponse {
   total: number;
 }
 
-export const ClientUsersApi = {
+export const clientUsersApi = {
   list: (params?: ClientUserSearchParams): Promise<UserListResponse> => {
     const query: Record<string, unknown> = {};
     if (params?.q) query.q = params.q;

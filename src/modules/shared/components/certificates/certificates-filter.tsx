@@ -75,8 +75,12 @@ export function CertificatesFilter({
             </div>
           )}
 
-          <Button size="sm" className="w-full" onClick={onSearch}>
-            <Search className="mr-2 size-3.5" />
+          <Button
+            size="sm"
+            onClick={() => onSearch()}
+            className="w-full bg-(--color-primary) hover:bg-(--color-primary)/80 text-primary-foreground"
+          >
+            <Search className="size-4" />
             Appliquer
           </Button>
         </div>

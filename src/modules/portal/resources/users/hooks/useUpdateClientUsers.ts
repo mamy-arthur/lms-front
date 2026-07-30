@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { ClientUsersApi } from '../api';
+import { clientUsersApi } from '../api';
 import type { UpdateClientUserPayload } from '../types';
 import { TENANT_USERS_QUERY_KEY } from './useClientUsersQuery';
 
@@ -9,7 +9,7 @@ export function useUpdateClientUser() {
 
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: UpdateClientUserPayload }) =>
-      ClientUsersApi.update(id, data),
+      clientUsersApi.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: TENANT_USERS_QUERY_KEY });
       toast.success('Utilisateur mis à jour');

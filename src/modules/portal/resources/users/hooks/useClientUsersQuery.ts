@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { ClientUsersApi } from '../api';
+import { clientUsersApi } from '../api';
 import { normalizeClientUser } from '../types';
 import type { ClientUserSearchParams } from '../types';
 
@@ -9,7 +9,7 @@ export function useClientUsersQuery(params?: ClientUserSearchParams) {
   return useQuery({
     queryKey: [...TENANT_USERS_QUERY_KEY, params],
     queryFn: async () => {
-      const res = await ClientUsersApi.list(params);
+      const res = await clientUsersApi.list(params);
       return {
         data: res.data.map((u) => normalizeClientUser(u as unknown as Record<string, unknown>)),
         total: res.total,

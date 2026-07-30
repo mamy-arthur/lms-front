@@ -1,43 +1,45 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { Camera, Eye, EyeOff, Loader2, Save } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import {
+  Field,
+  FieldContent,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+  FieldRoot,
+} from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { useAuthStore } from '@/shared/stores/auth.store';
 import { getInitials } from '@/shared/lib/string/getInitials';
 import { apiGet, apiPatch } from '@/shared/lib/apiClient';
 import { uploadUserProfilePhoto } from '@/modules/shared/lib/uploadUserProfilePhoto';
 import { toast } from 'sonner';
-import { COUNTRIES } from '@/shared/constants/countries';
-import { TIMEZONES } from '@/shared/constants/timezones';
-import { LANGUAGES } from '@/shared/constants/languages';
-import { AddressAutocomplete } from '@modules/shared/components/users/address-autocomplete';
+import { UserProfileFields } from '@modules/shared/components/users/user-profile-fields';
 
-interface FullUser {
-  first_name?: string;
-  last_name?: string;
-  address?: string | null;
-  zip_code?: string | null;
-  city?: string | null;
-  country?: string | null;
-  timezone?: string | null;
-  preferred_language?: string | null;
-}
+const profileSchema = z.object({
+  first_name: z.string().min(1, 'Prénom requis').max(120),
+  last_name: z.string().min(1, 'Nom requis').max(120),
+  address: z.string().max(255).nullable().optional(),
+  zip_code: z.string().max(20).nullable().optional(),
+  city: z.string().max(100).nullable().optional(),
+  country: z.string().length(2).nullable().optional(),
+  timezone: z.string().nullable().optional(),
+  preferred_language: z.string().nullable().optional(),
+});
+
+type ProfileFormValues = z.infer<typeof profileSchema>;
 
 interface ProfileContentProps {
-  uploadPath?: string;
+  uploadPath?: 'platform/users' | 'users';
   patchPath?: string;
 }
 
@@ -47,94 +49,108 @@ export default function ProfileContent({
 }: ProfileContentProps) {
   const { user, setAuth } = useAuthStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [uploading, setUploading] = useState(false);
+  const pendingPhotoRef = useRef<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'account' | 'security'>('account');
-  const [saving, setSaving] = useState(false);
-  const [saveSuccess, setSaveSuccess] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
-
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-
-  // Profile fields
-  const [address, setAddress] = useState('');
-  const [zipCode, setZipCode] = useState('');
-  const [city, setCity] = useState('');
-  const [country, setCountry] = useState('');
-  const [timezone, setTimezone] = useState('');
-  const [preferredLanguage, setPreferredLanguage] = useState('');
 
   // Security
+  const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showCurrentPwd, setShowCurrentPwd] = useState(false);
   const [showNewPwd, setShowNewPwd] = useState(false);
   const [showConfirmPwd, setShowConfirmPwd] = useState(false);
   const [pwdSaving, setPwdSaving] = useState(false);
-  const [pwdSuccess, setPwdSuccess] = useState(false);
   const [pwdError, setPwdError] = useState<string | null>(null);
 
-  // Load full profile on mount
+  const form = useForm<ProfileFormValues>({
+    resolver: zodResolver(profileSchema),
+    defaultValues: {
+      first_name: '',
+      last_name: '',
+      address: null,
+      zip_code: null,
+      city: null,
+      country: null,
+      timezone: null,
+      preferred_language: null,
+    },
+  });
+
+  const {
+    reset,
+    formState: { isSubmitting },
+  } = form;
+
   useEffect(() => {
     if (!user?.id) return;
-    apiGet<{ data: FullUser }>(`${patchPath}/${user.id}`)
+    setLoadError(null);
+    apiGet<{ data: ProfileFormValues }>(`${patchPath}/${user.id}`)
       .then(({ data }) => {
-        if (data.first_name !== undefined) setFirstName(data.first_name);
-        if (data.last_name !== undefined) setLastName(data.last_name);
-        setAddress(data.address ?? '');
-        setZipCode(data.zip_code ?? '');
-        setCity(data.city ?? '');
-        setCountry(data.country ?? '');
-        setTimezone(data.timezone ?? '');
-        setPreferredLanguage(data.preferred_language ?? '');
+        reset({
+          first_name: data.first_name ?? '',
+          last_name: data.last_name ?? '',
+          address: data.address ?? null,
+          zip_code: data.zip_code ?? null,
+          city: data.city ?? null,
+          country: data.country ?? null,
+          timezone: data.timezone ?? null,
+          preferred_language: data.preferred_language ?? null,
+        });
       })
       .catch(() => {
-        /* silently ignore */
+        setLoadError('Impossible de charger le profil. Veuillez réessayer.');
+        toast.error('Impossible de charger le profil');
       });
-  }, [user?.id, patchPath]);
+  }, [user?.id, patchPath, reset]);
 
-  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file == null || user == null) return;
-    setUploadError(null);
-    setUploading(true);
-    try {
-      const routePrefix = uploadPath as 'platform/users' | 'users';
-      const media = await uploadUserProfilePhoto(user.id, file, routePrefix);
-      setAuth({ ...user, avatar: media.url });
-    } catch {
-      setUploadError("Échec de l'upload.");
-    } finally {
-      setUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    }
+    if (!file) return;
+    pendingPhotoRef.current = file;
+    const reader = new FileReader();
+    reader.onload = (ev) => setPhotoPreview(ev.target?.result as string);
+    reader.readAsDataURL(file);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const handleSave = async () => {
+  const handleSave = async (values: ProfileFormValues) => {
     if (!user) return;
-    setSaving(true);
-    setSaveError(null);
-    setSaveSuccess(false);
+    setUploadError(null);
+
+    let updatedUser = user;
+
+    if (pendingPhotoRef.current) {
+      try {
+        const media = await uploadUserProfilePhoto(user.id, pendingPhotoRef.current, uploadPath);
+        updatedUser = { ...user, avatar: media.url };
+        setAuth(updatedUser);
+        pendingPhotoRef.current = null;
+        setPhotoPreview(null);
+      } catch {
+        setUploadError("Échec de l'upload de la photo.");
+        toast.error("Échec de l'upload de la photo");
+        return;
+      }
+    }
+
     try {
       await apiPatch(`${patchPath}/${user.id}`, {
-        first_name: firstName,
-        last_name: lastName,
-        address: address || null,
-        zip_code: zipCode || null,
-        city: city || null,
-        country: country || null,
-        timezone: timezone || null,
-        preferred_language: preferredLanguage || null,
+        first_name: values.first_name,
+        last_name: values.last_name,
+        address: values.address || null,
+        zip_code: values.zip_code || null,
+        city: values.city || null,
+        country: values.country || null,
+        timezone: values.timezone || null,
+        preferred_language: values.preferred_language || null,
       });
-      setAuth({ ...user, name: `${firstName} ${lastName}`.trim() });
-      setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 3000);
+      setAuth({ ...updatedUser, name: `${values.first_name} ${values.last_name}`.trim() });
       toast.success('Profil mis à jour');
     } catch {
-      setSaveError('Échec de la mise à jour.');
       toast.error('Échec de la mise à jour du profil');
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -150,17 +166,25 @@ export default function ProfileContent({
     }
     setPwdSaving(true);
     setPwdError(null);
-    setPwdSuccess(false);
     try {
-      await apiPatch(`${patchPath}/${user.id}/password`, { password: newPassword });
+      await apiPatch(`${patchPath}/${user.id}/password`, {
+        current_password: currentPassword,
+        password: newPassword,
+        password_confirmation: confirmPassword,
+      });
+      setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
-      setPwdSuccess(true);
-      setTimeout(() => setPwdSuccess(false), 3000);
       toast.success('Mot de passe modifié');
-    } catch {
-      setPwdError('Échec du changement de mot de passe.');
-      toast.error('Échec du changement de mot de passe');
+    } catch (err: unknown) {
+      const json =
+        err != null && typeof err === 'object' && 'json' in err
+          ? (err as { json?: { errors?: { current_password?: string[] }; message?: string } }).json
+          : undefined;
+      const fieldError = json?.errors?.current_password?.[0];
+      const msg = fieldError ?? json?.message ?? 'Échec du changement de mot de passe.';
+      setPwdError(msg);
+      toast.error(msg);
     } finally {
       setPwdSaving(false);
     }
@@ -191,7 +215,7 @@ export default function ProfileContent({
             <CardContent className="pt-6 pb-6 flex flex-col items-center gap-3">
               <div className="relative group">
                 <Avatar className="h-28 w-28 rounded-full border-4 border-background shadow">
-                  <AvatarImage src={user.avatar ?? undefined} alt={user.name} />
+                  <AvatarImage src={photoPreview ?? user.avatar ?? undefined} alt={user.name} />
                   <AvatarFallback className="bg-(--color-primary) text-white text-xl">
                     {getInitials(user.name)}
                   </AvatarFallback>
@@ -199,8 +223,7 @@ export default function ProfileContent({
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  disabled={uploading}
-                  className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer disabled:cursor-not-allowed"
+                  className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                   aria-label="Changer la photo"
                 >
                   <Camera className="h-5 w-5 text-white" />
@@ -210,17 +233,21 @@ export default function ProfileContent({
                   type="file"
                   accept="image/jpeg,image/png,image/webp"
                   className="hidden"
-                  onChange={handlePhotoChange}
+                  onChange={handlePhotoSelect}
                 />
               </div>
               <div className="text-center">
                 <p className="font-semibold text-sm">{user.name}</p>
                 <p className="text-xs text-muted-foreground mt-0.5">{user.role}</p>
               </div>
+              {photoPreview != null && (
+                <p className="text-xs text-amber-600 text-center">
+                  Photo sélectionnée — sera envoyée à la sauvegarde
+                </p>
+              )}
               {uploadError != null && (
                 <p className="text-xs text-destructive text-center">{uploadError}</p>
               )}
-              {uploading && <p className="text-xs text-muted-foreground">Upload en cours…</p>}
             </CardContent>
           </Card>
         </div>
@@ -249,199 +276,90 @@ export default function ProfileContent({
           {activeTab === 'account' && (
             <Card className="rounded-tl-none border-t-0">
               <CardContent className="pt-6 space-y-5">
-                {/* Identity */}
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="first_name" className="text-xs font-medium">
-                      Prénom
-                    </Label>
-                    <Input
-                      id="first_name"
-                      value={firstName}
-                      onChange={(e) => setFirstName(e.target.value)}
-                      className="text-sm"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="last_name" className="text-xs font-medium">
-                      Nom
-                    </Label>
-                    <Input
-                      id="last_name"
-                      value={lastName}
-                      onChange={(e) => setLastName(e.target.value)}
-                      className="text-sm"
-                    />
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="email" className="text-xs font-medium">
-                    Adresse email
-                  </Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    defaultValue={user.email}
-                    readOnly
-                    className="bg-muted/40 text-sm cursor-not-allowed"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="role" className="text-xs font-medium">
-                    Rôle
-                  </Label>
-                  <Input
-                    id="role"
-                    defaultValue={user.role}
-                    readOnly
-                    className="bg-muted/40 text-sm cursor-not-allowed"
-                  />
-                </div>
-
-                <Separator />
-
-                {/* Address section */}
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                  Adresse
-                </p>
-
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium">Pays</Label>
-                  <Select
-                    value={country || '__none__'}
-                    onValueChange={(v) => {
-                      setCountry(v === '__none__' ? '' : v);
-                      setAddress('');
-                      setZipCode('');
-                      setCity('');
-                    }}
+                {loadError != null && (
+                  <div
+                    role="alert"
+                    className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive"
                   >
-                    <SelectTrigger className="text-xs w-full">
-                      <SelectValue placeholder="Sélectionner un pays" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__none__">— Non renseigné</SelectItem>
-                      {COUNTRIES.map((c) => (
-                        <SelectItem key={c.code} value={c.code}>
-                          {c.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium">
-                    Adresse
-                    {!country && (
-                      <span className="ml-1 text-muted-foreground font-normal">
-                        (sélectionnez un pays d'abord)
-                      </span>
-                    )}
-                  </Label>
-                  <AddressAutocomplete
-                    value={address}
-                    onChange={setAddress}
-                    disabled={!country}
-                    country={country || null}
-                    onSelectSuggestion={(details) => {
-                      if (details.address) setAddress(details.address);
-                      if (details.zip_code) setZipCode(details.zip_code);
-                      if (details.city) setCity(details.city);
-                      if (details.country) setCountry(details.country);
-                    }}
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-medium">Code postal</Label>
-                    <Input
-                      value={zipCode}
-                      onChange={(e) => setZipCode(e.target.value)}
-                      className="text-xs"
-                      maxLength={20}
-                    />
+                    {loadError}
                   </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-medium">Ville</Label>
-                    <Input
-                      value={city}
-                      onChange={(e) => setCity(e.target.value)}
-                      className="text-xs"
-                      maxLength={100}
-                    />
-                  </div>
-                </div>
+                )}
 
-                <Separator />
+                <Field {...form}>
+                  <form onSubmit={form.handleSubmit(handleSave)} className="space-y-5" noValidate>
+                    {/* Identity */}
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <FieldRoot
+                        control={form.control}
+                        name="first_name"
+                        render={({ field }) => (
+                          <FieldGroup>
+                            <FieldLabel className="text-xs">Prénom</FieldLabel>
+                            <FieldContent>
+                              <Input className="text-sm" {...field} />
+                            </FieldContent>
+                            <FieldError />
+                          </FieldGroup>
+                        )}
+                      />
+                      <FieldRoot
+                        control={form.control}
+                        name="last_name"
+                        render={({ field }) => (
+                          <FieldGroup>
+                            <FieldLabel className="text-xs">Nom</FieldLabel>
+                            <FieldContent>
+                              <Input className="text-sm" {...field} />
+                            </FieldContent>
+                            <FieldError />
+                          </FieldGroup>
+                        )}
+                      />
+                    </div>
 
-                {/* Timezone + Language */}
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                  Préférences
-                </p>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-medium">Fuseau horaire</Label>
-                    <Select
-                      value={timezone || '__none__'}
-                      onValueChange={(v) => setTimezone(v === '__none__' ? '' : v)}
-                    >
-                      <SelectTrigger className="text-xs w-full">
-                        <SelectValue placeholder="Sélectionner" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__none__">— Non renseigné</SelectItem>
-                        {TIMEZONES.map((tz) => (
-                          <SelectItem key={tz.value} value={tz.value}>
-                            {tz.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-medium">Langue préférée</Label>
-                    <Select
-                      value={preferredLanguage || '__none__'}
-                      onValueChange={(v) => setPreferredLanguage(v === '__none__' ? '' : v)}
-                    >
-                      <SelectTrigger className="text-xs w-full">
-                        <SelectValue placeholder="Langue" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__none__">— Non renseigné</SelectItem>
-                        {LANGUAGES.map((l) => (
-                          <SelectItem key={l.code} value={l.code}>
-                            {l.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="email" className="text-xs font-medium">
+                        Adresse email
+                      </Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        defaultValue={user.email}
+                        readOnly
+                        className="bg-muted/40 text-sm cursor-not-allowed"
+                      />
+                    </div>
 
-                <div className="flex items-center gap-3 pt-1">
-                  <Button
-                    type="button"
-                    onClick={handleSave}
-                    disabled={saving}
-                    className="bg-(--color-primary) hover:bg-(--color-primary)/80 text-primary-foreground"
-                  >
-                    {saving ? (
-                      <Loader2 className="size-4 animate-spin" />
-                    ) : (
-                      <Save className="size-4" />
-                    )}
-                    {saving ? 'Enregistrement…' : 'Enregistrer'}
-                  </Button>
-                  {saveSuccess && (
-                    <span className="text-xs text-emerald-600">Profil mis à jour ✓</span>
-                  )}
-                  {saveError != null && (
-                    <span className="text-xs text-destructive">{saveError}</span>
-                  )}
-                </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="role" className="text-xs font-medium">
+                        Rôle
+                      </Label>
+                      <Input
+                        id="role"
+                        defaultValue={user.role}
+                        readOnly
+                        className="bg-muted/40 text-sm cursor-not-allowed"
+                      />
+                    </div>
+
+                    <UserProfileFields form={form} />
+
+                    <div className="flex items-center gap-3 pt-1">
+                      <Button
+                        type="submit"
+                        disabled={isSubmitting}
+                        className="bg-(--color-primary) hover:bg-(--color-primary)/80 text-primary-foreground"
+                      >
+                        {isSubmitting ? (
+                          <Loader2 className="size-4 animate-spin" />
+                        ) : (
+                          <Save className="size-4" />
+                        )}
+                        {isSubmitting ? 'Enregistrement…' : 'Enregistrer'}
+                      </Button>
+                    </div>
+                  </form>
+                </Field>
               </CardContent>
             </Card>
           )}
@@ -451,6 +369,31 @@ export default function ProfileContent({
             <Card className="rounded-tl-none border-t-0">
               <CardContent className="pt-6 space-y-5 max-w-md">
                 <p className="text-sm font-medium">Changer le mot de passe</p>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="current_password" className="text-xs font-medium">
+                    Mot de passe actuel
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="current_password"
+                      type={showCurrentPwd ? 'text' : 'password'}
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      className="text-sm pr-9"
+                      autoComplete="current-password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowCurrentPwd((v) => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      tabIndex={-1}
+                      aria-label={showCurrentPwd ? 'Masquer' : 'Afficher'}
+                    >
+                      {showCurrentPwd ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                    </button>
+                  </div>
+                </div>
 
                 <div className="space-y-1.5">
                   <Label htmlFor="new_password" className="text-xs font-medium">
@@ -509,7 +452,7 @@ export default function ProfileContent({
                   <Button
                     type="button"
                     onClick={handleChangePassword}
-                    disabled={pwdSaving || !newPassword || !confirmPassword}
+                    disabled={pwdSaving || !currentPassword || !newPassword || !confirmPassword}
                     className="bg-(--color-primary) hover:bg-(--color-primary)/80 text-primary-foreground"
                   >
                     {pwdSaving ? (
@@ -519,9 +462,6 @@ export default function ProfileContent({
                     )}
                     {pwdSaving ? 'Enregistrement…' : 'Changer le mot de passe'}
                   </Button>
-                  {pwdSuccess && (
-                    <span className="text-xs text-emerald-600">Mot de passe mis à jour ✓</span>
-                  )}
                   {pwdError != null && <span className="text-xs text-destructive">{pwdError}</span>}
                 </div>
               </CardContent>

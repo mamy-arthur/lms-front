@@ -85,7 +85,7 @@ export function UsersFilter({
 
           <Button
             size="sm"
-            onClick={onSearch}
+            onClick={() => onSearch()}
             className="w-full bg-(--color-primary) hover:bg-(--color-primary)/80 text-primary-foreground"
           >
             <Search className="size-4" />
