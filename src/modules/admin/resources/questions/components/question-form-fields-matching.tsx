@@ -24,33 +24,29 @@ export function QuestionFormFieldsMatching({ form }: MatchingFieldsProps) {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex items-end justify-between border-b border-border/10 pl-3 pb-4">
+      <div className="flex items-center justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase text-muted-foreground">Paires</p>
+          <p className="text-muted-foreground/70 mt-0.5 font-base text-xs">
+            Minimum 2 paires requises
+          </p>
         </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="xs"
-          className="text-(--color-primary) hover:text-(--color-primary)"
-          onClick={() => appendPair({ left: '', right: '' })}
-        >
+        <Button type="button" variant="outline" onClick={() => appendPair({ left: '', right: '' })}>
           <Plus className="mr-1 size-3" />
           Ajouter une paire
         </Button>
       </div>
-      <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-3xl bg-background/95 p-4 ring-1 ring-border/10">
+      <div className="flex h-full min-h-0 flex-col overflow-hidden bg-background/95 mt-5">
         <div className="flex-1 min-h-0 overflow-y-auto pb-3">
           {pairFields.length === 0 ? (
             <div className="rounded-2xl bg-muted/10 p-4 text-xs text-muted-foreground">
               Aucune paire. Cliquez sur "Ajouter une paire" pour commencer.
             </div>
           ) : (
-            <div className="space-y-2 overflow-hidden">
+            <div className="space-y-2">
               {pairFields.map((field, index) => (
                 <div
                   key={field.id}
-                  className="grid grid-cols-[1fr_1fr_auto] items-end gap-3 rounded-3xl bg-background/95 p-3 ring-1 ring-border/10"
+                  className="grid grid-cols-[1fr_1fr_auto] items-end gap-3 rounded-3xl bg-background/95 ring-1 ring-border/10"
                 >
                   <FieldRoot
                     control={form.control}
@@ -75,7 +71,12 @@ export function QuestionFormFieldsMatching({ form }: MatchingFieldsProps) {
                     name={`pairs.${index}.right`}
                     render={({ field: f }) => (
                       <FieldGroup className="space-y-1">
-                        <FieldLabel className="text-xs">Droite *</FieldLabel>
+                        <div className="flex items-center justify-between">
+                          <FieldLabel className="text-xs">Droite *</FieldLabel>
+                          <span className="rounded-full bg-orange-500 -translate-x-2 px-2 py-0.5 text-[10px] font-medium text-white">
+                            {Math.round(100 / pairFields.length)}%
+                          </span>
+                        </div>
                         <FieldContent>
                           <Input
                             aria-label={`Droite ${index + 1}`}
@@ -103,9 +104,10 @@ export function QuestionFormFieldsMatching({ form }: MatchingFieldsProps) {
             </div>
           )}
 
-          {form.formState.errors.pairs && (
+          {(form.formState.errors.pairs?.root?.message || form.formState.errors.pairs?.message) && (
             <p className="mt-2 text-xs text-destructive" role="alert">
-              {String(form.formState.errors.pairs.message ?? '')}
+              {form.formState.errors.pairs?.root?.message ??
+                String(form.formState.errors.pairs?.message ?? '')}
             </p>
           )}
         </div>

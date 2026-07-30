@@ -50,7 +50,11 @@ export function useCreateQuestion() {
       return questionBanksApi.createQuizItem(questionBankId, {
         ...base,
         type: 'matching',
-        pairs: pairs.map((p) => ({ left: p.left, right: p.right })),
+        pairs: pairs.map((p) => ({
+          left: p.left,
+          right: p.right,
+          weight_percentage: p.weight_percentage,
+        })),
       });
     },
     onSuccess: (response, variables) => {

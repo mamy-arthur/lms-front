@@ -67,7 +67,6 @@ export const formSchema = z
 export type FormValues = z.infer<typeof formSchema>;
 
 export function buildQuestionPayload(values: FormValues, questionBankId: string): QuestionPayload {
-  console.log('buildQuestionPayload', values, questionBankId);
   return {
     questionBankId,
     type: values.type,
@@ -81,7 +80,11 @@ export function buildQuestionPayload(values: FormValues, questionBankId: string)
       label: o.label,
       isCorrect: o.isCorrect,
     })),
-    pairs: values.pairs,
+    pairs: values.pairs.map((p) => ({
+      left: p.left,
+      right: p.right,
+      weight_percentage: Math.round(100 / values.pairs.length),
+    })),
   };
 }
 

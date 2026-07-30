@@ -173,7 +173,7 @@ function QuestionFormDrawerBase({
 
       {/* Step 2 — Form drawer */}
       <Sheet open={drawerOpen} onOpenChange={(nextOpen) => !nextOpen && modal.handleClose()}>
-        <SheetContent className="flex flex-col gap-0 p-0 max-w-[45%]!" showCloseButton={true}>
+        <SheetContent className="flex  flex-col gap-0 p-0 max-w-[45%]!" showCloseButton={true}>
           <SheetHeader className="border-b border-border px-6 py-4">
             <div className="flex items-center gap-3">
               <div className="min-w-0">
@@ -188,67 +188,57 @@ function QuestionFormDrawerBase({
           <Field {...modal.form}>
             <form
               onSubmit={modal.form.handleSubmit(modal.onSubmit)}
-              className="flex min-h-0 flex-1 flex-col py-4"
+              className="flex min-h-0 flex-1 flex-col"
               noValidate
             >
-              <div className="relative min-h-0 flex-1 px-4">
+              {/* Scrollable content */}
+              <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
                 {modal.mutation.isError && (
                   <div
                     role="alert"
-                    className="mx-6 mt-5 mb-0 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive"
+                    className="mb-4 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive"
                   >
                     {extractApiError(modal.mutation.error, isEdit)}
                   </div>
                 )}
 
-                <div className="overflow-hidden px-2 py-2">
-                  <div className="grid h-full w-full gap-4">
-                    <section className="flex h-full min-h-0 flex-col overflow-hidden">
-                      <div className="flex-1 min-h-0 overflow-y-auto pr-1">
-                        <QuestionFormFieldsCommon form={modal.form} />
-                      </div>
-                    </section>
-                    <section className="flex h-full min-h-0 flex-col overflow-hidden mt-2">
-                      <div className="flex-1 min-h-0 overflow-y-auto pr-1">
-                        {selectedType === 'true_false' && (
-                          <QuestionFormFieldsTrueFalse form={modal.form} />
-                        )}
+                <div className="flex flex-col gap-4">
+                  <QuestionFormFieldsCommon form={modal.form} />
 
-                        {(selectedType === 'single_choice' ||
-                          selectedType === 'multiple_choice') && (
-                          <QuestionFormFieldsChoices
-                            form={modal.form}
-                            selectedType={selectedType}
-                          />
-                        )}
+                  <div>
+                    {selectedType === 'true_false' && (
+                      <QuestionFormFieldsTrueFalse form={modal.form} />
+                    )}
 
-                        {selectedType === 'matching' && (
-                          <QuestionFormFieldsMatching form={modal.form} />
-                        )}
-                      </div>
-                    </section>
+                    {(selectedType === 'single_choice' || selectedType === 'multiple_choice') && (
+                      <QuestionFormFieldsChoices form={modal.form} selectedType={selectedType} />
+                    )}
+
+                    {selectedType === 'matching' && (
+                      <QuestionFormFieldsMatching form={modal.form} />
+                    )}
                   </div>
                 </div>
               </div>
-              <div className="flex w-full items-center justify-between gap-1 border-t bg-background sm:justify-end">
-                <div className="px-4 flex gap-1 items-center py-4">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={modal.handleClose}
-                    disabled={modal.mutation.isPending}
-                  >
-                    Annuler
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={modal.mutation.isPending}
-                    className="bg-(--color-primary) hover:bg-(--color-primary)/80"
-                  >
-                    {modal.mutation.isPending ? <Loader2 className="animate-spin" /> : <Save />}
-                    Enregistrer
-                  </Button>
-                </div>
+
+              {/* Sticky footer */}
+              <div className="flex shrink-0 items-center justify-end gap-2 border-t bg-background px-4 py-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={modal.handleClose}
+                  disabled={modal.mutation.isPending}
+                >
+                  Annuler
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={modal.mutation.isPending}
+                  className="bg-(--color-primary) hover:bg-(--color-primary)/80"
+                >
+                  {modal.mutation.isPending ? <Loader2 className="animate-spin" /> : <Save />}
+                  Enregistrer
+                </Button>
               </div>
             </form>
           </Field>

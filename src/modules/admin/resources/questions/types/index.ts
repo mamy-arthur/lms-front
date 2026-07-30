@@ -80,7 +80,7 @@ export interface QuestionPayload {
   commentIfIncorrect: string | null;
   correctAnswer: boolean;
   options: { id?: string; label: string; isCorrect: boolean }[];
-  pairs: { left: string; right: string }[];
+  pairs: { left: string; right: string; weight_percentage: number }[];
 }
 
 export type UpdateQuestionPayload = Omit<QuestionPayload, 'questionBankId' | 'type'>;

@@ -41,7 +41,11 @@ export function useUpdateQuestion(questionBankId: string) {
       }
       return quizItemsApi.update(id, {
         ...base,
-        pairs: pairs.map((p) => ({ left: p.left, right: p.right })),
+        pairs: pairs.map((p) => ({
+          left: p.left,
+          right: p.right,
+          weight_percentage: p.weight_percentage,
+        })),
       });
     },
     onSuccess: (_, variables) => {
