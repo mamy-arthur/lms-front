@@ -21,7 +21,7 @@ jest.mock('@/shared/lib/apiClient', () => ({
 import { apiGet, apiPost, apiPatch, apiDelete } from '@/shared/lib/apiClient';
 import { adminUsersApi } from '../index';
 import { Role } from '@/shared/constants/roles';
-import type { CreateUserPayload, UpdateUserPayload } from '../types';
+import type { CreateUserPayload, UpdateUserPayload } from '../../types';
 
 const mockApiGet = jest.mocked(apiGet);
 const mockApiPost = jest.mocked(apiPost);
