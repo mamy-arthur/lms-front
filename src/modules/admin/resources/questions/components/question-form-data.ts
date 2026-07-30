@@ -15,6 +15,7 @@ const pairSchema = z.object({
 export const formSchema = z
   .object({
     type: z.string().min(1, 'Type requis'),
+    competencyId: z.string().min(1, 'Module requis'),
     question: z.string().min(1, 'Question requise'),
     commentIfCorrect: z.string().nullable().optional(),
     commentIfIncorrect: z.string().nullable().optional(),
@@ -66,9 +67,11 @@ export const formSchema = z
 export type FormValues = z.infer<typeof formSchema>;
 
 export function buildQuestionPayload(values: FormValues, questionBankId: string): QuestionPayload {
+  console.log('buildQuestionPayload', values, questionBankId);
   return {
     questionBankId,
     type: values.type,
+    competency_id: values.competencyId,
     question: values.question,
     commentIfCorrect: values.commentIfCorrect ?? null,
     commentIfIncorrect: values.commentIfIncorrect ?? null,
@@ -85,6 +88,7 @@ export function buildQuestionPayload(values: FormValues, questionBankId: string)
 export function getCreateDefaults(): FormValues {
   return {
     type: '',
+    competencyId: '',
     question: '',
     commentIfCorrect: null,
     commentIfIncorrect: null,

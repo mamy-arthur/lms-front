@@ -67,7 +67,7 @@ export interface Question {
   referenceNumber: string;
   isActive: boolean;
   duration: Duration | null;
-  moduleId: string;
+  competencyId: string;
   correctAnswer: boolean;
   feedbackTrue: string;
   feedbackFalse: string;
@@ -98,7 +98,7 @@ export function normalizeQuestion(raw: Record<string, unknown>): Question {
             ) as Duration['unit'],
           }
         : null,
-    moduleId: String(raw.moduleId ?? raw.module_id ?? ''),
+    competencyId: String(raw.moduleId ?? raw.module_id ?? ''),
     correctAnswer: Boolean(raw.correctAnswer ?? raw.correct_answer ?? false),
     feedbackTrue: String(raw.feedbackTrue ?? raw.feedback_true ?? ''),
     feedbackFalse: String(raw.feedbackFalse ?? raw.feedback_false ?? ''),

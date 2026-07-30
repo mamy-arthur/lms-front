@@ -12,7 +12,7 @@ import { useQuestionsQuery } from '../hooks/useQuestionsQuery';
 import { useDeleteQuestion } from '../hooks/useDeleteQuestion';
 import type { Question, QuestionSearchParams } from '../types';
 import { AdminQuestionsTable } from './_components/admin-questions-table';
-import { QuestionFormModal } from '../components/question-form-modal';
+import { QuestionFormDrawer } from '../components/question-form-drawer';
 
 export function QuestionList({ quizId }: { quizId: string }) {
   const ctrl = useQuestionListController<Question>({
@@ -72,7 +72,7 @@ export function QuestionList({ quizId }: { quizId: string }) {
         />
       </div>
 
-      <QuestionFormModal
+      <QuestionFormDrawer
         open={ctrl.isDrawerOpen}
         onClose={ctrl.handleCloseDrawer}
         onSuccess={ctrl.handleSuccess}

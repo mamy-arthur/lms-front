@@ -27,11 +27,11 @@ export function normalizeQuestion(api: ApiQuizItem): Question {
     referenceNumber: api.idnumber,
     updatedAt: api.updated_at,
     // Fields not present in the new API — set sensible defaults
-    name: api.question.replace(/<[^>]*>/g, '').slice(0, 80),
+    name: (api.question ?? '').replace(/<[^>]*>/g, '').slice(0, 80),
     generalFeedback: '',
     isActive: true,
     duration: null,
-    moduleId: '',
+    competencyId: api.competency_id ?? '',
     feedbackTrue: api.comment_if_correct ?? '',
     feedbackFalse: api.comment_if_incorrect ?? '',
   };
@@ -74,6 +74,7 @@ export function normalizeQuestion(api: ApiQuizItem): Question {
 export interface QuestionPayload {
   questionBankId: string;
   type: string;
+  competency_id: string;
   question: string;
   commentIfCorrect: string | null;
   commentIfIncorrect: string | null;

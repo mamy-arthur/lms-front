@@ -101,11 +101,7 @@ function AdminQuestionsTableBase({
         key: 'type',
         label: 'Type',
         sortable: true,
-        render: (q) => (
-          <Badge variant="outline" className="text-xs">
-            {QUESTION_TYPE_LABELS[q.type] ?? q.type}
-          </Badge>
-        ),
+        render: (q) => <Badge variant="outline">{QUESTION_TYPE_LABELS[q.type] ?? q.type}</Badge>,
       },
       {
         key: 'text',

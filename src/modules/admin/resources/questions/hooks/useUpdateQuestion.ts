@@ -18,11 +18,13 @@ export function useUpdateQuestion(questionBankId: string) {
         correctAnswer,
         options,
         pairs,
+        competency_id,
       } = data as UpdateQuestionPayload & { type?: string };
       const base = {
         question,
         comment_if_correct: commentIfCorrect,
         comment_if_incorrect: commentIfIncorrect,
+        competency_id,
       };
       if (!type || type === 'multiple_choice' || type === 'single_choice') {
         return quizItemsApi.update(id, {

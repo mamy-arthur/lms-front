@@ -34,6 +34,7 @@ interface ApiQuizItemBase {
   comment_if_incorrect: string | null;
   created_at: string;
   updated_at: string;
+  competency_id: string;
 }
 
 export interface ApiQuizItemChoices extends ApiQuizItemBase {
