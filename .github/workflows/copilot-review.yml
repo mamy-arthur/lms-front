@@ -1,0 +1,28 @@
+name: Demander une revue Copilot
+
+on:
+  pull_request_target:
+    types:
+      - opened
+      - reopened
+      - ready_for_review
+
+permissions: {}
+
+jobs:
+  request-copilot-review:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+
+    steps:
+      - name: Ajouter Copilot comme reviewer
+        env:
+          GH_TOKEN: ${{ secrets.COPILOT_REVIEW_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          gh api \
+            --method POST \
+            "repos/$REPOSITORY/pulls/$PR_NUMBER/requested_reviewers" \
+            -f "reviewers[]=copilot-pull-request-reviewer[bot]"

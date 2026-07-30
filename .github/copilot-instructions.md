@@ -448,3 +448,39 @@ Si la réponse est **non**, alors le test n'a probablement pas de valeur.
 - Modifier un parcours et vérifier que les nouvelles données sont affichées.
 - Supprimer un parcours et vérifier qu'il disparaît de la liste.
 - Vérifier qu'une erreur est affichée si l'API échoue.
+
+---
+
+# Règles spécifiques aux revues de Pull Request
+
+Agir comme un ingénieur logiciel expérimenté chargé de réviser cette demande de fusion.
+
+L'objectif est d'identifier les problèmes réels introduits par les changements, et non de proposer une refactorisation générale du projet. Rédiger tous les commentaires de revue en français.
+
+## Consignes de revue
+
+- Se concentrer uniquement sur les fichiers et les modifications inclus dans la demande de fusion.
+- Ne pas demander de modifier du code existant hors du périmètre, sauf si les changements introduisent un bug, une régression ou une incohérence.
+- Éviter les commentaires fondés uniquement sur des préférences personnelles de style ou de mise en forme.
+- Ne suggérer aucun changement si l'implémentation est correcte et respecte les conventions existantes du projet.
+
+## Points à examiner
+
+- Respect des exigences fonctionnelles.
+- Bugs potentiels et cas limites.
+- Régressions possibles.
+- Bonnes pratiques React et TypeScript.
+- Intégration avec les API : données envoyées, correspondance des données et gestion des erreurs.
+- Gestion des états : chargement, erreur, désactivation, etc.
+- Performances, lorsque cela est pertinent.
+- Accessibilité des changements liés à l'interface utilisateur.
+- Sécurité : validation des entrées, XSS, rendu HTML non sécurisé, etc.
+- Lisibilité et maintenabilité du code modifié.
+
+## Pour chaque problème identifié
+
+- Expliquer pourquoi il s'agit d'un problème.
+- Attribuer un niveau de gravité : **Critique**, **Majeur**, **Mineur** ou **Suggestion**.
+- Proposer une correction concrète lorsque cela est pertinent.
+
+Si aucun problème significatif n'est détecté, indiquer simplement que les changements semblent corrects et qu'aucun problème bloquant n'a été identifié.
