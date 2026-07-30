@@ -1,6 +1,6 @@
 'use client';
 
-import { MoreHorizontal, Pencil, Plus, Search, Settings2 } from 'lucide-react';
+import { MoreHorizontal, Pencil, Plus, Search, Settings2, MapIcon } from 'lucide-react';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -233,6 +233,14 @@ function LearningPathsTableBase({
         data={filtered}
         columns={columns}
         isLoading={isLoading}
+        hasQuery={search.trim().length > 0}
+        emptyState={{
+          icon: <MapIcon className="size-6 text-muted-foreground" />,
+          title: 'Aucun parcours trouvé',
+          description: 'Créez votre premier parcours en cliquant sur « Nouveau parcours ».',
+          filteredTitle: 'Aucun résultat',
+          filteredDescription: 'Aucun parcours ne correspond à votre recherche.',
+        }}
         page={1}
         pageSize={25}
         total={filtered.length}

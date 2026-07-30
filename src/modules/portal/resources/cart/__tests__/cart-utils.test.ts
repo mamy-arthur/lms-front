@@ -10,6 +10,7 @@ import {
   formatCartMoney,
   getCartItemCount,
   getCartSubtotal,
+  withCartItemQuantity,
 } from '../cart-utils';
 import type { ApiCart, ApiCartItem } from '@/shared/types/cart.types';
 
@@ -100,6 +101,30 @@ describe('cart-utils', () => {
     it('utilise la devise fournie', () => {
       const formatted = formatCartMoney(10, 'USD');
       expect(formatted).toMatch(/10/);
+    });
+  });
+
+  describe('withCartItemQuantity', () => {
+    it('met à jour la quantité et recalcule le total', () => {
+      const next = withCartItemQuantity(CART, 'item-a', 3, ITEM_A);
+      expect(next.items.find((item) => item.id === 'item-a')?.quantity).toBe(3);
+      expect(next.total).toBe(349.5);
+    });
+
+    it('retire l’item si la quantité tombe à 0', () => {
+      const next = withCartItemQuantity(CART, 'item-a', 0, ITEM_A);
+      expect(next.items.find((item) => item.id === 'item-a')).toBeUndefined();
+      expect(next.total).toBe(49.5);
+    });
+
+    it('réinsère un item via le snapshot s’il a été retiré', () => {
+      const empty = withCartItemQuantity(CART, 'item-a', 0, ITEM_A);
+      const restored = withCartItemQuantity(empty, 'item-a', 2, ITEM_A);
+      expect(restored.items.find((item) => item.id === 'item-a')).toEqual({
+        ...ITEM_A,
+        quantity: 2,
+      });
+      expect(restored.total).toBe(249.5);
     });
   });
 });

@@ -35,8 +35,8 @@ export function ClientEvaluationNotesList() {
 
   return (
     <div className="bg-background pb-3">
-      <div className="mx-auto w-full max-w-[1800px] space-y-8 px-4 sm:px-6 2xl:px-10">
-        <header className="mb-8 space-y-6">
+      <div className="mx-auto w-full space-y-8">
+        <header className="mb-4 space-y-6">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Notes de formation</h1>
             <p className="mt-1 text-sm text-muted-foreground">

@@ -33,7 +33,7 @@ jest.mock('sonner', () => ({
 // ProgramFlow utilise ReactFlow (canvas) — incompatible avec jsdom
 jest.mock('@/modules/admin/resources/programs/components/ProgramFlow', () => ({
   __esModule: true,
-  default: jest.fn().mockReturnValue(null),
+  default: jest.fn(),
 }));
 
 jest.mock('@/modules/admin/resources/programs/hooks/useLearningPathsQuery', () => ({
@@ -53,6 +53,14 @@ jest.mock('@/modules/admin/resources/programs/hooks/useUpdateLearningPath', () =
 }));
 jest.mock('@/modules/admin/resources/programs/hooks/useUploadLearningPathMedia', () => ({
   useUploadLearningPathMedia: jest.fn(),
+}));
+
+jest.mock('@/modules/admin/resources/programs/hooks/useLinkCompetencyToLearningPath', () => ({
+  useLinkCompetencyToLearningPath: jest.fn(),
+}));
+
+jest.mock('@/modules/admin/resources/programs/hooks/useUnlinkCompetencyFromLearningPath', () => ({
+  useUnlinkCompetencyFromLearningPath: jest.fn(),
 }));
 
 // Hooks internes de LearningPathCategoriesDrawer — non testés ici
@@ -75,7 +83,7 @@ jest.mock('@/modules/admin/resources/modules/hooks/useModules', () => ({
 
 import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { toast } from 'sonner';
 import { useLearningPathsQuery } from '../../hooks/useLearningPathsQuery';
@@ -84,6 +92,10 @@ import { useDeleteLearningPath } from '../../hooks/useDeleteLearningPath';
 import { useCreateLearningPath } from '../../hooks/useCreateLearningPath';
 import { useUpdateLearningPath } from '../../hooks/useUpdateLearningPath';
 import { useUploadLearningPathMedia } from '../../hooks/useUploadLearningPathMedia';
+import { useLinkCompetencyToLearningPath } from '../../hooks/useLinkCompetencyToLearningPath';
+import { useUnlinkCompetencyFromLearningPath } from '../../hooks/useUnlinkCompetencyFromLearningPath';
+import ProgramFlow from '../../components/ProgramFlow';
+import type { ProgramFlowProps } from '../../components/ProgramFlow';
 import { ProgramsList } from '../ProgramsList';
 import type { LearningPath } from '../../types';
 
@@ -93,6 +105,9 @@ const mockUseDeleteLearningPath = jest.mocked(useDeleteLearningPath);
 const mockUseCreateLearningPath = jest.mocked(useCreateLearningPath);
 const mockUseUpdateLearningPath = jest.mocked(useUpdateLearningPath);
 const mockUseUploadLearningPathMedia = jest.mocked(useUploadLearningPathMedia);
+const mockUseLinkCompetency = jest.mocked(useLinkCompetencyToLearningPath);
+const mockUseUnlinkCompetency = jest.mocked(useUnlinkCompetencyFromLearningPath);
+const MockProgramFlow = jest.mocked(ProgramFlow);
 const mockToast = jest.mocked(toast);
 
 // ─── Wrapper ─────────────────────────────────────────────────────────────────
@@ -129,6 +144,20 @@ const MOCK_PATH_1: LearningPath = {
   updatedAt: '2024-01-01T00:00:00Z',
 };
 
+const MOCK_PATH_WITH_COMPETENCY: LearningPath = {
+  ...MOCK_PATH_1,
+  id: 'lp-with-comp',
+  name: 'Parcours avec compétence',
+  competencies: [
+    {
+      competencyId: 'comp-1',
+      position: 0,
+      locationX: 300,
+      locationY: 150,
+    },
+  ],
+};
+
 const MOCK_PATH_2: LearningPath = {
   ...MOCK_PATH_1,
   id: 'lp-2',
@@ -144,12 +173,16 @@ function mockDefaults({
   deleteMutateAsync = jest.fn().mockResolvedValue(undefined),
   createMutateAsync = jest.fn().mockResolvedValue({ data: { id: 'new-lp' } }),
   updateMutateAsync = jest.fn().mockResolvedValue(undefined),
+  linkMutateAsync = jest.fn().mockResolvedValue(undefined),
+  unlinkMutateAsync = jest.fn().mockResolvedValue(undefined),
 }: {
   paths?: LearningPath[];
   isLoading?: boolean;
   deleteMutateAsync?: jest.Mock;
   createMutateAsync?: jest.Mock;
   updateMutateAsync?: jest.Mock;
+  linkMutateAsync?: jest.Mock;
+  unlinkMutateAsync?: jest.Mock;
 } = {}) {
   mockUseLearningPathsQuery.mockReturnValue({
     data: paths,
@@ -180,6 +213,19 @@ function mockDefaults({
     mutateAsync: jest.fn(),
     isPending: false,
   } as unknown as ReturnType<typeof useUploadLearningPathMedia>);
+
+  mockUseLinkCompetency.mockReturnValue({
+    mutateAsync: linkMutateAsync,
+    isPending: false,
+  } as unknown as ReturnType<typeof useLinkCompetencyToLearningPath>);
+
+  mockUseUnlinkCompetency.mockReturnValue({
+    mutateAsync: unlinkMutateAsync,
+    isPending: false,
+  } as unknown as ReturnType<typeof useUnlinkCompetencyFromLearningPath>);
+
+  // Par défaut ProgramFlow ne fait rien — les tests spécifiques remplacent cette implémentation
+  MockProgramFlow.mockReturnValue(null);
 }
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
@@ -371,6 +417,153 @@ describe('ProgramsList', () => {
 
       await waitFor(() => {
         expect(mockToast.error).toHaveBeenCalledWith('Server error');
+      });
+    });
+  });
+
+  // ── Visible en boutique (canPublish) ──────────────────────────────────────
+
+  describe('visible en boutique', () => {
+    it('le switch est désactivé si aucun module dans le flow et aucune compétence sauvegardée', async () => {
+      const user = userEvent.setup();
+      render(<ProgramsList />, { wrapper: createWrapper() });
+
+      await user.click(screen.getByRole('button', { name: /nouveau parcours/i }));
+
+      const toggle = await screen.findByRole('switch', { name: /visible en boutique/i });
+      expect(toggle).toBeDisabled();
+    });
+
+    it("le switch s'active dès qu'un module est ajouté dans le flow", async () => {
+      let capturedOnModulesChange: ((v: boolean) => void) | undefined;
+      MockProgramFlow.mockImplementation((props: ProgramFlowProps) => {
+        capturedOnModulesChange = props.onModulesChange;
+        return null;
+      });
+
+      const user = userEvent.setup();
+      render(<ProgramsList />, { wrapper: createWrapper() });
+
+      await user.click(screen.getByRole('button', { name: /nouveau parcours/i }));
+
+      // Avant l'ajout d'un module
+      const toggle = await screen.findByRole('switch', { name: /visible en boutique/i });
+      expect(toggle).toBeDisabled();
+
+      // Le flow signal un module présent
+      act(() => capturedOnModulesChange?.(true));
+
+      await waitFor(() => {
+        expect(screen.getByRole('switch', { name: /visible en boutique/i })).not.toBeDisabled();
+      });
+    });
+
+    it('le switch est actif si le parcours a déjà des compétences sauvegardées', async () => {
+      mockDefaults({ paths: [MOCK_PATH_WITH_COMPETENCY] });
+
+      const user = userEvent.setup();
+      render(<ProgramsList />, { wrapper: createWrapper() });
+
+      await user.click(
+        screen.getByRole('button', { name: `Actions pour ${MOCK_PATH_WITH_COMPETENCY.name}` }),
+      );
+      await user.click(screen.getByRole('menuitem', { name: /modifier/i }));
+
+      const toggle = await screen.findByRole('switch', { name: /visible en boutique/i });
+      expect(toggle).not.toBeDisabled();
+    });
+  });
+
+  // ── Détachement de compétences (différé) ──────────────────────────────────
+
+  describe('détachement de compétences', () => {
+    it('ne détache pas la compétence immédiatement lors de la suppression du nœud dans le flow', async () => {
+      const unlinkMutateAsync = jest.fn().mockResolvedValue(undefined);
+      mockDefaults({ paths: [MOCK_PATH_WITH_COMPETENCY], unlinkMutateAsync });
+
+      let capturedOnUnlinkCompetency: ((id: string) => void) | undefined;
+      MockProgramFlow.mockImplementation((props: ProgramFlowProps) => {
+        capturedOnUnlinkCompetency = props.onUnlinkCompetency;
+        return null;
+      });
+
+      const user = userEvent.setup();
+      render(<ProgramsList />, { wrapper: createWrapper() });
+
+      await user.click(
+        screen.getByRole('button', { name: `Actions pour ${MOCK_PATH_WITH_COMPETENCY.name}` }),
+      );
+      await user.click(screen.getByRole('menuitem', { name: /modifier/i }));
+
+      // Simuler la suppression d'un nœud dans le flow
+      act(() => capturedOnUnlinkCompetency?.('comp-1'));
+
+      // L'API ne doit PAS être appelée immédiatement
+      expect(unlinkMutateAsync).not.toHaveBeenCalled();
+    });
+
+    it("appelle l'API de détachement uniquement lors de l'enregistrement", async () => {
+      const unlinkMutateAsync = jest.fn().mockResolvedValue(undefined);
+      const updateMutateAsync = jest.fn().mockResolvedValue(undefined);
+      mockDefaults({
+        paths: [MOCK_PATH_WITH_COMPETENCY],
+        unlinkMutateAsync,
+        updateMutateAsync,
+      });
+
+      let capturedOnUnlinkCompetency: ((id: string) => void) | undefined;
+      MockProgramFlow.mockImplementation((props: ProgramFlowProps) => {
+        capturedOnUnlinkCompetency = props.onUnlinkCompetency;
+        return null;
+      });
+
+      const user = userEvent.setup();
+      render(<ProgramsList />, { wrapper: createWrapper() });
+
+      await user.click(
+        screen.getByRole('button', { name: `Actions pour ${MOCK_PATH_WITH_COMPETENCY.name}` }),
+      );
+      await user.click(screen.getByRole('menuitem', { name: /modifier/i }));
+
+      // Supprimer le nœud dans le flow
+      act(() => capturedOnUnlinkCompetency?.('comp-1'));
+
+      // Soumettre via le bouton principal
+      await user.click(screen.getByRole('button', { name: /enregistrer/i }));
+
+      await waitFor(() => {
+        expect(unlinkMutateAsync).toHaveBeenCalledWith({
+          id: MOCK_PATH_WITH_COMPETENCY.id,
+          competencyId: 'comp-1',
+        });
+      });
+    });
+
+    it("n'appelle pas l'API si la compétence supprimée n'était pas liée à l'origine", async () => {
+      const unlinkMutateAsync = jest.fn().mockResolvedValue(undefined);
+      mockDefaults({ paths: [MOCK_PATH_WITH_COMPETENCY], unlinkMutateAsync });
+
+      let capturedOnUnlinkCompetency: ((id: string) => void) | undefined;
+      MockProgramFlow.mockImplementation((props: ProgramFlowProps) => {
+        capturedOnUnlinkCompetency = props.onUnlinkCompetency;
+        return null;
+      });
+
+      const user = userEvent.setup();
+      render(<ProgramsList />, { wrapper: createWrapper() });
+
+      await user.click(
+        screen.getByRole('button', { name: `Actions pour ${MOCK_PATH_WITH_COMPETENCY.name}` }),
+      );
+      await user.click(screen.getByRole('menuitem', { name: /modifier/i }));
+
+      // Supprimer un nœud qui n'était PAS dans les compétences originales
+      act(() => capturedOnUnlinkCompetency?.('comp-not-linked'));
+
+      await user.click(screen.getByRole('button', { name: /enregistrer/i }));
+
+      await waitFor(() => {
+        expect(unlinkMutateAsync).not.toHaveBeenCalled();
       });
     });
   });

@@ -1,11 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { cartsApi } from '@/shared/api/carts.api';
 import { cartKeys } from '@/shared/queries/keys';
-import type {
-  AddCartItemPayload,
-  ApiCartResponse,
-  CartItemQuantityDelta,
-} from '@/shared/types/cart.types';
+import type { AddCartItemPayload, ApiCartResponse } from '@/shared/types/cart.types';
 
 function useSetCartCache() {
   const queryClient = useQueryClient();
@@ -28,8 +24,8 @@ export function useUpdateCartItem() {
   const setCartCache = useSetCartCache();
 
   return useMutation({
-    mutationFn: ({ itemId, delta }: { itemId: string; delta: CartItemQuantityDelta }) =>
-      cartsApi.updateItem(itemId, { delta }),
+    mutationFn: ({ itemId, quantity }: { itemId: string; quantity: number }) =>
+      cartsApi.updateItem(itemId, { quantity }),
     onSuccess: setCartCache,
   });
 }

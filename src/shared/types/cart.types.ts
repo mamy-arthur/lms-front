@@ -5,6 +5,12 @@ export interface ApiCartItem {
   cart_id: string;
   learning_path_id: string;
   name: string;
+  /**
+   * Image renvoyée par l'API panier.
+   * Selon la version backend, peut être une URL directe
+   * ou un objet `{ url }`.
+   */
+  image?: string | { url?: string | null } | null;
   price: number;
   quantity: number;
   currency: string;
@@ -32,9 +38,6 @@ export interface AddCartItemPayload {
   learning_path_id: string;
 }
 
-/** Uniquement `1` (incrément) ou `-1` (décrément) — contrainte backend. */
-export type CartItemQuantityDelta = 1 | -1;
-
 export interface UpdateCartItemPayload {
-  delta: CartItemQuantityDelta;
+  quantity: number;
 }

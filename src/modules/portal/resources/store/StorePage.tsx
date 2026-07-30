@@ -33,7 +33,7 @@ function FormationCardSkeleton() {
 
 export function StorePage() {
   const router = useRouter();
-  const { add, increase, decrease, findItem, isMutatingFor } = useCartActions();
+  const { add, increase, decrease, setQuantity, findItem, isMutatingFor } = useCartActions();
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
@@ -181,8 +181,9 @@ export function StorePage() {
                   onOpenDetails={handleOpenDetails}
                   cartQuantity={cartItem?.quantity}
                   onIncreaseQuantity={cartItem ? () => increase(cartItem.id) : undefined}
-                  onDecreaseQuantity={
-                    cartItem ? () => decrease(cartItem.id, cartItem.quantity) : undefined
+                  onDecreaseQuantity={cartItem ? () => decrease(cartItem.id) : undefined}
+                  onQuantityChange={
+                    cartItem ? (quantity) => setQuantity(cartItem.id, quantity) : undefined
                   }
                   isCartMutating={isMutatingFor({
                     learningPathId: lp.id,

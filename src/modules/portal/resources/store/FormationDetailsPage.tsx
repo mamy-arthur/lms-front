@@ -1,6 +1,4 @@
 'use client';
-
-import { toast } from 'sonner';
 import {
   Award,
   BookOpen,
@@ -106,7 +104,7 @@ function ProgramEvaluation({ step, stepIndex }: { step: StoreEvaluationStep; ste
 }
 
 export function FormationDetailsPage({ formation }: FormationDetailsPageProps) {
-  const { add, increase, decrease, findItem, isMutatingFor } = useCartActions();
+  const { add, increase, decrease, setQuantity, findItem, isMutatingFor } = useCartActions();
 
   const cartItem = findItem(formation.id);
   const isInCart = Boolean(cartItem);
@@ -114,14 +112,6 @@ export function FormationDetailsPage({ formation }: FormationDetailsPageProps) {
     learningPathId: formation.id,
     cartItemId: cartItem?.id,
   });
-
-  const handleBuyNow = async () => {
-    if (!isInCart) {
-      const ok = await add(formation.id, { silentSuccess: true });
-      if (!ok) return;
-    }
-    toast.info('Ouvrez le panier pour finaliser le paiement.');
-  };
 
   return (
     <div className="w-full space-y-6 pb-8">
@@ -174,8 +164,9 @@ export function FormationDetailsPage({ formation }: FormationDetailsPageProps) {
                 {isInCart && cartItem ? (
                   <CartQuantityControls
                     quantity={cartItem.quantity}
-                    onDecrease={() => decrease(cartItem.id, cartItem.quantity)}
+                    onDecrease={() => decrease(cartItem.id)}
                     onIncrease={() => increase(cartItem.id)}
+                    onQuantityChange={(quantity) => setQuantity(cartItem.id, quantity)}
                     disabled={isCartMutating}
                   />
                 ) : (
@@ -188,9 +179,6 @@ export function FormationDetailsPage({ formation }: FormationDetailsPageProps) {
                     Ajouter au panier
                   </Button>
                 )}
-                <Button variant="outline" onClick={handleBuyNow} disabled={isCartMutating}>
-                  Acheter maintenant
-                </Button>
               </div>
             </div>
           </div>

@@ -163,6 +163,9 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPath, categ
   const isEdit = !!learningPath;
   const hasCompetencies = isEdit && (learningPath?.competencies?.length ?? 0) > 0;
 
+  const [flowHasModules, setFlowHasModules] = useState(hasCompetencies);
+  const canPublish = hasCompetencies || flowHasModules;
+
   const createMutation = useCreateLearningPath();
   const updateMutation = useUpdateLearningPath();
   const uploadMedia = useUploadLearningPathMedia();
@@ -180,7 +183,7 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPath, categ
     return map;
   }, [modulesResult]);
 
-  // Immediately unlink a competency from the backend when removed from the flow (edit mode only)
+  // Queue a competency to be unlinked on save (edit mode only)
   const handleUnlinkCompetency = useCallback(
     (competencyId: string) => {
       if (!learningPath) return;
@@ -188,25 +191,9 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPath, categ
         (c) => c.competencyId === competencyId,
       );
       if (!wasOriginallyLinked) return;
-      if (unlinkedDuringSessionRef.current.has(competencyId)) return;
       unlinkedDuringSessionRef.current.add(competencyId);
-      unlinkCompetency.mutate(
-        { id: learningPath.id, competencyId },
-        {
-          onSuccess: () => toast.success('Compétence détachée du parcours'),
-          onError: (err) => {
-            unlinkedDuringSessionRef.current.delete(competencyId);
-            toast.error(
-              getApiErrorMessage(
-                err,
-                'Impossible de détacher la compétence. Vérifiez votre connexion et réessayez.',
-              ),
-            );
-          },
-        },
-      );
     },
-    [learningPath, unlinkCompetency],
+    [learningPath],
   );
 
   // Build initial flow nodes/edges from existing competencies (sorted by position)
@@ -396,6 +383,23 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPath, categ
         return;
       }
 
+      // Unlink competencies removed from the flow during this session
+      if (unlinkedDuringSessionRef.current.size > 0) {
+        try {
+          for (const competencyId of unlinkedDuringSessionRef.current) {
+            await unlinkCompetency.mutateAsync({ id: lpId, competencyId });
+          }
+        } catch (err) {
+          toast.error(
+            getApiErrorMessage(
+              err,
+              'Le parcours a été enregistré, mais le détachement de certaines compétences a échoué. Rouvrez le parcours et réessayez.',
+            ),
+          );
+          return;
+        }
+      }
+
       // Link new module competencies with canvas positions (location_x / location_y)
       const flowPayload = flowRef.current?.getPayload();
       const moduleSteps = (flowPayload?.etapes ?? []).filter(
@@ -445,7 +449,11 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPath, categ
   };
 
   const isPending =
-    isSubmitting || uploadMedia.isPending || createMutation.isPending || updateMutation.isPending;
+    isSubmitting ||
+    uploadMedia.isPending ||
+    createMutation.isPending ||
+    updateMutation.isPending ||
+    unlinkCompetency.isPending;
   const title = isEdit ? `Modifier — ${learningPath?.name}` : 'Nouveau parcours';
 
   return (
@@ -497,6 +505,7 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPath, categ
                 initialEdges={initialFlow?.edges}
                 initialNodeOrder={initialFlow?.nodeOrder}
                 onUnlinkCompetency={isEdit ? handleUnlinkCompetency : undefined}
+                onModulesChange={setFlowHasModules}
                 learningPathId={learningPath?.id}
               />
             )}
@@ -701,15 +710,16 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPath, categ
                       </p>
                     </div>
                     <Switch
+                      aria-label="Visible en boutique"
                       checked={watch('show_in_shop') ?? false}
                       onCheckedChange={(v) => setValue('show_in_shop', v)}
-                      disabled={!hasCompetencies}
+                      disabled={!canPublish}
                     />
                   </div>
-                  {!hasCompetencies && (
+                  {!canPublish && (
                     <p className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-500 mt-5">
                       <AlertCircle className="size-3.5 shrink-0" />
-                      Ce parcours ne contient aucune compétence et ne peut pas être publié dans la
+                      Ce parcours ne contient aucun module et ne peut pas être publié dans la
                       boutique.
                     </p>
                   )}
