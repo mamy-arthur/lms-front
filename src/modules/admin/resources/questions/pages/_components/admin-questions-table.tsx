@@ -19,6 +19,18 @@ import {
 import { formatDate } from '@/shared/lib/date';
 import { QUESTION_TYPE_LABELS } from '@modules/shared/components/questions';
 import type { Question } from '../../types';
+import { TYPE_ICONS } from '../../components/question-form-constants';
+
+const TYPE_BADGE_CLASSES: Record<string, string> = {
+  true_false:
+    'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400',
+  single_choice:
+    'border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-400',
+  multiple_choice:
+    'border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-800 dark:bg-violet-950/40 dark:text-violet-400',
+  matching:
+    'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-400',
+};
 
 export type SortConfig = DataTableSort;
 
@@ -101,7 +113,14 @@ function AdminQuestionsTableBase({
         key: 'type',
         label: 'Type',
         sortable: true,
-        render: (q) => <Badge variant="outline">{QUESTION_TYPE_LABELS[q.type] ?? q.type}</Badge>,
+        render: (q) => (
+          <Badge variant="outline" className={`gap-1 ${TYPE_BADGE_CLASSES[q.type] ?? ''}`}>
+            <span className={`[&>svg]:size-3 ${TYPE_ICONS[q.type]?.color ?? ''}`}>
+              {TYPE_ICONS[q.type]?.icon}
+            </span>
+            {QUESTION_TYPE_LABELS[q.type] ?? q.type}
+          </Badge>
+        ),
       },
       {
         key: 'text',
