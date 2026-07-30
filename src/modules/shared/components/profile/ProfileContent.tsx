@@ -1,9 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { useState } from 'react';
 import { Camera, Eye, EyeOff, Loader2, Save } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -20,23 +17,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuthStore } from '@/shared/stores/auth.store';
 import { getInitials } from '@/shared/lib/string/getInitials';
-import { apiGet, apiPatch } from '@/shared/lib/apiClient';
-import { uploadUserProfilePhoto } from '@/modules/shared/lib/uploadUserProfilePhoto';
-import { toast } from 'sonner';
 import { UserProfileFields } from '@modules/shared/components/users/user-profile-fields';
-
-const profileSchema = z.object({
-  first_name: z.string().min(1, 'Prénom requis').max(120),
-  last_name: z.string().min(1, 'Nom requis').max(120),
-  address: z.string().max(255).nullable().optional(),
-  zip_code: z.string().max(20).nullable().optional(),
-  city: z.string().max(100).nullable().optional(),
-  country: z.string().length(2).nullable().optional(),
-  timezone: z.string().nullable().optional(),
-  preferred_language: z.string().nullable().optional(),
-});
-
-type ProfileFormValues = z.infer<typeof profileSchema>;
+import { useProfileForm } from './useProfileForm';
+import { usePasswordChange } from './usePasswordChange';
 
 interface ProfileContentProps {
   uploadPath?: 'platform/users' | 'users';
@@ -47,150 +30,42 @@ export default function ProfileContent({
   uploadPath = 'platform/users',
   patchPath = 'platform/users',
 }: ProfileContentProps) {
-  const { user, setAuth } = useAuthStore();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const pendingPhotoRef = useRef<File | null>(null);
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
-  const [uploadError, setUploadError] = useState<string | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const { user } = useAuthStore();
   const [activeTab, setActiveTab] = useState<'account' | 'security'>('account');
 
-  // Security
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [showCurrentPwd, setShowCurrentPwd] = useState(false);
-  const [showNewPwd, setShowNewPwd] = useState(false);
-  const [showConfirmPwd, setShowConfirmPwd] = useState(false);
-  const [pwdSaving, setPwdSaving] = useState(false);
-  const [pwdError, setPwdError] = useState<string | null>(null);
-
-  const form = useForm<ProfileFormValues>({
-    resolver: zodResolver(profileSchema),
-    defaultValues: {
-      first_name: '',
-      last_name: '',
-      address: null,
-      zip_code: null,
-      city: null,
-      country: null,
-      timezone: null,
-      preferred_language: null,
-    },
-  });
+  const {
+    form,
+    fileInputRef,
+    photoPreview,
+    uploadError,
+    loadError,
+    handlePhotoSelect,
+    handleSave,
+  } = useProfileForm({ uploadPath, patchPath });
 
   const {
-    reset,
-    formState: { isSubmitting },
-  } = form;
-
-  useEffect(() => {
-    if (!user?.id) return;
-    setLoadError(null);
-    apiGet<{ data: ProfileFormValues }>(`${patchPath}/${user.id}`)
-      .then(({ data }) => {
-        reset({
-          first_name: data.first_name ?? '',
-          last_name: data.last_name ?? '',
-          address: data.address ?? null,
-          zip_code: data.zip_code ?? null,
-          city: data.city ?? null,
-          country: data.country ?? null,
-          timezone: data.timezone ?? null,
-          preferred_language: data.preferred_language ?? null,
-        });
-      })
-      .catch(() => {
-        setLoadError('Impossible de charger le profil. Veuillez réessayer.');
-        toast.error('Impossible de charger le profil');
-      });
-  }, [user?.id, patchPath, reset]);
-
-  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    pendingPhotoRef.current = file;
-    const reader = new FileReader();
-    reader.onload = (ev) => setPhotoPreview(ev.target?.result as string);
-    reader.readAsDataURL(file);
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  };
-
-  const handleSave = async (values: ProfileFormValues) => {
-    if (!user) return;
-    setUploadError(null);
-
-    let updatedUser = user;
-
-    if (pendingPhotoRef.current) {
-      try {
-        const media = await uploadUserProfilePhoto(user.id, pendingPhotoRef.current, uploadPath);
-        updatedUser = { ...user, avatar: media.url };
-        setAuth(updatedUser);
-        pendingPhotoRef.current = null;
-        setPhotoPreview(null);
-      } catch {
-        setUploadError("Échec de l'upload de la photo.");
-        toast.error("Échec de l'upload de la photo");
-        return;
-      }
-    }
-
-    try {
-      await apiPatch(`${patchPath}/${user.id}`, {
-        first_name: values.first_name,
-        last_name: values.last_name,
-        address: values.address || null,
-        zip_code: values.zip_code || null,
-        city: values.city || null,
-        country: values.country || null,
-        timezone: values.timezone || null,
-        preferred_language: values.preferred_language || null,
-      });
-      setAuth({ ...updatedUser, name: `${values.first_name} ${values.last_name}`.trim() });
-      toast.success('Profil mis à jour');
-    } catch {
-      toast.error('Échec de la mise à jour du profil');
-    }
-  };
-
-  const handleChangePassword = async () => {
-    if (!user) return;
-    if (newPassword.length < 8) {
-      setPwdError('Le mot de passe doit contenir au moins 8 caractères.');
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      setPwdError('Les mots de passe ne correspondent pas.');
-      return;
-    }
-    setPwdSaving(true);
-    setPwdError(null);
-    try {
-      await apiPatch(`${patchPath}/${user.id}/password`, {
-        current_password: currentPassword,
-        password: newPassword,
-        password_confirmation: confirmPassword,
-      });
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
-      toast.success('Mot de passe modifié');
-    } catch (err: unknown) {
-      const json =
-        err != null && typeof err === 'object' && 'json' in err
-          ? (err as { json?: { errors?: { current_password?: string[] }; message?: string } }).json
-          : undefined;
-      const fieldError = json?.errors?.current_password?.[0];
-      const msg = fieldError ?? json?.message ?? 'Échec du changement de mot de passe.';
-      setPwdError(msg);
-      toast.error(msg);
-    } finally {
-      setPwdSaving(false);
-    }
-  };
+    currentPassword,
+    setCurrentPassword,
+    newPassword,
+    setNewPassword,
+    confirmPassword,
+    setConfirmPassword,
+    showCurrentPwd,
+    setShowCurrentPwd,
+    showNewPwd,
+    setShowNewPwd,
+    showConfirmPwd,
+    setShowConfirmPwd,
+    isSaving: pwdSaving,
+    error: pwdError,
+    handleChangePassword,
+  } = usePasswordChange({ patchPath });
 
   if (user == null) return null;
+
+  const {
+    formState: { isSubmitting },
+  } = form;
 
   const tabs = [
     { key: 'account' as const, label: 'Paramètres du compte' },

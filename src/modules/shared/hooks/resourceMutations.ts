@@ -95,6 +95,25 @@ export function makeDuplicateMutation(
   };
 }
 
+export function makeToggleActiveMutation(
+  api: Pick<ResourceApi<unknown, { is_active: boolean }>, 'update'>,
+  queryKey: readonly unknown[],
+  messages?: MutationMessages,
+) {
+  return function useToggleActiveResource() {
+    const queryClient = useQueryClient();
+    return useMutation({
+      mutationFn: ({ id, is_active }: { id: string; is_active: boolean }) =>
+        api.update(id, { is_active }),
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey });
+        if (messages?.success) toast.success(messages.success);
+      },
+      onError: () => toast.error(messages?.error ?? DEFAULT_ERROR),
+    });
+  };
+}
+
 export function makeUploadMediaMutation(api: Pick<ResourceApi<unknown, unknown>, 'uploadMedia'>) {
   return function useUploadMediaResource() {
     return useMutation({
