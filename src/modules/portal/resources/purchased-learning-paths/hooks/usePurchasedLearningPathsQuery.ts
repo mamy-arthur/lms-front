@@ -1,10 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { purchasedLearningPathKeys } from '@/shared/queries/keys';
 import { purchasedLearningPathsManagementApi } from '../api';
-import type {
-  PurchasedLearningPathQueryParams,
-  PurchasedLearningPathsQueryResult,
-} from '../types';
+import type { PurchasedLearningPathQueryParams, PurchasedLearningPathsQueryResult } from '../types';
 
 export function usePurchasedLearningPathsQuery(params: PurchasedLearningPathQueryParams = {}) {
   return useQuery<PurchasedLearningPathsQueryResult>({

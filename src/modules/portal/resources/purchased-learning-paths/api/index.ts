@@ -1,10 +1,7 @@
 import { purchasedLearningPathsApi } from '@/shared/api/purchased-learning-paths.api';
 import { getAllTenantAssignableUsers, getAllTenantGroups } from '../data/assignable.mock';
 import { mapToPurchasedLearningPath } from '../lib/mappers';
-import type {
-  PurchasedLearningPathQueryParams,
-  PurchasedLearningPathsQueryResult,
-} from '../types';
+import type { PurchasedLearningPathQueryParams, PurchasedLearningPathsQueryResult } from '../types';
 
 export const purchasedLearningPathsManagementApi = {
   async list(

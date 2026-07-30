@@ -17,10 +17,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { formatDate } from '@/shared/lib/date';
-import type {
-  PurchasedLearningPathEnrollment,
-  PurchasedLearningPathStatKey,
-} from '../../types';
+import type { PurchasedLearningPathEnrollment, PurchasedLearningPathStatKey } from '../../types';
 
 const STAT_LABELS: Record<PurchasedLearningPathStatKey, string> = {
   cumulative: 'Inscrits cumulés',

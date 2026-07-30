@@ -56,7 +56,9 @@ export function filterEnrollmentsByStat(
         (enrollment) => enrollment.startedAt !== null && enrollment.completedAt === null,
       );
     case 'notStarted':
-      return purchasedLearningPath.enrollments.filter((enrollment) => enrollment.startedAt === null);
+      return purchasedLearningPath.enrollments.filter(
+        (enrollment) => enrollment.startedAt === null,
+      );
     case 'cumulative':
     default:
       return purchasedLearningPath.enrollments;

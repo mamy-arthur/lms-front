@@ -14,11 +14,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import type {
-  AssignableGroup,
-  PurchasedLearningPathRow,
-  TenantAssignableUser,
-} from '../../types';
+import type { AssignableGroup, PurchasedLearningPathRow, TenantAssignableUser } from '../../types';
 import { AddUsersDialog } from './add-users-dialog';
 import { CreateGroupDialog } from './create-group-dialog';
 import { UserCard, GroupCard } from './cards';

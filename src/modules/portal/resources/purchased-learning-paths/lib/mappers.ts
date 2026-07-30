@@ -2,9 +2,7 @@ import type { ApiPurchasedLearningPath } from '@/shared/types/purchased-learning
 import type { PurchasedLearningPath } from '../types';
 
 /** Mappe une ressource API vers le modèle UI purchasedLearningPath. */
-export function mapToPurchasedLearningPath(
-  api: ApiPurchasedLearningPath,
-): PurchasedLearningPath {
+export function mapToPurchasedLearningPath(api: ApiPurchasedLearningPath): PurchasedLearningPath {
   return {
     id: api.id,
     tenantId: api.tenant_id,
