@@ -1,3 +1,11 @@
+import type {
+  ApiQuizItem,
+  ApiQuizItemChoices,
+  ApiQuizItemTrueFalse,
+  ApiQuizItemMatching,
+} from '@/shared/types/question-bank.types';
+import type { Question, QuestionType } from '@/modules/shared/lib/normalizers';
+
 export type {
   Question,
   QuestionType,
@@ -5,38 +13,82 @@ export type {
   MatchingPair,
   Duration,
 } from '@/modules/shared/lib/normalizers';
-export { normalizeQuestion } from '@/modules/shared/lib/normalizers';
 
-export interface QuestionPayload {
-  quizId: string;
-  name: string;
-  text: string;
-  type: string;
-  generalFeedback: string;
-  referenceNumber: string;
-  isActive: boolean;
-  duration: { value: number; unit: string } | null;
-  moduleId: string;
-  correctAnswer: boolean;
-  feedbackTrue: string;
-  feedbackFalse: string;
-  options: {
-    id: string;
-    label: string;
-    isCorrect: boolean;
-    score: number;
-    feedback: string;
-  }[];
-  pairs: { id: string; question: string; answer: string }[];
+/**
+ * Maps a Quiz item from the platform API (module 10) to the shared Question type
+ * used by the admin questions table and form modal.
+ */
+export function normalizeQuestion(api: ApiQuizItem): Question {
+  const base = {
+    id: api.id,
+    quizId: api.question_bank_id,
+    type: api.type as QuestionType,
+    text: api.question,
+    referenceNumber: api.idnumber,
+    updatedAt: api.updated_at,
+    // Fields not present in the new API — set sensible defaults
+    name: (api.question ?? '').replace(/<[^>]*>/g, '').slice(0, 80),
+    generalFeedback: '',
+    isActive: true,
+    duration: null,
+    competencyId: api.competency_id ?? '',
+    feedbackTrue: api.comment_if_correct ?? '',
+    feedbackFalse: api.comment_if_incorrect ?? '',
+  };
+
+  if (api.type === 'multiple_choice' || api.type === 'single_choice') {
+    const a = api as ApiQuizItemChoices;
+    return {
+      ...base,
+      correctAnswer: false,
+      options: a.options.map((o) => ({
+        id: o.id,
+        label: o.label,
+        isCorrect: o.is_correct,
+        score: o.is_correct ? 100 : 0,
+        feedback: '',
+        weightPercentage: o.weight_percentage ?? 0,
+      })),
+      pairs: [],
+    };
+  }
+
+  if (api.type === 'true_false') {
+    const a = api as ApiQuizItemTrueFalse;
+    return { ...base, correctAnswer: a.correct_answer, options: [], pairs: [] };
+  }
+
+  // matching
+  const a = api as ApiQuizItemMatching;
+  return {
+    ...base,
+    correctAnswer: false,
+    options: [],
+    pairs: a.pairs.map((p, i) => ({
+      id: String(i),
+      question: p.left,
+      answer: p.right,
+    })),
+  };
 }
 
-export type UpdateQuestionPayload = QuestionPayload;
+export interface QuestionPayload {
+  questionBankId: string;
+  type: string;
+  competency_id: string;
+  question: string;
+  commentIfCorrect: string | null;
+  commentIfIncorrect: string | null;
+  correctAnswer: boolean;
+  options: { id?: string; label: string; isCorrect: boolean; weight_percentage?: number }[];
+  pairs: { left: string; right: string; weight_percentage: number }[];
+}
+
+export type UpdateQuestionPayload = Omit<QuestionPayload, 'questionBankId' | 'type'>;
 
 export interface QuestionSearchParams {
   q?: string;
-  quiz_id?: string;
   type?: string;
-  is_active?: boolean;
   sort_by?: string;
   sort_dir?: 'asc' | 'desc';
   page?: number;

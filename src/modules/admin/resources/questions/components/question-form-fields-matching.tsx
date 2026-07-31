@@ -1,11 +1,12 @@
 'use client';
 
-import { Plus, Trash2 } from 'lucide-react';
+import { ArrowRight, Plus, Trash2 } from 'lucide-react';
 import type { UseFormReturn } from 'react-hook-form';
-import { useFieldArray } from 'react-hook-form';
+import { useFieldArray, useWatch } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
 import { FieldContent, FieldError, FieldGroup, FieldLabel, FieldRoot } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
 import type { FormValues } from './question-form-data';
 
 interface MatchingFieldsProps {
@@ -22,106 +23,135 @@ export function QuestionFormFieldsMatching({ form }: MatchingFieldsProps) {
     name: 'pairs',
   });
 
+  const autoWeight = pairFields.length > 0 ? Math.round(100 / pairFields.length) : 0;
+  const watchedPairs = useWatch({ control: form.control, name: 'pairs' });
+
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex items-end justify-between border-b border-border/10 pl-3">
+      <div className="flex items-center justify-between border-b border-border/10 pb-4">
         <div>
-          <p className="text-xs font-semibold uppercase text-muted-foreground">
-            Réponses et explications
-          </p>
-          <p className="mt-2 text-xs text-foreground/80">
-            Ajoutez des paires et associez vos réponses rapidement.
-          </p>
+          {pairFields.length > 0 && (
+            <div className="mt-1 flex items-center gap-2">
+              <p className="text-xs text-muted-foreground">
+                {pairFields.length} paire{pairFields.length === 1 ? '' : 's'}
+              </p>
+              <span className="px-2 py-0.5 text-xs font-medium text-(--color-primary)">
+                {autoWeight}%&nbsp;/ paire (auto)
+              </span>
+            </div>
+          )}
         </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="xs"
-          className="text-(--color-primary) hover:text-(--color-primary)"
-          onClick={() =>
-            appendPair({
-              id: `pair-${Date.now()}-${Math.random()}`,
-              question: '',
-              answer: '',
-            })
-          }
-        >
+        <Button type="button" variant="outline" onClick={() => appendPair({ left: '', right: '' })}>
           <Plus className="mr-1 size-3" />
           Ajouter une paire
         </Button>
       </div>
-      <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-3xl bg-background/95 p-4 ring-1 ring-border/10">
-        <div className="flex-1 min-h-0 overflow-y-auto pb-3">
-          {pairFields.length === 0 ? (
-            <div className="rounded-2xl bg-muted/10 p-4 text-xs text-muted-foreground">
-              Aucune paire. Cliquez sur "Ajouter une paire" pour commencer.
-            </div>
-          ) : (
-            <div className="space-y-2 overflow-hidden">
-              {pairFields.map((field, index) => (
-                <div
-                  key={field.id}
-                  className="space-y-3 rounded-3xl bg-background/95 p-4 ring-1 ring-border/10"
-                >
-                  <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
-                    <span>Pair {index + 1}</span>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="size-6 text-(--color-primary)"
-                      onClick={() => removePair(index)}
+
+      <div className="flex h-full min-h-0 flex-col overflow-hidden ring-1 ring-border/10">
+        {pairFields.length === 0 ? (
+          <div className="rounded-3xl bg-muted/10 p-4 text-xs text-muted-foreground">
+            Aucune paire ajoutée. Cliquez sur "Ajouter une paire" pour commencer.
+          </div>
+        ) : (
+          <div className="flex h-full min-h-0 flex-col overflow-hidden">
+            <div className="flex-1 min-h-0 overflow-y-auto pb-3">
+              <div className="space-y-3">
+                {pairFields.map((field, index) => {
+                  const isFilled =
+                    !!watchedPairs?.[index]?.left?.trim() && !!watchedPairs?.[index]?.right?.trim();
+                  return (
+                    <div
+                      key={field.id}
+                      className={cn(
+                        'group rounded-sm border p-3 transition-all duration-200',
+                        isFilled
+                          ? 'border-(--color-primary) bg-primary/5 shadow-sm'
+                          : 'border-border bg-card hover:border-primary/20 hover:bg-muted/30 hover:shadow-sm',
+                      )}
                     >
-                      <Trash2 className="size-3" />
-                    </Button>
-                  </div>
+                      <div className="flex items-start gap-3">
+                        {/* Numéro de paire */}
+                        <div className="mt-6 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-muted-foreground/30 text-[10px] font-medium text-muted-foreground">
+                          {index + 1}
+                        </div>
 
-                  <FieldRoot
-                    control={form.control}
-                    name={`pairs.${index}.question`}
-                    render={({ field: f }) => (
-                      <FieldGroup className="space-y-2">
-                        <FieldLabel className="text-xs">Question *</FieldLabel>
-                        <FieldContent>
-                          <Input
-                            aria-label={`Question ${index + 1}`}
-                            {...f}
-                            className="text-foreground/70"
+                        {/* Gauche */}
+                        <div className="flex-1">
+                          <FieldRoot
+                            control={form.control}
+                            name={`pairs.${index}.left`}
+                            render={({ field: f }) => (
+                              <FieldGroup className="flex flex-col space-y-1">
+                                <FieldLabel className="text-xs font-medium text-muted-foreground">
+                                  Gauche
+                                </FieldLabel>
+                                <FieldContent>
+                                  <Input
+                                    {...f}
+                                    aria-label={`Gauche ${index + 1}`}
+                                    placeholder="Terme…"
+                                    className="h-9 border shadow-none focus-visible:ring-1"
+                                  />
+                                </FieldContent>
+                                <FieldError />
+                              </FieldGroup>
+                            )}
                           />
-                        </FieldContent>
-                        <FieldError />
-                      </FieldGroup>
-                    )}
-                  />
+                        </div>
 
-                  <FieldRoot
-                    control={form.control}
-                    name={`pairs.${index}.answer`}
-                    render={({ field: f }) => (
-                      <FieldGroup className="space-y-2">
-                        <FieldLabel className="text-xs">Réponse *</FieldLabel>
-                        <FieldContent>
-                          <Input
-                            aria-label={`Réponse ${index + 1}`}
-                            {...f}
-                            className="text-foreground/70"
+                        {/* Séparateur */}
+                        <ArrowRight className="mt-6 size-4 shrink-0 text-muted-foreground/40" />
+
+                        {/* Droite */}
+                        <div className="flex-1">
+                          <FieldRoot
+                            control={form.control}
+                            name={`pairs.${index}.right`}
+                            render={({ field: f }) => (
+                              <FieldGroup className="flex flex-col space-y-1">
+                                <FieldLabel className="text-xs font-medium text-muted-foreground">
+                                  Droite
+                                </FieldLabel>
+                                <FieldContent>
+                                  <Input
+                                    {...f}
+                                    aria-label={`Droite ${index + 1}`}
+                                    placeholder="Définition…"
+                                    className="h-9 border shadow-none focus-visible:ring-1"
+                                  />
+                                </FieldContent>
+                                <FieldError />
+                              </FieldGroup>
+                            )}
                           />
-                        </FieldContent>
-                        <FieldError />
-                      </FieldGroup>
-                    )}
-                  />
-                </div>
-              ))}
+                        </div>
+
+                        {/* Suppression */}
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removePair(index)}
+                          className="h-8 w-8 shrink-0 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive"
+                          aria-label={`Supprimer la paire ${index + 1}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-          )}
+          </div>
+        )}
 
-          {form.formState.errors.pairs && (
-            <p className="mt-2 text-xs text-destructive" role="alert">
-              {String(form.formState.errors.pairs.message ?? '')}
-            </p>
-          )}
-        </div>
+        {(form.formState.errors.pairs?.root?.message || form.formState.errors.pairs?.message) && (
+          <p className="mt-2 text-xs text-destructive" role="alert">
+            {form.formState.errors.pairs?.root?.message ??
+              String(form.formState.errors.pairs?.message ?? '')}
+          </p>
+        )}
       </div>
     </div>
   );

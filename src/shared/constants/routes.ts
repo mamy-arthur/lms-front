@@ -23,6 +23,8 @@ export const ROUTES = {
     wallet: '/admin/wallet',
 
     quizQuestions: (quizId: string) => `/admin/quizzes/${quizId}/questions`,
+    questionBanks: '/admin/question-banks',
+    questionBankQuizzes: (bankId: string) => `/admin/question-banks/${bankId}/quizzes`,
     certificate: '/admin/certificates',
     mailTemplates: '/admin/mail-templates',
     contentTypes: '/admin/content-types',

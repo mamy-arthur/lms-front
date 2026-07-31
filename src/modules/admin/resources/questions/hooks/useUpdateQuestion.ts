@@ -1,52 +1,61 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import type { Question, QuestionPayload } from '../types';
-import { normalizeQuestion } from '../types';
-import { ADMIN_QUESTIONS_QUERY_KEY } from './useQuestionsQuery';
+import { toast } from 'sonner';
+import { quizItemsApi } from '@/shared/api/question-banks.api';
+import { quizItemKeys } from '@/shared/queries/keys';
+import { getApiErrorMessage } from '@/shared/lib/errors';
+import type { UpdateQuestionPayload } from '../types';
 
-export function useUpdateQuestion() {
+export function useUpdateQuestion(questionBankId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: QuestionPayload }) => {
-      const mockRaw: Record<string, unknown> = {
-        id,
-        quiz_id: data.quizId,
-        name: data.name,
-        text: data.text,
-        type: data.type,
-        general_feedback: data.generalFeedback,
-        identification_number: data.referenceNumber,
-        is_active: data.isActive,
-        duration: data.duration,
-        module_id: data.moduleId,
-        correct_answer: data.correctAnswer,
-        feedback_true: data.feedbackTrue,
-        feedback_false: data.feedbackFalse,
-        options: data.options.map((o) => ({
-          id: o.id,
-          label: o.label,
-          is_correct: o.isCorrect,
-          score: o.score,
-          feedback: o.feedback,
-        })),
-        pairs: data.pairs.map((p) => ({
-          id: p.id,
-          question: p.question,
-          answer: p.answer,
-        })),
-        updated_at: new Date().toISOString(),
+    mutationFn: ({ id, data }: { id: string; data: UpdateQuestionPayload }) => {
+      const {
+        type,
+        question,
+        commentIfCorrect,
+        commentIfIncorrect,
+        correctAnswer,
+        options,
+        pairs,
+        competency_id,
+      } = data as UpdateQuestionPayload & { type?: string };
+      const base = {
+        question,
+        comment_if_correct: commentIfCorrect,
+        comment_if_incorrect: commentIfIncorrect,
+        competency_id,
       };
-      return Promise.resolve({ data: mockRaw });
+      if (!type || type === 'multiple_choice' || type === 'single_choice') {
+        return quizItemsApi.update(id, {
+          ...base,
+          options: options.map((o) => ({
+            ...(o.id ? { id: o.id } : {}),
+            label: o.label,
+            is_correct: o.isCorrect,
+            ...(type === 'multiple_choice' ? { weight_percentage: o.weight_percentage ?? 0 } : {}),
+          })),
+        });
+      }
+      if (type === 'true_false') {
+        return quizItemsApi.update(id, { ...base, correct_answer: correctAnswer });
+      }
+      return quizItemsApi.update(id, {
+        ...base,
+        pairs: pairs.map((p) => ({
+          left: p.left,
+          right: p.right,
+          weight_percentage: p.weight_percentage,
+        })),
+      });
     },
-    onSuccess: ({ data: rawQuestion }) => {
-      const updated = normalizeQuestion(rawQuestion as unknown as Record<string, unknown>);
-      queryClient.setQueryData<{ data: Question[]; total: number }>(
-        ADMIN_QUESTIONS_QUERY_KEY,
-        (prev) => ({
-          data: (prev?.data ?? []).map((q) => (q.id === updated.id ? updated : q)),
-          total: prev?.total ?? 0,
-        }),
-      );
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: quizItemKeys.listByBank(questionBankId) });
+      queryClient.invalidateQueries({ queryKey: quizItemKeys.detail(variables.id) });
+      toast.success('Question mise à jour.');
+    },
+    onError: (err: unknown) => {
+      toast.error(getApiErrorMessage(err, 'Erreur lors de la mise à jour.'));
     },
   });
 }
