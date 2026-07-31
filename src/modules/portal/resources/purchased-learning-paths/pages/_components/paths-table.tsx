@@ -1,10 +1,6 @@
 'use client';
 
-import {
-  DataTable,
-  type DataTableColumn,
-  type DataTableSort,
-} from '@/shared/components/ui/DataTable';
+import { DataTable, type DataTableColumn } from '@/shared/components/ui/DataTable';
 import { Badge } from '@/components/ui/badge';
 import type { PurchasedLearningPathRow, PurchasedLearningPathStatKey } from '../../types';
 import { PurchasedLearningPathStatTrigger } from './stat-trigger';
@@ -16,10 +12,8 @@ interface PurchasedLearningPathsTableProps {
   page: number;
   pageSize: number;
   total: number;
-  sort?: DataTableSort;
   hasQuery?: boolean;
   isLoading?: boolean;
-  onSort: (column: string) => void;
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
   onStatClick: (
@@ -34,10 +28,8 @@ export function PurchasedLearningPathsTable({
   page,
   pageSize,
   total,
-  sort,
   hasQuery = false,
   isLoading = false,
-  onSort,
   onPageChange,
   onPageSizeChange,
   onStatClick,
@@ -46,8 +38,7 @@ export function PurchasedLearningPathsTable({
   const columns: DataTableColumn<PurchasedLearningPathRow>[] = [
     {
       key: 'name',
-      label: 'Nom de la formation',
-      sortable: true,
+      label: 'Parcours de formation',
       render: (row) => <span className="font-medium text-foreground">{row.name}</span>,
     },
     {
@@ -116,10 +107,8 @@ export function PurchasedLearningPathsTable({
       page={page}
       pageSize={pageSize}
       total={total}
-      sort={sort}
       isLoading={isLoading}
       hasQuery={hasQuery}
-      onSort={onSort}
       onPageChange={onPageChange}
       onPageSizeChange={onPageSizeChange}
       onRowClick={onAssign}

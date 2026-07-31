@@ -15,13 +15,7 @@ import { PurchasedLearningPathsTable } from './_components/paths-table';
 import { PurchasedLearningPathStatsUsersDrawer } from './_components/stats-users-drawer';
 import { PurchasedLearningPathAssignmentDrawer } from './_components/assignment-drawer';
 
-interface SortState {
-  column: 'name';
-  direction: 'asc' | 'desc';
-}
-
 export function PurchasedLearningPathList() {
-  const [sort, setSort] = useState<SortState>({ column: 'name', direction: 'asc' });
   /** Index 0-based pour DataTable ; l’API attend page 1-based. */
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(25);
@@ -47,18 +41,6 @@ export function PurchasedLearningPathList() {
     groups: data?.groups ?? [],
   });
 
-  const sortedRows = useMemo(() => {
-    const rows = [...controller.purchasedLearningPathRows];
-
-    rows.sort((a, b) => {
-      const compareResult = a.name.localeCompare(b.name);
-
-      return sort.direction === 'asc' ? compareResult : -compareResult;
-    });
-
-    return rows;
-  }, [controller.purchasedLearningPathRows, sort]);
-
   const total = data?.meta.total ?? 0;
 
   const statsUsers = useMemo(() => {
@@ -68,19 +50,6 @@ export function PurchasedLearningPathList() {
 
     return filterEnrollmentsByStat(statsDrawer.purchasedLearningPath, statsDrawer.stat);
   }, [statsDrawer]);
-
-  const handleSort = (column: string) => {
-    if (column !== 'name') {
-      return;
-    }
-
-    setSort((current) => ({
-      column,
-      direction: current.column === column && current.direction === 'asc' ? 'desc' : 'asc',
-    }));
-
-    setPage(0);
-  };
 
   const handlePageSizeChange = (newPageSize: number) => {
     setPageSize(newPageSize);
@@ -104,9 +73,11 @@ export function PurchasedLearningPathList() {
       <div className="bg-background">
         <header className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Gestion des formations</h1>
+            <h1 className="text-2xl font-bold tracking-tight">
+              Gestion des parcours de formations
+            </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Gérez vos formations et les assignations aux utilisateurs.
+              Gérez vos parcours de formation et leur affectation aux utilisateurs.
             </p>
           </div>
         </header>
@@ -121,12 +92,10 @@ export function PurchasedLearningPathList() {
           </Card>
         ) : (
           <PurchasedLearningPathsTable
-            purchasedLearningPaths={sortedRows}
+            purchasedLearningPaths={controller.purchasedLearningPathRows}
             page={page}
             pageSize={pageSize}
             total={total}
-            sort={sort}
-            onSort={handleSort}
             onPageChange={setPage}
             onPageSizeChange={handlePageSizeChange}
             onStatClick={(purchasedLearningPath, stat) =>

@@ -49,7 +49,7 @@ export function PurchasedLearningPathStatsUsersDrawer({
             {purchasedLearningPathName} - {STAT_LABELS[stat]}
           </SheetTitle>
           <SheetDescription>
-            Liste des utilisateurs correspondant au filtre selectionne ({users.length}).
+            Liste des utilisateurs correspondant au filtre sélectionné ({users.length}).
           </SheetDescription>
         </SheetHeader>
 

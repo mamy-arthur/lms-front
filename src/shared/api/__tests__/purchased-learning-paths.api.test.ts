@@ -1,4 +1,8 @@
 /**
+ * @jest-environment node
+ */
+
+/**
  * Tests unitaires — purchasedLearningPathsApi
  *
  * On vérifie :
@@ -6,8 +10,6 @@
  *  - la réponse (data + meta) est retournée telle quelle
  *  - les erreurs API sont propagées
  */
-
-// @jest-environment node
 
 jest.mock('@/shared/lib/apiClient', () => ({
   apiGet: jest.fn(),
