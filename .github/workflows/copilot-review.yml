@@ -22,7 +22,6 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           REPOSITORY: ${{ github.repository }}
         run: |
-          gh api \
-            --method POST \
-            "repos/$REPOSITORY/pulls/$PR_NUMBER/requested_reviewers" \
-            -f "reviewers[]=copilot-pull-request-reviewer[bot]"
+          gh pr edit "$PR_NUMBER" \
+            --repo "$REPOSITORY" \
+            --add-reviewer "@copilot"
