@@ -71,34 +71,6 @@ export const formSchema = z
           });
         }
       });
-
-      const correctOptions = data.options.filter((o) => o.isCorrect);
-      const incorrectOptions = data.options.filter((o) => !o.isCorrect);
-
-      if (correctOptions.length > 0) {
-        const correctSum = correctOptions.reduce((sum, o) => sum + (o.weightPercentage ?? 0), 0);
-        if (correctSum !== 100) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: `La somme des pourcentages des bonnes réponses doit être 100 (actuellement ${correctSum})`,
-            path: ['options'],
-          });
-        }
-      }
-
-      if (incorrectOptions.length > 0) {
-        const incorrectSum = incorrectOptions.reduce(
-          (sum, o) => sum + (o.weightPercentage ?? 0),
-          0,
-        );
-        if (incorrectSum !== -100) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: `La somme des pourcentages des mauvaises réponses doit être -100 (actuellement ${incorrectSum})`,
-            path: ['options'],
-          });
-        }
-      }
     }
     if (data.type === 'matching') {
       if (data.pairs.length < 2) {
@@ -113,7 +85,44 @@ export const formSchema = z
 
 export type FormValues = z.infer<typeof formSchema>;
 
+/**
+ * Distributes `target` integer points across `weights` proportionally,
+ * guaranteeing the result sums to exactly `target` (largest-remainder method).
+ */
+export function largestRemainder(weights: number[], target: number): number[] {
+  const total = weights.reduce((s, w) => s + w, 0);
+  if (total === 0) {
+    const base = Math.floor(target / weights.length);
+    const extra = target - base * weights.length;
+    return weights.map((_, i) => base + (i < extra ? 1 : 0));
+  }
+  const exact = weights.map((w) => (w / total) * target);
+  const floored = exact.map(Math.floor);
+  const remainder = target - floored.reduce((s, v) => s + v, 0);
+  const indices = exact
+    .map((v, i) => ({ i, frac: v - Math.floor(v) }))
+    .sort((a, b) => b.frac - a.frac)
+    .map((x) => x.i);
+  const result = [...floored];
+  for (let k = 0; k < remainder; k++) result[indices[k]] += 1;
+  return result;
+}
+
 export function buildQuestionPayload(values: FormValues, questionBankId: string): QuestionPayload {
+  // Normalize correct weights so they sum to exactly 100 (largest-remainder method).
+  // Incorrect weights are sent as-is — no normalization.
+  let resolvedOptions = values.options;
+  if (values.type === 'multiple_choice') {
+    const correctWeights = values.options
+      .filter((o) => o.isCorrect)
+      .map((o) => o.weightPercentage ?? 0);
+    const normalized = largestRemainder(correctWeights, 100);
+    let ci = 0;
+    resolvedOptions = values.options.map((o) =>
+      o.isCorrect ? { ...o, weightPercentage: normalized[ci++] } : o,
+    );
+  }
+
   return {
     questionBankId,
     type: values.type,
@@ -122,7 +131,7 @@ export function buildQuestionPayload(values: FormValues, questionBankId: string)
     commentIfCorrect: values.commentIfCorrect ?? null,
     commentIfIncorrect: values.commentIfIncorrect ?? null,
     correctAnswer: values.correctAnswer,
-    options: values.options.map((o) => ({
+    options: resolvedOptions.map((o) => ({
       ...(o.id ? { id: o.id } : {}),
       label: o.label,
       isCorrect: o.isCorrect,

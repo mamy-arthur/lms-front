@@ -5,8 +5,16 @@
 import { Plus } from 'lucide-react';
 import { useCallback, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { ConfirmDialog } from '@/shared/components/confirm-dialog/ConfirmDialog';
 import { QuizSearch } from '@modules/shared/components/quizzes';
+import { QUESTION_TYPE_OPTIONS } from '@modules/shared/components/questions';
 import { useQuestionListController } from '@/modules/shared/hooks/useQuestionListController';
 import { useQuestionsQuery } from '../hooks/useQuestionsQuery';
 import { useDeleteQuestion } from '../hooks/useDeleteQuestion';
@@ -18,7 +26,8 @@ export function QuestionList({ quizId }: { quizId: string }) {
   const ctrl = useQuestionListController<Question>({
     defaultPageSize: 25,
   });
-  const params: QuestionSearchParams = {};
+  const [typeFilter, setTypeFilter] = useState<string>('');
+  const params: QuestionSearchParams = typeFilter ? { type: typeFilter } : {};
   const { data, isLoading } = useQuestionsQuery(quizId, params);
   const deleteMutation = useDeleteQuestion(quizId);
   const [deleteConfirm, setDeleteConfirm] = useState<Question | undefined>();
@@ -46,6 +55,19 @@ export function QuestionList({ quizId }: { quizId: string }) {
             onSearch={ctrl.handleSearch}
           />
           <div className="flex items-center gap-2 sm:ml-auto">
+            <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v === 'all' ? '' : v)}>
+              <SelectTrigger className="h-9 w-44">
+                <SelectValue placeholder="Tous les types" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tous les types</SelectItem>
+                {QUESTION_TYPE_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Button
               onClick={ctrl.handleOpenCreate}
               className="bg-(--color-primary) hover:bg-(--color-primary)/80 text-primary-foreground shrink-0"

@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import type { QuestionType } from '../types';
 import type { FormValues } from './question-form-data';
+import { largestRemainder } from './question-form-data';
 
 interface ChoicesFieldsProps {
   form: UseFormReturn<FormValues>;
@@ -40,8 +41,17 @@ export function QuestionFormFieldsChoices({ form, selectedType }: ChoicesFieldsP
     watchedOptions
       ?.filter((o) => !o?.isCorrect)
       .reduce((sum, o) => sum + (o?.weightPercentage ?? 0), 0) ?? 0;
-  const positiveRemaining = 100 - positiveUsed;
-  const negativeRemaining = -100 - negativeUsed;
+
+  // Precompute normalized final weights for correct options (real-time preview)
+  const correctWeightsMap = new Map<number, number>(); // optionIndex → position
+  const correctRawWeights: number[] = [];
+  watchedOptions?.forEach((o, i) => {
+    if (o?.isCorrect) {
+      correctWeightsMap.set(i, correctRawWeights.length);
+      correctRawWeights.push(o?.weightPercentage ?? 0);
+    }
+  });
+  const normalizedCorrectWeights = isMultipleChoice ? largestRemainder(correctRawWeights, 100) : [];
 
   const toggleCorrect = useCallback(
     (index: number) => {
@@ -75,26 +85,6 @@ export function QuestionFormFieldsChoices({ form, selectedType }: ChoicesFieldsP
                 {correctCount} bonne{correctCount === 1 ? '' : 's'} réponse
                 {correctCount === 1 ? '' : 's'}
               </span>
-              {isMultipleChoice && (
-                <>
-                  <span
-                    className={cn(
-                      'px-2 py-0.5 text-xs font-medium',
-                      positiveRemaining === 0 ? 'text-green-600' : 'text-amber-500',
-                    )}
-                  >
-                    Bonnes réponses&nbsp;: +{positiveRemaining}% restant
-                  </span>
-                  <span
-                    className={cn(
-                      'px-2 py-0.5 text-xs font-medium',
-                      negativeRemaining === 0 ? 'text-green-600' : 'text-amber-500',
-                    )}
-                  >
-                    Mauvaises réponses&nbsp;: {negativeRemaining}% restant
-                  </span>
-                </>
-              )}
             </div>
           )}
         </div>
@@ -126,6 +116,9 @@ export function QuestionFormFieldsChoices({ form, selectedType }: ChoicesFieldsP
                   const otherIncorrectSum = negativeUsed - (!isCorrect ? currentWeight : 0);
                   const maxAllowed = isCorrect ? 100 - otherCorrectSum : 0;
                   const minAllowed = !isCorrect ? -100 - otherIncorrectSum : 0;
+                  const normalizedPreview = isCorrect
+                    ? (normalizedCorrectWeights[correctWeightsMap.get(index) ?? -1] ?? 0)
+                    : null;
                   return (
                     <div
                       key={field.id}
@@ -184,41 +177,60 @@ export function QuestionFormFieldsChoices({ form, selectedType }: ChoicesFieldsP
                             />
                           </div>
                           {isMultipleChoice && (
-                            <div className="w-24 shrink-0">
-                              <FieldRoot
-                                control={form.control}
-                                name={`options.${index}.weightPercentage`}
-                                render={({ field: f }) => (
-                                  <FieldGroup className="flex flex-col space-y-1">
-                                    <FieldLabel className="text-xs font-medium text-muted-foreground">
-                                      Poids
-                                    </FieldLabel>
-                                    <FieldContent>
-                                      <Input
-                                        type="number"
-                                        min={minAllowed}
-                                        max={maxAllowed}
-                                        placeholder="0"
-                                        value={f.value ?? 0}
-                                        onChange={(e) => {
-                                          if (e.target.value === '') {
-                                            f.onChange(0);
-                                            return;
-                                          }
-                                          const parsed = parseInt(e.target.value, 10);
-                                          if (isNaN(parsed)) return;
-                                          f.onChange(
-                                            Math.max(minAllowed, Math.min(maxAllowed, parsed)),
-                                          );
-                                        }}
-                                        className="h-9 border shadow-none focus-visible:ring-1 text-center"
-                                      />
-                                    </FieldContent>
-                                    <FieldError />
-                                  </FieldGroup>
-                                )}
-                              />
-                            </div>
+                            <>
+                              <div className="w-24 shrink-0">
+                                <FieldRoot
+                                  control={form.control}
+                                  name={`options.${index}.weightPercentage`}
+                                  render={({ field: f }) => (
+                                    <FieldGroup className="flex flex-col space-y-1">
+                                      <FieldLabel className="text-xs font-medium text-muted-foreground">
+                                        Poids
+                                      </FieldLabel>
+                                      <FieldContent>
+                                        <Input
+                                          type="number"
+                                          min={minAllowed}
+                                          max={maxAllowed}
+                                          placeholder="0"
+                                          value={f.value ?? 0}
+                                          onChange={(e) => {
+                                            if (e.target.value === '') {
+                                              f.onChange(0);
+                                              return;
+                                            }
+                                            const parsed = parseInt(e.target.value, 10);
+                                            if (isNaN(parsed)) return;
+                                            f.onChange(
+                                              Math.max(minAllowed, Math.min(maxAllowed, parsed)),
+                                            );
+                                          }}
+                                          className="h-9 border shadow-none focus-visible:ring-1 text-center"
+                                        />
+                                      </FieldContent>
+                                      <FieldError />
+                                    </FieldGroup>
+                                  )}
+                                />
+                              </div>
+                              {isCorrect && normalizedPreview !== null && (
+                                <div className="w-16 shrink-0">
+                                  <div className="flex flex-col space-y-1">
+                                    <span className="text-xs font-medium text-muted-foreground">
+                                      Final
+                                    </span>
+                                    <div
+                                      className={cn(
+                                        'flex h-9 items-center justify-center rounded-sm border text-xs font-semibold',
+                                        'border-(--color-primary) bg-primary/5 text-(--color-primary)',
+                                      )}
+                                    >
+                                      {normalizedPreview}%
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </>
                           )}
                         </div>
 

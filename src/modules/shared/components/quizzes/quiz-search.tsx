@@ -14,7 +14,7 @@ export function QuizSearch({ value, onChange, onSearch }: QuizSearchProps) {
     <div className="relative w-full sm:max-w-sm">
       <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
       <Input
-        placeholder="Rechercher par titre…"
+        placeholder="Rechercher par reference , question ..."
         aria-label="Rechercher"
         value={value}
         onChange={(e) => onChange(e.target.value)}
