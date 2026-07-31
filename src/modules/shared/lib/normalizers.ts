@@ -99,7 +99,7 @@ export function normalizeQuestion(raw: Record<string, unknown>): Question {
             ) as Duration['unit'],
           }
         : null,
-    competencyId: String(raw.moduleId ?? raw.module_id ?? ''),
+    competencyId: String(raw.competency_id ?? ''),
     correctAnswer: Boolean(raw.correctAnswer ?? raw.correct_answer ?? false),
     feedbackTrue: String(raw.feedbackTrue ?? raw.feedback_true ?? ''),
     feedbackFalse: String(raw.feedbackFalse ?? raw.feedback_false ?? ''),
