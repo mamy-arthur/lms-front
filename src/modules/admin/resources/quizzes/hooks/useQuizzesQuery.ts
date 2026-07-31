@@ -1,12 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { questionBanksApi } from '@/shared/api/question-banks.api';
 import { questionBankKeys } from '@/shared/queries/keys';
-import type { QuizSearchParams } from '../types';
+// import type { QuizSearchParams } from '../types';
 import { normalizeQuiz } from '../types';
 
 export const ADMIN_QUIZZES_QUERY_KEY = questionBankKeys.lists();
 
-export function useQuizzesQuery(_params?: QuizSearchParams) {
+export function useQuizzesQuery() {
   return useQuery({
     queryKey: questionBankKeys.lists(),
     queryFn: async () => {

@@ -321,7 +321,11 @@ describe('questionBanksApi', () => {
       mockApiPost.mockRejectedValue(new Error('422 Unprocessable Entity'));
 
       await expect(
-        questionBanksApi.createQuizItem('bank-1', { type: 'true_false', question: '' }),
+        questionBanksApi.createQuizItem('bank-1', {
+          type: 'true_false',
+          question: '',
+          correct_answer: false,
+        }),
       ).rejects.toThrow('422 Unprocessable Entity');
     });
   });

@@ -16,7 +16,7 @@ export function QuizList() {
   const ctrl = useQuizListController<Quiz>({
     defaultPageSize: 25,
   });
-  const { data, isLoading } = useQuizzesQuery(ctrl.params);
+  const { data, isLoading } = useQuizzesQuery();
   const deleteMutation = useDeleteQuiz();
   const [duplicateFrom, setDuplicateFrom] = useState<Quiz | undefined>();
   const [deleteConfirm, setDeleteConfirm] = useState<Quiz | undefined>();
