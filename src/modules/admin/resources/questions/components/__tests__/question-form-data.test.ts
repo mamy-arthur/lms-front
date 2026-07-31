@@ -128,7 +128,7 @@ describe('formSchema — single_choice', () => {
     expect(result.error?.issues.some((i) => i.message.includes('Exactement un choix'))).toBe(true);
   });
 
-  it('échoue si plus d\'une option correcte', () => {
+  it("échoue si plus d'une option correcte", () => {
     const result = formSchema.safeParse(
       baseValues({
         type: 'single_choice',
@@ -142,7 +142,7 @@ describe('formSchema — single_choice', () => {
     expect(result.error?.issues.some((i) => i.message.includes('Exactement un choix'))).toBe(true);
   });
 
-  it('échoue si le label d\'une option est vide', () => {
+  it("échoue si le label d'une option est vide", () => {
     const result = formSchema.safeParse(
       baseValues({
         type: 'single_choice',
@@ -201,7 +201,7 @@ describe('formSchema — multiple_choice', () => {
     expect(result.error?.issues.some((i) => i.message.includes('Au moins un choix'))).toBe(true);
   });
 
-  it('échoue si le poids d\'une réponse correcte est négatif', () => {
+  it("échoue si le poids d'une réponse correcte est négatif", () => {
     const result = formSchema.safeParse(
       baseValues({
         type: 'multiple_choice',
@@ -212,12 +212,10 @@ describe('formSchema — multiple_choice', () => {
       }),
     );
     expect(result.success).toBe(false);
-    expect(
-      result.error?.issues.some((i) => i.message.includes('entre 0 et 100')),
-    ).toBe(true);
+    expect(result.error?.issues.some((i) => i.message.includes('entre 0 et 100'))).toBe(true);
   });
 
-  it('échoue si le poids d\'une réponse correcte dépasse 100', () => {
+  it("échoue si le poids d'une réponse correcte dépasse 100", () => {
     const result = formSchema.safeParse(
       baseValues({
         type: 'multiple_choice',
@@ -228,12 +226,10 @@ describe('formSchema — multiple_choice', () => {
       }),
     );
     expect(result.success).toBe(false);
-    expect(
-      result.error?.issues.some((i) => i.message.includes('entre 0 et 100')),
-    ).toBe(true);
+    expect(result.error?.issues.some((i) => i.message.includes('entre 0 et 100'))).toBe(true);
   });
 
-  it('échoue si le poids d\'une réponse incorrecte est positif', () => {
+  it("échoue si le poids d'une réponse incorrecte est positif", () => {
     const result = formSchema.safeParse(
       baseValues({
         type: 'multiple_choice',
@@ -244,12 +240,10 @@ describe('formSchema — multiple_choice', () => {
       }),
     );
     expect(result.success).toBe(false);
-    expect(
-      result.error?.issues.some((i) => i.message.includes('entre -100 et 0')),
-    ).toBe(true);
+    expect(result.error?.issues.some((i) => i.message.includes('entre -100 et 0'))).toBe(true);
   });
 
-  it('échoue si le poids d\'une réponse incorrecte est inférieur à -100', () => {
+  it("échoue si le poids d'une réponse incorrecte est inférieur à -100", () => {
     const result = formSchema.safeParse(
       baseValues({
         type: 'multiple_choice',
@@ -260,9 +254,7 @@ describe('formSchema — multiple_choice', () => {
       }),
     );
     expect(result.success).toBe(false);
-    expect(
-      result.error?.issues.some((i) => i.message.includes('entre -100 et 0')),
-    ).toBe(true);
+    expect(result.error?.issues.some((i) => i.message.includes('entre -100 et 0'))).toBe(true);
   });
 
   it('accepte la soumission même si la somme des poids corrects ≠ 100 (normalisé au payload)', () => {
@@ -283,16 +275,12 @@ describe('formSchema — multiple_choice', () => {
 
 describe('formSchema — true_false', () => {
   it('valide avec correctAnswer = true', () => {
-    const result = formSchema.safeParse(
-      baseValues({ type: 'true_false', correctAnswer: true }),
-    );
+    const result = formSchema.safeParse(baseValues({ type: 'true_false', correctAnswer: true }));
     expect(result.success).toBe(true);
   });
 
   it('valide avec correctAnswer = false', () => {
-    const result = formSchema.safeParse(
-      baseValues({ type: 'true_false', correctAnswer: false }),
-    );
+    const result = formSchema.safeParse(baseValues({ type: 'true_false', correctAnswer: false }));
     expect(result.success).toBe(true);
   });
 });
@@ -306,9 +294,7 @@ describe('formSchema — matching', () => {
   ];
 
   it('valide un formulaire correct (2 paires minimum)', () => {
-    const result = formSchema.safeParse(
-      baseValues({ type: 'matching', pairs: validPairs }),
-    );
+    const result = formSchema.safeParse(baseValues({ type: 'matching', pairs: validPairs }));
     expect(result.success).toBe(true);
   });
 
@@ -320,7 +306,7 @@ describe('formSchema — matching', () => {
     expect(result.error?.issues.some((i) => i.message.includes('2 paires'))).toBe(true);
   });
 
-  it('échoue si le côté gauche d\'une paire est vide', () => {
+  it("échoue si le côté gauche d'une paire est vide", () => {
     const result = formSchema.safeParse(
       baseValues({
         type: 'matching',
@@ -352,17 +338,13 @@ describe('formSchema — matching', () => {
 
 describe('formSchema — champs communs', () => {
   it('échoue si question est vide', () => {
-    const result = formSchema.safeParse(
-      baseValues({ type: 'true_false', question: '' }),
-    );
+    const result = formSchema.safeParse(baseValues({ type: 'true_false', question: '' }));
     expect(result.success).toBe(false);
     expect(result.error?.issues.some((i) => i.path.includes('question'))).toBe(true);
   });
 
   it('échoue si competencyId est vide', () => {
-    const result = formSchema.safeParse(
-      baseValues({ type: 'true_false', competencyId: '' }),
-    );
+    const result = formSchema.safeParse(baseValues({ type: 'true_false', competencyId: '' }));
     expect(result.success).toBe(false);
     expect(result.error?.issues.some((i) => i.path.includes('competencyId'))).toBe(true);
   });
@@ -518,7 +500,7 @@ describe('buildQuestionPayload()', () => {
   // ── single_choice ──────────────────────────────────────────────────────────
 
   describe('single_choice', () => {
-    it('n\'inclut pas weight_percentage dans le payload options', () => {
+    it("n'inclut pas weight_percentage dans le payload options", () => {
       const values = baseValues({
         type: 'single_choice',
         options: [
@@ -621,7 +603,7 @@ describe('buildQuestionPayload()', () => {
       expect(payload.commentIfCorrect).toBeNull();
     });
 
-    it('transmet l\'id existant d\'une option si présent', () => {
+    it("transmet l'id existant d'une option si présent", () => {
       const values = baseValues({
         type: 'single_choice',
         options: [

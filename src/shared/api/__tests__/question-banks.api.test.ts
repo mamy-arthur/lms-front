@@ -246,10 +246,7 @@ describe('questionBanksApi', () => {
 
       await questionBanksApi.listQuizzes('bank-1');
 
-      expect(mockApiGet).toHaveBeenCalledWith(
-        'platform/question-banks/bank-1/quizzes',
-        undefined,
-      );
+      expect(mockApiGet).toHaveBeenCalledWith('platform/question-banks/bank-1/quizzes', undefined);
     });
 
     it('transmet le filtre type si fourni', async () => {
@@ -269,11 +266,7 @@ describe('questionBanksApi', () => {
       const result = await questionBanksApi.listQuizzes('bank-1');
 
       expect(result.data).toHaveLength(3);
-      expect(result.data.map((q) => q.type)).toEqual([
-        'multiple_choice',
-        'true_false',
-        'matching',
-      ]);
+      expect(result.data.map((q) => q.type)).toEqual(['multiple_choice', 'true_false', 'matching']);
     });
 
     it('retourne une liste vide si la banque est vide', async () => {
@@ -309,10 +302,7 @@ describe('questionBanksApi', () => {
 
       await questionBanksApi.createQuizItem('bank-1', payload);
 
-      expect(mockApiPost).toHaveBeenCalledWith(
-        'platform/question-banks/bank-1/quizzes',
-        payload,
-      );
+      expect(mockApiPost).toHaveBeenCalledWith('platform/question-banks/bank-1/quizzes', payload);
     });
 
     it('retourne le quiz créé', async () => {

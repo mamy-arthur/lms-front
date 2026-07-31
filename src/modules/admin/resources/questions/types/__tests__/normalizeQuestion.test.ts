@@ -146,7 +146,7 @@ describe('normalizeQuestion — multiple_choice', () => {
     });
   });
 
-  it('utilise 0 pour weightPercentage si absent dans l\'API', () => {
+  it("utilise 0 pour weightPercentage si absent dans l'API", () => {
     const api: ApiQuizItemChoices = {
       ...API_CHOICES,
       options: [{ id: 'o-1', label: 'A', is_correct: true }],
