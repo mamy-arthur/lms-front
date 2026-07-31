@@ -5,6 +5,7 @@ const optionSchema = z.object({
   id: z.string().optional(),
   label: z.string().min(1, 'Libellé requis'),
   isCorrect: z.boolean(),
+  weightPercentage: z.number().int().optional(),
 });
 
 const pairSchema = z.object({
@@ -52,6 +53,52 @@ export const formSchema = z
           path: ['options'],
         });
       }
+
+      data.options.forEach((o, i) => {
+        const w = o.weightPercentage ?? 0;
+        if (o.isCorrect && (w < 0 || w > 100)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: 'Le poids doit être compris entre 0 et 100',
+            path: ['options', i, 'weightPercentage'],
+          });
+        }
+        if (!o.isCorrect && (w < -100 || w > 0)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: 'Le poids doit être compris entre -100 et 0',
+            path: ['options', i, 'weightPercentage'],
+          });
+        }
+      });
+
+      const correctOptions = data.options.filter((o) => o.isCorrect);
+      const incorrectOptions = data.options.filter((o) => !o.isCorrect);
+
+      if (correctOptions.length > 0) {
+        const correctSum = correctOptions.reduce((sum, o) => sum + (o.weightPercentage ?? 0), 0);
+        if (correctSum !== 100) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `La somme des pourcentages des bonnes réponses doit être 100 (actuellement ${correctSum})`,
+            path: ['options'],
+          });
+        }
+      }
+
+      if (incorrectOptions.length > 0) {
+        const incorrectSum = incorrectOptions.reduce(
+          (sum, o) => sum + (o.weightPercentage ?? 0),
+          0,
+        );
+        if (incorrectSum !== -100) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `La somme des pourcentages des mauvaises réponses doit être -100 (actuellement ${incorrectSum})`,
+            path: ['options'],
+          });
+        }
+      }
     }
     if (data.type === 'matching') {
       if (data.pairs.length < 2) {
@@ -79,6 +126,7 @@ export function buildQuestionPayload(values: FormValues, questionBankId: string)
       ...(o.id ? { id: o.id } : {}),
       label: o.label,
       isCorrect: o.isCorrect,
+      ...(values.type === 'multiple_choice' ? { weight_percentage: o.weightPercentage ?? 0 } : {}),
     })),
     pairs: values.pairs.map((p) => ({
       left: p.left,

@@ -17,6 +17,7 @@ export interface ApiQuizItemOption {
   id: string;
   label: string;
   is_correct: boolean;
+  weight_percentage?: number;
 }
 
 export interface ApiQuizItemPair {

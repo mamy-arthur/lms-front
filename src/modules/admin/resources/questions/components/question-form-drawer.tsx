@@ -101,6 +101,7 @@ function QuestionFormDrawerBase({
           id: o.id,
           label: o.label,
           isCorrect: o.isCorrect,
+          weightPercentage: o.weightPercentage ?? 0,
         })),
         pairs: source.pairs.map((p) => ({
           left: p.question,

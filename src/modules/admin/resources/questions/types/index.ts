@@ -47,6 +47,7 @@ export function normalizeQuestion(api: ApiQuizItem): Question {
         isCorrect: o.is_correct,
         score: o.is_correct ? 100 : 0,
         feedback: '',
+        weightPercentage: o.weight_percentage ?? 0,
       })),
       pairs: [],
     };
@@ -79,7 +80,7 @@ export interface QuestionPayload {
   commentIfCorrect: string | null;
   commentIfIncorrect: string | null;
   correctAnswer: boolean;
-  options: { id?: string; label: string; isCorrect: boolean }[];
+  options: { id?: string; label: string; isCorrect: boolean; weight_percentage?: number }[];
   pairs: { left: string; right: string; weight_percentage: number }[];
 }
 

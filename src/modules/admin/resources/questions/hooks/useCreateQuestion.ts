@@ -37,6 +37,7 @@ export function useCreateQuestion() {
             ...(o.id ? { id: o.id } : {}),
             label: o.label,
             is_correct: o.isCorrect,
+            ...(type === 'multiple_choice' ? { weight_percentage: o.weight_percentage ?? 0 } : {}),
           })),
         });
       }

@@ -44,6 +44,7 @@ export interface QuestionOption {
   isCorrect: boolean;
   score: number;
   feedback: string;
+  weightPercentage?: number;
 }
 
 export interface MatchingPair {
@@ -109,6 +110,7 @@ export function normalizeQuestion(raw: Record<string, unknown>): Question {
           isCorrect: Boolean(o.isCorrect ?? o.is_correct ?? false),
           score: Number(o.score ?? 0),
           feedback: String(o.feedback ?? ''),
+          weightPercentage: Number(o.weightPercentage ?? o.weight_percentage ?? 0),
         }))
       : [],
     pairs: Array.isArray(rawPairs)

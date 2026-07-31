@@ -28,8 +28,20 @@ export function QuestionFormFieldsChoices({ form, selectedType }: ChoicesFieldsP
 
   const watchedOptions = useWatch({ control: form.control, name: 'options' });
 
+  const isMultipleChoice = selectedType === 'multiple_choice';
   const totalChoices = optionFields.length;
   const correctCount = watchedOptions?.filter((o) => o?.isCorrect).length ?? 0;
+
+  const positiveUsed =
+    watchedOptions
+      ?.filter((o) => o?.isCorrect)
+      .reduce((sum, o) => sum + (o?.weightPercentage ?? 0), 0) ?? 0;
+  const negativeUsed =
+    watchedOptions
+      ?.filter((o) => !o?.isCorrect)
+      .reduce((sum, o) => sum + (o?.weightPercentage ?? 0), 0) ?? 0;
+  const positiveRemaining = 100 - positiveUsed;
+  const negativeRemaining = -100 - negativeUsed;
 
   const toggleCorrect = useCallback(
     (index: number) => {
@@ -40,15 +52,17 @@ export function QuestionFormFieldsChoices({ form, selectedType }: ChoicesFieldsP
         values.forEach((_, i) => form.setValue(`options.${i}.isCorrect`, false));
       }
       form.setValue(`options.${index}.isCorrect`, !current);
+      if (isMultipleChoice) {
+        form.setValue(`options.${index}.weightPercentage`, 0);
+      }
     },
-    [form, selectedType],
+    [form, selectedType, isMultipleChoice],
   );
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex items-end justify-between border-b border-border/10 pb-4">
+      <div className="flex items-center justify-between border-b border-border/10 pb-4">
         <div>
-          <p className="text-xs font-semibold uppercase text-muted-foreground">Réponses</p>
           {optionFields.length > 0 && (
             <div className="mt-1 flex items-center gap-2">
               <p className="text-xs text-muted-foreground">{totalChoices} choix</p>
@@ -61,22 +75,40 @@ export function QuestionFormFieldsChoices({ form, selectedType }: ChoicesFieldsP
                 {correctCount} bonne{correctCount === 1 ? '' : 's'} réponse
                 {correctCount === 1 ? '' : 's'}
               </span>
+              {isMultipleChoice && (
+                <>
+                  <span
+                    className={cn(
+                      'px-2 py-0.5 text-xs font-medium',
+                      positiveRemaining === 0 ? 'text-green-600' : 'text-amber-500',
+                    )}
+                  >
+                    Bonnes réponses&nbsp;: +{positiveRemaining}% restant
+                  </span>
+                  <span
+                    className={cn(
+                      'px-2 py-0.5 text-xs font-medium',
+                      negativeRemaining === 0 ? 'text-green-600' : 'text-amber-500',
+                    )}
+                  >
+                    Mauvaises réponses&nbsp;: {negativeRemaining}% restant
+                  </span>
+                </>
+              )}
             </div>
           )}
         </div>
         <Button
           type="button"
           variant="outline"
-          size="xs"
-          className="text-(--color-primary) hover:text-(--color-primary)"
-          onClick={() => appendOption({ label: '', isCorrect: false })}
+          onClick={() => appendOption({ label: '', isCorrect: false, weightPercentage: 0 })}
         >
           <Plus className="mr-1 size-3" />
           Ajouter un choix
         </Button>
       </div>
 
-      <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-3xl bg-background/95 px-2 ring-1 ring-border/10">
+      <div className="flex h-full min-h-0 flex-col overflow-hidden  ring-1 ring-border/10">
         {optionFields.length === 0 ? (
           <div className="rounded-3xl bg-muted/10 p-4 text-xs text-muted-foreground">
             Aucun choix ajouté. Cliquez sur "Ajouter un choix" pour commencer.
@@ -87,66 +119,123 @@ export function QuestionFormFieldsChoices({ form, selectedType }: ChoicesFieldsP
               <div className="space-y-3">
                 {optionFields.map((field, index) => {
                   const isCorrect = watchedOptions?.[index]?.isCorrect ?? false;
-
+                  const currentWeight = watchedOptions?.[index]?.weightPercentage ?? 0;
+                  // Exclude this field's own value from the running totals so that
+                  // max/min is always based on what the *other* fields have used.
+                  const otherCorrectSum = positiveUsed - (isCorrect ? currentWeight : 0);
+                  const otherIncorrectSum = negativeUsed - (!isCorrect ? currentWeight : 0);
+                  const maxAllowed = isCorrect ? 100 - otherCorrectSum : 0;
+                  const minAllowed = !isCorrect ? -100 - otherIncorrectSum : 0;
                   return (
                     <div
                       key={field.id}
+                      onClick={() => toggleCorrect(index)}
                       className={cn(
-                        'flex items-center gap-3 rounded-3xl border p-3 transition-colors',
+                        'group cursor-pointer rounded-sm border p-3 transition-all duration-200',
                         isCorrect
-                          ? 'border-(--color-primary)/40 bg-(--color-primary)/5'
-                          : 'border-border/10 bg-background/95',
+                          ? 'border-(--color-primary) bg-primary/5 shadow-sm'
+                          : 'border-border bg-card hover:border-primary/20 hover:bg-muted/30 hover:shadow-sm',
                       )}
                     >
-                      <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted/50 text-xs text-muted-foreground">
-                        {index + 1}
-                      </span>
+                      <div className="flex items-start gap-4">
+                        {/* Bouton réponse correcte */}
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleCorrect(index);
+                          }}
+                          className={cn(
+                            'mt-1 h-5 w-5 rounded-full border transition-all',
+                            isCorrect
+                              ? 'border-(--color-primary) bg-(--color-primary) text-primary-foreground hover:bg-(--color-primary) hover:text-white'
+                              : 'border-muted-foreground/30 hover:border-(--color-primary) hover:text-primary',
+                          )}
+                        >
+                          {isCorrect && <Check className="h-4 w-4" />}
+                        </Button>
 
-                      <FieldRoot
-                        control={form.control}
-                        name={`options.${index}.label`}
-                        render={({ field: f }) => (
-                          <FieldGroup className="flex-1 space-y-1">
-                            <FieldLabel className="sr-only">Libellé {index + 1}</FieldLabel>
-                            <FieldContent>
-                              <Input
-                                aria-label={`Libellé ${index + 1}`}
-                                placeholder="Réponse *"
-                                className="text-foreground/70"
-                                {...f}
+                        {/* Input */}
+                        <div
+                          className="flex flex-1 items-start gap-2"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <div className="flex-1">
+                            <FieldRoot
+                              control={form.control}
+                              name={`options.${index}.label`}
+                              render={({ field: f }) => (
+                                <FieldGroup className="flex flex-col space-y-1">
+                                  <FieldLabel className="text-xs font-medium text-muted-foreground">
+                                    Réponse {String.fromCharCode(65 + index)}
+                                  </FieldLabel>
+                                  <FieldContent>
+                                    <Input
+                                      {...f}
+                                      placeholder="Saisissez une réponse..."
+                                      className="h-9 border shadow-none focus-visible:ring-1"
+                                    />
+                                  </FieldContent>
+                                  <FieldError />
+                                </FieldGroup>
+                              )}
+                            />
+                          </div>
+                          {isMultipleChoice && (
+                            <div className="w-24 shrink-0">
+                              <FieldRoot
+                                control={form.control}
+                                name={`options.${index}.weightPercentage`}
+                                render={({ field: f }) => (
+                                  <FieldGroup className="flex flex-col space-y-1">
+                                    <FieldLabel className="text-xs font-medium text-muted-foreground">
+                                      Poids
+                                    </FieldLabel>
+                                    <FieldContent>
+                                      <Input
+                                        type="number"
+                                        min={minAllowed}
+                                        max={maxAllowed}
+                                        placeholder="0"
+                                        value={f.value ?? 0}
+                                        onChange={(e) => {
+                                          if (e.target.value === '') {
+                                            f.onChange(0);
+                                            return;
+                                          }
+                                          const parsed = parseInt(e.target.value, 10);
+                                          if (isNaN(parsed)) return;
+                                          f.onChange(
+                                            Math.max(minAllowed, Math.min(maxAllowed, parsed)),
+                                          );
+                                        }}
+                                        className="h-9 border shadow-none focus-visible:ring-1 text-center"
+                                      />
+                                    </FieldContent>
+                                    <FieldError />
+                                  </FieldGroup>
+                                )}
                               />
-                            </FieldContent>
-                            <FieldError />
-                          </FieldGroup>
-                        )}
-                      />
+                            </div>
+                          )}
+                        </div>
 
-                      <Button
-                        type="button"
-                        variant={isCorrect ? 'default' : 'outline'}
-                        size="icon"
-                        className={cn(
-                          'size-7 shrink-0',
-                          isCorrect
-                            ? 'bg-(--color-primary) text-white hover:bg-(--color-primary)/80'
-                            : '',
-                        )}
-                        aria-label={isCorrect ? 'Réponse correcte' : 'Marquer comme correct'}
-                        onClick={() => toggleCorrect(index)}
-                      >
-                        {isCorrect && <Check className="size-4" />}
-                      </Button>
-
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="size-7 shrink-0 text-muted-foreground hover:text-destructive"
-                        aria-label={`Supprimer le choix ${index + 1}`}
-                        onClick={() => removeOption(index)}
-                      >
-                        <Trash2 className="size-3.5" />
-                      </Button>
+                        {/* Suppression */}
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeOption(index);
+                          }}
+                          className="h-8 w-8 shrink-0 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   );
                 })}
