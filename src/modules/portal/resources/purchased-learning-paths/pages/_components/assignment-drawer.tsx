@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Plus, Save, UserPlus } from 'lucide-react';
+import { Loader2, Plus, Save, UserPlus } from 'lucide-react';
 import {
   Sheet,
   SheetContent,
@@ -14,6 +14,11 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
+import { getApiErrorMessage } from '@/shared/lib/errors';
+import type {
+  CreateAssignmentPayload,
+  CreateAssignmentResponse,
+} from '@/shared/types/assignment.types';
 import type { AssignableGroup, PurchasedLearningPathRow, TenantAssignableUser } from '../../types';
 import { AddUsersDialog } from './add-users-dialog';
 import { CreateGroupDialog } from './create-group-dialog';
@@ -25,11 +30,14 @@ interface PurchasedLearningPathAssignmentDrawerProps {
   purchasedLearningPath: PurchasedLearningPathRow | null;
   users: TenantAssignableUser[];
   groups: AssignableGroup[];
-  onAssignUsers: (purchasedLearningPathId: string, userIds: string[]) => number;
-  onAssignGroup: (purchasedLearningPathId: string, groupId: string) => number;
-  onCreateGroup: (tenantId: string, name: string, userIds: string[]) => AssignableGroup;
-  onEditGroup: (groupId: string, name: string, userIds: string[]) => void;
-  onDeleteGroup: (groupId: string) => void;
+  onCreateGroup: (name: string, traineeIds: string[]) => Promise<AssignableGroup>;
+  onEditGroup: (group: AssignableGroup, name: string, traineeIds: string[]) => Promise<void>;
+  onDeleteGroup: (groupId: string) => Promise<void>;
+  onAssign: (payload: CreateAssignmentPayload) => Promise<CreateAssignmentResponse>;
+  isCreatingGroup?: boolean;
+  isUpdatingGroup?: boolean;
+  isDeletingGroup?: boolean;
+  isAssigning?: boolean;
 }
 
 export function PurchasedLearningPathAssignmentDrawer({
@@ -38,11 +46,14 @@ export function PurchasedLearningPathAssignmentDrawer({
   purchasedLearningPath,
   users,
   groups,
-  onAssignUsers,
-  onAssignGroup,
   onCreateGroup,
   onEditGroup,
   onDeleteGroup,
+  onAssign,
+  isCreatingGroup = false,
+  isUpdatingGroup = false,
+  isDeletingGroup = false,
+  isAssigning = false,
 }: PurchasedLearningPathAssignmentDrawerProps) {
   const [pendingAddIds, setPendingAddIds] = useState<Set<string>>(new Set());
   const [selectedGroupIds, setSelectedGroupIds] = useState<Set<string>>(new Set());
@@ -50,6 +61,8 @@ export function PurchasedLearningPathAssignmentDrawer({
 
   const [showAddUsers, setShowAddUsers] = useState(false);
   const [showCreateGroup, setShowCreateGroup] = useState(false);
+
+  const isBusy = isCreatingGroup || isUpdatingGroup || isDeletingGroup || isAssigning;
 
   useEffect(() => {
     if (!purchasedLearningPath || !open) return;
@@ -76,10 +89,40 @@ export function PurchasedLearningPathAssignmentDrawer({
     setPendingAddIds((prev) => new Set([...prev, ...userIds]));
   };
 
-  const handleCreateGroupConfirm = (name: string, userIds: string[]) => {
-    const group = onCreateGroup(purchasedLearningPath.tenantId, name, userIds);
-    setSelectedGroupIds((prev) => new Set([...prev, group.id]));
-    toast.success(`Groupe "${group.name}" créé.`);
+  const handleCreateGroupConfirm = async (name: string, userIds: string[]) => {
+    try {
+      const group = await onCreateGroup(name, userIds);
+      setSelectedGroupIds((prev) => new Set([...prev, group.id]));
+      setShowCreateGroup(false);
+      toast.success(`Groupe "${group.name}" créé.`);
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, 'Impossible de créer le groupe.'));
+    }
+  };
+
+  const handleEditGroupConfirm = async (name: string, userIds: string[]) => {
+    if (!editingGroup) return;
+    try {
+      await onEditGroup(editingGroup, name, userIds);
+      setEditingGroup(null);
+      toast.success(`Groupe "${name}" mis à jour.`);
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, 'Impossible de modifier le groupe.'));
+    }
+  };
+
+  const handleDeleteGroup = async (groupId: string) => {
+    try {
+      await onDeleteGroup(groupId);
+      setSelectedGroupIds((prev) => {
+        const next = new Set(prev);
+        next.delete(groupId);
+        return next;
+      });
+      toast.success('Groupe supprimé.');
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, 'Impossible de supprimer le groupe.'));
+    }
   };
 
   const toggleGroupSelection = (groupId: string) => {
@@ -94,27 +137,34 @@ export function PurchasedLearningPathAssignmentDrawer({
     });
   };
 
-  const handleAssign = () => {
-    if (pendingAddIds.size > 0) {
-      onAssignUsers(purchasedLearningPath.id, [...pendingAddIds]);
-    }
+  const handleAssign = async () => {
+    const learningPathId = purchasedLearningPath.learningPathId;
+    const traineeIds = [...pendingAddIds];
+    const groupIds = [...selectedGroupIds];
 
-    let groupCount = 0;
-    for (const groupId of selectedGroupIds) {
-      groupCount += onAssignGroup(purchasedLearningPath.id, groupId);
-    }
-
-    const parts: string[] = [];
-    if (pendingAddIds.size > 0) parts.push(`${pendingAddIds.size} utilisateur(s) ajouté(s)`);
-    if (groupCount > 0) parts.push(`${groupCount} membre(s) de groupe assigné(s)`);
-
-    if (parts.length === 0) {
+    if (traineeIds.length === 0 && groupIds.length === 0) {
       toast.info('Aucune modification à enregistrer.');
-    } else {
-      toast.success(parts.join(', ') + '.');
+      return;
     }
 
-    onOpenChange(false);
+    const payload: CreateAssignmentPayload = {
+      learning_path_id: learningPathId,
+      ...(traineeIds.length > 0 ? { trainee_ids: traineeIds } : {}),
+      ...(groupIds.length > 0 ? { group_ids: groupIds } : {}),
+    };
+
+    try {
+      const response = await onAssign(payload);
+
+      if (response.meta.assigned_count > 0) {
+        toast.success(response.message);
+      } else {
+        toast.info(response.message);
+      }
+      onOpenChange(false);
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Impossible d'enregistrer les assignations."));
+    }
   };
 
   return (
@@ -130,6 +180,7 @@ export function PurchasedLearningPathAssignmentDrawer({
         onOpenChange={setShowCreateGroup}
         allUsers={users}
         onConfirm={handleCreateGroupConfirm}
+        isSubmitting={isCreatingGroup}
       />
       <CreateGroupDialog
         open={Boolean(editingGroup)}
@@ -139,12 +190,8 @@ export function PurchasedLearningPathAssignmentDrawer({
         allUsers={users}
         initialName={editingGroup?.name}
         initialUserIds={editingGroup?.userIds}
-        onConfirm={(name, userIds) => {
-          if (editingGroup) {
-            onEditGroup(editingGroup.id, name, userIds);
-            setEditingGroup(null);
-          }
-        }}
+        onConfirm={handleEditGroupConfirm}
+        isSubmitting={isUpdatingGroup}
       />
 
       <Sheet open={open} onOpenChange={onOpenChange}>
@@ -178,7 +225,7 @@ export function PurchasedLearningPathAssignmentDrawer({
                     variant="outline"
                     className="gap-1.5"
                     onClick={() => setShowAddUsers(true)}
-                    disabled={availableToAdd.length === 0}
+                    disabled={availableToAdd.length === 0 || isBusy}
                   >
                     <UserPlus className="size-3.5" />
                     Ajouter des stagiaires
@@ -237,6 +284,7 @@ export function PurchasedLearningPathAssignmentDrawer({
                     variant="outline"
                     className="gap-1.5"
                     onClick={() => setShowCreateGroup(true)}
+                    disabled={isBusy}
                   >
                     <Plus className="size-3.5" />
                     Créer un groupe
@@ -258,12 +306,7 @@ export function PurchasedLearningPathAssignmentDrawer({
                         onClick={() => toggleGroupSelection(group.id)}
                         onEdit={() => setEditingGroup(group)}
                         onDelete={() => {
-                          onDeleteGroup(group.id);
-                          setSelectedGroupIds((prev) => {
-                            const next = new Set(prev);
-                            next.delete(group.id);
-                            return next;
-                          });
+                          void handleDeleteGroup(group.id);
                         }}
                       />
                     ))}
@@ -275,15 +318,25 @@ export function PurchasedLearningPathAssignmentDrawer({
 
           <SheetFooter className="border-t px-5 py-4">
             <div className="flex justify-end gap-3">
-              <Button size="lg" variant={'outline'}>
+              <Button
+                size="lg"
+                variant="outline"
+                disabled={isBusy}
+                onClick={() => onOpenChange(false)}
+              >
                 Annuler
               </Button>
               <Button
                 className="gap-2 bg-(--color-primary) text-white hover:bg-(--color-primary)/80"
                 size="lg"
-                onClick={handleAssign}
+                onClick={() => void handleAssign()}
+                disabled={isBusy}
               >
-                <Save className="size-4" />
+                {isAssigning ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Save className="size-4" />
+                )}
                 Enregistrer
               </Button>
             </div>

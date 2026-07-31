@@ -20,12 +20,13 @@ const MOCK_PURCHASED: ApiPurchasedLearningPath = {
 };
 
 describe('mapToPurchasedLearningPath', () => {
-  it('mappe name et purchasedCredits, sans enrollments', () => {
+  it('mappe name, learningPathId et purchasedCredits, sans enrollments', () => {
     const result = mapToPurchasedLearningPath(MOCK_PURCHASED);
 
     expect(result).toEqual({
       id: MOCK_PURCHASED.id,
       tenantId: MOCK_PURCHASED.tenant_id,
+      learningPathId: MOCK_PURCHASED.learning_path.id,
       name: 'Devenir chef de projet digital',
       purchasedCredits: 5,
       enrollments: [],

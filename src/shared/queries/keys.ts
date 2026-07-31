@@ -80,6 +80,21 @@ export const purchasedLearningPathKeys = {
   list: (filters: object) => [...purchasedLearningPathKeys.lists(), filters] as const,
 };
 
+/** Groupes CM (API backend: groups) */
+export const groupKeys = {
+  all: ['groups'] as const,
+  lists: () => [...groupKeys.all, 'list'] as const,
+  list: (filters: object) => [...groupKeys.lists(), filters] as const,
+  detail: (id: string) => [...groupKeys.all, 'detail', id] as const,
+};
+
+/** Assignations CM (API backend: assignments) */
+export const assignmentKeys = {
+  all: ['assignments'] as const,
+  lists: () => [...assignmentKeys.all, 'list'] as const,
+  list: (filters: object) => [...assignmentKeys.lists(), filters] as const,
+};
+
 export const learningPathCompetencyAssociationKeys = {
   all: ['learning-path-competency-associations'] as const,
   lists: () => [...learningPathCompetencyAssociationKeys.all, 'list'] as const,

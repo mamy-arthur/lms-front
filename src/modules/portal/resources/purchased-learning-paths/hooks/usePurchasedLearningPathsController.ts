@@ -1,9 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
+import type { ApiAssignment } from '@/shared/types/assignment.types';
+import { mapAssignmentToEnrollment } from '../lib/mappers';
 import type {
-  AssignableGroup,
-  AssignPurchasedLearningPathToGroupPayload,
-  AssignPurchasedLearningPathToUsersPayload,
-  CreateAssignableGroupPayload,
   PurchasedLearningPath,
   PurchasedLearningPathEnrollment,
   PurchasedLearningPathRow,
@@ -65,57 +63,17 @@ export function filterEnrollmentsByStat(
   }
 }
 
-function createEnrollmentId(purchasedLearningPathId: string, userId: string) {
-  const suffix =
-    typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
-      ? crypto.randomUUID().slice(0, 8)
-      : `${Date.now()}`;
-
-  return `enrollment-${purchasedLearningPathId}-${userId}-${suffix}`;
-}
-
-function buildNewEnrollment(
-  purchasedLearningPath: PurchasedLearningPath,
-  user: TenantAssignableUser,
-  groupName: string | null,
-): PurchasedLearningPathEnrollment {
-  return {
-    id: createEnrollmentId(purchasedLearningPath.id, user.id),
-    userId: user.id,
-    fullName: user.fullName,
-    enrolledAt: new Date().toISOString(),
-    groupName,
-    startedAt: null,
-    completedAt: null,
-    plannedDurationDays: 0,
-    actualDurationDays: null,
-  };
-}
-
 interface UsePurchasedLearningPathsControllerInput {
   purchasedLearningPaths: PurchasedLearningPath[];
-  groups: AssignableGroup[];
+  assignments: ApiAssignment[];
   users: TenantAssignableUser[];
 }
 
 export function usePurchasedLearningPathsController({
-  purchasedLearningPaths: initialPurchasedLearningPaths,
-  groups: initialGroups,
+  purchasedLearningPaths,
+  assignments,
   users,
 }: UsePurchasedLearningPathsControllerInput) {
-  const [purchasedLearningPaths, setPurchasedLearningPaths] = useState<PurchasedLearningPath[]>(
-    initialPurchasedLearningPaths,
-  );
-  const [groups, setGroups] = useState<AssignableGroup[]>(initialGroups);
-
-  useEffect(() => {
-    setPurchasedLearningPaths(initialPurchasedLearningPaths);
-  }, [initialPurchasedLearningPaths]);
-
-  useEffect(() => {
-    setGroups(initialGroups);
-  }, [initialGroups]);
-
   const usersById = useMemo(() => {
     const map = new Map<string, TenantAssignableUser>();
     for (const user of users) {
@@ -125,140 +83,30 @@ export function usePurchasedLearningPathsController({
   }, [users]);
 
   const purchasedLearningPathRows = useMemo<PurchasedLearningPathRow[]>(() => {
-    return purchasedLearningPaths.map((purchasedLearningPath) => ({
-      ...purchasedLearningPath,
-      stats: buildPurchasedLearningPathStats(purchasedLearningPath),
-    }));
-  }, [purchasedLearningPaths]);
+    const enrollmentsByLearningPathId = new Map<string, PurchasedLearningPathEnrollment[]>();
 
-  const assignToUsers = useCallback(
-    ({ purchasedLearningPathId, userIds }: AssignPurchasedLearningPathToUsersPayload) => {
-      let assignedCount = 0;
+    for (const assignment of assignments) {
+      const enrollment = mapAssignmentToEnrollment(assignment, usersById);
+      const existing = enrollmentsByLearningPathId.get(assignment.learning_path_id) ?? [];
+      existing.push(enrollment);
+      enrollmentsByLearningPathId.set(assignment.learning_path_id, existing);
+    }
 
-      setPurchasedLearningPaths((current) =>
-        current.map((purchasedLearningPath) => {
-          if (purchasedLearningPath.id !== purchasedLearningPathId) {
-            return purchasedLearningPath;
-          }
+    return purchasedLearningPaths.map((purchasedLearningPath) => {
+      const withEnrollments: PurchasedLearningPath = {
+        ...purchasedLearningPath,
+        enrollments: enrollmentsByLearningPathId.get(purchasedLearningPath.learningPathId) ?? [],
+      };
 
-          const existingUserIds = new Set(
-            purchasedLearningPath.enrollments.map((enrollment) => enrollment.userId),
-          );
-
-          const newEnrollments = userIds
-            .filter((userId) => !existingUserIds.has(userId))
-            .map((userId) => usersById.get(userId))
-            .filter((user): user is TenantAssignableUser => Boolean(user))
-            .map((user) => buildNewEnrollment(purchasedLearningPath, user, null));
-
-          assignedCount = newEnrollments.length;
-
-          if (newEnrollments.length === 0) {
-            return purchasedLearningPath;
-          }
-
-          return {
-            ...purchasedLearningPath,
-            enrollments: [...purchasedLearningPath.enrollments, ...newEnrollments],
-          };
-        }),
-      );
-
-      return assignedCount;
-    },
-    [usersById],
-  );
-
-  const assignToGroup = useCallback(
-    ({ purchasedLearningPathId, groupId }: AssignPurchasedLearningPathToGroupPayload) => {
-      const group = groups.find((item) => item.id === groupId);
-
-      if (!group) {
-        return 0;
-      }
-
-      let assignedCount = 0;
-
-      setPurchasedLearningPaths((current) =>
-        current.map((purchasedLearningPath) => {
-          if (purchasedLearningPath.id !== purchasedLearningPathId) {
-            return purchasedLearningPath;
-          }
-
-          const existingUserIds = new Set(
-            purchasedLearningPath.enrollments.map((enrollment) => enrollment.userId),
-          );
-
-          const newEnrollments = group.userIds
-            .filter((userId) => !existingUserIds.has(userId))
-            .map((userId) => usersById.get(userId))
-            .filter((user): user is TenantAssignableUser => Boolean(user))
-            .map((user) => buildNewEnrollment(purchasedLearningPath, user, group.name));
-
-          assignedCount = newEnrollments.length;
-
-          if (newEnrollments.length === 0) {
-            return purchasedLearningPath;
-          }
-
-          return {
-            ...purchasedLearningPath,
-            enrollments: [...purchasedLearningPath.enrollments, ...newEnrollments],
-          };
-        }),
-      );
-
-      return assignedCount;
-    },
-    [groups, usersById],
-  );
-
-  const removeEnrollment = useCallback((purchasedLearningPathId: string, userId: string) => {
-    setPurchasedLearningPaths((current) =>
-      current.map((purchasedLearningPath) =>
-        purchasedLearningPath.id !== purchasedLearningPathId
-          ? purchasedLearningPath
-          : {
-              ...purchasedLearningPath,
-              enrollments: purchasedLearningPath.enrollments.filter((e) => e.userId !== userId),
-            },
-      ),
-    );
-  }, []);
-
-  const createGroup = useCallback(({ tenantId, name, userIds }: CreateAssignableGroupPayload) => {
-    const group: AssignableGroup = {
-      id: `group-${Date.now()}`,
-      tenantId,
-      name,
-      userIds,
-    };
-
-    setGroups((current) => [group, ...current]);
-
-    return group;
-  }, []);
-
-  const updateGroup = useCallback(
-    ({ id, name, userIds }: { id: string; name: string; userIds: string[] }) => {
-      setGroups((current) => current.map((g) => (g.id === id ? { ...g, name, userIds } : g)));
-    },
-    [],
-  );
-
-  const deleteGroup = useCallback((groupId: string) => {
-    setGroups((current) => current.filter((g) => g.id !== groupId));
-  }, []);
+      return {
+        ...withEnrollments,
+        stats: buildPurchasedLearningPathStats(withEnrollments),
+      };
+    });
+  }, [assignments, purchasedLearningPaths, usersById]);
 
   return {
     purchasedLearningPathRows,
-    groups,
     users,
-    removeEnrollment,
-    assignToUsers,
-    assignToGroup,
-    createGroup,
-    updateGroup,
-    deleteGroup,
   } as const;
 }

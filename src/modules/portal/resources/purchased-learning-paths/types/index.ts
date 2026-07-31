@@ -15,6 +15,7 @@ export interface PurchasedLearningPathEnrollment {
 export interface PurchasedLearningPath {
   id: string;
   tenantId: string;
+  learningPathId: string;
   name: string;
   purchasedCredits: number;
   enrollments: PurchasedLearningPathEnrollment[];
@@ -58,23 +59,5 @@ export interface PurchasedLearningPathListMeta {
 
 export interface PurchasedLearningPathsQueryResult {
   purchasedLearningPaths: PurchasedLearningPath[];
-  users: TenantAssignableUser[];
-  groups: AssignableGroup[];
   meta: PurchasedLearningPathListMeta;
-}
-
-export interface AssignPurchasedLearningPathToUsersPayload {
-  purchasedLearningPathId: string;
-  userIds: string[];
-}
-
-export interface AssignPurchasedLearningPathToGroupPayload {
-  purchasedLearningPathId: string;
-  groupId: string;
-}
-
-export interface CreateAssignableGroupPayload {
-  tenantId: string;
-  name: string;
-  userIds: string[];
 }
