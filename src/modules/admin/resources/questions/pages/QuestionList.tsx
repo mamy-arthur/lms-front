@@ -1,7 +1,7 @@
 'use client';
 
 import { Plus } from 'lucide-react';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -16,7 +16,7 @@ import { QUESTION_TYPE_OPTIONS } from '@modules/shared/components/questions';
 import { useQuestionListController } from '@/modules/shared/hooks/useQuestionListController';
 import { useQuestionsQuery } from '../hooks/useQuestionsQuery';
 import { useDeleteQuestion } from '../hooks/useDeleteQuestion';
-import type { Question, QuestionSearchParams } from '../types';
+import type { Question } from '../types';
 import { AdminQuestionsTable } from './_components/admin-questions-table';
 import { QuestionFormDrawer } from '../components/question-form-drawer';
 
@@ -25,12 +25,23 @@ export function QuestionList({ quizId }: { quizId: string }) {
     defaultPageSize: 25,
   });
   const [typeFilter, setTypeFilter] = useState<string>('');
-  const params: QuestionSearchParams = typeFilter ? { type: typeFilter } : {};
-  const { data, isLoading } = useQuestionsQuery(quizId, params);
+  const { data, isLoading } = useQuestionsQuery(quizId);
   const deleteMutation = useDeleteQuestion(quizId);
   const [deleteConfirm, setDeleteConfirm] = useState<Question | undefined>();
 
-  const questions = data?.data ?? [];
+  const questions = useMemo(() => {
+    let result = data?.data ?? [];
+    if (typeFilter) {
+      result = result.filter((q) => q.type === typeFilter);
+    }
+    if (ctrl.draftSearch) {
+      const search = ctrl.draftSearch.toLowerCase();
+      result = result.filter(
+        (q) => q.name?.toLowerCase().includes(search) || q.text?.toLowerCase().includes(search),
+      );
+    }
+    return result;
+  }, [data, typeFilter, ctrl.draftSearch]);
 
   const handleDeleteConfirm = useCallback((question: Question) => setDeleteConfirm(question), []);
 

@@ -10,7 +10,6 @@ import {
   ClipboardList,
   ImageIcon,
   ShoppingCart,
-  User,
 } from 'lucide-react';
 
 export interface FormationCardProps {
@@ -54,7 +53,6 @@ function formatPrice(price: number): string {
 export function FormationCard({
   id,
   title,
-  author,
   category,
   coverImage,
   price,
@@ -120,7 +118,7 @@ export function FormationCard({
         </div>
       </div>
 
-      <CardHeader className="pb-2">
+      <CardHeader>
         <CardTitle className="line-clamp-2 text-sm leading-snug">{title}</CardTitle>
       </CardHeader>
 
@@ -137,11 +135,6 @@ export function FormationCard({
               {evaluationCount} examen{evaluationCount > 1 ? 's' : ''}
             </Badge>
           </div>
-        </div>
-
-        <div className="flex items-center gap-1.5">
-          <User className="size-3.5 shrink-0" />
-          <span className="truncate">{author}</span>
         </div>
 
         <div className="flex items-center gap-1.5">

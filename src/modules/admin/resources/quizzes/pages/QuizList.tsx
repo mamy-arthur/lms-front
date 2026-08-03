@@ -1,7 +1,7 @@
 'use client';
 
 import { Plus } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/shared/components/confirm-dialog/ConfirmDialog';
 import { QuizSearch } from '@modules/shared/components/quizzes';
@@ -20,6 +20,16 @@ export function QuizList() {
   const deleteMutation = useDeleteQuiz();
   const [duplicateFrom, setDuplicateFrom] = useState<Quiz | undefined>();
   const [deleteConfirm, setDeleteConfirm] = useState<Quiz | undefined>();
+
+  const quizzes = useMemo(() => {
+    const result = data?.data ?? [];
+    if (!ctrl.draftSearch) return result;
+    const search = ctrl.draftSearch.toLowerCase();
+    return result.filter(
+      (q) =>
+        q.title?.toLowerCase().includes(search) || q.description?.toLowerCase().includes(search),
+    );
+  }, [data, ctrl.draftSearch]);
 
   return (
     <div className="bg-background">
@@ -51,12 +61,12 @@ export function QuizList() {
         </div>
 
         <AdminQuizzesTable
-          quizzes={data?.data ?? []}
+          quizzes={quizzes}
           isLoading={isLoading}
           hasQuery={ctrl.hasQuery}
           page={ctrl.page}
           pageSize={ctrl.pageSize}
-          total={data?.total ?? 0}
+          total={quizzes.length}
           sort={ctrl.sort}
           onSort={ctrl.handleSort}
           onPageChange={ctrl.handlePageChange}

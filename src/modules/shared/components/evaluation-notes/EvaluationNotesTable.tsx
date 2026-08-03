@@ -20,6 +20,7 @@ interface EvaluationNotesTableProps<TRow extends { id: string | number }> {
   total?: number;
   onPageChange?: (page: number) => void;
   onPageSizeChange?: (pageSize: number) => void;
+  onRowClick?: (row: TRow) => void;
 }
 
 export function EvaluationNotesTable<TRow extends { id: string | number }>({
@@ -34,6 +35,7 @@ export function EvaluationNotesTable<TRow extends { id: string | number }>({
   total: externalTotal,
   onPageChange,
   onPageSizeChange,
+  onRowClick,
 }: EvaluationNotesTableProps<TRow>) {
   const [sort, setSort] = useState<DataTableSort | undefined>(initialSort);
 
@@ -72,6 +74,7 @@ export function EvaluationNotesTable<TRow extends { id: string | number }>({
         emptyState={emptyState}
         hasQuery={hasQuery}
         hidePaginationWhenSinglePage={true}
+        onRowClick={onRowClick}
       />
     </section>
   );

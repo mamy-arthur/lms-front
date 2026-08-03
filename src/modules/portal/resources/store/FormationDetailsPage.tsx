@@ -11,7 +11,6 @@ import {
   Lock,
   ShoppingCart,
   Timer,
-  User,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -122,7 +121,7 @@ export function FormationDetailsPage({ formation }: FormationDetailsPageProps) {
               <img
                 src={formation.coverImage}
                 alt={formation.title}
-                className="h-full w-full object-cover rounded-xl"
+                className="h-112.5 w-full object-cover rounded-sm"
               />
             ) : (
               <div className="flex h-full items-center justify-center text-muted-foreground">
@@ -150,12 +149,6 @@ export function FormationDetailsPage({ formation }: FormationDetailsPageProps) {
                 <p className="text-muted-foreground">Évaluations</p>
                 <p className="mt-1 font-semibold">{formation.evaluationCount}</p>
               </div>
-            </div>
-
-            <div className="flex items-center gap-2 text-xs">
-              <User className="size-4 text-muted-foreground" />
-              <span className="text-muted-foreground">Formateur :</span>
-              <span className="font-medium">{formation.author}</span>
             </div>
 
             <div className="mt-auto flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

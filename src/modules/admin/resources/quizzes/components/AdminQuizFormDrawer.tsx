@@ -4,7 +4,7 @@ import { memo, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Field,
@@ -112,7 +112,7 @@ function AdminQuizFormDrawerBase({
             className="flex min-h-0 flex-1 flex-col"
             noValidate
           >
-            <div className="flex-1 space-y-4 overflow-y-auto px-6 py-6">
+            <div className="flex-1 space-y-4 overflow-y-auto px-4 py-6">
               {mutation.isError && (
                 <div
                   role="alert"
@@ -127,7 +127,7 @@ function AdminQuizFormDrawerBase({
                 name="title"
                 render={({ field }) => (
                   <FieldGroup className="space-y-2">
-                    <FieldLabel>Titre *</FieldLabel>
+                    <FieldLabel className="text-xs">Titre *</FieldLabel>
                     <FieldContent>
                       <Input
                         autoFocus
@@ -146,7 +146,7 @@ function AdminQuizFormDrawerBase({
                 name="description"
                 render={({ field }) => (
                   <FieldGroup className="space-y-2">
-                    <FieldLabel>Description</FieldLabel>
+                    <FieldLabel className="text-xs">Description</FieldLabel>
                     <FieldContent>
                       <Textarea
                         aria-label="Description"
@@ -174,16 +174,10 @@ function AdminQuizFormDrawerBase({
               <Button
                 type="submit"
                 disabled={mutation.isPending}
-                className="bg-(--color-primary) hover:bg-primary/80"
+                className="bg-(--color-primary) hover:bg-(--color-primary)/80"
               >
-                {mutation.isPending && <Loader2 className="mr-1 size-4 animate-spin" />}
-                {mutation.isPending
-                  ? isEdit
-                    ? 'Enregistrement…'
-                    : 'Création…'
-                  : isEdit
-                    ? 'Enregistrer'
-                    : 'Créer'}
+                {mutation.isPending ? <Loader2 className="animate-spin" /> : <Save />}
+                Enregistrer
               </Button>
             </div>
           </form>
