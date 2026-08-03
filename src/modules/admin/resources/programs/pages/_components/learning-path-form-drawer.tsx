@@ -38,6 +38,7 @@ import { useUploadLearningPathMedia } from '../../hooks/useUploadLearningPathMed
 import { useLinkCompetencyToLearningPath } from '../../hooks/useLinkCompetencyToLearningPath';
 import { useUnlinkCompetencyFromLearningPath } from '../../hooks/useUnlinkCompetencyFromLearningPath';
 import { useModules } from '@/modules/admin/resources/modules/hooks/useModules';
+import { useLearningPathQuery } from '../../hooks/useLearningPathQuery';
 import ProgramFlow, {
   type ProgramFlowHandle,
   type ModuleStepPayload,
@@ -49,7 +50,7 @@ import {
   minutesToDuration,
   type DurationUnit,
 } from '../../lib/duration';
-import type { LearningPath, LearningPathCategory } from '../../types';
+import type { LearningPathCategory } from '../../types';
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
 
@@ -153,14 +154,19 @@ function DatePickerField({
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  learningPath?: LearningPath;
+  learningPathId?: string;
   categories: LearningPathCategory[];
 };
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function LearningPathFormDrawer({ open, onOpenChange, learningPath, categories }: Props) {
-  const isEdit = !!learningPath;
+export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, categories }: Props) {
+  const isEdit = !!learningPathId;
+
+  const { data: learningPath, isLoading: isLoadingPath } = useLearningPathQuery(
+    open && isEdit ? learningPathId : null,
+  );
+
   const hasCompetencies = isEdit && (learningPath?.competencies?.length ?? 0) > 0;
 
   const [flowHasModules, setFlowHasModules] = useState(hasCompetencies);
@@ -493,13 +499,13 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPath, categ
         <div className="flex min-h-0 flex-1 overflow-hidden">
           {/* Flow canvas */}
           <div className="flex-6 overflow-hidden">
-            {isEdit && isLoadingModules ? (
+            {isEdit && (isLoadingModules || isLoadingPath) ? (
               <div className="flex h-full items-center justify-center">
                 <Loader2 className="size-5 animate-spin text-muted-foreground" />
               </div>
             ) : (
               <ProgramFlow
-                key={learningPath?.id ?? 'new'}
+                key={learningPathId ?? 'new'}
                 ref={flowRef}
                 initialNodes={initialFlow?.nodes}
                 initialEdges={initialFlow?.edges}
