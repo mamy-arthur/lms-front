@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { evaluationsApi } from '@/shared/api/evaluations.api';
 import type { CreateEvaluationPayload } from '@/shared/api/evaluations.api';
-import { learningPathKeys } from '@/shared/queries/keys';
+import { evaluationKeys, learningPathKeys } from '@/shared/queries/keys';
 
 interface CreateEvaluationVariables extends CreateEvaluationPayload {
   learningPathId: string;
@@ -16,6 +16,9 @@ export function useCreateEvaluation() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
         queryKey: learningPathKeys.detail(variables.learningPathId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: evaluationKeys.listByLearningPath(variables.learningPathId),
       });
     },
   });

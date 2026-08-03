@@ -39,6 +39,7 @@ import { useLinkCompetencyToLearningPath } from '../../hooks/useLinkCompetencyTo
 import { useUnlinkCompetencyFromLearningPath } from '../../hooks/useUnlinkCompetencyFromLearningPath';
 import { useModules } from '@/modules/admin/resources/modules/hooks/useModules';
 import { useLearningPathQuery } from '../../hooks/useLearningPathQuery';
+import { useEvaluationsQuery } from '../../hooks/useEvaluationsQuery';
 import ProgramFlow, { type StepNode } from '../../components/ProgramFlow';
 import type { CreateEvaluationPayload } from '@/shared/api/evaluations.api';
 import { useCreateEvaluation } from '../../hooks/useCreateEvaluation';
@@ -166,6 +167,11 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
     open && isEdit ? learningPathId : null,
   );
 
+  // Fetch full evaluation details (includes question_bank_ids) for the initial flow
+  const { data: evaluationsData, isLoading: isLoadingEvaluations } = useEvaluationsQuery(
+    open && isEdit ? learningPathId : null,
+  );
+
   const hasCompetencies = isEdit && (learningPath?.competencies?.length ?? 0) > 0;
 
   const [flowHasModules, setFlowHasModules] = useState(hasCompetencies);
@@ -198,6 +204,9 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
     const evaluations = learningPath.evaluations ?? [];
     const emailNodeId = 'email-start';
 
+    // Map full evaluation details (question_bank_ids, question_count, max_attempts)
+    const evDetailsMap = new Map((evaluationsData?.data ?? []).map((ev) => [ev.id, ev]));
+
     const emailNode: StepNode = {
       id: emailNodeId,
       type: 'programStep',
@@ -227,6 +236,7 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
         .filter((e) => e.precedingCompetencyId === comp.competencyId)
         .sort((a, b) => a.position - b.position);
       for (const ev of partialEvals) {
+        const evDetail = evDetailsMap.get(ev.id);
         allNodes.push({
           id: `step-eval-${ev.id}`,
           type: 'programStep',
@@ -240,10 +250,10 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
               durationEnabled: false,
               durationHours: 0,
               durationMinutes: 30,
-              questionCount: 20,
-              attemptCount: 1,
-              questionBankId: null,
-              questionBankName: null,
+              questionCount: evDetail?.question_count ?? 20,
+              attemptCount: evDetail?.max_attempts ?? 1,
+              questionBankIds: evDetail?.question_bank_ids ?? [],
+              questionBankNames: [],
             },
           },
         });
@@ -256,6 +266,7 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
       .filter((e) => e.precedingCompetencyId === null)
       .sort((a, b) => a.position - b.position);
     for (const ev of finalEvals) {
+      const evDetail = evDetailsMap.get(ev.id);
       allNodes.push({
         id: `step-eval-${ev.id}`,
         type: 'programStep',
@@ -269,10 +280,10 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
             durationEnabled: false,
             durationHours: 0,
             durationMinutes: 30,
-            questionCount: 20,
-            attemptCount: 1,
-            questionBankId: null,
-            questionBankName: null,
+            questionCount: evDetail?.question_count ?? 20,
+            attemptCount: evDetail?.max_attempts ?? 1,
+            questionBankIds: evDetail?.question_bank_ids ?? [],
+            questionBankNames: [],
           },
         },
       });
@@ -289,7 +300,7 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
     }));
 
     return { nodes: allNodes, edges, nodeOrder };
-  }, [learningPath, moduleNameMap]);
+  }, [learningPath, moduleNameMap, evaluationsData]);
 
   const imageInputRef = useRef<HTMLInputElement>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -578,7 +589,7 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
         <div className="flex min-h-0 flex-1 overflow-hidden">
           {/* Flow canvas */}
           <div className="flex-6 overflow-hidden">
-            {isEdit && (isLoadingModules || isLoadingPath) ? (
+            {isEdit && (isLoadingModules || isLoadingPath || isLoadingEvaluations) ? (
               <div className="flex h-full items-center justify-center">
                 <Loader2 className="size-5 animate-spin text-muted-foreground" />
               </div>

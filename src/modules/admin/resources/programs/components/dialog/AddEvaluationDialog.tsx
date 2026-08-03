@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Award, ClipboardCheck, Loader2, Plus, Search } from 'lucide-react';
+import { useEvaluationQuery } from '../../hooks/useEvaluationQuery';
+import { Award, Check, ClipboardCheck, Loader2, Plus, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -30,8 +31,8 @@ export type EvaluationConfig = {
   durationMinutes: number;
   questionCount: number;
   attemptCount: number;
-  questionBankId: string | null;
-  questionBankName: string | null;
+  questionBankIds: string[];
+  questionBankNames: string[];
 };
 
 type QuestionBank = {
@@ -48,8 +49,8 @@ const DEFAULT_CONFIG: EvaluationConfig = {
   durationMinutes: 30,
   questionCount: 20,
   attemptCount: 1,
-  questionBankId: null,
-  questionBankName: null,
+  questionBankIds: [],
+  questionBankNames: [],
 };
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -60,6 +61,8 @@ type Props = {
   hasFinalEval: boolean;
   hasPartialForLastModule?: boolean;
   initialConfig?: EvaluationConfig;
+  evaluationId?: string;
+  alreadyUsedBankIds?: string[];
   onConfirm: (config: EvaluationConfig) => void;
 };
 
@@ -69,12 +72,18 @@ export function AddEvaluationDialog({
   hasFinalEval,
   hasPartialForLastModule = false,
   initialConfig,
+  evaluationId,
+  alreadyUsedBankIds = [],
   onConfirm,
 }: Props) {
   const [config, setConfig] = useState<EvaluationConfig>(initialConfig ?? DEFAULT_CONFIG);
   const [bankSearch, setBankSearch] = useState('');
 
   const { data: banksRaw, isLoading: isLoadingBanks } = useQuizzesQuery();
+
+  const { data: evalDetail, isLoading: isLoadingDetail } = useEvaluationQuery(
+    open ? evaluationId : null,
+  );
 
   const questionBanks = useMemo(
     () =>
@@ -93,6 +102,18 @@ export function AddEvaluationDialog({
     }
   }, [open]);
 
+  // Pre-populate selected banks from API only as a fallback when initialConfig
+  // didn't already provide them (prevents evalDetail refetches from overriding
+  // user selections in-progress).
+  useEffect(() => {
+    if (open && evalDetail && !initialConfig?.questionBankIds?.length) {
+      setConfig((c) => ({
+        ...c,
+        questionBankIds: evalDetail.data.question_bank_ids,
+      }));
+    }
+  }, [open, evalDetail]);
+
   const set = <K extends keyof EvaluationConfig>(key: K, val: EvaluationConfig[K]) =>
     setConfig((c) => ({ ...c, [key]: val }));
 
@@ -103,7 +124,7 @@ export function AddEvaluationDialog({
 
   const canSubmit =
     config.title.trim() !== '' &&
-    config.questionBankId !== null &&
+    config.questionBankIds.length > 0 &&
     !(hasPartialForLastModule && config.stepType === 'evaluation-intermediate');
 
   return (
@@ -247,9 +268,17 @@ export function AddEvaluationDialog({
 
           {/* ── Question bank ── */}
           <div className="flex flex-col space-y-2">
-            <Label>
-              Banque de questions <span className="text-destructive">*</span>
-            </Label>
+            <div className="flex items-center justify-between">
+              <Label>
+                Banques de questions <span className="text-destructive">*</span>
+              </Label>
+              {config.questionBankIds.length > 0 && (
+                <span className="text-xs text-muted-foreground">
+                  {config.questionBankIds.length} sélectionnée
+                  {config.questionBankIds.length > 1 ? 's' : ''}
+                </span>
+              )}
+            </div>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -260,7 +289,7 @@ export function AddEvaluationDialog({
               />
             </div>
             <div className="flex max-h-44 flex-col gap-1.5 overflow-y-auto pr-1">
-              {isLoadingBanks ? (
+              {isLoadingBanks || isLoadingDetail ? (
                 <div className="flex items-center justify-center py-4">
                   <Loader2 className="size-4 animate-spin text-muted-foreground" />
                 </div>
@@ -272,14 +301,28 @@ export function AddEvaluationDialog({
                 </p>
               ) : (
                 filteredBanks.map((bank) => {
-                  const isSelected = config.questionBankId === bank.id;
+                  const isSelected = config.questionBankIds.includes(bank.id);
                   return (
                     <button
                       key={bank.id}
+                      disabled={alreadyUsedBankIds.includes(bank.id)}
                       type="button"
                       onClick={() => {
-                        set('questionBankId', bank.id);
-                        set('questionBankName', bank.name);
+                        setConfig((c) => {
+                          if (c.questionBankIds.includes(bank.id)) {
+                            const idx = c.questionBankIds.indexOf(bank.id);
+                            return {
+                              ...c,
+                              questionBankIds: c.questionBankIds.filter((id) => id !== bank.id),
+                              questionBankNames: c.questionBankNames.filter((_, i) => i !== idx),
+                            };
+                          }
+                          return {
+                            ...c,
+                            questionBankIds: [...c.questionBankIds, bank.id],
+                            questionBankNames: [...c.questionBankNames, bank.name],
+                          };
+                        });
                       }}
                       className={cn(
                         'flex items-start justify-between rounded-lg border p-3 text-left transition-colors',
@@ -288,14 +331,20 @@ export function AddEvaluationDialog({
                           : 'border-border bg-card hover:border-(--color-primary)',
                       )}
                     >
-                      <div>
+                      <div className="min-w-0 flex-1">
                         <p className="text-xs font-semibold">{bank.name}</p>
                         {bank.description && (
-                          <p className="mt-0.5 text-[11px] text-muted-foreground">
+                          <p className="mt-0.5 line-clamp-1 text-[11px] text-muted-foreground">
                             {bank.description}
                           </p>
                         )}
                       </div>
+                      {!isSelected && alreadyUsedBankIds.includes(bank.id) && (
+                        <span className="ml-2 shrink-0 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">
+                          Déjà ajoutée
+                        </span>
+                      )}
+                      {isSelected && <Check className="ml-2 mt-0.5 size-4 shrink-0 text-primary" />}
                     </button>
                   );
                 })

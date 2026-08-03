@@ -105,8 +105,8 @@ export type EvaluationStepPayload = {
   label: string;
   title: string;
   evaluationId?: string;
-  questionBankId: string | null;
-  questionBankName: string | null;
+  questionBankIds: string[];
+  questionBankNames: string[];
   questionCount: number;
   attemptCount: number;
   durationEnabled: boolean;
@@ -496,6 +496,7 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
 
   const [editEvalDialog, setEditEvalDialog] = useState<{
     nodeId: string;
+    evaluationId?: string;
     config: EvaluationConfig;
     hasFinalEval: boolean;
   } | null>(null);
@@ -537,6 +538,12 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
   // ── IDs of modules already present in the flow ──
   const usedModuleIds = useMemo(
     () => nodes.filter((n) => n.data.moduleId).map((n) => n.data.moduleId!),
+    [nodes],
+  );
+
+  // ── Bank IDs already used by evaluations in the flow ──
+  const allUsedBankIds = useMemo(
+    () => [...new Set(nodes.flatMap((n) => n.data.evaluationConfig?.questionBankIds ?? []))],
     [nodes],
   );
 
@@ -710,6 +717,7 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
       case 'evaluation-final':
         setEditEvalDialog({
           nodeId,
+          evaluationId: node.data.evaluationId,
           config: {
             stepType: node.data.stepType,
             title: node.data.evaluationConfig?.title ?? '',
@@ -718,8 +726,8 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
             durationMinutes: node.data.evaluationConfig?.durationMinutes ?? 30,
             questionCount: node.data.evaluationConfig?.questionCount ?? 20,
             attemptCount: node.data.evaluationConfig?.attemptCount ?? 1,
-            questionBankId: node.data.evaluationConfig?.questionBankId ?? null,
-            questionBankName: node.data.evaluationConfig?.questionBankName ?? null,
+            questionBankIds: node.data.evaluationConfig?.questionBankIds ?? [],
+            questionBankNames: node.data.evaluationConfig?.questionBankNames ?? [],
           },
           hasFinalEval: nodesRef.current.some(
             (n) => n.data.stepType === 'evaluation-final' && n.id !== nodeId,
@@ -811,12 +819,12 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
       const { stepType, ...rest } = cfg;
       let evaluationId: string | undefined;
 
-      if (onEvalCreate && cfg.questionBankId) {
+      if (onEvalCreate && cfg.questionBankIds.length > 0) {
         try {
           evaluationId = await onEvalCreate({
             title: cfg.title,
             type: stepType === 'evaluation-intermediate' ? 'PARTIAL' : 'FINAL',
-            question_bank_ids: [cfg.questionBankId],
+            question_bank_ids: cfg.questionBankIds,
             question_count: cfg.questionCount,
             max_attempts: cfg.attemptCount > 0 ? cfg.attemptCount : null,
           });
@@ -827,7 +835,7 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
       }
 
       addStep(stepType, {
-        label: cfg.title || cfg.questionBankName || undefined,
+        label: cfg.title || cfg.questionBankNames[0] || undefined,
         evaluationId,
         evaluationConfig: rest,
       });
@@ -872,7 +880,7 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
         try {
           await evaluationsApi.update(node.data.evaluationId, {
             title: cfg.title,
-            question_bank_ids: cfg.questionBankId ? [cfg.questionBankId] : undefined,
+            question_bank_ids: cfg.questionBankIds.length > 0 ? cfg.questionBankIds : undefined,
             question_count: cfg.questionCount,
             max_attempts: cfg.attemptCount > 0 ? cfg.attemptCount : null,
           });
@@ -890,7 +898,7 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
                 data: {
                   ...n.data,
                   stepType,
-                  label: cfg.title || cfg.questionBankName || n.data.label,
+                  label: cfg.title || cfg.questionBankNames[0] || n.data.label,
                   evaluationConfig: rest,
                 },
               }
@@ -978,8 +986,8 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
             label: d.label,
             title: d.evaluationConfig?.title ?? '',
             evaluationId: d.evaluationId,
-            questionBankId: d.evaluationConfig?.questionBankId ?? null,
-            questionBankName: d.evaluationConfig?.questionBankName ?? null,
+            questionBankIds: d.evaluationConfig?.questionBankIds ?? [],
+            questionBankNames: d.evaluationConfig?.questionBankNames ?? [],
             questionCount: d.evaluationConfig?.questionCount ?? 0,
             attemptCount: d.evaluationConfig?.attemptCount ?? 0,
             durationEnabled: d.evaluationConfig?.durationEnabled ?? false,
@@ -1096,7 +1104,7 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
 
           <Button
             variant="outline"
-            disabled={!hasModule || hasFinalEval || hasAttestation}
+            disabled={!hasModule || hasFinalEval || hasAttestation || hasPartialForLastModule}
             onClick={() => setEvalDialogOpen(true)}
             className="gap-1.5 border-orange-200 text-orange-700 hover:bg-orange-50 hover:text-orange-700"
           >
@@ -1152,6 +1160,7 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
         onOpenChange={setEvalDialogOpen}
         hasFinalEval={hasFinalEval}
         hasPartialForLastModule={hasPartialForLastModule}
+        alreadyUsedBankIds={allUsedBankIds}
         onConfirm={handleEvalConfirm}
       />
       <SelectAttestationDialog
@@ -1208,6 +1217,8 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
         }}
         hasFinalEval={editEvalDialog?.hasFinalEval ?? false}
         initialConfig={editEvalDialog?.config}
+        evaluationId={editEvalDialog?.evaluationId}
+        alreadyUsedBankIds={allUsedBankIds}
         onConfirm={handleEditEvalSave}
       />
       <SelectAttestationDialog
