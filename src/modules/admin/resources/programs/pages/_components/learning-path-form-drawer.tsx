@@ -39,11 +39,10 @@ import { useLinkCompetencyToLearningPath } from '../../hooks/useLinkCompetencyTo
 import { useUnlinkCompetencyFromLearningPath } from '../../hooks/useUnlinkCompetencyFromLearningPath';
 import { useModules } from '@/modules/admin/resources/modules/hooks/useModules';
 import { useLearningPathQuery } from '../../hooks/useLearningPathQuery';
-import ProgramFlow, {
-  type ProgramFlowHandle,
-  type ModuleStepPayload,
-  type StepNode,
-} from '../../components/ProgramFlow';
+import ProgramFlow, { type StepNode } from '../../components/ProgramFlow';
+import type { CreateEvaluationPayload } from '@/shared/api/evaluations.api';
+import { useCreateEvaluation } from '../../hooks/useCreateEvaluation';
+import { useDeleteEvaluation } from '../../hooks/useDeleteEvaluation';
 import {
   DURATION_UNITS,
   durationToMinutes,
@@ -177,6 +176,8 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
   const uploadMedia = useUploadLearningPathMedia();
   const linkCompetency = useLinkCompetencyToLearningPath();
   const unlinkCompetency = useUnlinkCompetencyFromLearningPath();
+  const createEvaluation = useCreateEvaluation();
+  const deleteEvaluation = useDeleteEvaluation();
 
   // Pre-fetch all modules so competency names are ready when the flow renders
   const { data: modulesResult, isLoading: isLoadingModules } = useModules();
@@ -189,24 +190,12 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
     return map;
   }, [modulesResult]);
 
-  // Queue a competency to be unlinked on save (edit mode only)
-  const handleUnlinkCompetency = useCallback(
-    (competencyId: string) => {
-      if (!learningPath) return;
-      const wasOriginallyLinked = learningPath.competencies.some(
-        (c) => c.competencyId === competencyId,
-      );
-      if (!wasOriginallyLinked) return;
-      unlinkedDuringSessionRef.current.add(competencyId);
-    },
-    [learningPath],
-  );
-
-  // Build initial flow nodes/edges from existing competencies (sorted by position)
+  // Build initial flow nodes/edges from existing competencies + evaluations
   const initialFlow = useMemo(() => {
     if (!learningPath?.competencies.length) return null;
 
     const sorted = [...learningPath.competencies].sort((a, b) => a.position - b.position);
+    const evaluations = learningPath.evaluations ?? [];
     const emailNodeId = 'email-start';
 
     const emailNode: StepNode = {
@@ -216,22 +205,81 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
       data: { stepType: 'email', label: 'Email de démarrage' },
     };
 
-    const moduleNodes: StepNode[] = sorted.map((comp, idx) => ({
-      id: `step-module-${comp.competencyId}`,
-      type: 'programStep',
-      position: {
-        x: comp.locationX ?? CANVAS_X,
-        y: comp.locationY ?? (idx + 1) * NODE_GAP,
-      },
-      data: {
-        stepType: 'module',
-        label: moduleNameMap.get(comp.competencyId) ?? comp.competencyId,
-        moduleId: comp.competencyId,
-      },
-    }));
+    const allNodes: StepNode[] = [emailNode];
+    let currentY = NODE_GAP;
 
-    const nodes = [emailNode, ...moduleNodes];
-    const nodeOrder = nodes.map((n) => n.id);
+    for (const comp of sorted) {
+      const moduleY = comp.locationY ?? currentY;
+      allNodes.push({
+        id: `step-module-${comp.competencyId}`,
+        type: 'programStep',
+        position: { x: comp.locationX ?? CANVAS_X, y: moduleY },
+        data: {
+          stepType: 'module',
+          label: moduleNameMap.get(comp.competencyId) ?? comp.competencyId,
+          moduleId: comp.competencyId,
+        },
+      });
+      currentY = moduleY + NODE_GAP;
+
+      // Insert PARTIAL evaluations linked to this competency (sorted by position)
+      const partialEvals = evaluations
+        .filter((e) => e.precedingCompetencyId === comp.competencyId)
+        .sort((a, b) => a.position - b.position);
+      for (const ev of partialEvals) {
+        allNodes.push({
+          id: `step-eval-${ev.id}`,
+          type: 'programStep',
+          position: { x: CANVAS_X, y: currentY },
+          data: {
+            stepType: 'evaluation-intermediate',
+            label: ev.title,
+            evaluationId: ev.id,
+            evaluationConfig: {
+              title: ev.title,
+              durationEnabled: false,
+              durationHours: 0,
+              durationMinutes: 30,
+              questionCount: 20,
+              attemptCount: 1,
+              questionBankId: null,
+              questionBankName: null,
+            },
+          },
+        });
+        currentY += NODE_GAP;
+      }
+    }
+
+    // FINAL evaluations (no preceding competency) at the end
+    const finalEvals = evaluations
+      .filter((e) => e.precedingCompetencyId === null)
+      .sort((a, b) => a.position - b.position);
+    for (const ev of finalEvals) {
+      allNodes.push({
+        id: `step-eval-${ev.id}`,
+        type: 'programStep',
+        position: { x: CANVAS_X, y: currentY },
+        data: {
+          stepType: 'evaluation-final',
+          label: ev.title,
+          evaluationId: ev.id,
+          evaluationConfig: {
+            title: ev.title,
+            durationEnabled: false,
+            durationHours: 0,
+            durationMinutes: 30,
+            questionCount: 20,
+            attemptCount: 1,
+            questionBankId: null,
+            questionBankName: null,
+          },
+        },
+      });
+      currentY += NODE_GAP;
+    }
+
+    const nodeOrder = allNodes.map((n) => n.id);
     const edges = nodeOrder.slice(1).map((targetId, idx) => ({
       id: `e-${nodeOrder[idx]}-${targetId}`,
       source: nodeOrder[idx],
@@ -240,16 +288,17 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
       animated: true,
     }));
 
-    return { nodes, edges, nodeOrder };
+    return { nodes: allNodes, edges, nodeOrder };
   }, [learningPath, moduleNameMap]);
 
   const imageInputRef = useRef<HTMLInputElement>(null);
-  const flowRef = useRef<ProgramFlowHandle>(null);
-  /** Competencies unlinked during this edit session (editingPath snapshot may be stale). */
-  const unlinkedDuringSessionRef = useRef<Set<string>>(new Set());
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [pendingImageFile, setPendingImageFile] = useState<File | null>(null);
   const [imageId, setImageId] = useState<string | null>(null);
+
+  // Lazy LP ID: set when a new LP is auto-created on the first flow action
+  const [lazyLpId, setLazyLpId] = useState<string | null>(null);
+  const currentLpId = learningPath?.id ?? lazyLpId;
 
   const {
     register,
@@ -257,6 +306,7 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
     reset,
     setValue,
     watch,
+    getValues,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -272,6 +322,76 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
       duration_unit: 'hours',
     },
   });
+
+  // Get the current LP ID, creating the LP lazily if the user adds a flow element before saving
+  const getOrCreateLpId = useCallback(async (): Promise<string> => {
+    if (currentLpId) return currentLpId;
+
+    const values = getValues();
+    if (!values.name?.trim()) {
+      const msg = "Saisissez d'abord le nom du parcours pour pouvoir ajouter des éléments.";
+      toast.error(msg);
+      throw new Error(msg);
+    }
+
+    const result = await createMutation.mutateAsync({
+      name: values.name,
+      description: values.description ?? null,
+      category_id: values.category_id ?? null,
+      price: values.price ?? null,
+      currency: values.currency ?? 'EUR',
+      image: imageId ?? null,
+      published_at: values.published_at ?? null,
+      show_in_shop: values.show_in_shop ?? false,
+      duration: toApiDuration(values.duration_value, values.duration_unit),
+    });
+    const newId = result.data.id;
+    setLazyLpId(newId);
+    return newId;
+  }, [currentLpId, getValues, createMutation, imageId]);
+
+  // Immediately link a module when added to the flow
+  const handleModuleAdd = useCallback(
+    async (moduleId: string, position: { x: number; y: number }) => {
+      const lpId = await getOrCreateLpId();
+      await linkCompetency.mutateAsync({
+        id: lpId,
+        competencyId: moduleId,
+        locationX: Math.round(position.x),
+        locationY: Math.round(position.y),
+      });
+    },
+    [getOrCreateLpId, linkCompetency],
+  );
+
+  // Immediately unlink a module when removed from the flow
+  const handleModuleRemove = useCallback(
+    async (moduleId: string) => {
+      if (!currentLpId) return;
+      await unlinkCompetency.mutateAsync({ id: currentLpId, competencyId: moduleId });
+    },
+    [currentLpId, unlinkCompetency],
+  );
+
+  // Immediately create an evaluation when added to the flow
+  const handleEvalCreate = useCallback(
+    async (data: CreateEvaluationPayload): Promise<string> => {
+      const lpId = await getOrCreateLpId();
+      const res = await createEvaluation.mutateAsync({ learningPathId: lpId, ...data });
+      return res.id;
+    },
+    [getOrCreateLpId, createEvaluation],
+  );
+
+  // Immediately delete an evaluation when removed from the flow
+  const handleEvalDelete = useCallback(
+    async (evaluationId: string) => {
+      console.log('handleEvalDelete', { evaluationId, currentLpId });
+      if (!currentLpId) return;
+      await deleteEvaluation.mutateAsync({ evaluationId, learningPathId: currentLpId });
+    },
+    [currentLpId, deleteEvaluation],
+  );
 
   const watchedPrice = watch('price');
   const watchedPublishedAt = watch('published_at');
@@ -313,9 +433,9 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
         });
         setImageId(null);
         setImagePreview(null);
+        setLazyLpId(null);
       }
       setPendingImageFile(null);
-      unlinkedDuringSessionRef.current = new Set();
     }
   }, [open, learningPath, reset]);
 
@@ -367,76 +487,34 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
         duration: toApiDuration(values.duration_value, values.duration_unit),
       };
 
-      let lpId: string;
-
-      try {
-        if (isEdit && learningPath) {
-          await updateMutation.mutateAsync({ id: learningPath.id, ...payload });
-          lpId = learningPath.id;
-          toast.success('Parcours mis à jour');
-        } else {
-          const result = await createMutation.mutateAsync(payload);
-          lpId = result.data.id;
-          toast.success('Parcours créé');
-        }
-      } catch (err) {
-        toast.error(
-          getApiErrorMessage(
-            err,
-            "Impossible d'enregistrer le parcours. Vérifiez les informations saisies et réessayez.",
-          ),
-        );
-        return;
-      }
-
-      // Unlink competencies removed from the flow during this session
-      if (unlinkedDuringSessionRef.current.size > 0) {
+      if (currentLpId) {
+        // LP already exists (edit mode or lazily created) — only save form metadata
         try {
-          for (const competencyId of unlinkedDuringSessionRef.current) {
-            await unlinkCompetency.mutateAsync({ id: lpId, competencyId });
-          }
+          await updateMutation.mutateAsync({ id: currentLpId, ...payload });
+          toast.success(isEdit ? 'Parcours mis à jour' : 'Parcours créé');
         } catch (err) {
           toast.error(
             getApiErrorMessage(
               err,
-              'Le parcours a été enregistré, mais le détachement de certaines compétences a échoué. Rouvrez le parcours et réessayez.',
+              "Impossible d'enregistrer le parcours. Vérifiez les informations saisies et réessayez.",
             ),
           );
           return;
         }
-      }
-
-      // Link new module competencies with canvas positions (location_x / location_y)
-      const flowPayload = flowRef.current?.getPayload();
-      const moduleSteps = (flowPayload?.etapes ?? []).filter(
-        (s): s is ModuleStepPayload => s.type === 'module' && !!s.moduleId,
-      );
-      const alreadyLinked = new Set(
-        (isEdit ? (learningPath?.competencies ?? []) : [])
-          .filter((c) => !unlinkedDuringSessionRef.current.has(c.competencyId))
-          .map((c) => c.competencyId),
-      );
-
-      try {
-        for (const step of moduleSteps) {
-          const competencyId = step.moduleId!;
-          if (alreadyLinked.has(competencyId)) continue;
-
-          await linkCompetency.mutateAsync({
-            id: lpId,
-            competencyId,
-            locationX: Math.round(step.position.x),
-            locationY: Math.round(step.position.y),
-          });
+      } else {
+        // New LP, no flow actions taken yet — create with metadata only
+        try {
+          await createMutation.mutateAsync(payload);
+          toast.success('Parcours créé');
+        } catch (err) {
+          toast.error(
+            getApiErrorMessage(
+              err,
+              'Impossible de créer le parcours. Vérifiez les informations saisies et réessayez.',
+            ),
+          );
+          return;
         }
-      } catch (err) {
-        toast.error(
-          getApiErrorMessage(
-            err,
-            'Le parcours a été enregistré, mais la synchronisation des compétences a échoué. Rouvrez le parcours et réessayez.',
-          ),
-        );
-        return;
       }
 
       onOpenChange(false);
@@ -459,6 +537,7 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
     uploadMedia.isPending ||
     createMutation.isPending ||
     updateMutation.isPending ||
+    linkCompetency.isPending ||
     unlinkCompetency.isPending;
   const title = isEdit ? `Modifier — ${learningPath?.name}` : 'Nouveau parcours';
 
@@ -506,13 +585,14 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
             ) : (
               <ProgramFlow
                 key={learningPathId ?? 'new'}
-                ref={flowRef}
                 initialNodes={initialFlow?.nodes}
                 initialEdges={initialFlow?.edges}
                 initialNodeOrder={initialFlow?.nodeOrder}
-                onUnlinkCompetency={isEdit ? handleUnlinkCompetency : undefined}
                 onModulesChange={setFlowHasModules}
-                learningPathId={learningPath?.id}
+                onModuleAdd={handleModuleAdd}
+                onModuleRemove={handleModuleRemove}
+                onEvalCreate={handleEvalCreate}
+                onEvalDelete={handleEvalDelete}
               />
             )}
           </div>

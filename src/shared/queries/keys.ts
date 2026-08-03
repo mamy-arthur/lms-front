@@ -92,3 +92,11 @@ export const quizItemKeys = {
     [...quizItemKeys.lists(), bankId, filters ?? {}] as const,
   detail: (id: string) => [...quizItemKeys.all, 'detail', id] as const,
 };
+
+export const evaluationKeys = {
+  all: ['evaluations'] as const,
+  lists: () => [...evaluationKeys.all, 'list'] as const,
+  listByLearningPath: (learningPathId: string) =>
+    [...evaluationKeys.lists(), learningPathId] as const,
+  detail: (id: string) => [...evaluationKeys.all, 'detail', id] as const,
+};

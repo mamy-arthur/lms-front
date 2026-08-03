@@ -1,8 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Award, ClipboardCheck, Plus, Search } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { Award, ClipboardCheck, Loader2, Plus, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -17,6 +16,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/shared/lib/cn';
 import { Separator } from '@/components/ui/separator';
+import { useQuizzesQuery } from '@/modules/admin/resources/quizzes/hooks/useQuizzesQuery';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -24,6 +24,7 @@ export type EvalStepType = 'evaluation-intermediate' | 'evaluation-final';
 
 export type EvaluationConfig = {
   stepType: EvalStepType;
+  title: string;
   durationEnabled: boolean;
   durationHours: number;
   durationMinutes: number;
@@ -36,53 +37,12 @@ export type EvaluationConfig = {
 type QuestionBank = {
   id: string;
   name: string;
-  questionCount: number;
   description?: string;
 };
 
-// ─── Mock data ────────────────────────────────────────────────────────────────
-
-const MOCK_QUESTION_BANKS: QuestionBank[] = [
-  {
-    id: 'qb1',
-    name: 'JavaScript Avancé',
-    questionCount: 120,
-    description: 'Concepts avancés, closures, async/await',
-  },
-  {
-    id: 'qb2',
-    name: 'React & Hooks',
-    questionCount: 85,
-    description: 'useState, useEffect, useContext, hooks personnalisés',
-  },
-  {
-    id: 'qb3',
-    name: 'Docker & Kubernetes',
-    questionCount: 60,
-    description: 'Conteneurisation et orchestration',
-  },
-  {
-    id: 'qb4',
-    name: 'Gestion de projet Agile',
-    questionCount: 75,
-    description: 'Scrum, Kanban, user stories, estimations',
-  },
-  {
-    id: 'qb5',
-    name: 'SQL & NoSQL',
-    questionCount: 95,
-    description: 'Requêtes, modélisation, indexation',
-  },
-  {
-    id: 'qb6',
-    name: 'Sécurité web (OWASP)',
-    questionCount: 50,
-    description: 'XSS, CSRF, injections SQL, bonnes pratiques',
-  },
-];
-
 const DEFAULT_CONFIG: EvaluationConfig = {
   stepType: 'evaluation-intermediate',
+  title: '',
   durationEnabled: false,
   durationHours: 0,
   durationMinutes: 30,
@@ -98,6 +58,7 @@ type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   hasFinalEval: boolean;
+  hasPartialForLastModule?: boolean;
   initialConfig?: EvaluationConfig;
   onConfirm: (config: EvaluationConfig) => void;
 };
@@ -106,11 +67,24 @@ export function AddEvaluationDialog({
   open,
   onOpenChange,
   hasFinalEval,
+  hasPartialForLastModule = false,
   initialConfig,
   onConfirm,
 }: Props) {
   const [config, setConfig] = useState<EvaluationConfig>(initialConfig ?? DEFAULT_CONFIG);
   const [bankSearch, setBankSearch] = useState('');
+
+  const { data: banksRaw, isLoading: isLoadingBanks } = useQuizzesQuery();
+
+  const questionBanks = useMemo(
+    () =>
+      (banksRaw?.data ?? []).map<QuestionBank>((b) => ({
+        id: b.id,
+        name: b.title,
+        description: b.description ?? undefined,
+      })),
+    [banksRaw],
+  );
 
   useEffect(() => {
     if (open) {
@@ -123,12 +97,14 @@ export function AddEvaluationDialog({
     setConfig((c) => ({ ...c, [key]: val }));
 
   const filteredBanks = useMemo(
-    () =>
-      MOCK_QUESTION_BANKS.filter((b) => b.name.toLowerCase().includes(bankSearch.toLowerCase())),
-    [bankSearch],
+    () => questionBanks.filter((b) => b.name.toLowerCase().includes(bankSearch.toLowerCase())),
+    [questionBanks, bankSearch],
   );
 
-  const canSubmit = config.questionBankId !== null;
+  const canSubmit =
+    config.title.trim() !== '' &&
+    config.questionBankId !== null &&
+    !(hasPartialForLastModule && config.stepType === 'evaluation-intermediate');
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -141,25 +117,44 @@ export function AddEvaluationDialog({
         </DialogHeader>
         <Separator />
         <div className="space-y-5">
+          {/* ── Title ── */}
+          <div className="flex flex-col space-y-2">
+            <Label htmlFor="eval-title">
+              Titre <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="eval-title"
+              placeholder="Ex. : Évaluation intermédiaire — Module 1"
+              value={config.title}
+              onChange={(e) => set('title', e.target.value)}
+            />
+          </div>
+
           {/* ── Type ── */}
           <div className="flex flex-col space-y-2">
             <Label>Type d'évaluation</Label>
             <div className="flex gap-2">
               <button
                 type="button"
-                onClick={() => set('stepType', 'evaluation-intermediate')}
+                disabled={hasPartialForLastModule}
+                onClick={() =>
+                  !hasPartialForLastModule && set('stepType', 'evaluation-intermediate')
+                }
                 className={cn(
                   'flex flex-1 items-center gap-2.5 rounded-lg border p-3 text-left transition-colors',
-                  config.stepType === 'evaluation-intermediate'
+                  config.stepType === 'evaluation-intermediate' && !hasPartialForLastModule
                     ? 'border-orange-400 bg-orange-50 text-orange-700'
                     : 'border-border bg-card hover:bg-muted/50',
+                  hasPartialForLastModule && 'cursor-not-allowed opacity-50',
                 )}
               >
                 <ClipboardCheck className="size-4 shrink-0" />
                 <div>
                   <p className="text-xs font-semibold">Intermédiaire</p>
                   <p className="mt-0.5 text-[10px] text-muted-foreground">
-                    Évaluation en cours de parcours
+                    {hasPartialForLastModule
+                      ? 'Ajoutez un module avant de poursuivre'
+                      : 'Évaluation en cours de parcours'}
                   </p>
                 </div>
               </button>
@@ -265,41 +260,45 @@ export function AddEvaluationDialog({
               />
             </div>
             <div className="flex max-h-44 flex-col gap-1.5 overflow-y-auto pr-1">
-              {filteredBanks.map((bank) => {
-                const isSelected = config.questionBankId === bank.id;
-                return (
-                  <button
-                    key={bank.id}
-                    type="button"
-                    onClick={() => {
-                      set('questionBankId', bank.id);
-                      set('questionBankName', bank.name);
-                    }}
-                    className={cn(
-                      'flex items-start justify-between rounded-lg border  p-3 text-left transition-colors',
-                      isSelected
-                        ? 'border-primary/60 bg-primary/5 ring-1 ring-primary/30'
-                        : 'border-border bg-card hover:border-(--color-primary)',
-                    )}
-                  >
-                    <div>
-                      <p className="text-xs font-semibold">{bank.name}</p>
-                      {bank.description && (
-                        <p className="mt-0.5 text-[11px] text-muted-foreground">
-                          {bank.description}
-                        </p>
-                      )}
-                    </div>
-                    <Badge variant="outline" className="ml-2 shrink-0 text-[10px]">
-                      {bank.questionCount} questions
-                    </Badge>
-                  </button>
-                );
-              })}
-              {filteredBanks.length === 0 && (
+              {isLoadingBanks ? (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="size-4 animate-spin text-muted-foreground" />
+                </div>
+              ) : filteredBanks.length === 0 ? (
                 <p className="py-4 text-center text-xs text-muted-foreground">
-                  Aucune banque ne correspond à votre recherche.
+                  {questionBanks.length === 0
+                    ? 'Aucune banque de questions disponible.'
+                    : 'Aucune banque ne correspond à votre recherche.'}
                 </p>
+              ) : (
+                filteredBanks.map((bank) => {
+                  const isSelected = config.questionBankId === bank.id;
+                  return (
+                    <button
+                      key={bank.id}
+                      type="button"
+                      onClick={() => {
+                        set('questionBankId', bank.id);
+                        set('questionBankName', bank.name);
+                      }}
+                      className={cn(
+                        'flex items-start justify-between rounded-lg border p-3 text-left transition-colors',
+                        isSelected
+                          ? 'border-primary/60 bg-primary/5 ring-1 ring-primary/30'
+                          : 'border-border bg-card hover:border-(--color-primary)',
+                      )}
+                    >
+                      <div>
+                        <p className="text-xs font-semibold">{bank.name}</p>
+                        {bank.description && (
+                          <p className="mt-0.5 text-[11px] text-muted-foreground">
+                            {bank.description}
+                          </p>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })
               )}
             </div>
           </div>

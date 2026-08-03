@@ -1,4 +1,8 @@
-import type { ApiLearningPath, ApiLearningPathCategory } from '@/shared/types/learning-path.types';
+import type {
+  ApiLearningPath,
+  ApiLearningPathCategory,
+  ApiLearningPathEvaluation,
+} from '@/shared/types/learning-path.types';
 
 export interface LearningPathImage {
   id: string;
@@ -11,6 +15,13 @@ export interface LearningPathCompetency {
   position: number;
   locationX: number | null;
   locationY: number | null;
+}
+
+export interface LearningPathEvaluation {
+  id: string;
+  title: string;
+  position: number;
+  precedingCompetencyId: string | null;
 }
 
 export interface LearningPath {
@@ -31,6 +42,7 @@ export interface LearningPath {
   /** Durée estimée du parcours en minutes */
   duration: number | null;
   competencies: LearningPathCompetency[];
+  evaluations: LearningPathEvaluation[];
   createdAt: string;
   updatedAt: string;
 }
@@ -68,6 +80,12 @@ export function normalizeLearningPath(api: ApiLearningPath): LearningPath {
       position: c.position,
       locationX: c.location_x ?? null,
       locationY: c.location_y ?? null,
+    })),
+    evaluations: (api.evaluations ?? []).map((e: ApiLearningPathEvaluation) => ({
+      id: e.id,
+      title: e.title,
+      position: e.position,
+      precedingCompetencyId: e.preceding_competency_id,
     })),
     createdAt: api.created_at,
     updatedAt: api.updated_at,

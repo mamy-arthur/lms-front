@@ -50,6 +50,10 @@ import { SelectModuleDialog, type ModuleItem } from './dialog/SelectModuleDialog
 import { AddEvaluationDialog, type EvaluationConfig } from './dialog/AddEvaluationDialog';
 import { SelectAttestationDialog, type AttestationItem } from './dialog/SelectAttestationDialog';
 import { SelectEmailTemplateDialog, type EmailTemplate } from './dialog/SelectEmailTemplateDialog';
+import { toast } from 'sonner';
+import { evaluationsApi } from '@/shared/api/evaluations.api';
+import type { CreateEvaluationPayload } from '@/shared/api/evaluations.api';
+import { getApiErrorMessage } from '@/shared/lib/errors';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -62,6 +66,7 @@ export type StepNodeData = {
   attestationId?: string;
   emailTemplateId?: string;
   emailTemplateName?: string;
+  evaluationId?: string;
   evaluationConfig?: Omit<EvaluationConfig, 'stepType'>;
 };
 
@@ -98,6 +103,8 @@ export type EvaluationStepPayload = {
   type: 'evaluation-intermediate' | 'evaluation-final';
   position: StepPosition;
   label: string;
+  title: string;
+  evaluationId?: string;
   questionBankId: string | null;
   questionBankName: string | null;
   questionCount: number;
@@ -226,32 +233,27 @@ const STEP_CONFIG: Record<StepType, StepConfig> = {
 // ─── Context ──────────────────────────────────────────────────────────────────
 
 const FlowActionsContext = createContext<{
-  onDeleteNode: (id: string) => void;
+  onDeleteNode: (id: string) => void | Promise<void>;
   onConfigureEdge: (edgeId: string) => void;
   onEditNode: (id: string) => void;
-  onUnlinkCompetency: (competencyId: string) => void;
 }>({
   onDeleteNode: () => {},
   onConfigureEdge: () => {},
   onEditNode: () => {},
-  onUnlinkCompetency: () => {},
 });
 
 // ─── Custom Node ──────────────────────────────────────────────────────────────
 
 function ProgramStepNode({ id, data, isConnectable }: NodeProps<StepNode>) {
-  const { onDeleteNode, onEditNode, onUnlinkCompetency } = useContext(FlowActionsContext);
+  const { onDeleteNode, onEditNode } = useContext(FlowActionsContext);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const cfg = STEP_CONFIG[data.stepType];
   const { Icon } = cfg;
   const isEmail = data.stepType === 'email';
 
   const handleConfirmDelete = () => {
-    if (data.stepType === 'module' && data.moduleId) {
-      onUnlinkCompetency(data.moduleId);
-    }
-    onDeleteNode(id);
     setConfirmOpen(false);
+    onDeleteNode(id);
   };
 
   return (
@@ -435,13 +437,24 @@ export type ProgramFlowProps = {
   initialNodes?: StepNode[];
   initialEdges?: Edge<EdgeRuleData>[];
   initialNodeOrder?: string[];
-  onUnlinkCompetency?: (competencyId: string) => void;
   onModulesChange?: (hasModules: boolean) => void;
-  learningPathId?: string;
+  onModuleAdd?: (moduleId: string, position: { x: number; y: number }) => Promise<void>;
+  onModuleRemove?: (moduleId: string) => Promise<void>;
+  onEvalCreate?: (data: CreateEvaluationPayload) => Promise<string>;
+  onEvalDelete?: (evaluationId: string) => Promise<void>;
 };
 
 const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function ProgramFlow(
-  { initialNodes, initialEdges, initialNodeOrder, onUnlinkCompetency, onModulesChange },
+  {
+    initialNodes,
+    initialEdges,
+    initialNodeOrder,
+    onModulesChange,
+    onModuleAdd,
+    onModuleRemove,
+    onEvalCreate,
+    onEvalDelete,
+  },
   ref,
 ) {
   const [nodes, setNodes] = useState<StepNode[]>(initialNodes ?? [initialEmailNode]);
@@ -498,14 +511,23 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
   } | null>(null);
 
   // ── Business rule flags ──
-  const { hasFinalEval, hasAttestation, hasModule } = useMemo(
-    () => ({
+  const { hasFinalEval, hasAttestation, hasModule, hasPartialForLastModule } = useMemo(() => {
+    const lastModuleIdx = nodeOrder.reduce<number>(
+      (last, id, idx) => (nodes.find((n) => n.id === id)?.data.stepType === 'module' ? idx : last),
+      -1,
+    );
+    const partialAfterLastModule =
+      lastModuleIdx !== -1 &&
+      nodeOrder.slice(lastModuleIdx + 1).some((id) => {
+        return nodes.find((n) => n.id === id)?.data.stepType === 'evaluation-intermediate';
+      });
+    return {
       hasModule: nodes.some((n) => n.data.stepType === 'module'),
       hasFinalEval: nodes.some((n) => n.data.stepType === 'evaluation-final'),
       hasAttestation: nodes.some((n) => n.data.stepType === 'attestation'),
-    }),
-    [nodes],
-  );
+      hasPartialForLastModule: partialAfterLastModule,
+    };
+  }, [nodes, nodeOrder]);
 
   // Notify parent whenever the presence of module nodes changes
   useEffect(() => {
@@ -608,37 +630,66 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
   );
 
   // ── Delete a node and reconnect its neighbours ──
-  const onDeleteNode = useCallback((nodeId: string) => {
-    // The email start node is mandatory and cannot be removed
-    const targetNode = nodesRef.current.find((n) => n.id === nodeId);
-    if (targetNode?.data.stepType === 'email') return;
+  const onDeleteNode = useCallback(
+    async (nodeId: string) => {
+      const targetNode = nodesRef.current.find((n) => n.id === nodeId);
+      if (targetNode?.data.stepType === 'email') return;
 
-    const order = nodeOrderRef.current;
-    const idx = order.indexOf(nodeId);
-    const prev = order[idx - 1] ?? null;
-    const next = order[idx + 1] ?? null;
-
-    setNodes((nds) => nds.filter((n) => n.id !== nodeId));
-
-    setEdges((eds) => {
-      const filtered = eds.filter((e) => e.source !== nodeId && e.target !== nodeId);
-      if (prev && next) {
-        return [
-          ...filtered,
-          {
-            id: `e-${prev}-${next}`,
-            source: prev,
-            target: next,
-            type: 'configurableEdge',
-            animated: true,
-          },
-        ];
+      // Immediately unlink competency when a module node is removed
+      if (targetNode?.data.stepType === 'module' && targetNode.data.moduleId && onModuleRemove) {
+        try {
+          await onModuleRemove(targetNode.data.moduleId);
+        } catch (err) {
+          toast.error(getApiErrorMessage(err, 'Impossible de détacher la compétence.'));
+          return;
+        }
       }
-      return filtered;
-    });
 
-    setNodeOrder((o) => o.filter((id) => id !== nodeId));
-  }, []);
+      // Immediately delete evaluation from the API when an evaluation node is removed
+      if (
+        (targetNode?.data.stepType === 'evaluation-intermediate' ||
+          targetNode?.data.stepType === 'evaluation-final') &&
+        targetNode.data.evaluationId
+      ) {
+        try {
+          if (onEvalDelete) {
+            console.log('Deleting evaluation via onEvalDelete callback');
+            await onEvalDelete(targetNode.data.evaluationId);
+          }
+        } catch (err) {
+          toast.error(getApiErrorMessage(err, "Impossible de supprimer l'évaluation."));
+          return;
+        }
+      }
+
+      const order = nodeOrderRef.current;
+      const idx = order.indexOf(nodeId);
+      const prev = order[idx - 1] ?? null;
+      const next = order[idx + 1] ?? null;
+
+      setNodes((nds) => nds.filter((n) => n.id !== nodeId));
+
+      setEdges((eds) => {
+        const filtered = eds.filter((e) => e.source !== nodeId && e.target !== nodeId);
+        if (prev && next) {
+          return [
+            ...filtered,
+            {
+              id: `e-${prev}-${next}`,
+              source: prev,
+              target: next,
+              type: 'configurableEdge',
+              animated: true,
+            },
+          ];
+        }
+        return filtered;
+      });
+
+      setNodeOrder((o) => o.filter((id) => id !== nodeId));
+    },
+    [onModuleRemove, onEvalDelete],
+  );
 
   // ── Open the right edit dialog when a node is clicked ──
   const onEditNode = useCallback((nodeId: string) => {
@@ -661,6 +712,7 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
           nodeId,
           config: {
             stepType: node.data.stepType,
+            title: node.data.evaluationConfig?.title ?? '',
             durationEnabled: node.data.evaluationConfig?.durationEnabled ?? false,
             durationHours: node.data.evaluationConfig?.durationHours ?? 0,
             durationMinutes: node.data.evaluationConfig?.durationMinutes ?? 30,
@@ -688,6 +740,7 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
         label?: string;
         moduleId?: string;
         attestationId?: string;
+        evaluationId?: string;
         evaluationConfig?: Omit<EvaluationConfig, 'stepType'>;
       },
     ) => {
@@ -708,6 +761,7 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
           label: opts?.label ?? `${STEP_CONFIG[stepType].label} ${count}`,
           moduleId: opts?.moduleId,
           attestationId: opts?.attestationId,
+          evaluationId: opts?.evaluationId,
           evaluationConfig: opts?.evaluationConfig,
         },
       };
@@ -734,22 +788,51 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
 
   // ── Handle module selection ──
   const handleModuleSelect = useCallback(
-    (mod: ModuleItem) => {
+    async (mod: ModuleItem) => {
+      if (onModuleAdd) {
+        const lastId = nodeOrderRef.current.at(-1) ?? null;
+        const lastNode = lastId ? nodesRef.current.find((n) => n.id === lastId) : null;
+        const y = lastNode ? lastNode.position.y + NODE_GAP : 0;
+        try {
+          await onModuleAdd(mod.id, { x: CANVAS_X, y });
+        } catch (err) {
+          toast.error(getApiErrorMessage(err, 'Impossible de lier la compétence.'));
+          return;
+        }
+      }
       addStep('module', { label: mod.name, moduleId: mod.id });
     },
-    [addStep],
+    [addStep, onModuleAdd],
   );
 
   // ── Handle evaluation configuration ──
   const handleEvalConfirm = useCallback(
-    (cfg: EvaluationConfig) => {
+    async (cfg: EvaluationConfig) => {
       const { stepType, ...rest } = cfg;
+      let evaluationId: string | undefined;
+
+      if (onEvalCreate && cfg.questionBankId) {
+        try {
+          evaluationId = await onEvalCreate({
+            title: cfg.title,
+            type: stepType === 'evaluation-intermediate' ? 'PARTIAL' : 'FINAL',
+            question_bank_ids: [cfg.questionBankId],
+            question_count: cfg.questionCount,
+            max_attempts: cfg.attemptCount > 0 ? cfg.attemptCount : null,
+          });
+        } catch (err) {
+          toast.error(getApiErrorMessage(err, "Impossible d'ajouter l'évaluation."));
+          return;
+        }
+      }
+
       addStep(stepType, {
-        label: cfg.questionBankName ?? undefined,
+        label: cfg.title || cfg.questionBankName || undefined,
+        evaluationId,
         evaluationConfig: rest,
       });
     },
-    [addStep],
+    [addStep, onEvalCreate],
   );
 
   // ── Handle attestation selection ──
@@ -780,9 +863,25 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
   );
 
   const handleEditEvalSave = useCallback(
-    (cfg: EvaluationConfig) => {
+    async (cfg: EvaluationConfig) => {
       if (!editEvalDialog) return;
       const { stepType, ...rest } = cfg;
+
+      const node = nodesRef.current.find((n) => n.id === editEvalDialog.nodeId);
+      if (node?.data.evaluationId) {
+        try {
+          await evaluationsApi.update(node.data.evaluationId, {
+            title: cfg.title,
+            question_bank_ids: cfg.questionBankId ? [cfg.questionBankId] : undefined,
+            question_count: cfg.questionCount,
+            max_attempts: cfg.attemptCount > 0 ? cfg.attemptCount : null,
+          });
+        } catch (err) {
+          toast.error(getApiErrorMessage(err, "Impossible de modifier l'évaluation."));
+          return;
+        }
+      }
+
       setNodes((nds) =>
         nds.map((n) =>
           n.id === editEvalDialog.nodeId
@@ -791,7 +890,7 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
                 data: {
                   ...n.data,
                   stepType,
-                  label: cfg.questionBankName ?? n.data.label,
+                  label: cfg.title || cfg.questionBankName || n.data.label,
                   evaluationConfig: rest,
                 },
               }
@@ -877,6 +976,8 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
             type: d.stepType,
             position: node.position,
             label: d.label,
+            title: d.evaluationConfig?.title ?? '',
+            evaluationId: d.evaluationId,
             questionBankId: d.evaluationConfig?.questionBankId ?? null,
             questionBankName: d.evaluationConfig?.questionBankName ?? null,
             questionCount: d.evaluationConfig?.questionCount ?? 0,
@@ -974,9 +1075,8 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
       onDeleteNode,
       onConfigureEdge,
       onEditNode,
-      onUnlinkCompetency: onUnlinkCompetency ?? (() => {}),
     }),
-    [onDeleteNode, onConfigureEdge, onEditNode, onUnlinkCompetency],
+    [onDeleteNode, onConfigureEdge, onEditNode],
   );
 
   return (
@@ -1051,6 +1151,7 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
         open={evalDialogOpen}
         onOpenChange={setEvalDialogOpen}
         hasFinalEval={hasFinalEval}
+        hasPartialForLastModule={hasPartialForLastModule}
         onConfirm={handleEvalConfirm}
       />
       <SelectAttestationDialog
