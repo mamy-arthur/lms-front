@@ -37,6 +37,8 @@ import { useUpdateLearningPath } from '../../hooks/useUpdateLearningPath';
 import { useUploadLearningPathMedia } from '../../hooks/useUploadLearningPathMedia';
 import { useLinkCompetencyToLearningPath } from '../../hooks/useLinkCompetencyToLearningPath';
 import { useUnlinkCompetencyFromLearningPath } from '../../hooks/useUnlinkCompetencyFromLearningPath';
+import { useUpdateCompetencyLocation } from '../../hooks/useUpdateCompetencyLocation';
+import { useUpdateEvaluationLocation } from '../../hooks/useUpdateEvaluationLocation';
 import { useModules } from '@/modules/admin/resources/modules/hooks/useModules';
 import { useLearningPathQuery } from '../../hooks/useLearningPathQuery';
 import { useEvaluationsQuery } from '../../hooks/useEvaluationsQuery';
@@ -184,6 +186,8 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
   const unlinkCompetency = useUnlinkCompetencyFromLearningPath();
   const createEvaluation = useCreateEvaluation();
   const deleteEvaluation = useDeleteEvaluation();
+  const updateCompetencyLocation = useUpdateCompetencyLocation();
+  const updateEvaluationLocation = useUpdateEvaluationLocation();
 
   // Pre-fetch all modules so competency names are ready when the flow renders
   const { data: modulesResult, isLoading: isLoadingModules } = useModules();
@@ -237,10 +241,12 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
         .sort((a, b) => a.position - b.position);
       for (const ev of partialEvals) {
         const evDetail = evDetailsMap.get(ev.id);
+        const evalX = evDetail?.location_x ?? CANVAS_X;
+        const evalY = evDetail?.location_y ?? currentY;
         allNodes.push({
           id: `step-eval-${ev.id}`,
           type: 'programStep',
-          position: { x: CANVAS_X, y: currentY },
+          position: { x: evalX, y: evalY },
           data: {
             stepType: 'evaluation-intermediate',
             label: ev.title,
@@ -257,7 +263,7 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
             },
           },
         });
-        currentY += NODE_GAP;
+        currentY = evalY + NODE_GAP;
       }
     }
 
@@ -267,10 +273,12 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
       .sort((a, b) => a.position - b.position);
     for (const ev of finalEvals) {
       const evDetail = evDetailsMap.get(ev.id);
+      const evalX = evDetail?.location_x ?? CANVAS_X;
+      const evalY = evDetail?.location_y ?? currentY;
       allNodes.push({
         id: `step-eval-${ev.id}`,
         type: 'programStep',
-        position: { x: CANVAS_X, y: currentY },
+        position: { x: evalX, y: evalY },
         data: {
           stepType: 'evaluation-final',
           label: ev.title,
@@ -287,7 +295,7 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
           },
         },
       });
-      currentY += NODE_GAP;
+      currentY = evalY + NODE_GAP;
     }
 
     const nodeOrder = allNodes.map((n) => n.id);
@@ -402,6 +410,34 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
       await deleteEvaluation.mutateAsync({ evaluationId, learningPathId: currentLpId });
     },
     [currentLpId, deleteEvaluation],
+  );
+
+  // Update module canvas position when dragged
+  const handleModuleMove = useCallback(
+    async (moduleId: string, position: { x: number; y: number }) => {
+      if (!currentLpId) return;
+      await updateCompetencyLocation.mutateAsync({
+        learningPathId: currentLpId,
+        competencyId: moduleId,
+        locationX: position.x,
+        locationY: position.y,
+      });
+    },
+    [currentLpId, updateCompetencyLocation],
+  );
+
+  // Update evaluation canvas position when dragged
+  const handleEvalMove = useCallback(
+    async (evaluationId: string, position: { x: number; y: number }) => {
+      if (!currentLpId) return;
+      await updateEvaluationLocation.mutateAsync({
+        evaluationId,
+        learningPathId: currentLpId,
+        locationX: position.x,
+        locationY: position.y,
+      });
+    },
+    [currentLpId, updateEvaluationLocation],
   );
 
   const watchedPrice = watch('price');
@@ -602,8 +638,10 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
                 onModulesChange={setFlowHasModules}
                 onModuleAdd={handleModuleAdd}
                 onModuleRemove={handleModuleRemove}
+                onModuleMove={handleModuleMove}
                 onEvalCreate={handleEvalCreate}
                 onEvalDelete={handleEvalDelete}
+                onEvalMove={handleEvalMove}
               />
             )}
           </div>

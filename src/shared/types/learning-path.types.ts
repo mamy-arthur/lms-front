@@ -9,6 +9,8 @@ export interface ApiLearningPathEvaluation {
   id: string;
   title: string;
   position: number;
+  location_x: number | null;
+  location_y: number | null;
   preceding_competency_id: string | null;
 }
 

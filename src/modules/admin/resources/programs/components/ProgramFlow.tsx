@@ -448,8 +448,10 @@ export type ProgramFlowProps = {
   onModulesChange?: (hasModules: boolean) => void;
   onModuleAdd?: (moduleId: string, position: { x: number; y: number }) => Promise<void>;
   onModuleRemove?: (moduleId: string) => Promise<void>;
+  onModuleMove?: (moduleId: string, position: { x: number; y: number }) => Promise<void>;
   onEvalCreate?: (data: CreateEvaluationPayload) => Promise<string>;
   onEvalDelete?: (evaluationId: string) => Promise<void>;
+  onEvalMove?: (evaluationId: string, position: { x: number; y: number }) => Promise<void>;
 };
 
 const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function ProgramFlow(
@@ -460,8 +462,10 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
     onModulesChange,
     onModuleAdd,
     onModuleRemove,
+    onModuleMove,
     onEvalCreate,
     onEvalDelete,
+    onEvalMove,
   },
   ref,
 ) {
@@ -835,6 +839,9 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
       let evaluationId: string | undefined;
 
       if (onEvalCreate && cfg.questionBankIds.length > 0) {
+        const lastId = nodeOrderRef.current.at(-1) ?? null;
+        const lastNode = lastId ? nodesRef.current.find((n) => n.id === lastId) : null;
+        const locationY = lastNode ? lastNode.position.y + NODE_GAP : 0;
         try {
           evaluationId = await onEvalCreate({
             title: cfg.title,
@@ -842,6 +849,8 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
             question_bank_ids: cfg.questionBankIds,
             question_count: cfg.questionCount,
             max_attempts: cfg.attemptCount > 0 ? cfg.attemptCount : null,
+            location_x: CANVAS_X,
+            location_y: locationY,
           });
         } catch (err) {
           toast.error(getApiErrorMessage(err, "Impossible d'ajouter l'évaluation."));
@@ -967,6 +976,25 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
   const editModuleUsedIds = useMemo(
     () => usedModuleIds.filter((id) => id !== editModuleDialog?.moduleId),
     [usedModuleIds, editModuleDialog?.moduleId],
+  );
+
+  // ── Persist position when a node is dragged ──
+  const handleNodeDragStop = useCallback(
+    (_event: MouseEvent | TouchEvent, node: StepNode) => {
+      const { stepType, moduleId, evaluationId } = node.data;
+      const pos = { x: Math.round(node.position.x), y: Math.round(node.position.y) };
+
+      if (stepType === 'module' && moduleId && onModuleMove) {
+        onModuleMove(moduleId, pos).catch(() => {});
+      } else if (
+        (stepType === 'evaluation-intermediate' || stepType === 'evaluation-final') &&
+        evaluationId &&
+        onEvalMove
+      ) {
+        onEvalMove(evaluationId, pos).catch(() => {});
+      }
+    },
+    [onModuleMove, onEvalMove],
   );
 
   // ── Build the serializable payload ──
@@ -1156,6 +1184,7 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
+            onNodeDragStop={handleNodeDragStop}
             nodeTypes={nodeTypes}
             edgeTypes={edgeTypes}
             fitView

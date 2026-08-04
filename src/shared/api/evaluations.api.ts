@@ -11,6 +11,8 @@ export interface ApiEvaluation {
   question_count: number;
   max_attempts: number | null;
   position: number;
+  location_x: number | null;
+  location_y: number | null;
   preceding_competency_id: string | null;
   is_published: boolean;
   pool_size: number | null;
@@ -25,6 +27,8 @@ export interface CreateEvaluationPayload {
   question_bank_ids: string[];
   question_count: number;
   max_attempts?: number | null;
+  location_x?: number | null;
+  location_y?: number | null;
 }
 
 export type UpdateEvaluationPayload = Partial<Omit<CreateEvaluationPayload, 'type'>> & {
