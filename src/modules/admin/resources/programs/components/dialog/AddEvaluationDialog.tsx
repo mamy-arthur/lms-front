@@ -97,7 +97,12 @@ export function AddEvaluationDialog({
 
   useEffect(() => {
     if (open) {
-      setConfig(initialConfig ?? DEFAULT_CONFIG);
+      const base = initialConfig ?? DEFAULT_CONFIG;
+      setConfig(
+        !initialConfig && hasPartialForLastModule
+          ? { ...base, stepType: 'evaluation-final' as EvalStepType }
+          : base,
+      );
       setBankSearch('');
     }
   }, [open]);
@@ -174,7 +179,7 @@ export function AddEvaluationDialog({
                   <p className="text-xs font-semibold">Intermédiaire</p>
                   <p className="mt-0.5 text-[10px] text-muted-foreground">
                     {hasPartialForLastModule
-                      ? 'Ajoutez un module avant de poursuivre'
+                      ? 'Seule une évaluation finale est disponible'
                       : 'Évaluation en cours de parcours'}
                   </p>
                 </div>

@@ -18,7 +18,6 @@ export function useModules(params?: ModuleSearchParams) {
           sort_order: params?.sort_dir,
         });
         const items = res.data ?? [];
-        console.debug('[useModules] raw response:', res, 'items:', items.length);
         return {
           data: items.map(normalizeModule),
           total: res.meta?.total ?? res.total ?? items.length,

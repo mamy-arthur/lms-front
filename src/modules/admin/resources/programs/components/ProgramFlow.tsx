@@ -251,6 +251,13 @@ function ProgramStepNode({ id, data, isConnectable }: NodeProps<StepNode>) {
   const { Icon } = cfg;
   const isEmail = data.stepType === 'email';
 
+  const isConfigured =
+    (data.stepType === 'email' && !!data.emailTemplateId) ||
+    (data.stepType === 'module' && !!data.moduleId) ||
+    ((data.stepType === 'evaluation-intermediate' || data.stepType === 'evaluation-final') &&
+      !!data.evaluationId) ||
+    (data.stepType === 'attestation' && !!data.attestationId);
+
   const handleConfirmDelete = () => {
     setConfirmOpen(false);
     onDeleteNode(id);
@@ -259,11 +266,12 @@ function ProgramStepNode({ id, data, isConnectable }: NodeProps<StepNode>) {
   return (
     <div
       className={cn(
-        'min-w-55 cursor-pointer rounded-md border px-4 py-3 shadow-sm',
+        'min-w-55 rounded-md border px-4 py-3 shadow-sm',
+        isConfigured ? 'cursor-default' : 'cursor-pointer',
         cfg.border,
         cfg.bg,
       )}
-      onClick={() => onEditNode(id)}
+      onClick={isConfigured ? undefined : () => onEditNode(id)}
     >
       <Handle type="target" position={Position.Top} isConnectable={isConnectable} />
 
@@ -512,23 +520,30 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
   } | null>(null);
 
   // ── Business rule flags ──
-  const { hasFinalEval, hasAttestation, hasModule, hasPartialForLastModule } = useMemo(() => {
-    const lastModuleIdx = nodeOrder.reduce<number>(
-      (last, id, idx) => (nodes.find((n) => n.id === id)?.data.stepType === 'module' ? idx : last),
-      -1,
-    );
-    const partialAfterLastModule =
-      lastModuleIdx !== -1 &&
-      nodeOrder.slice(lastModuleIdx + 1).some((id) => {
-        return nodes.find((n) => n.id === id)?.data.stepType === 'evaluation-intermediate';
-      });
-    return {
-      hasModule: nodes.some((n) => n.data.stepType === 'module'),
-      hasFinalEval: nodes.some((n) => n.data.stepType === 'evaluation-final'),
-      hasAttestation: nodes.some((n) => n.data.stepType === 'attestation'),
-      hasPartialForLastModule: partialAfterLastModule,
-    };
-  }, [nodes, nodeOrder]);
+  const { hasFinalEval, hasAttestation, hasModule, hasPartialForLastModule, lastNodeIsEvaluation } =
+    useMemo(() => {
+      const lastNodeId = nodeOrder.at(-1);
+      const lastNodeStepType = nodes.find((n) => n.id === lastNodeId)?.data.stepType;
+
+      const lastModuleIdx = nodeOrder.reduce<number>(
+        (last, id, idx) =>
+          nodes.find((n) => n.id === id)?.data.stepType === 'module' ? idx : last,
+        -1,
+      );
+      const partialAfterLastModule =
+        lastModuleIdx !== -1 &&
+        nodeOrder.slice(lastModuleIdx + 1).some((id) => {
+          return nodes.find((n) => n.id === id)?.data.stepType === 'evaluation-intermediate';
+        });
+      return {
+        hasModule: nodes.some((n) => n.data.stepType === 'module'),
+        hasFinalEval: nodes.some((n) => n.data.stepType === 'evaluation-final'),
+        hasAttestation: nodes.some((n) => n.data.stepType === 'attestation'),
+        hasPartialForLastModule: partialAfterLastModule,
+        lastNodeIsEvaluation:
+          lastNodeStepType === 'evaluation-intermediate' || lastNodeStepType === 'evaluation-final',
+      };
+    }, [nodes, nodeOrder]);
 
   // Notify parent whenever the presence of module nodes changes
   useEffect(() => {
@@ -1104,7 +1119,12 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
 
           <Button
             variant="outline"
-            disabled={!hasModule || hasFinalEval || hasAttestation || hasPartialForLastModule}
+            disabled={
+              !hasModule ||
+              hasFinalEval ||
+              hasAttestation ||
+              (hasPartialForLastModule && !lastNodeIsEvaluation)
+            }
             onClick={() => setEvalDialogOpen(true)}
             className="gap-1.5 border-orange-200 text-orange-700 hover:bg-orange-50 hover:text-orange-700"
           >
@@ -1159,7 +1179,7 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
         open={evalDialogOpen}
         onOpenChange={setEvalDialogOpen}
         hasFinalEval={hasFinalEval}
-        hasPartialForLastModule={hasPartialForLastModule}
+        hasPartialForLastModule={hasPartialForLastModule || lastNodeIsEvaluation}
         alreadyUsedBankIds={allUsedBankIds}
         onConfirm={handleEvalConfirm}
       />
