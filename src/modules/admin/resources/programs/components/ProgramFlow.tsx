@@ -35,7 +35,16 @@ import type {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
-import { Award, BadgeCheck, BookOpen, ClipboardCheck, Mail, Settings2, Trash2 } from 'lucide-react';
+import {
+  Award,
+  BadgeCheck,
+  BookOpen,
+  ClipboardCheck,
+  Info,
+  Mail,
+  Settings2,
+  Trash2,
+} from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/shared/lib/cn';
@@ -1170,9 +1179,9 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
             Attestation
           </Button>
 
-          <span className="ml-auto text-xs text-muted-foreground">
-            {nodes.filter((n) => n.data.stepType !== 'email').length} étape
-            {nodes.filter((n) => n.data.stepType !== 'email').length !== 1 ? 's' : ''}
+          <span className="ml-auto flex items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-xs text-amber-700">
+            <Info className="size-3 shrink-0" />
+            Les modifications du canvas sont enregistrées automatiquement
           </span>
         </div>
 
