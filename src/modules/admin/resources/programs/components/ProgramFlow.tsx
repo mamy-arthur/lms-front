@@ -688,7 +688,6 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
       ) {
         try {
           if (onEvalDelete) {
-            console.log('Deleting evaluation via onEvalDelete callback');
             await onEvalDelete(targetNode.data.evaluationId);
           }
         } catch (err) {

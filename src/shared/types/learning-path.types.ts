@@ -61,7 +61,8 @@ export interface ApiLearningPath {
   /** Durée estimée du parcours en minutes */
   duration: number | null;
   competencies: ApiLearningPathCompetency[];
-  evaluations: ApiLearningPathEvaluation[];
+  /** Only present in detail endpoint responses — absent from list/shop endpoints */
+  evaluations?: ApiLearningPathEvaluation[];
   created_at: string;
   updated_at: string;
 }

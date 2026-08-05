@@ -310,7 +310,7 @@ export function AddEvaluationDialog({
                   return (
                     <button
                       key={bank.id}
-                      disabled={alreadyUsedBankIds.includes(bank.id)}
+
                       type="button"
                       onClick={() => {
                         setConfig((c) => {

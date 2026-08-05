@@ -405,7 +405,6 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
   // Immediately delete an evaluation when removed from the flow
   const handleEvalDelete = useCallback(
     async (evaluationId: string) => {
-      console.log('handleEvalDelete', { evaluationId, currentLpId });
       if (!currentLpId) return;
       await deleteEvaluation.mutateAsync({ evaluationId, learningPathId: currentLpId });
     },
