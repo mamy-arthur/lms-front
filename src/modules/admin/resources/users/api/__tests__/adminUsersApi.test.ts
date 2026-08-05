@@ -106,21 +106,21 @@ describe('adminUsersApi', () => {
       );
     });
 
-    it('convertit page 1 en 0 (0-based backend)', async () => {
+    it('transmet page 1 tel quel', async () => {
       mockApiGet.mockResolvedValue({ data: [], total: 0 });
       await adminUsersApi.list({ page: 1 });
       expect(mockApiGet).toHaveBeenCalledWith(
         'platform/users',
-        expect.objectContaining({ page: 0 }),
+        expect.objectContaining({ page: 1 }),
       );
     });
 
-    it('convertit page 3 en 2 (0-based backend)', async () => {
+    it('transmet page 3 tel quel', async () => {
       mockApiGet.mockResolvedValue({ data: [], total: 0 });
       await adminUsersApi.list({ page: 3 });
       expect(mockApiGet).toHaveBeenCalledWith(
         'platform/users',
-        expect.objectContaining({ page: 2 }),
+        expect.objectContaining({ page: 3 }),
       );
     });
 

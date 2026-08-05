@@ -37,7 +37,7 @@ export function ClientUserList() {
     page,
     pageSize,
     hasQuery,
-  } = useUsersListController<ClientUser, ClientUserSearchParams>({ defaultPageSize: 12 });
+  } = useUsersListController<ClientUser, ClientUserSearchParams>({ defaultPageSize: 25 });
 
   const { data: queryResult } = useClientUsersQuery(params);
   const toggleActive = useToggleClientUserActive();

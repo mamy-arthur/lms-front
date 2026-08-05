@@ -18,7 +18,7 @@ export type UseQuestionListControllerOptions = {
 };
 
 export function useQuestionListController<TQuestion>(opts?: UseQuestionListControllerOptions) {
-  const { defaultSortBy = 'name', defaultSortDir = 'asc', defaultPageSize = 12 } = opts ?? {};
+  const { defaultSortBy = 'name', defaultSortDir = 'asc', defaultPageSize = 25 } = opts ?? {};
 
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<TQuestion | undefined>();

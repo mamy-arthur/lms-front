@@ -14,6 +14,6 @@ export function useUpdateUser() {
       queryClient.invalidateQueries({ queryKey: ADMIN_USERS_QUERY_KEY });
       toast.success('Utilisateur mis à jour');
     },
-    onError: () => toast.error('Échec de la mise à jour de l’utilisateur'),
+    onError: () => toast.error("Échec de la mise à jour de l'utilisateur"),
   });
 }

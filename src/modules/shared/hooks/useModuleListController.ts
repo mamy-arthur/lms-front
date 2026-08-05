@@ -24,7 +24,7 @@ export function useModuleListController<TModule>(opts?: UseModuleListControllerO
     includeTenantFilter = false,
     defaultSortBy = 'name',
     defaultSortDir = 'asc',
-    defaultPageSize = 12,
+    defaultPageSize = 25,
   } = opts ?? {};
 
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);

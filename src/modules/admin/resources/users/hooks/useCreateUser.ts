@@ -13,6 +13,6 @@ export function useCreateUser() {
       queryClient.invalidateQueries({ queryKey: ADMIN_USERS_QUERY_KEY });
       toast.success('Utilisateur créé');
     },
-    onError: () => toast.error('Échec de la création de l’utilisateur'),
+    onError: () => toast.error("Échec de la création de l'utilisateur"),
   });
 }

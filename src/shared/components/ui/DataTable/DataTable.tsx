@@ -140,7 +140,7 @@ export function DataTable<T extends { id: string | number }>({
 
       return sort.direction === 'asc' ? cmp : -cmp;
     });
-  }, [data, sort]);
+  }, [data, sort, onSort]);
 
   const buildPages = useCallback(() => {
     const pages: (number | 'ellipsis')[] = [];

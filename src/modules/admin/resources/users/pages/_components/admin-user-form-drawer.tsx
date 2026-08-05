@@ -270,7 +270,7 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
         formState.onSubmit(values);
       }
     },
-    [isEdit, user, createMutation, updateMutation, formState, onSuccess, onClose],
+    [isEdit, user, createMutation, updateMutation, formState, queryClient, onSuccess, onClose],
   );
 
   // Champ is_active — toggle actif/inactif

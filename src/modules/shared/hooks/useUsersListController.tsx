@@ -16,7 +16,7 @@ export function useUsersListController<TUser, TParams = Record<string, unknown>>
     includeTenantFilter = false,
     defaultSortBy = 'created_at',
     defaultSortDir = 'desc',
-    defaultPageSize = 12,
+    defaultPageSize = 25,
   } = opts ?? {};
 
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -29,7 +29,12 @@ export function useUsersListController<TUser, TParams = Record<string, unknown>>
 
   type ParamsState = TParams & Record<string, unknown>;
   const [params, setParams] = useState<ParamsState>(
-    () => ({ sort_by: defaultSortBy, sort_dir: defaultSortDir }) as unknown as ParamsState,
+    () =>
+      ({
+        sort_by: defaultSortBy,
+        sort_dir: defaultSortDir,
+        page_size: defaultPageSize,
+      }) as unknown as ParamsState,
   );
 
   // Application explicite uniquement (bouton Appliquer ou touche Entrée)

@@ -85,10 +85,10 @@ describe('clientUsersApi', () => {
       );
     });
 
-    it('convertit page 2 en 1 (0-based backend)', async () => {
+    it('transmet page 2 tel quel', async () => {
       mockApiGet.mockResolvedValue({ data: [], total: 0 });
       await clientUsersApi.list({ page: 2 });
-      expect(mockApiGet).toHaveBeenCalledWith('users', expect.objectContaining({ page: 1 }));
+      expect(mockApiGet).toHaveBeenCalledWith('users', expect.objectContaining({ page: 2 }));
     });
 
     it('ne descend pas sous 0 pour page 0', async () => {

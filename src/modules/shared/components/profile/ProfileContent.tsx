@@ -242,103 +242,121 @@ export default function ProfileContent({
           {/* ── Security tab ── */}
           {activeTab === 'security' && (
             <Card className="rounded-tl-none border-t-0">
-              <CardContent className="pt-6 space-y-5 max-w-md">
-                <p className="text-sm font-medium">Changer le mot de passe</p>
+              <CardContent className="pt-6 max-w-md">
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    void handleChangePassword();
+                  }}
+                  className="space-y-5"
+                  noValidate
+                >
+                  <p className="text-sm font-medium">Changer le mot de passe</p>
 
-                <div className="space-y-1.5">
-                  <Label htmlFor="current_password" className="text-xs font-medium">
-                    Mot de passe actuel
-                  </Label>
-                  <div className="relative">
-                    <Input
-                      id="current_password"
-                      type={showCurrentPwd ? 'text' : 'password'}
-                      value={currentPassword}
-                      onChange={(e) => setCurrentPassword(e.target.value)}
-                      className="text-sm pr-9"
-                      autoComplete="current-password"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowCurrentPwd((v) => !v)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                      tabIndex={-1}
-                      aria-label={showCurrentPwd ? 'Masquer' : 'Afficher'}
-                    >
-                      {showCurrentPwd ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                    </button>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="current_password" className="text-xs font-medium">
+                      Mot de passe actuel
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        id="current_password"
+                        type={showCurrentPwd ? 'text' : 'password'}
+                        value={currentPassword}
+                        onChange={(e) => setCurrentPassword(e.target.value)}
+                        className="text-sm pr-9"
+                        autoComplete="current-password"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowCurrentPwd((v) => !v)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                        tabIndex={-1}
+                        aria-label={showCurrentPwd ? 'Masquer' : 'Afficher'}
+                      >
+                        {showCurrentPwd ? (
+                          <EyeOff className="size-4" />
+                        ) : (
+                          <Eye className="size-4" />
+                        )}
+                      </button>
+                    </div>
                   </div>
-                </div>
 
-                <div className="space-y-1.5">
-                  <Label htmlFor="new_password" className="text-xs font-medium">
-                    Nouveau mot de passe
-                  </Label>
-                  <div className="relative">
-                    <Input
-                      id="new_password"
-                      type={showNewPwd ? 'text' : 'password'}
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      className="text-sm pr-9"
-                      autoComplete="new-password"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowNewPwd((v) => !v)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                      tabIndex={-1}
-                      aria-label={showNewPwd ? 'Masquer' : 'Afficher'}
-                    >
-                      {showNewPwd ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                    </button>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="new_password" className="text-xs font-medium">
+                      Nouveau mot de passe
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        id="new_password"
+                        type={showNewPwd ? 'text' : 'password'}
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        className="text-sm pr-9"
+                        autoComplete="new-password"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowNewPwd((v) => !v)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                        tabIndex={-1}
+                        aria-label={showNewPwd ? 'Masquer' : 'Afficher'}
+                      >
+                        {showNewPwd ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                      </button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Minimum 8 caractères, une majuscule, une minuscule et un chiffre.
+                    </p>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    Minimum 8 caractères, une majuscule, une minuscule et un chiffre.
-                  </p>
-                </div>
 
-                <div className="space-y-1.5">
-                  <Label htmlFor="confirm_password" className="text-xs font-medium">
-                    Confirmer le mot de passe
-                  </Label>
-                  <div className="relative">
-                    <Input
-                      id="confirm_password"
-                      type={showConfirmPwd ? 'text' : 'password'}
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="text-sm pr-9"
-                      autoComplete="new-password"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirmPwd((v) => !v)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                      tabIndex={-1}
-                      aria-label={showConfirmPwd ? 'Masquer' : 'Afficher'}
-                    >
-                      {showConfirmPwd ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                    </button>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="confirm_password" className="text-xs font-medium">
+                      Confirmer le mot de passe
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        id="confirm_password"
+                        type={showConfirmPwd ? 'text' : 'password'}
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        className="text-sm pr-9"
+                        autoComplete="new-password"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPwd((v) => !v)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                        tabIndex={-1}
+                        aria-label={showConfirmPwd ? 'Masquer' : 'Afficher'}
+                      >
+                        {showConfirmPwd ? (
+                          <EyeOff className="size-4" />
+                        ) : (
+                          <Eye className="size-4" />
+                        )}
+                      </button>
+                    </div>
                   </div>
-                </div>
 
-                <div className="flex items-center gap-3 pt-1">
-                  <Button
-                    type="button"
-                    onClick={handleChangePassword}
-                    disabled={pwdSaving || !currentPassword || !newPassword || !confirmPassword}
-                    className="bg-(--color-primary) hover:bg-(--color-primary)/80 text-primary-foreground"
-                  >
-                    {pwdSaving ? (
-                      <Loader2 className="size-4 animate-spin" />
-                    ) : (
-                      <Save className="size-4" />
+                  <div className="flex items-center gap-3 pt-1">
+                    <Button
+                      type="submit"
+                      disabled={pwdSaving || !currentPassword || !newPassword || !confirmPassword}
+                      className="bg-(--color-primary) hover:bg-(--color-primary)/80 text-primary-foreground"
+                    >
+                      {pwdSaving ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : (
+                        <Save className="size-4" />
+                      )}
+                      {pwdSaving ? 'Enregistrement…' : 'Changer le mot de passe'}
+                    </Button>
+                    {pwdError != null && (
+                      <span className="text-xs text-destructive">{pwdError}</span>
                     )}
-                    {pwdSaving ? 'Enregistrement…' : 'Changer le mot de passe'}
-                  </Button>
-                  {pwdError != null && <span className="text-xs text-destructive">{pwdError}</span>}
-                </div>
+                  </div>
+                </form>
               </CardContent>
             </Card>
           )}
