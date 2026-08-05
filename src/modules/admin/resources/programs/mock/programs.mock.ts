@@ -54,13 +54,14 @@ const n = {
         stepType: type,
         label: bankName,
         evaluationConfig: {
+          title: bankName,
           durationEnabled,
           durationHours,
           durationMinutes,
           questionCount,
           attemptCount,
-          questionBankId: bankId,
-          questionBankName: bankName,
+          questionBankIds: [bankId],
+          questionBankNames: [bankName],
         },
       },
     };
