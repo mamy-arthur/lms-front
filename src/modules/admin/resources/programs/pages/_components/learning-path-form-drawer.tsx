@@ -352,37 +352,35 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
   // Get the current LP ID, creating the LP lazily if the user adds a flow element before saving
   const getOrCreateLpId = useCallback(async (): Promise<string> => {
     if (currentLpId) return currentLpId;
+    const msg = "Configurez d'abord l'email de démarrage avant d'ajouter des éléments.";
+    toast.error(msg);
+    throw new Error(msg);
+  }, [currentLpId]);
 
-    const values = getValues();
-    if (!values.name?.trim()) {
-      const msg = "Saisissez d'abord le nom du parcours pour pouvoir ajouter des éléments.";
-      toast.error(msg);
-      throw new Error(msg);
-    }
-
-    const result = await createMutation.mutateAsync({
-      name: values.name,
-      description: values.description ?? null,
-      category_id: values.category_id ?? null,
-      price: values.price ?? null,
-      currency: values.currency ?? 'EUR',
-      image: imageId ?? null,
-      published_at: values.published_at ?? null,
-      show_in_shop: values.show_in_shop ?? false,
-      duration: toApiDuration(values.duration_value, values.duration_unit),
-    });
-    const newId = result.data.id;
-    setLazyLpId(newId);
-    return newId;
-  }, [currentLpId, getValues, createMutation, imageId]);
-
-  // Assign mail template when the email node is configured
+  // Assign mail template — auto-creates the LP if it doesn't exist yet
   const handleMailTemplateAssign = useCallback(
     async (mailTemplateId: string) => {
-      const lpId = await getOrCreateLpId();
+      let lpId = currentLpId;
+      if (!lpId) {
+        const name = getValues('name')?.trim() || 'Nouvelle formation';
+        if (!getValues('name')?.trim()) setValue('name', 'Nouvelle formation');
+        const result = await createMutation.mutateAsync({
+          name,
+          description: null,
+          category_id: null,
+          price: null,
+          currency: 'EUR',
+          image: null,
+          published_at: null,
+          show_in_shop: false,
+          duration: null,
+        });
+        lpId = result.data.id;
+        setLazyLpId(lpId);
+      }
       await assignMailTemplate.mutateAsync({ learningPathId: lpId, mailTemplateId });
     },
-    [getOrCreateLpId, assignMailTemplate],
+    [currentLpId, getValues, setValue, createMutation, assignMailTemplate],
   );
 
   // Immediately link a module when added to the flow
@@ -868,8 +866,8 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
                     />
                   </div>
                   {!canPublish && (
-                    <p className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-500 mt-5">
-                      <AlertCircle className="size-3.5 shrink-0" />
+                    <p className="mt-5 flex items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-xs text-amber-700">
+                      <AlertCircle className="size-3 shrink-0" />
                       Ce parcours ne contient aucun module et ne peut pas être publié dans la
                       boutique.
                     </p>
