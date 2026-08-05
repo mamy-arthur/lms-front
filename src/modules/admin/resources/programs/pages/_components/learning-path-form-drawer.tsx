@@ -46,6 +46,7 @@ import ProgramFlow, { type StepNode } from '../../components/ProgramFlow';
 import type { CreateEvaluationPayload } from '@/shared/api/evaluations.api';
 import { useCreateEvaluation } from '../../hooks/useCreateEvaluation';
 import { useDeleteEvaluation } from '../../hooks/useDeleteEvaluation';
+import { useAssignMailTemplate } from '../../hooks/useAssignMailTemplate';
 import {
   DURATION_UNITS,
   durationToMinutes,
@@ -186,6 +187,7 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
   const unlinkCompetency = useUnlinkCompetencyFromLearningPath();
   const createEvaluation = useCreateEvaluation();
   const deleteEvaluation = useDeleteEvaluation();
+  const assignMailTemplate = useAssignMailTemplate();
   const updateCompetencyLocation = useUpdateCompetencyLocation();
   const updateEvaluationLocation = useUpdateEvaluationLocation();
 
@@ -202,7 +204,7 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
 
   // Build initial flow nodes/edges from existing competencies + evaluations
   const initialFlow = useMemo(() => {
-    if (!learningPath?.competencies.length) return null;
+    if (!learningPath) return null;
 
     const sorted = [...learningPath.competencies].sort((a, b) => a.position - b.position);
     const evaluations = learningPath.evaluations ?? [];
@@ -215,7 +217,12 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
       id: emailNodeId,
       type: 'programStep',
       position: { x: CANVAS_X, y: 0 },
-      data: { stepType: 'email', label: 'Email de démarrage' },
+      data: {
+        stepType: 'email',
+        label: learningPath.mailTemplate?.name ?? 'Email de démarrage',
+        emailTemplateId: learningPath.mailTemplate?.id,
+        emailTemplateName: learningPath.mailTemplate?.name,
+      },
     };
 
     const allNodes: StepNode[] = [emailNode];
@@ -368,6 +375,15 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
     setLazyLpId(newId);
     return newId;
   }, [currentLpId, getValues, createMutation, imageId]);
+
+  // Assign mail template when the email node is configured
+  const handleMailTemplateAssign = useCallback(
+    async (mailTemplateId: string) => {
+      const lpId = await getOrCreateLpId();
+      await assignMailTemplate.mutateAsync({ learningPathId: lpId, mailTemplateId });
+    },
+    [getOrCreateLpId, assignMailTemplate],
+  );
 
   // Immediately link a module when added to the flow
   const handleModuleAdd = useCallback(
@@ -641,6 +657,7 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
                 onEvalCreate={handleEvalCreate}
                 onEvalDelete={handleEvalDelete}
                 onEvalMove={handleEvalMove}
+                onMailTemplateAssign={handleMailTemplateAssign}
               />
             )}
           </div>

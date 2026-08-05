@@ -276,11 +276,11 @@ function ProgramStepNode({ id, data, isConnectable }: NodeProps<StepNode>) {
     <div
       className={cn(
         'min-w-55 rounded-md border px-4 py-3 shadow-sm',
-        isConfigured ? 'cursor-default' : 'cursor-pointer',
+        isConfigured && !isEmail ? 'cursor-default' : 'cursor-pointer',
         cfg.border,
         cfg.bg,
       )}
-      onClick={isConfigured ? undefined : () => onEditNode(id)}
+      onClick={isConfigured && !isEmail ? undefined : () => onEditNode(id)}
     >
       <Handle type="target" position={Position.Top} isConnectable={isConnectable} />
 
@@ -461,6 +461,7 @@ export type ProgramFlowProps = {
   onEvalCreate?: (data: CreateEvaluationPayload) => Promise<string>;
   onEvalDelete?: (evaluationId: string) => Promise<void>;
   onEvalMove?: (evaluationId: string, position: { x: number; y: number }) => Promise<void>;
+  onMailTemplateAssign?: (mailTemplateId: string) => Promise<void>;
 };
 
 const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function ProgramFlow(
@@ -475,6 +476,7 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
     onEvalCreate,
     onEvalDelete,
     onEvalMove,
+    onMailTemplateAssign,
   },
   ref,
 ) {
@@ -960,6 +962,7 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
   const handleEditEmailSave = useCallback(
     (template: EmailTemplate) => {
       if (!editEmailDialog) return;
+      // Mise à jour locale immédiate
       setNodes((nds) =>
         nds.map((n) =>
           n.id === editEmailDialog.nodeId
@@ -976,8 +979,12 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
         ),
       );
       setEditEmailDialog(null);
+      // Persistance API en fire-and-forget
+      onMailTemplateAssign?.(template.id).catch((err) => {
+        toast.error(getApiErrorMessage(err, "Impossible d'assigner le template mail."));
+      });
     },
-    [editEmailDialog],
+    [editEmailDialog, onMailTemplateAssign],
   );
 
   // ── Used module IDs excluding the one currently being edited ──
