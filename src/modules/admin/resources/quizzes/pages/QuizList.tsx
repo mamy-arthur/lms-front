@@ -1,7 +1,7 @@
 'use client';
 
 import { Plus } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/shared/components/confirm-dialog/ConfirmDialog';
 import { QuizSearch } from '@modules/shared/components/quizzes';
@@ -16,18 +16,28 @@ export function QuizList() {
   const ctrl = useQuizListController<Quiz>({
     defaultPageSize: 25,
   });
-  const { data, isLoading } = useQuizzesQuery(ctrl.params);
+  const { data, isLoading } = useQuizzesQuery();
   const deleteMutation = useDeleteQuiz();
   const [duplicateFrom, setDuplicateFrom] = useState<Quiz | undefined>();
   const [deleteConfirm, setDeleteConfirm] = useState<Quiz | undefined>();
+
+  const quizzes = useMemo(() => {
+    const result = data?.data ?? [];
+    if (!ctrl.draftSearch) return result;
+    const search = ctrl.draftSearch.toLowerCase();
+    return result.filter(
+      (q) =>
+        q.title?.toLowerCase().includes(search) || q.description?.toLowerCase().includes(search),
+    );
+  }, [data, ctrl.draftSearch]);
 
   return (
     <div className="bg-background">
       <header className="mb-8">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Quiz</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Banques de questions</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Créez, modifiez et gérez les quizzes de vos formations.
+            Créez et gérez vos banques de questions.
           </p>
         </div>
       </header>
@@ -51,12 +61,12 @@ export function QuizList() {
         </div>
 
         <AdminQuizzesTable
-          quizzes={data?.data ?? []}
+          quizzes={quizzes}
           isLoading={isLoading}
           hasQuery={ctrl.hasQuery}
           page={ctrl.page}
           pageSize={ctrl.pageSize}
-          total={data?.total ?? 0}
+          total={quizzes.length}
           sort={ctrl.sort}
           onSort={ctrl.handleSort}
           onPageChange={ctrl.handlePageChange}
@@ -82,13 +92,14 @@ export function QuizList() {
 
         <ConfirmDialog
           open={!!deleteConfirm}
-          title="Supprimer le quiz"
+          title="Désactiver la banque"
           description={
             <>
-              Êtes-vous sûr de vouloir supprimer le quiz « {deleteConfirm?.title}» ? Cette action
-              est irréversible.
+              Êtes-vous sûr de vouloir désactiver « {deleteConfirm?.title} » ? Elle restera
+              consultable mais ne pourra plus accueillir de nouveaux quiz.
             </>
           }
+          confirmLabel="Désactiver"
           confirmClassName="bg-destructive hover:bg-destructive/80"
           onClose={() => setDeleteConfirm(undefined)}
           onConfirm={() => {

@@ -4,6 +4,16 @@ export interface ApiLearningPathImage {
   mime_type: string;
 }
 
+/** Evaluation summary embedded in the LP detail response */
+export interface ApiLearningPathEvaluation {
+  id: string;
+  title: string;
+  position: number;
+  location_x: number | null;
+  location_y: number | null;
+  preceding_competency_id: string | null;
+}
+
 /** Used by admin/platform CRUD endpoints — competency id only */
 export interface ApiLearningPathCompetency {
   competency_id: string;
@@ -51,6 +61,8 @@ export interface ApiLearningPath {
   /** Durée estimée du parcours en minutes */
   duration: number | null;
   competencies: ApiLearningPathCompetency[];
+  /** Only present in detail endpoint responses — absent from list/shop endpoints */
+  evaluations?: ApiLearningPathEvaluation[];
   created_at: string;
   updated_at: string;
 }

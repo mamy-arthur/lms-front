@@ -57,10 +57,10 @@ export const ADMIN_NAV: AdminNavItem[] = [
     icon: GraduationCap,
     access: ACCESS.courses,
     items: [
-      { title: 'Parcours', url: ROUTES.admin.programs },
       { title: 'Cours', url: ROUTES.admin.courses },
       { title: 'Modules', url: ROUTES.admin.modules },
       { title: 'Quiz', url: ROUTES.admin.quizzes },
+      { title: 'Parcours', url: ROUTES.admin.programs },
       { title: 'Notes', url: ROUTES.admin.clientEvaluationNotes },
       // { title: "Attestation", url: ROUTES.admin.certificate},
     ],

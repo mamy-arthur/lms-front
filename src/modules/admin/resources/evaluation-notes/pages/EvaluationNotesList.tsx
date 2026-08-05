@@ -1,6 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { GraduationCap, LayoutGrid, List } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Button } from '@/components/ui/button';
 import {
   Select,
   SelectContent,
@@ -11,8 +13,10 @@ import {
 import {
   EvaluationNotesSearch,
   EvaluationNotesDrawer,
+  EvaluationNotesTable,
   FormationSummaryCard,
 } from '@/modules/shared/components/evaluation-notes';
+import type { DataTableColumn } from '@/shared/components/ui/DataTable';
 import { type FormationSummary } from '@/modules/shared/lib/evaluation-notes';
 import { useEvaluationNotesQuery } from '../hooks/useEvaluationNotesQuery';
 import { useFormationEvaluationNotesQuery } from '../hooks/useFormationEvaluationNotesQuery';
@@ -22,6 +26,7 @@ export function EvaluationNotesList() {
   const [clientFilter, setClientFilter] = useState('all');
   const [selectedFormation, setSelectedFormation] = useState<FormationSummary | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [view, setView] = useState<'card' | 'table'>('table');
 
   const { data, isLoading, isError } = useEvaluationNotesQuery({
     q: search || undefined,
@@ -43,6 +48,72 @@ export function EvaluationNotesList() {
     setDrawerOpen(true);
   }
 
+  const tableColumns: DataTableColumn<FormationSummary>[] = useMemo(
+    () => [
+      {
+        key: 'name',
+        label: 'Formation',
+        sortable: true,
+        render: (row) => (
+          <div className="flex items-center gap-3">
+            <div className="size-9 shrink-0 overflow-hidden rounded-sm bg-muted">
+              {row.coverImage ? (
+                <img src={row.coverImage} alt={row.name} className="h-full w-full object-cover" />
+              ) : (
+                <div className="flex size-full items-center justify-center text-muted-foreground/40">
+                  <GraduationCap className="size-4" />
+                </div>
+              )}
+            </div>
+            <span className="font-medium">{row.name}</span>
+          </div>
+        ),
+      },
+      {
+        key: 'category',
+        label: 'Catégorie',
+        render: (row) => <span className="text-muted-foreground">{row.category ?? '—'}</span>,
+      },
+      {
+        key: 'traineeCount',
+        label: 'Stagiaires',
+        sortable: true,
+        render: (row) => <span className="block ">{row.traineeCount}</span>,
+      },
+      {
+        key: 'evaluationCount',
+        label: 'Évaluations',
+        sortable: true,
+        render: (row) => <span className="block ">{row.evaluationCount}</span>,
+      },
+      {
+        key: 'avgScore',
+        label: 'Moyenne',
+        sortable: true,
+        render: (row) => (
+          <span
+            className={`block  font-semibold ${row.avgScore >= 50 ? 'text-emerald-600' : 'text-red-500'}`}
+          >
+            {row.avgScore}%
+          </span>
+        ),
+      },
+      {
+        key: 'successRate',
+        label: 'Taux de réussite',
+        sortable: true,
+        render: (row) => (
+          <span
+            className={`block  font-semibold ${row.successRate >= 50 ? 'text-emerald-600' : 'text-red-500'}`}
+          >
+            {row.successRate}%
+          </span>
+        ),
+      },
+    ],
+    [],
+  );
+
   return (
     <div className="bg-background pb-3">
       <div className="mx-auto w-full max-w-[1800px] space-y-8">
@@ -60,12 +131,29 @@ export function EvaluationNotesList() {
               onChange={setSearch}
               placeholder="Rechercher une formation…"
             />
-            <div className="flex items-center gap-3">
-              <p className="shrink-0 text-xs text-muted-foreground">
-                <span className="text-primary">{formations.length}</span> formation(s)
-              </p>
+            <div className="flex items-center gap-1">
+              <div className="flex items-center rounded-md border bg-muted/40 p-0.5">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={`size-6 ${view === 'card' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                  onClick={() => setView('card')}
+                  title="Vue cartes"
+                >
+                  <LayoutGrid className="size-3" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={`size-6 ${view === 'table' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                  onClick={() => setView('table')}
+                  title="Vue tableau"
+                >
+                  <List className="size-3" />
+                </Button>
+              </div>
               <Select value={clientFilter} onValueChange={setClientFilter}>
-                <SelectTrigger className="h-10 w-[220px] border-border/60 bg-background focus:ring-(--color-primary)">
+                <SelectTrigger className="w-55 border-border/60 bg-background focus:ring-(--color-primary)">
                   <SelectValue placeholder="Tous les clients" />
                 </SelectTrigger>
                 <SelectContent>
@@ -85,6 +173,19 @@ export function EvaluationNotesList() {
           <div className="rounded-2xl border border-dashed border-red-200 bg-red-50 p-10 text-center text-sm text-red-600">
             Une erreur est survenue lors du chargement des données.
           </div>
+        ) : view === 'table' ? (
+          <EvaluationNotesTable
+            data={formations}
+            columns={tableColumns}
+            isLoading={isLoading}
+            hasQuery={hasQuery}
+            onRowClick={openDrawer}
+            emptyState={{
+              title: 'Aucune formation',
+              filteredTitle: 'Aucun résultat',
+              filteredDescription: 'Essayez de modifier vos filtres.',
+            }}
+          />
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {formations.map((formation) => (

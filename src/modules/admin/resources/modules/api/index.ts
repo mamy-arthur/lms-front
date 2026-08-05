@@ -44,6 +44,16 @@ export const adminModulesApi = {
 
   getById: (id: string) => apiGet<{ data: CompetencyApiResponse }>(`${BASE}/${id}`),
 
+  getOverview: (id: string) =>
+    apiGet<{
+      data: Omit<CompetencyApiResponse, 'courses'> & {
+        courses: { id: string; shortname: string }[];
+        learning_paths: { id: string; name: string }[];
+        course_count: number;
+        learning_path_count: number;
+      };
+    }>(`${BASE}/${id}/overview`),
+
   create: (payload: CreateModulePayload) =>
     apiPost<{ data: CompetencyApiResponse }, CreateModulePayload>(BASE, payload),
 

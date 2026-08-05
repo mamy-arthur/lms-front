@@ -51,6 +51,16 @@ export const learningPathsApi = {
   linkCompetency: (id: string, data: LinkCompetencyPayload) =>
     apiPost<{ data: ApiLearningPath }>(`platform/learning-paths/${id}/competencies`, data),
 
+  updateCompetencyLocation: (
+    id: string,
+    competencyId: string,
+    location: { location_x: number | null; location_y: number | null },
+  ) =>
+    apiPatch<{ data: ApiLearningPath }>(
+      `platform/learning-paths/${id}/competencies/${competencyId}`,
+      location,
+    ),
+
   unlinkCompetency: (id: string, competencyId: string) =>
     apiDelete(`platform/learning-paths/${id}/competencies/${competencyId}`),
 

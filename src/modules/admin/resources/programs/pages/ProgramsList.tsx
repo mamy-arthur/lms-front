@@ -17,16 +17,16 @@ export function ProgramsList() {
   const deleteMutation = useDeleteLearningPath();
 
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [editingPath, setEditingPath] = useState<LearningPath | undefined>(undefined);
+  const [editingPathId, setEditingPathId] = useState<string | undefined>(undefined);
   const [categoriesDrawerOpen, setCategoriesDrawerOpen] = useState(false);
 
   const openNew = () => {
-    setEditingPath(undefined);
+    setEditingPathId(undefined);
     setDrawerOpen(true);
   };
 
   const openEdit = (path: LearningPath) => {
-    setEditingPath(path);
+    setEditingPathId(path.id);
     setDrawerOpen(true);
   };
 
@@ -70,7 +70,7 @@ export function ProgramsList() {
       <LearningPathFormDrawer
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
-        learningPath={editingPath}
+        learningPathId={editingPathId}
         categories={categoriesQuery.data ?? []}
       />
 

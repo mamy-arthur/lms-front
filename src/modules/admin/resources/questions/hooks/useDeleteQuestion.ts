@@ -1,22 +1,20 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import type { Question } from '../types';
-import { ADMIN_QUESTIONS_QUERY_KEY } from './useQuestionsQuery';
+import { toast } from 'sonner';
+import { quizItemsApi } from '@/shared/api/question-banks.api';
+import { quizItemKeys } from '@/shared/queries/keys';
+import { getApiErrorMessage } from '@/shared/lib/errors';
 
-export function useDeleteQuestion() {
+export function useDeleteQuestion(questionBankId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (id: string) => {
-      return Promise.resolve({ id });
+    mutationFn: (id: string) => quizItemsApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: quizItemKeys.listByBank(questionBankId) });
+      toast.success('Question supprimée.');
     },
-    onSuccess: ({ id }) => {
-      queryClient.setQueryData<{ data: Question[]; total: number }>(
-        ADMIN_QUESTIONS_QUERY_KEY,
-        (prev) => ({
-          data: (prev?.data ?? []).filter((q) => q.id !== id),
-          total: (prev?.total ?? 1) - 1,
-        }),
-      );
+    onError: (err: unknown) => {
+      toast.error(getApiErrorMessage(err, 'Erreur lors de la suppression.'));
     },
   });
 }

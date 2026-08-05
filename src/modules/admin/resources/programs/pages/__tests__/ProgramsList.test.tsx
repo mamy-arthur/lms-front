@@ -79,6 +79,20 @@ jest.mock('@/modules/admin/resources/modules/hooks/useModules', () => ({
   useModules: jest.fn().mockReturnValue({ data: undefined, isLoading: false, isError: false }),
 }));
 
+// Requêtes individuelles utilisées par LearningPathFormDrawer en mode édition
+jest.mock('@/modules/admin/resources/programs/hooks/useLearningPathQuery', () => ({
+  useLearningPathQuery: jest.fn(),
+}));
+jest.mock('@/modules/admin/resources/programs/hooks/useEvaluationsQuery', () => ({
+  useEvaluationsQuery: jest.fn(),
+}));
+jest.mock('@/modules/admin/resources/programs/hooks/useCreateEvaluation', () => ({
+  useCreateEvaluation: jest.fn(),
+}));
+jest.mock('@/modules/admin/resources/programs/hooks/useDeleteEvaluation', () => ({
+  useDeleteEvaluation: jest.fn(),
+}));
+
 // ─── Imports ──────────────────────────────────────────────────────────────────
 
 import React from 'react';
@@ -94,6 +108,11 @@ import { useUpdateLearningPath } from '../../hooks/useUpdateLearningPath';
 import { useUploadLearningPathMedia } from '../../hooks/useUploadLearningPathMedia';
 import { useLinkCompetencyToLearningPath } from '../../hooks/useLinkCompetencyToLearningPath';
 import { useUnlinkCompetencyFromLearningPath } from '../../hooks/useUnlinkCompetencyFromLearningPath';
+import { useLearningPathQuery } from '../../hooks/useLearningPathQuery';
+import { useEvaluationsQuery } from '../../hooks/useEvaluationsQuery';
+import { useCreateEvaluation } from '../../hooks/useCreateEvaluation';
+import { useDeleteEvaluation } from '../../hooks/useDeleteEvaluation';
+import type { CreateEvaluationPayload } from '@/shared/api/evaluations.api';
 import ProgramFlow from '../../components/ProgramFlow';
 import type { ProgramFlowProps } from '../../components/ProgramFlow';
 import { ProgramsList } from '../ProgramsList';
@@ -107,6 +126,10 @@ const mockUseUpdateLearningPath = jest.mocked(useUpdateLearningPath);
 const mockUseUploadLearningPathMedia = jest.mocked(useUploadLearningPathMedia);
 const mockUseLinkCompetency = jest.mocked(useLinkCompetencyToLearningPath);
 const mockUseUnlinkCompetency = jest.mocked(useUnlinkCompetencyFromLearningPath);
+const mockUseLearningPathQuery = jest.mocked(useLearningPathQuery);
+const mockUseEvaluationsQuery = jest.mocked(useEvaluationsQuery);
+const mockUseCreateEvaluation = jest.mocked(useCreateEvaluation);
+const mockUseDeleteEvaluation = jest.mocked(useDeleteEvaluation);
 const MockProgramFlow = jest.mocked(ProgramFlow);
 const mockToast = jest.mocked(toast);
 
@@ -140,6 +163,7 @@ const MOCK_PATH_1: LearningPath = {
   isSellable: false,
   duration: null,
   competencies: [],
+  evaluations: [],
   createdAt: '2024-01-01T00:00:00Z',
   updatedAt: '2024-01-01T00:00:00Z',
 };
@@ -175,6 +199,8 @@ function mockDefaults({
   updateMutateAsync = jest.fn().mockResolvedValue(undefined),
   linkMutateAsync = jest.fn().mockResolvedValue(undefined),
   unlinkMutateAsync = jest.fn().mockResolvedValue(undefined),
+  createEvaluationMutateAsync = jest.fn().mockResolvedValue({ id: 'eval-new' }),
+  deleteEvaluationMutateAsync = jest.fn().mockResolvedValue(undefined),
 }: {
   paths?: LearningPath[];
   isLoading?: boolean;
@@ -183,6 +209,8 @@ function mockDefaults({
   updateMutateAsync?: jest.Mock;
   linkMutateAsync?: jest.Mock;
   unlinkMutateAsync?: jest.Mock;
+  createEvaluationMutateAsync?: jest.Mock;
+  deleteEvaluationMutateAsync?: jest.Mock;
 } = {}) {
   mockUseLearningPathsQuery.mockReturnValue({
     data: paths,
@@ -223,6 +251,30 @@ function mockDefaults({
     mutateAsync: unlinkMutateAsync,
     isPending: false,
   } as unknown as ReturnType<typeof useUnlinkCompetencyFromLearningPath>);
+
+  // Retourne le parcours correspondant à l'ID demandé (utilisé par LearningPathFormDrawer)
+  mockUseLearningPathQuery.mockImplementation(
+    (id: string | null) =>
+      ({
+        data: id ? paths.find((p) => p.id === id) : undefined,
+        isLoading: false,
+      }) as unknown as ReturnType<typeof useLearningPathQuery>,
+  );
+
+  mockUseEvaluationsQuery.mockReturnValue({
+    data: undefined,
+    isLoading: false,
+  } as unknown as ReturnType<typeof useEvaluationsQuery>);
+
+  mockUseCreateEvaluation.mockReturnValue({
+    mutateAsync: createEvaluationMutateAsync,
+    isPending: false,
+  } as unknown as ReturnType<typeof useCreateEvaluation>);
+
+  mockUseDeleteEvaluation.mockReturnValue({
+    mutateAsync: deleteEvaluationMutateAsync,
+    isPending: false,
+  } as unknown as ReturnType<typeof useDeleteEvaluation>);
 
   // Par défaut ProgramFlow ne fait rien — les tests spécifiques remplacent cette implémentation
   MockProgramFlow.mockReturnValue(null);
@@ -474,16 +526,16 @@ describe('ProgramsList', () => {
     });
   });
 
-  // ── Détachement de compétences (différé) ──────────────────────────────────
+  // ── Détachement de compétences ───────────────────────────────────────────
 
   describe('détachement de compétences', () => {
-    it('ne détache pas la compétence immédiatement lors de la suppression du nœud dans le flow', async () => {
+    it('détache la compétence immédiatement lors de la suppression du nœud dans le flow', async () => {
       const unlinkMutateAsync = jest.fn().mockResolvedValue(undefined);
       mockDefaults({ paths: [MOCK_PATH_WITH_COMPETENCY], unlinkMutateAsync });
 
-      let capturedOnUnlinkCompetency: ((id: string) => void) | undefined;
+      let capturedOnModuleRemove: ((id: string) => Promise<void>) | undefined;
       MockProgramFlow.mockImplementation((props: ProgramFlowProps) => {
-        capturedOnUnlinkCompetency = props.onUnlinkCompetency;
+        capturedOnModuleRemove = props.onModuleRemove;
         return null;
       });
 
@@ -496,75 +548,169 @@ describe('ProgramsList', () => {
       await user.click(screen.getByRole('menuitem', { name: /modifier/i }));
 
       // Simuler la suppression d'un nœud dans le flow
-      act(() => capturedOnUnlinkCompetency?.('comp-1'));
+      await act(async () => {
+        await capturedOnModuleRemove?.('comp-1');
+      });
 
-      // L'API ne doit PAS être appelée immédiatement
+      // L'API doit être appelée immédiatement, sans attendre l'enregistrement
+      expect(unlinkMutateAsync).toHaveBeenCalledWith({
+        id: MOCK_PATH_WITH_COMPETENCY.id,
+        competencyId: 'comp-1',
+      });
+    });
+
+    it("ne détache pas la compétence si le parcours n'a pas encore d'identifiant", async () => {
+      const unlinkMutateAsync = jest.fn().mockResolvedValue(undefined);
+      mockDefaults({ unlinkMutateAsync });
+
+      let capturedOnModuleRemove: ((id: string) => Promise<void>) | undefined;
+      MockProgramFlow.mockImplementation((props: ProgramFlowProps) => {
+        capturedOnModuleRemove = props.onModuleRemove;
+        return null;
+      });
+
+      const user = userEvent.setup();
+      render(<ProgramsList />, { wrapper: createWrapper() });
+
+      // Ouvrir en mode création (aucun ID de parcours)
+      await user.click(screen.getByRole('button', { name: /nouveau parcours/i }));
+
+      // Simuler la suppression d'un nœud
+      await act(async () => {
+        await capturedOnModuleRemove?.('comp-1');
+      });
+
+      // Sans ID de parcours, l'API ne doit pas être appelée
       expect(unlinkMutateAsync).not.toHaveBeenCalled();
     });
+  });
 
-    it("appelle l'API de détachement uniquement lors de l'enregistrement", async () => {
-      const unlinkMutateAsync = jest.fn().mockResolvedValue(undefined);
-      const updateMutateAsync = jest.fn().mockResolvedValue(undefined);
-      mockDefaults({
-        paths: [MOCK_PATH_WITH_COMPETENCY],
-        unlinkMutateAsync,
-        updateMutateAsync,
-      });
+  // ── Gestion des évaluations dans le flow ──────────────────────────────────
 
-      let capturedOnUnlinkCompetency: ((id: string) => void) | undefined;
+  describe('gestion des évaluations dans le flow', () => {
+    const EVAL_PAYLOAD: CreateEvaluationPayload = {
+      title: 'Évaluation intermédiaire',
+      type: 'PARTIAL',
+      question_bank_ids: ['qb1'],
+      question_count: 10,
+      max_attempts: 2,
+      location_x: 200,
+      location_y: 100,
+    };
+
+    it("crée l'évaluation via l'API immédiatement lors de l'ajout dans le flow (mode édition)", async () => {
+      const createEvaluationMutateAsync = jest.fn().mockResolvedValue({ id: 'eval-new' });
+      mockDefaults({ createEvaluationMutateAsync });
+
+      let capturedOnEvalCreate: ((data: CreateEvaluationPayload) => Promise<string>) | undefined;
       MockProgramFlow.mockImplementation((props: ProgramFlowProps) => {
-        capturedOnUnlinkCompetency = props.onUnlinkCompetency;
+        capturedOnEvalCreate = props.onEvalCreate;
         return null;
       });
 
       const user = userEvent.setup();
       render(<ProgramsList />, { wrapper: createWrapper() });
 
-      await user.click(
-        screen.getByRole('button', { name: `Actions pour ${MOCK_PATH_WITH_COMPETENCY.name}` }),
-      );
+      // Ouvrir en mode édition (LP avec ID existant)
+      await user.click(screen.getByRole('button', { name: `Actions pour ${MOCK_PATH_1.name}` }));
       await user.click(screen.getByRole('menuitem', { name: /modifier/i }));
 
-      // Supprimer le nœud dans le flow
-      act(() => capturedOnUnlinkCompetency?.('comp-1'));
+      let returnedId: string | undefined;
+      await act(async () => {
+        returnedId = await capturedOnEvalCreate?.(EVAL_PAYLOAD);
+      });
 
-      // Soumettre via le bouton principal
-      await user.click(screen.getByRole('button', { name: /enregistrer/i }));
+      expect(createEvaluationMutateAsync).toHaveBeenCalledWith({
+        learningPathId: MOCK_PATH_1.id,
+        ...EVAL_PAYLOAD,
+      });
+      expect(returnedId).toBe('eval-new');
+    });
 
-      await waitFor(() => {
-        expect(unlinkMutateAsync).toHaveBeenCalledWith({
-          id: MOCK_PATH_WITH_COMPETENCY.id,
-          competencyId: 'comp-1',
-        });
+    it("crée le parcours en premier si aucun ID existant, puis crée l'évaluation", async () => {
+      const createMutateAsync = jest.fn().mockResolvedValue({ data: { id: 'lp-created' } });
+      const createEvaluationMutateAsync = jest.fn().mockResolvedValue({ id: 'eval-new' });
+      mockDefaults({ createMutateAsync, createEvaluationMutateAsync });
+
+      let capturedOnEvalCreate: ((data: CreateEvaluationPayload) => Promise<string>) | undefined;
+      MockProgramFlow.mockImplementation((props: ProgramFlowProps) => {
+        capturedOnEvalCreate = props.onEvalCreate;
+        return null;
+      });
+
+      const user = userEvent.setup();
+      render(<ProgramsList />, { wrapper: createWrapper() });
+
+      // Ouvrir en mode création
+      await user.click(screen.getByRole('button', { name: /nouveau parcours/i }));
+
+      // Saisir un nom (requis pour la création du LP)
+      const nameInput = screen.getByLabelText(/nom du parcours/i);
+      await user.clear(nameInput);
+      await user.type(nameInput, 'Nouveau parcours');
+
+      // Simuler l'ajout d'une évaluation dans le flow
+      await act(async () => {
+        await capturedOnEvalCreate?.(EVAL_PAYLOAD);
+      });
+
+      // Le LP doit avoir été créé en premier
+      expect(createMutateAsync).toHaveBeenCalled();
+      // Puis l'évaluation avec l'ID du nouveau LP
+      expect(createEvaluationMutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({ learningPathId: 'lp-created', ...EVAL_PAYLOAD }),
+      );
+    });
+
+    it("supprime l'évaluation via l'API immédiatement lors du retrait dans le flow (mode édition)", async () => {
+      const deleteEvaluationMutateAsync = jest.fn().mockResolvedValue(undefined);
+      mockDefaults({ deleteEvaluationMutateAsync });
+
+      let capturedOnEvalDelete: ((evaluationId: string) => Promise<void>) | undefined;
+      MockProgramFlow.mockImplementation((props: ProgramFlowProps) => {
+        capturedOnEvalDelete = props.onEvalDelete;
+        return null;
+      });
+
+      const user = userEvent.setup();
+      render(<ProgramsList />, { wrapper: createWrapper() });
+
+      // Ouvrir en mode édition
+      await user.click(screen.getByRole('button', { name: `Actions pour ${MOCK_PATH_1.name}` }));
+      await user.click(screen.getByRole('menuitem', { name: /modifier/i }));
+
+      await act(async () => {
+        await capturedOnEvalDelete?.('eval-1');
+      });
+
+      expect(deleteEvaluationMutateAsync).toHaveBeenCalledWith({
+        evaluationId: 'eval-1',
+        learningPathId: MOCK_PATH_1.id,
       });
     });
 
-    it("n'appelle pas l'API si la compétence supprimée n'était pas liée à l'origine", async () => {
-      const unlinkMutateAsync = jest.fn().mockResolvedValue(undefined);
-      mockDefaults({ paths: [MOCK_PATH_WITH_COMPETENCY], unlinkMutateAsync });
+    it("ne supprime pas l'évaluation si le parcours n'a pas encore d'identifiant", async () => {
+      const deleteEvaluationMutateAsync = jest.fn().mockResolvedValue(undefined);
+      mockDefaults({ deleteEvaluationMutateAsync });
 
-      let capturedOnUnlinkCompetency: ((id: string) => void) | undefined;
+      let capturedOnEvalDelete: ((evaluationId: string) => Promise<void>) | undefined;
       MockProgramFlow.mockImplementation((props: ProgramFlowProps) => {
-        capturedOnUnlinkCompetency = props.onUnlinkCompetency;
+        capturedOnEvalDelete = props.onEvalDelete;
         return null;
       });
 
       const user = userEvent.setup();
       render(<ProgramsList />, { wrapper: createWrapper() });
 
-      await user.click(
-        screen.getByRole('button', { name: `Actions pour ${MOCK_PATH_WITH_COMPETENCY.name}` }),
-      );
-      await user.click(screen.getByRole('menuitem', { name: /modifier/i }));
+      // Ouvrir en mode création (aucun ID de parcours)
+      await user.click(screen.getByRole('button', { name: /nouveau parcours/i }));
 
-      // Supprimer un nœud qui n'était PAS dans les compétences originales
-      act(() => capturedOnUnlinkCompetency?.('comp-not-linked'));
-
-      await user.click(screen.getByRole('button', { name: /enregistrer/i }));
-
-      await waitFor(() => {
-        expect(unlinkMutateAsync).not.toHaveBeenCalled();
+      await act(async () => {
+        await capturedOnEvalDelete?.('eval-1');
       });
+
+      // Sans ID de parcours, l'API ne doit pas être appelée
+      expect(deleteEvaluationMutateAsync).not.toHaveBeenCalled();
     });
   });
 });

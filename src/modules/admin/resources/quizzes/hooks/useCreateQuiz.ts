@@ -1,35 +1,21 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import type { CreateQuizPayload, Quiz } from '../types';
-import { normalizeQuiz } from '../types';
-import { ADMIN_QUIZZES_QUERY_KEY } from './useQuizzesQuery';
+import { toast } from 'sonner';
+import { questionBanksApi } from '@/shared/api/question-banks.api';
+import { questionBankKeys } from '@/shared/queries/keys';
+import { getApiErrorMessage } from '@/shared/lib/errors';
+import type { CreateQuizPayload } from '../types';
 
 export function useCreateQuiz() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: CreateQuizPayload) => {
-      const mockRaw: Record<string, unknown> = {
-        id: `quiz-${Date.now()}`,
-        title: data.title,
-        slug: data.slug,
-        description: data.description ?? '',
-        isFinalEvaluation: data.is_final_evaluation,
-        formationId: data.formation_id,
-        questionCount: 0,
-        activeQuestionCount: 0,
-        updatedAt: new Date().toISOString(),
-      };
-      return Promise.resolve({ data: mockRaw });
+    mutationFn: (data: CreateQuizPayload) => questionBanksApi.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: questionBankKeys.lists() });
+      toast.success('Banque de questions créée.');
     },
-    onSuccess: ({ data: rawQuiz }) => {
-      const newQuiz = normalizeQuiz(rawQuiz as unknown as Record<string, unknown>);
-      queryClient.setQueryData<{ data: Quiz[]; total: number }>(
-        ADMIN_QUIZZES_QUERY_KEY,
-        (prev) => ({
-          data: [newQuiz, ...(prev?.data ?? [])],
-          total: (prev?.total ?? 0) + 1,
-        }),
-      );
+    onError: (err: unknown) => {
+      toast.error(getApiErrorMessage(err, 'Erreur lors de la création.'));
     },
   });
 }
