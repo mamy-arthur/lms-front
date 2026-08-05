@@ -59,6 +59,7 @@ import { SelectModuleDialog, type ModuleItem } from './dialog/SelectModuleDialog
 import { AddEvaluationDialog, type EvaluationConfig } from './dialog/AddEvaluationDialog';
 import { SelectAttestationDialog, type AttestationItem } from './dialog/SelectAttestationDialog';
 import { SelectEmailTemplateDialog, type EmailTemplate } from './dialog/SelectEmailTemplateDialog';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
 import { evaluationsApi } from '@/shared/api/evaluations.api';
 import type { CreateEvaluationPayload } from '@/shared/api/evaluations.api';
@@ -445,7 +446,7 @@ const initialEmailNode: StepNode = {
   id: EMAIL_NODE_ID,
   type: 'programStep',
   position: { x: CANVAS_X, y: 0 },
-  data: { stepType: 'email', label: 'Email de démarrage' },
+  data: { stepType: 'email', label: "Choisir l'email de démarrage" },
 };
 
 // ─── ProgramFlow ──────────────────────────────────────────────────────────────
@@ -535,30 +536,38 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
   } | null>(null);
 
   // ── Business rule flags ──
-  const { hasFinalEval, hasAttestation, hasModule, hasPartialForLastModule, lastNodeIsEvaluation } =
-    useMemo(() => {
-      const lastNodeId = nodeOrder.at(-1);
-      const lastNodeStepType = nodes.find((n) => n.id === lastNodeId)?.data.stepType;
+  const {
+    hasFinalEval,
+    hasAttestation,
+    hasModule,
+    hasPartialForLastModule,
+    lastNodeIsEvaluation,
+    hasEmailConfigured,
+  } = useMemo(() => {
+    const lastNodeId = nodeOrder.at(-1);
+    const lastNodeStepType = nodes.find((n) => n.id === lastNodeId)?.data.stepType;
 
-      const lastModuleIdx = nodeOrder.reduce<number>(
-        (last, id, idx) =>
-          nodes.find((n) => n.id === id)?.data.stepType === 'module' ? idx : last,
-        -1,
-      );
-      const partialAfterLastModule =
-        lastModuleIdx !== -1 &&
-        nodeOrder.slice(lastModuleIdx + 1).some((id) => {
-          return nodes.find((n) => n.id === id)?.data.stepType === 'evaluation-intermediate';
-        });
-      return {
-        hasModule: nodes.some((n) => n.data.stepType === 'module'),
-        hasFinalEval: nodes.some((n) => n.data.stepType === 'evaluation-final'),
-        hasAttestation: nodes.some((n) => n.data.stepType === 'attestation'),
-        hasPartialForLastModule: partialAfterLastModule,
-        lastNodeIsEvaluation:
-          lastNodeStepType === 'evaluation-intermediate' || lastNodeStepType === 'evaluation-final',
-      };
-    }, [nodes, nodeOrder]);
+    const lastModuleIdx = nodeOrder.reduce<number>(
+      (last, id, idx) => (nodes.find((n) => n.id === id)?.data.stepType === 'module' ? idx : last),
+      -1,
+    );
+    const partialAfterLastModule =
+      lastModuleIdx !== -1 &&
+      nodeOrder.slice(lastModuleIdx + 1).some((id) => {
+        return nodes.find((n) => n.id === id)?.data.stepType === 'evaluation-intermediate';
+      });
+    return {
+      hasModule: nodes.some((n) => n.data.stepType === 'module'),
+      hasFinalEval: nodes.some((n) => n.data.stepType === 'evaluation-final'),
+      hasAttestation: nodes.some((n) => n.data.stepType === 'attestation'),
+      hasPartialForLastModule: partialAfterLastModule,
+      lastNodeIsEvaluation:
+        lastNodeStepType === 'evaluation-intermediate' || lastNodeStepType === 'evaluation-final',
+      hasEmailConfigured: nodes.some(
+        (n) => n.data.stepType === 'email' && !!n.data.emailTemplateId,
+      ),
+    };
+  }, [nodes, nodeOrder]);
 
   // Notify parent whenever the presence of module nodes changes
   useEffect(() => {
@@ -1150,16 +1159,26 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
       <div className="flex h-175 flex-col overflow-hidden">
         {/* ── Toolbar ── */}
         <div className="flex flex-wrap items-center gap-2 px-4 py-3">
-          <Button
-            variant="outline"
-            disabled={hasFinalEval || hasAttestation}
-            onClick={() => setModuleDialogOpen(true)}
-            className="gap-1.5"
-          >
-            <BookOpen className="size-3.5" />
-            Module
-          </Button>
-
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                disabled={hasFinalEval || hasAttestation}
+                onClick={() => {
+                  if (hasEmailConfigured) setModuleDialogOpen(true);
+                }}
+                className="gap-1.5"
+              >
+                <BookOpen className="size-3.5" />
+                Module
+              </Button>
+            </TooltipTrigger>
+            {!hasEmailConfigured && (
+              <TooltipContent side="bottom">
+                Configurez d&apos;abord l&apos;email de démarrage
+              </TooltipContent>
+            )}
+          </Tooltip>
           <Button
             variant="outline"
             disabled={

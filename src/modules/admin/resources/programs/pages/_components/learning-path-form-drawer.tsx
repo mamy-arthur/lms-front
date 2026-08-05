@@ -219,7 +219,7 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
       position: { x: CANVAS_X, y: 0 },
       data: {
         stepType: 'email',
-        label: learningPath.mailTemplate?.name ?? 'Email de démarrage',
+        label: learningPath.mailTemplate?.name ?? "Choisir l'email",
         emailTemplateId: learningPath.mailTemplate?.id,
         emailTemplateName: learningPath.mailTemplate?.name,
       },
