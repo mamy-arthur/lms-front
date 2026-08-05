@@ -2,15 +2,15 @@
  * Tests unitaires — usePasswordChange
  *
  * Couvre :
- *  - état initial
- *  - validation : mot de passe trop court (< 8 chars)
- *  - validation : mots de passe non identiques
+ *  - état initial du form (valeurs par défaut)
  *  - retour anticipé si user absent
- *  - happy path : appel API + reset des champs
- *  - gestion d'erreur : json.errors.current_password
- *  - gestion d'erreur : json.message
- *  - gestion d'erreur : message générique
- *  - isSaving pendant la requête
+ *  - validation Zod : mot de passe trop court
+ *  - validation Zod : mots de passe non identiques
+ *  - happy path : appel API + reset du form
+ *  - gestion erreur serveur : json.errors.current_password → setError champ
+ *  - gestion erreur serveur : json.message → setError root + toast
+ *  - gestion erreur : message générique
+ *  - isSubmitting repasse à false après succès/erreur
  */
 
 jest.mock('@/shared/lib/apiClient', () => ({
@@ -47,9 +47,9 @@ function setupFields(
   result: ReturnType<typeof renderHook<ReturnType<typeof usePasswordChange>, unknown>>['result'],
 ) {
   act(() => {
-    result.current.setCurrentPassword('OldPass1');
-    result.current.setNewPassword('NewPass12');
-    result.current.setConfirmPassword('NewPass12');
+    result.current.form.setValue('current_password', 'OldPass1');
+    result.current.form.setValue('password', 'NewPass12');
+    result.current.form.setValue('password_confirmation', 'NewPass12');
   });
 }
 
@@ -61,67 +61,70 @@ describe('usePasswordChange', () => {
 
   // ── État initial ──────────────────────────────────────────────────────────
 
-  it('currentPassword vaut chaîne vide initialement', () => {
+  it('current_password vaut chaîne vide initialement', () => {
     const { result } = renderHook(() => usePasswordChange());
-    expect(result.current.currentPassword).toBe('');
+    expect(result.current.form.getValues('current_password')).toBe('');
   });
 
-  it('newPassword vaut chaîne vide initialement', () => {
+  it('password vaut chaîne vide initialement', () => {
     const { result } = renderHook(() => usePasswordChange());
-    expect(result.current.newPassword).toBe('');
+    expect(result.current.form.getValues('password')).toBe('');
   });
 
-  it('error vaut null initialement', () => {
+  it("pas d'erreur root initialement", () => {
     const { result } = renderHook(() => usePasswordChange());
-    expect(result.current.error).toBeNull();
+    expect(result.current.form.formState.errors.root).toBeUndefined();
   });
 
-  it('isSaving vaut false initialement', () => {
+  it('isSubmitting vaut false initialement', () => {
     const { result } = renderHook(() => usePasswordChange());
-    expect(result.current.isSaving).toBe(false);
+    expect(result.current.form.formState.isSubmitting).toBe(false);
   });
 
   // ── Retour anticipé si pas d'utilisateur ─────────────────────────────────
 
   it("ne fait pas d'appel API si user absent", async () => {
     const { result } = renderHook(() => usePasswordChange());
-    act(() => {
-      result.current.setNewPassword('NewPass12');
-      result.current.setConfirmPassword('NewPass12');
-    });
+    setupFields(result);
     await act(async () => {
       await result.current.handleChangePassword();
     });
     expect(mockApiPatch).not.toHaveBeenCalled();
   });
 
-  // ── Validations ───────────────────────────────────────────────────────────
+  // ── Validations Zod ───────────────────────────────────────────────────────
 
-  it('définit une erreur si newPassword < 8 caractères', async () => {
+  it('erreur Zod si password < 8 caractères', async () => {
     setupWithUser();
     const { result } = renderHook(() => usePasswordChange());
     act(() => {
-      result.current.setNewPassword('short');
-      result.current.setConfirmPassword('short');
+      result.current.form.setValue('current_password', 'OldPass1');
+      result.current.form.setValue('password', 'short');
+      result.current.form.setValue('password_confirmation', 'short');
     });
     await act(async () => {
       await result.current.handleChangePassword();
     });
-    expect(result.current.error).toBe('Le mot de passe doit contenir au moins 8 caractères.');
+    expect(result.current.form.getFieldState('password').error?.message).toBe(
+      'Minimum 8 caractères',
+    );
     expect(mockApiPatch).not.toHaveBeenCalled();
   });
 
-  it('définit une erreur si les mots de passe ne correspondent pas', async () => {
+  it('erreur Zod si les mots de passe ne correspondent pas', async () => {
     setupWithUser();
     const { result } = renderHook(() => usePasswordChange());
     act(() => {
-      result.current.setNewPassword('NewPass12');
-      result.current.setConfirmPassword('Different1');
+      result.current.form.setValue('current_password', 'OldPass1');
+      result.current.form.setValue('password', 'NewPass12');
+      result.current.form.setValue('password_confirmation', 'Different1');
     });
     await act(async () => {
       await result.current.handleChangePassword();
     });
-    expect(result.current.error).toBe('Les mots de passe ne correspondent pas.');
+    expect(result.current.form.getFieldState('password_confirmation').error?.message).toBe(
+      'Les mots de passe ne correspondent pas.',
+    );
     expect(mockApiPatch).not.toHaveBeenCalled();
   });
 
@@ -144,7 +147,7 @@ describe('usePasswordChange', () => {
     });
   });
 
-  it('remet les champs à vide après succès', async () => {
+  it('remet le form à vide après succès', async () => {
     setupWithUser();
     mockApiPatch.mockResolvedValue(undefined);
     const { result } = renderHook(() => usePasswordChange());
@@ -154,9 +157,9 @@ describe('usePasswordChange', () => {
       await result.current.handleChangePassword();
     });
 
-    expect(result.current.currentPassword).toBe('');
-    expect(result.current.newPassword).toBe('');
-    expect(result.current.confirmPassword).toBe('');
+    expect(result.current.form.getValues('current_password')).toBe('');
+    expect(result.current.form.getValues('password')).toBe('');
+    expect(result.current.form.getValues('password_confirmation')).toBe('');
   });
 
   it('appelle toast.success après succès', async () => {
@@ -172,7 +175,7 @@ describe('usePasswordChange', () => {
     expect(mockToastSuccess).toHaveBeenCalledWith('Mot de passe modifié');
   });
 
-  it('isSaving repasse à false après succès', async () => {
+  it('isSubmitting repasse à false après succès', async () => {
     setupWithUser();
     mockApiPatch.mockResolvedValue(undefined);
     const { result } = renderHook(() => usePasswordChange());
@@ -182,12 +185,12 @@ describe('usePasswordChange', () => {
       await result.current.handleChangePassword();
     });
 
-    expect(result.current.isSaving).toBe(false);
+    expect(result.current.form.formState.isSubmitting).toBe(false);
   });
 
   // ── Gestion d'erreur ──────────────────────────────────────────────────────
 
-  it("utilise json.errors.current_password comme message d'erreur", async () => {
+  it('json.errors.current_password → setError sur le champ current_password', async () => {
     setupWithUser();
     mockApiPatch.mockRejectedValue({
       json: { errors: { current_password: ['Mot de passe actuel incorrect.'] } },
@@ -199,11 +202,13 @@ describe('usePasswordChange', () => {
       await result.current.handleChangePassword();
     });
 
-    expect(result.current.error).toBe('Mot de passe actuel incorrect.');
-    expect(mockToastError).toHaveBeenCalledWith('Mot de passe actuel incorrect.');
+    expect(result.current.form.getFieldState('current_password').error?.message).toBe(
+      'Mot de passe actuel incorrect.',
+    );
+    expect(mockToastError).not.toHaveBeenCalled();
   });
 
-  it("utilise json.message comme message d'erreur si errors absent", async () => {
+  it('json.message → setError root + toast.error si errors absent', async () => {
     setupWithUser();
     mockApiPatch.mockRejectedValue({ json: { message: 'Erreur serveur.' } });
     const { result } = renderHook(() => usePasswordChange());
@@ -213,10 +218,10 @@ describe('usePasswordChange', () => {
       await result.current.handleChangePassword();
     });
 
-    expect(result.current.error).toBe('Erreur serveur.');
+    expect(mockToastError).toHaveBeenCalledWith('Erreur serveur.');
   });
 
-  it('utilise le message générique si json absent', async () => {
+  it('message générique si json absent', async () => {
     setupWithUser();
     mockApiPatch.mockRejectedValue(new Error('Network'));
     const { result } = renderHook(() => usePasswordChange());
@@ -226,10 +231,10 @@ describe('usePasswordChange', () => {
       await result.current.handleChangePassword();
     });
 
-    expect(result.current.error).toBe('Échec du changement de mot de passe.');
+    expect(mockToastError).toHaveBeenCalledWith('Échec du changement de mot de passe.');
   });
 
-  it('isSaving repasse à false après une erreur', async () => {
+  it('isSubmitting repasse à false après une erreur', async () => {
     setupWithUser();
     mockApiPatch.mockRejectedValue(new Error('fail'));
     const { result } = renderHook(() => usePasswordChange());
@@ -239,6 +244,6 @@ describe('usePasswordChange', () => {
       await result.current.handleChangePassword();
     });
 
-    expect(result.current.isSaving).toBe(false);
+    expect(result.current.form.formState.isSubmitting).toBe(false);
   });
 });

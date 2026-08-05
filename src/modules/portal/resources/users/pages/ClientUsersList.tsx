@@ -1,9 +1,7 @@
 'use client';
 
-import { useState } from 'react';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ConfirmDialog } from '@/shared/components/confirm-dialog/ConfirmDialog';
 import { UserSearch } from '@modules/shared/components/users';
 import { UserFormDrawer } from '../components/UserFormDrawer';
 import { useClientUsersQuery } from '../hooks/useClientUsersQuery';
@@ -13,6 +11,7 @@ import { ClientUsersTable } from './_components/client-users-table';
 import { useUsersListController } from '@/modules/shared/hooks/useUsersListController';
 import { useToggleClientUserActive } from '../hooks/useToggleClientUserActive';
 import { useDeleteClientUser } from '../hooks/useDeleteClientUser';
+import { useDeleteConfirm } from '@/modules/shared/hooks/useDeleteConfirm';
 
 export function ClientUserList() {
   const {
@@ -42,7 +41,9 @@ export function ClientUserList() {
   const { data: queryResult } = useClientUsersQuery(params);
   const toggleActive = useToggleClientUserActive();
   const deleteClientUser = useDeleteClientUser();
-  const [deletingUser, setDeletingUser] = useState<ClientUser | null>(null);
+  const { openConfirm: confirmDelete, dialog: deleteDialog } = useDeleteConfirm((id) =>
+    deleteClientUser.mutate(id),
+  );
 
   return (
     <div className="bg-background">
@@ -90,7 +91,7 @@ export function ClientUserList() {
           onToggleActive={(user) =>
             toggleActive.mutate({ id: user.id, is_active: !user.is_active })
           }
-          onDelete={(user) => setDeletingUser(user)}
+          onDelete={(user) => confirmDelete(user)}
         />
       </div>
 
@@ -101,21 +102,7 @@ export function ClientUserList() {
         user={editingUser}
       />
 
-      <ConfirmDialog
-        open={deletingUser !== null}
-        title="Supprimer l'utilisateur"
-        description={
-          deletingUser
-            ? `Êtes-vous sûr de vouloir supprimer « ${deletingUser.full_name || `${deletingUser.first_name} ${deletingUser.last_name}`.trim()} » ? Cette action est irréversible.`
-            : undefined
-        }
-        confirmLabel="Supprimer"
-        confirmClassName="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-        onClose={() => setDeletingUser(null)}
-        onConfirm={() => {
-          if (deletingUser) deleteClientUser.mutate(deletingUser.id);
-        }}
-      />
+      {deleteDialog}
     </div>
   );
 }

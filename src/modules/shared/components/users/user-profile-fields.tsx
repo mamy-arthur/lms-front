@@ -1,6 +1,6 @@
 'use client';
 
-import { useWatch, type UseFormReturn } from 'react-hook-form';
+import { useWatch, type UseFormReturn, type FieldValues } from 'react-hook-form';
 import { FieldContent, FieldError, FieldGroup, FieldLabel, FieldRoot } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import {
@@ -16,18 +16,10 @@ import { LANGUAGES } from '@/shared/constants/languages';
 import { TIMEZONES } from '@/shared/constants/timezones';
 import { AddressAutocomplete } from './address-autocomplete';
 
-interface ProfileFormValues {
-  country?: string | null;
-  address?: string | null;
-  zip_code?: string | null;
-  city?: string | null;
-  timezone?: string | null;
-  preferred_language?: string | null;
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function UserProfileFields({ form }: { form: UseFormReturn<any> }) {
-  const country = useWatch({ control: form.control, name: 'country' }) as string | null | undefined;
+// Generic T ensures callers pass a typed form; f casts to FieldValues for internal field access
+export function UserProfileFields<T extends FieldValues>({ form }: { form: UseFormReturn<T> }) {
+  const f = form as unknown as UseFormReturn<FieldValues>;
+  const country = useWatch({ control: f.control, name: 'country' }) as string | null | undefined;
 
   return (
     <>
@@ -40,7 +32,7 @@ export function UserProfileFields({ form }: { form: UseFormReturn<any> }) {
 
       {/* Pays — obligatoire en premier pour activer l'autocomplétion */}
       <FieldRoot
-        control={form.control}
+        control={f.control}
         name="country"
         render={({ field }) => (
           <FieldGroup>
@@ -49,9 +41,9 @@ export function UserProfileFields({ form }: { form: UseFormReturn<any> }) {
               onValueChange={(v) => {
                 field.onChange(v === '__none__' ? null : v);
                 // Réinitialise l'adresse si le pays change
-                form.setValue('address', '');
-                form.setValue('zip_code', '');
-                form.setValue('city', '');
+                f.setValue('address', '');
+                f.setValue('zip_code', '');
+                f.setValue('city', '');
               }}
               value={field.value ?? '__none__'}
             >
@@ -76,7 +68,7 @@ export function UserProfileFields({ form }: { form: UseFormReturn<any> }) {
 
       {/* Adresse — autocomplétion LocationIQ activée si pays renseigné */}
       <FieldRoot
-        control={form.control}
+        control={f.control}
         name="address"
         render={({ field }) => (
           <FieldGroup>
@@ -95,10 +87,10 @@ export function UserProfileFields({ form }: { form: UseFormReturn<any> }) {
                 disabled={!country}
                 country={country}
                 onSelectSuggestion={(details) => {
-                  if (details.address) form.setValue('address', details.address);
-                  if (details.zip_code) form.setValue('zip_code', details.zip_code);
-                  if (details.city) form.setValue('city', details.city);
-                  if (details.country) form.setValue('country', details.country);
+                  if (details.address) f.setValue('address', details.address);
+                  if (details.zip_code) f.setValue('zip_code', details.zip_code);
+                  if (details.city) f.setValue('city', details.city);
+                  if (details.country) f.setValue('country', details.country);
                 }}
               />
             </FieldContent>
@@ -110,7 +102,7 @@ export function UserProfileFields({ form }: { form: UseFormReturn<any> }) {
       {/* Code postal + Ville */}
       <div className="flex gap-3">
         <FieldRoot
-          control={form.control}
+          control={f.control}
           name="zip_code"
           render={({ field }) => (
             <FieldGroup className="w-32 shrink-0">
@@ -129,7 +121,7 @@ export function UserProfileFields({ form }: { form: UseFormReturn<any> }) {
           )}
         />
         <FieldRoot
-          control={form.control}
+          control={f.control}
           name="city"
           render={({ field }) => (
             <FieldGroup className="flex-1">
@@ -154,7 +146,7 @@ export function UserProfileFields({ form }: { form: UseFormReturn<any> }) {
       {/* Fuseau horaire + Langue */}
       <div className="flex gap-3">
         <FieldRoot
-          control={form.control}
+          control={f.control}
           name="timezone"
           render={({ field }) => (
             <FieldGroup className="flex-1">
@@ -187,7 +179,7 @@ export function UserProfileFields({ form }: { form: UseFormReturn<any> }) {
         />
 
         <FieldRoot
-          control={form.control}
+          control={f.control}
           name="preferred_language"
           render={({ field }) => (
             <FieldGroup className="w-36 shrink-0">
@@ -222,5 +214,3 @@ export function UserProfileFields({ form }: { form: UseFormReturn<any> }) {
     </>
   );
 }
-
-export type { ProfileFormValues };

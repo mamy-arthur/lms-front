@@ -1,9 +1,7 @@
 'use client';
 
-import { useState } from 'react';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ConfirmDialog } from '@/shared/components/confirm-dialog/ConfirmDialog';
 import { UserSearch, UsersFilter } from '@modules/shared/components/users';
 import { AdminUserFormDrawer } from './_components/admin-user-form-drawer';
 import { AdminUsersTable } from './_components/admin-users-table';
@@ -13,6 +11,7 @@ import { useUsersListController } from '@/modules/shared/hooks/useUsersListContr
 import { Role } from '@/shared/constants/roles';
 import { useToggleUserActive } from '../hooks/useToggleUserActive';
 import { useDeleteUser } from '../hooks/useDeleteUser';
+import { useDeleteConfirm } from '@/modules/shared/hooks/useDeleteConfirm';
 
 const ROLE_OPTIONS = [
   { value: Role.SUPER_ADMIN, label: 'Super admin' },
@@ -49,7 +48,9 @@ export function UsersList() {
   const { data, isLoading } = useUsersQuery(params);
   const toggleActive = useToggleUserActive();
   const deleteUser = useDeleteUser();
-  const [deletingUser, setDeletingUser] = useState<User | null>(null);
+  const { openConfirm: confirmDelete, dialog: deleteDialog } = useDeleteConfirm((id) =>
+    deleteUser.mutate(id),
+  );
 
   return (
     <div className="bg-background">
@@ -99,7 +100,7 @@ export function UsersList() {
           onToggleActive={(user) =>
             toggleActive.mutate({ id: user.id, is_active: !user.is_active })
           }
-          onDelete={(user) => setDeletingUser(user)}
+          onDelete={(user) => confirmDelete(user)}
         />
       </div>
 
@@ -110,21 +111,7 @@ export function UsersList() {
         user={editingUser}
       />
 
-      <ConfirmDialog
-        open={deletingUser !== null}
-        title="Supprimer l'utilisateur"
-        description={
-          deletingUser
-            ? `Êtes-vous sûr de vouloir supprimer « ${deletingUser.full_name || `${deletingUser.first_name} ${deletingUser.last_name}`.trim()} » ? Cette action est irréversible.`
-            : undefined
-        }
-        confirmLabel="Supprimer"
-        confirmClassName="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-        onClose={() => setDeletingUser(null)}
-        onConfirm={() => {
-          if (deletingUser) deleteUser.mutate(deletingUser.id);
-        }}
-      />
+      {deleteDialog}
     </div>
   );
 }
