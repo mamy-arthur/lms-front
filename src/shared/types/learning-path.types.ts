@@ -65,6 +65,8 @@ export interface ApiLearningPath {
   evaluations?: ApiLearningPathEvaluation[];
   /** Mail template attached as the first node of the LP — id + name only, null if none attached yet. Present in both list and detail responses. */
   mail_template?: { id: string; name: string } | null;
+  /** Certificate attached to the LP — id + name only, null if none attached yet. */
+  certificate?: { id: string; name: string } | null;
   created_at: string;
   updated_at: string;
 }

@@ -95,6 +95,12 @@ jest.mock('@/modules/admin/resources/programs/hooks/useDeleteEvaluation', () => 
 jest.mock('@/modules/admin/resources/programs/hooks/useAssignMailTemplate', () => ({
   useAssignMailTemplate: jest.fn(),
 }));
+jest.mock('@/modules/admin/resources/programs/hooks/useAssignCertificate', () => ({
+  useAssignCertificate: jest.fn(),
+}));
+jest.mock('@/modules/admin/resources/programs/hooks/useDetachCertificate', () => ({
+  useDetachCertificate: jest.fn(),
+}));
 
 // ─── Imports ──────────────────────────────────────────────────────────────────
 
@@ -116,6 +122,8 @@ import { useEvaluationsQuery } from '../../hooks/useEvaluationsQuery';
 import { useCreateEvaluation } from '../../hooks/useCreateEvaluation';
 import { useDeleteEvaluation } from '../../hooks/useDeleteEvaluation';
 import { useAssignMailTemplate } from '../../hooks/useAssignMailTemplate';
+import { useAssignCertificate } from '../../hooks/useAssignCertificate';
+import { useDetachCertificate } from '../../hooks/useDetachCertificate';
 import type { CreateEvaluationPayload } from '@/shared/api/evaluations.api';
 import ProgramFlow from '../../components/ProgramFlow';
 import type { ProgramFlowProps } from '../../components/ProgramFlow';
@@ -135,6 +143,8 @@ const mockUseEvaluationsQuery = jest.mocked(useEvaluationsQuery);
 const mockUseCreateEvaluation = jest.mocked(useCreateEvaluation);
 const mockUseDeleteEvaluation = jest.mocked(useDeleteEvaluation);
 const mockUseAssignMailTemplate = jest.mocked(useAssignMailTemplate);
+const mockUseAssignCertificate = jest.mocked(useAssignCertificate);
+const mockUseDetachCertificate = jest.mocked(useDetachCertificate);
 const MockProgramFlow = jest.mocked(ProgramFlow);
 const mockToast = jest.mocked(toast);
 
@@ -217,6 +227,8 @@ function mockDefaults({
   createEvaluationMutateAsync = jest.fn().mockResolvedValue({ id: 'eval-new' }),
   deleteEvaluationMutateAsync = jest.fn().mockResolvedValue(undefined),
   assignMailTemplateMutateAsync = jest.fn().mockResolvedValue(undefined),
+  assignCertificateMutateAsync = jest.fn().mockResolvedValue(undefined),
+  detachCertificateMutateAsync = jest.fn().mockResolvedValue(undefined),
 }: {
   paths?: LearningPath[];
   isLoading?: boolean;
@@ -228,6 +240,8 @@ function mockDefaults({
   createEvaluationMutateAsync?: jest.Mock;
   deleteEvaluationMutateAsync?: jest.Mock;
   assignMailTemplateMutateAsync?: jest.Mock;
+  assignCertificateMutateAsync?: jest.Mock;
+  detachCertificateMutateAsync?: jest.Mock;
 } = {}) {
   mockUseLearningPathsQuery.mockReturnValue({
     data: paths,
@@ -297,6 +311,16 @@ function mockDefaults({
     mutateAsync: assignMailTemplateMutateAsync,
     isPending: false,
   } as unknown as ReturnType<typeof useAssignMailTemplate>);
+
+  mockUseAssignCertificate.mockReturnValue({
+    mutateAsync: assignCertificateMutateAsync,
+    isPending: false,
+  } as unknown as ReturnType<typeof useAssignCertificate>);
+
+  mockUseDetachCertificate.mockReturnValue({
+    mutateAsync: detachCertificateMutateAsync,
+    isPending: false,
+  } as unknown as ReturnType<typeof useDetachCertificate>);
 
   // Par défaut ProgramFlow ne fait rien — les tests spécifiques remplacent cette implémentation
   MockProgramFlow.mockReturnValue(null);
@@ -771,6 +795,84 @@ describe('ProgramsList', () => {
         ...EVAL_PAYLOAD,
       });
       expect(returnedId).toBe('eval-new');
+    });
+  });
+
+  // ── Assignation du certificat ──────────────────────────────────────────────
+
+  describe('assignation du certificat', () => {
+    it("assigne le certificat via l'API en mode édition", async () => {
+      const assignCertificateMutateAsync = jest.fn().mockResolvedValue(undefined);
+      mockDefaults({ assignCertificateMutateAsync });
+
+      let capturedOnCertificateAssign: ((certificateId: string) => Promise<void>) | undefined;
+      MockProgramFlow.mockImplementation((props: ProgramFlowProps) => {
+        capturedOnCertificateAssign = props.onCertificateAssign;
+        return null;
+      });
+
+      const user = userEvent.setup();
+      render(<ProgramsList />, { wrapper: createWrapper() });
+
+      await user.click(screen.getByRole('button', { name: `Actions pour ${MOCK_PATH_1.name}` }));
+      await user.click(screen.getByRole('menuitem', { name: /modifier/i }));
+
+      await act(async () => {
+        await capturedOnCertificateAssign?.('cert-1');
+      });
+
+      expect(assignCertificateMutateAsync).toHaveBeenCalledWith({
+        learningPathId: MOCK_PATH_1.id,
+        certificateId: 'cert-1',
+      });
+    });
+
+    it("détache le certificat via l'API en mode édition", async () => {
+      const detachCertificateMutateAsync = jest.fn().mockResolvedValue(undefined);
+      mockDefaults({ detachCertificateMutateAsync });
+
+      let capturedOnCertificateDetach: (() => Promise<void>) | undefined;
+      MockProgramFlow.mockImplementation((props: ProgramFlowProps) => {
+        capturedOnCertificateDetach = props.onCertificateDetach;
+        return null;
+      });
+
+      const user = userEvent.setup();
+      render(<ProgramsList />, { wrapper: createWrapper() });
+
+      await user.click(screen.getByRole('button', { name: `Actions pour ${MOCK_PATH_1.name}` }));
+      await user.click(screen.getByRole('menuitem', { name: /modifier/i }));
+
+      await act(async () => {
+        await capturedOnCertificateDetach?.();
+      });
+
+      expect(detachCertificateMutateAsync).toHaveBeenCalledWith({
+        learningPathId: MOCK_PATH_1.id,
+      });
+    });
+
+    it("ne détache pas le certificat si le parcours n'a pas encore d'identifiant", async () => {
+      const detachCertificateMutateAsync = jest.fn().mockResolvedValue(undefined);
+      mockDefaults({ detachCertificateMutateAsync });
+
+      let capturedOnCertificateDetach: (() => Promise<void>) | undefined;
+      MockProgramFlow.mockImplementation((props: ProgramFlowProps) => {
+        capturedOnCertificateDetach = props.onCertificateDetach;
+        return null;
+      });
+
+      const user = userEvent.setup();
+      render(<ProgramsList />, { wrapper: createWrapper() });
+
+      // Ouvrir en mode création (aucun ID de parcours)
+      await user.click(screen.getByRole('button', { name: /nouveau parcours/i }));
+
+      await act(async () => {
+        await capturedOnCertificateDetach?.();
+      });
+
+      expect(detachCertificateMutateAsync).not.toHaveBeenCalled();
     });
   });
 

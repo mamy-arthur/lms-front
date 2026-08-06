@@ -47,6 +47,8 @@ import type { CreateEvaluationPayload } from '@/shared/api/evaluations.api';
 import { useCreateEvaluation } from '../../hooks/useCreateEvaluation';
 import { useDeleteEvaluation } from '../../hooks/useDeleteEvaluation';
 import { useAssignMailTemplate } from '../../hooks/useAssignMailTemplate';
+import { useAssignCertificate } from '../../hooks/useAssignCertificate';
+import { useDetachCertificate } from '../../hooks/useDetachCertificate';
 import {
   DURATION_UNITS,
   durationToMinutes,
@@ -188,6 +190,8 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
   const createEvaluation = useCreateEvaluation();
   const deleteEvaluation = useDeleteEvaluation();
   const assignMailTemplate = useAssignMailTemplate();
+  const assignCertificate = useAssignCertificate();
+  const detachCertificate = useDetachCertificate();
   const updateCompetencyLocation = useUpdateCompetencyLocation();
   const updateEvaluationLocation = useUpdateEvaluationLocation();
 
@@ -305,6 +309,20 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
       currentY = evalY + NODE_GAP;
     }
 
+    // Attestation node at the very end if a certificate is attached
+    if (learningPath.certificate) {
+      allNodes.push({
+        id: 'attestation-end',
+        type: 'programStep',
+        position: { x: CANVAS_X, y: currentY },
+        data: {
+          stepType: 'attestation',
+          label: learningPath.certificate.name,
+          attestationId: learningPath.certificate.id,
+        },
+      });
+    }
+
     const nodeOrder = allNodes.map((n) => n.id);
     const edges = nodeOrder.slice(1).map((targetId, idx) => ({
       id: `e-${nodeOrder[idx]}-${targetId}`,
@@ -382,6 +400,21 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
     },
     [currentLpId, getValues, setValue, createMutation, assignMailTemplate],
   );
+
+  // Assign certificate — LP must already exist (requires mail template first)
+  const handleCertificateAssign = useCallback(
+    async (certificateId: string) => {
+      const lpId = await getOrCreateLpId();
+      await assignCertificate.mutateAsync({ learningPathId: lpId, certificateId });
+    },
+    [getOrCreateLpId, assignCertificate],
+  );
+
+  // Detach certificate
+  const handleCertificateDetach = useCallback(async () => {
+    if (!currentLpId) return;
+    await detachCertificate.mutateAsync({ learningPathId: currentLpId });
+  }, [currentLpId, detachCertificate]);
 
   // Immediately link a module when added to the flow
   const handleModuleAdd = useCallback(
@@ -656,6 +689,8 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
                 onEvalDelete={handleEvalDelete}
                 onEvalMove={handleEvalMove}
                 onMailTemplateAssign={handleMailTemplateAssign}
+                onCertificateAssign={handleCertificateAssign}
+                onCertificateDetach={handleCertificateDetach}
               />
             )}
           </div>
