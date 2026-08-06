@@ -801,7 +801,7 @@ describe('ProgramsList', () => {
   // ── Assignation du certificat ──────────────────────────────────────────────
 
   describe('assignation du certificat', () => {
-    it('assigne le certificat via l\'API en mode édition', async () => {
+    it("assigne le certificat via l'API en mode édition", async () => {
       const assignCertificateMutateAsync = jest.fn().mockResolvedValue(undefined);
       mockDefaults({ assignCertificateMutateAsync });
 
@@ -827,7 +827,7 @@ describe('ProgramsList', () => {
       });
     });
 
-    it('détache le certificat via l\'API en mode édition', async () => {
+    it("détache le certificat via l'API en mode édition", async () => {
       const detachCertificateMutateAsync = jest.fn().mockResolvedValue(undefined);
       mockDefaults({ detachCertificateMutateAsync });
 
@@ -852,7 +852,7 @@ describe('ProgramsList', () => {
       });
     });
 
-    it('ne détache pas le certificat si le parcours n\'a pas encore d\'identifiant', async () => {
+    it("ne détache pas le certificat si le parcours n'a pas encore d'identifiant", async () => {
       const detachCertificateMutateAsync = jest.fn().mockResolvedValue(undefined);
       mockDefaults({ detachCertificateMutateAsync });
 
