@@ -41,6 +41,7 @@ import {
   BookOpen,
   ClipboardCheck,
   Info,
+  Lock,
   Mail,
   Settings2,
   Trash2,
@@ -256,6 +257,7 @@ function ProgramStepNode({ id, data, isConnectable }: NodeProps<StepNode>) {
   const cfg = STEP_CONFIG[data.stepType];
   const { Icon } = cfg;
   const isEmail = data.stepType === 'email';
+  const isAttestation = data.stepType === 'attestation';
 
   const isConfigured =
     (data.stepType === 'email' && !!data.emailTemplateId) ||
@@ -273,11 +275,11 @@ function ProgramStepNode({ id, data, isConnectable }: NodeProps<StepNode>) {
     <div
       className={cn(
         'min-w-55 rounded-md border px-4 py-3 shadow-sm',
-        isConfigured && !isEmail ? 'cursor-default' : 'cursor-pointer',
+        isConfigured && !isEmail && !isAttestation ? 'cursor-default' : 'cursor-pointer',
         cfg.border,
         cfg.bg,
       )}
-      onClick={isConfigured && !isEmail ? undefined : () => onEditNode(id)}
+      onClick={isConfigured && !isEmail && !isAttestation ? undefined : () => onEditNode(id)}
     >
       <Handle type="target" position={Position.Top} isConnectable={isConnectable} />
 
@@ -407,9 +409,11 @@ function ConfigurableEdge({
             }}
             title="Configurer les règles d'accès"
           >
-            <Settings2
-              className={hasRules ? 'size-3 text-indigo-500' : 'size-3 text-muted-foreground'}
-            />
+            {hasRules ? (
+              <Lock className="size-3 text-indigo-500" />
+            ) : (
+              <Settings2 className="size-3 text-muted-foreground" />
+            )}
           </button>
         </EdgeLabelRenderer>
       )}
