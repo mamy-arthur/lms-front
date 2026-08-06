@@ -42,7 +42,7 @@ import { useUpdateEvaluationLocation } from '../../hooks/useUpdateEvaluationLoca
 import { useModules } from '@/modules/admin/resources/modules/hooks/useModules';
 import { useLearningPathQuery } from '../../hooks/useLearningPathQuery';
 import { useEvaluationsQuery } from '../../hooks/useEvaluationsQuery';
-import ProgramFlow, { type StepNode } from '../../components/ProgramFlow';
+import ProgramFlow, { EdgeRuleData, type StepNode } from '../../components/ProgramFlow';
 import type { CreateEvaluationPayload } from '@/shared/api/evaluations.api';
 import { useCreateEvaluation } from '../../hooks/useCreateEvaluation';
 import { useDeleteEvaluation } from '../../hooks/useDeleteEvaluation';
@@ -52,10 +52,12 @@ import { useDetachCertificate } from '../../hooks/useDetachCertificate';
 import { useCreateProgressionRule } from '../../hooks/useCreateProgressionRule';
 import { usePatchProgressionRule } from '../../hooks/usePatchProgressionRule';
 import { useDeactivateProgressionRule } from '../../hooks/useDeactivateProgressionRule';
+import { useProgressionRulesQuery } from '../../hooks/useProgressionRulesQuery';
 import type {
   CreateProgressionRulePayload,
   UpdateProgressionRulePayload,
   ApiProgressionRule,
+  ProgressionNodeRef,
 } from '@/shared/types/progression-rule.types';
 import {
   DURATION_UNITS,
@@ -183,6 +185,11 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
   // Fetch full evaluation details (includes question_bank_ids) for the initial flow
   const { data: evaluationsData, isLoading: isLoadingEvaluations } = useEvaluationsQuery(
     open && isEdit ? learningPathId : null,
+  );
+
+  // Fetch existing progression rules to pre-populate edge data
+  const { data: progressionRules, isLoading: isLoadingRules } = useProgressionRulesQuery(
+    open && isEdit ? (learningPathId ?? null) : null,
   );
 
   const hasCompetencies = isEdit && (learningPath?.competencies?.length ?? 0) > 0;
@@ -335,16 +342,81 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
     }
 
     const nodeOrder = allNodes.map((n) => n.id);
-    const edges = nodeOrder.slice(1).map((targetId, idx) => ({
-      id: `e-${nodeOrder[idx]}-${targetId}`,
-      source: nodeOrder[idx],
-      target: targetId,
-      type: 'configurableEdge' as const,
-      animated: true,
-    }));
+    const nodeIdSet = new Set(nodeOrder);
+
+    // Helper: map an API node reference to a canvas node ID
+    const apiRefToCanvasId = (ref: ProgressionNodeRef): string | null => {
+      if (ref.type === 'module') return `step-module-${ref.id}`;
+      if (ref.type === 'evaluation') return `step-eval-${ref.id}`;
+      if (ref.type === 'certificate') return 'attestation-end';
+      return null;
+    };
+
+    // Build a mutable edge map keyed by "sourceId→targetId" for fast rule lookup
+    const edgeMap = new Map<string, (typeof edges)[number]>();
+    const edges: {
+      id: string;
+      source: string;
+      target: string;
+      type: 'configurableEdge';
+      animated: boolean;
+      data?: EdgeRuleData;
+    }[] = nodeOrder.slice(1).map((targetId, idx) => {
+      const edge = {
+        id: `e-${nodeOrder[idx]}-${targetId}`,
+        source: nodeOrder[idx],
+        target: targetId,
+        type: 'configurableEdge' as const,
+        animated: true,
+      };
+      edgeMap.set(`${nodeOrder[idx]}→${targetId}`, edge);
+      return edge;
+    });
+
+    // Apply active progression rules to their matching edges
+    const activeRules = (progressionRules ?? []).filter((r) => r.is_active);
+    for (const rule of activeRules) {
+      const sourceCanvasId = apiRefToCanvasId(rule.source);
+      const successCanvasId = apiRefToCanvasId(rule.target_on_success);
+      if (!sourceCanvasId || !successCanvasId) continue;
+
+      const edge = edgeMap.get(`${sourceCanvasId}→${successCanvasId}`);
+      if (!edge) continue;
+
+      const failureCanvasId = rule.target_on_failure
+        ? apiRefToCanvasId(rule.target_on_failure)
+        : null;
+      const exhaustedCanvasId = rule.target_on_exhausted
+        ? apiRefToCanvasId(rule.target_on_exhausted)
+        : null;
+
+      edge.data = {
+        progressionRule: {
+          progressionRuleId: rule.id,
+          condition: rule.condition,
+          failureTargetNodeId:
+            failureCanvasId && nodeIdSet.has(failureCanvasId) ? failureCanvasId : null,
+          maxAttempts: rule.max_attempts,
+          exhaustedTargetNodeId:
+            exhaustedCanvasId && nodeIdSet.has(exhaustedCanvasId) ? exhaustedCanvasId : null,
+        },
+      };
+
+      // Add a visual retake edge for failure paths
+      if (failureCanvasId && nodeIdSet.has(failureCanvasId)) {
+        edges.push({
+          id: `retake-${rule.id}-${failureCanvasId}`,
+          source: sourceCanvasId,
+          target: failureCanvasId,
+          type: 'configurableEdge' as const,
+          animated: false,
+          data: { kind: 'retake' as const },
+        });
+      }
+    }
 
     return { nodes: allNodes, edges, nodeOrder };
-  }, [learningPath, moduleNameMap, evaluationsData]);
+  }, [learningPath, moduleNameMap, evaluationsData, progressionRules]);
 
   const imageInputRef = useRef<HTMLInputElement>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -713,7 +785,8 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
         <div className="flex min-h-0 flex-1 overflow-hidden">
           {/* Flow canvas */}
           <div className="flex-6 overflow-hidden">
-            {isEdit && (isLoadingModules || isLoadingPath || isLoadingEvaluations) ? (
+            {isEdit &&
+            (isLoadingModules || isLoadingPath || isLoadingEvaluations || isLoadingRules) ? (
               <div className="flex h-full items-center justify-center">
                 <Loader2 className="size-5 animate-spin text-muted-foreground" />
               </div>

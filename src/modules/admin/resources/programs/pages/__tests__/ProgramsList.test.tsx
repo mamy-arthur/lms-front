@@ -86,6 +86,9 @@ jest.mock('@/modules/admin/resources/programs/hooks/useLearningPathQuery', () =>
 jest.mock('@/modules/admin/resources/programs/hooks/useEvaluationsQuery', () => ({
   useEvaluationsQuery: jest.fn(),
 }));
+jest.mock('@/modules/admin/resources/programs/hooks/useProgressionRulesQuery', () => ({
+  useProgressionRulesQuery: jest.fn(),
+}));
 jest.mock('@/modules/admin/resources/programs/hooks/useCreateEvaluation', () => ({
   useCreateEvaluation: jest.fn(),
 }));
@@ -137,6 +140,7 @@ import { useLinkCompetencyToLearningPath } from '../../hooks/useLinkCompetencyTo
 import { useUnlinkCompetencyFromLearningPath } from '../../hooks/useUnlinkCompetencyFromLearningPath';
 import { useLearningPathQuery } from '../../hooks/useLearningPathQuery';
 import { useEvaluationsQuery } from '../../hooks/useEvaluationsQuery';
+import { useProgressionRulesQuery } from '../../hooks/useProgressionRulesQuery';
 import { useCreateEvaluation } from '../../hooks/useCreateEvaluation';
 import { useDeleteEvaluation } from '../../hooks/useDeleteEvaluation';
 import { useAssignMailTemplate } from '../../hooks/useAssignMailTemplate';
@@ -158,6 +162,7 @@ const mockUseLinkCompetency = jest.mocked(useLinkCompetencyToLearningPath);
 const mockUseUnlinkCompetency = jest.mocked(useUnlinkCompetencyFromLearningPath);
 const mockUseLearningPathQuery = jest.mocked(useLearningPathQuery);
 const mockUseEvaluationsQuery = jest.mocked(useEvaluationsQuery);
+const mockUseProgressionRulesQuery = jest.mocked(useProgressionRulesQuery);
 const mockUseCreateEvaluation = jest.mocked(useCreateEvaluation);
 const mockUseDeleteEvaluation = jest.mocked(useDeleteEvaluation);
 const mockUseAssignMailTemplate = jest.mocked(useAssignMailTemplate);
@@ -314,6 +319,11 @@ function mockDefaults({
     data: undefined,
     isLoading: false,
   } as unknown as ReturnType<typeof useEvaluationsQuery>);
+
+  mockUseProgressionRulesQuery.mockReturnValue({
+    data: undefined,
+    isLoading: false,
+  } as unknown as ReturnType<typeof useProgressionRulesQuery>);
 
   mockUseCreateEvaluation.mockReturnValue({
     mutateAsync: createEvaluationMutateAsync,
