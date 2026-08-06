@@ -66,6 +66,11 @@ export const learningPathsApi = {
 
   listCompetencyAssociations: () =>
     apiGet<{ data: ApiLpCompetencyItem[] }>('platform/learning-path-competencies'),
+
+  assignMailTemplate: (learningPathId: string, mailTemplateId: string) =>
+    apiPost<{ data: ApiLearningPath }>(`platform/learning-paths/${learningPathId}/mail-template`, {
+      mail_template_id: mailTemplateId,
+    }),
 };
 
 /**

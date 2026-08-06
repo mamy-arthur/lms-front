@@ -29,7 +29,7 @@ type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   initialTemplateId?: string;
-  onSelect: (template: EmailTemplate) => void;
+  onSelect: (template: EmailTemplate) => Promise<void>;
 };
 
 export function SelectEmailTemplateDialog({
@@ -40,6 +40,7 @@ export function SelectEmailTemplateDialog({
 }: Props) {
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<EmailTemplate | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   const { data: queryData, isLoading } = useMailTemplatesQuery();
   const data = queryData?.data;
@@ -124,16 +125,27 @@ export function SelectEmailTemplateDialog({
             Annuler
           </Button>
           <Button
-            disabled={!selected}
-            onClick={() => {
+            disabled={!selected || isSaving}
+            onClick={async () => {
               if (!selected) return;
-              onSelect(selected);
-              setSelected(null);
-              onOpenChange(false);
+              setIsSaving(true);
+              try {
+                await onSelect(selected);
+                setSelected(null);
+                onOpenChange(false);
+              } catch {
+                // error already toasted by onSelect
+              } finally {
+                setIsSaving(false);
+              }
             }}
             className="bg-(--color-primary) hover:bg-primary/80"
           >
-            <Mail className="size-3.5" />
+            {isSaving ? (
+              <Loader2 className="size-3.5 animate-spin" />
+            ) : (
+              <Mail className="size-3.5" />
+            )}
             Choisir ce modèle
           </Button>
         </DialogFooter>
