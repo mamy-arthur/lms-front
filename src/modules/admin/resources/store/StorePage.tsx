@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils';
 import { useShopLearningPathsQuery } from './hooks/useShopLearningPathsQuery';
 import { useLearningPathCategoriesQuery } from '../programs/hooks/useLearningPathCategoriesQuery';
 
-const PAGE_SIZE = 12;
+const PAGE_SIZE = 25;
 
 function FormationCardSkeleton() {
   return (

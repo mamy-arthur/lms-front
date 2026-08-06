@@ -41,6 +41,7 @@ const EXPECTED_AUTH_USER: AuthUser = {
   name: 'Alice Dupont',
   email: 'alice@example.com',
   role: Role.CLIENT_MANAGER,
+  avatar: null,
 };
 
 const LOGIN_RESPONSE = {

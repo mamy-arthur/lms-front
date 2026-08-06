@@ -50,12 +50,19 @@ export function PortalCertificatesTable({
       key: 'name',
       label: 'Nom',
       sortable: true,
-      render: (cert) => <span className="text-xs font-medium text-foreground">{cert.name}</span>,
+      cellClassName: 'w-1/3',
+      render: (cert) => (
+        <div className="text-wrap">
+          <span className="text-xs font-medium text-foreground wrap-break-word">{cert.name}</span>
+        </div>
+      ),
     },
     {
       key: 'isActive',
       label: 'Statut',
       sortable: false,
+      headerClassName: 'text-center',
+      cellClassName: 'text-center',
       render: (cert) =>
         cert.isActive ? (
           <Badge
@@ -76,25 +83,24 @@ export function PortalCertificatesTable({
       key: 'isDefaultTemplate',
       label: 'Modèle par défaut',
       sortable: false,
+      headerClassName: 'text-center',
+      cellClassName: 'text-center',
       render: (cert) =>
         cert.isDefaultTemplate ? (
-          <Badge
-            variant="outline"
-            className="gap-1 border-blue-200 bg-blue-50 text-blue-700 text-center"
-          >
+          <Badge variant="outline" className="gap-1 border-blue-200 bg-blue-50 text-blue-700">
             <CheckCircle2 className="size-3" />
             Oui
           </Badge>
         ) : (
-          <span className="text-xs text-muted-foreground text-center">Non</span>
+          <span className="text-xs text-muted-foreground ">Non</span>
         ),
     },
     {
       key: 'id',
-      label: 'Actions',
+      label: '',
       sortable: false,
       render: (cert) => (
-        <div onClick={(e) => e.stopPropagation()}>
+        <div className="text-right" onClick={(e) => e.stopPropagation()}>
           <CertificateActions
             certificateLabel={cert.name}
             onPreview={() => onPreview(cert)}
@@ -122,6 +128,7 @@ export function PortalCertificatesTable({
         onPageChange={onPageChange}
         onPageSizeChange={onPageSizeChange}
         onRowClick={(cert) => onPreview(cert)}
+        tableClassName="table-fixed"
         emptyState={{
           icon: <Award className="size-8 text-muted-foreground" />,
           title: 'Aucune attestation',

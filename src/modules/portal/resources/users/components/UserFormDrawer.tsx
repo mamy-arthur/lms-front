@@ -1,6 +1,9 @@
 'use client';
 
-import { memo, useCallback, useEffect, useMemo } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
+import { TENANT_USERS_QUERY_KEY } from '../hooks/useClientUsersQuery';
 import { z } from 'zod';
 import {
   Sheet,
@@ -15,28 +18,49 @@ import { useTenantStore } from '@/shared/stores/tenant.store';
 import { useCreateClientUser } from '../hooks/useCreateClientUsers';
 import { useUpdateClientUser } from '../hooks/useUpdateClientUsers';
 import type { CreateClientUserPayload, ClientUser, UpdateClientUserPayload } from '../types';
+import { Switch } from '@/components/ui/switch';
+import { FieldGroup, FieldLabel, FieldRoot } from '@/components/ui/field';
+import { UserPhotoField } from '@modules/shared/components/users/user-photo-field';
+import { UserProfileFields } from '@modules/shared/components/users/user-profile-fields';
+import { uploadUserProfilePhoto } from '@/modules/shared/lib/uploadUserProfilePhoto';
 
-const createSchema = z.object({
-  first_name: z.string().min(1, 'Prénom requis').max(120),
-  last_name: z.string().min(1, 'Nom requis').max(120),
-  username: z.string().max(120).optional().or(z.literal('')),
-  email: z.string().email('Email invalide').max(255),
-  password: z.string().min(8, 'Minimum 8 caractères').max(255),
-  role: z.enum(['CLIENT_MANAGER', 'TRAINEE']),
-  city: z.string().max(120).optional().or(z.literal('')),
-  country: z.string().max(120).optional().or(z.literal('')),
+const passwordSchema = z
+  .string()
+  .min(8, 'Minimum 8 caractères')
+  .regex(/[A-Z]/, 'Au moins une majuscule')
+  .regex(/[a-z]/, 'Au moins une minuscule')
+  .regex(/[0-9]/, 'Au moins un chiffre')
+  .max(255);
+
+const profileFieldsSchema = z.object({
+  address: z.string().max(255).nullable().optional(),
+  zip_code: z.string().max(20).nullable().optional(),
+  city: z.string().max(100).nullable().optional(),
+  country: z.string().length(2).nullable().optional(),
+  timezone: z.string().nullable().optional(),
+  preferred_language: z.string().nullable().optional(),
 });
 
-const updateSchema = z.object({
-  first_name: z.string().min(1, 'Prénom requis').max(120),
-  last_name: z.string().min(1, 'Nom requis').max(120),
-  username: z.string().max(120).optional().or(z.literal('')),
-  email: z.string().email('Email invalide').max(255),
-  password: z.string().min(8, 'Minimum 8 caractères').max(255).optional().or(z.literal('')),
-  role: z.enum(['CLIENT_MANAGER', 'TRAINEE']),
-  city: z.string().max(120).optional().or(z.literal('')),
-  country: z.string().max(120).optional().or(z.literal('')),
-});
+const createSchema = z
+  .object({
+    first_name: z.string().min(1, 'Prénom requis').max(120),
+    last_name: z.string().min(1, 'Nom requis').max(120),
+    email: z.string().email('Email invalide').max(255),
+    password: passwordSchema,
+    role: z.enum(['CLIENT_MANAGER', 'TRAINEE']),
+    is_active: z.boolean().default(true),
+  })
+  .merge(profileFieldsSchema);
+
+const updateSchema = z
+  .object({
+    first_name: z.string().min(1, 'Prénom requis').max(120),
+    last_name: z.string().min(1, 'Nom requis').max(120),
+    email: z.string().email('Email invalide').max(255),
+    role: z.enum(['CLIENT_MANAGER', 'TRAINEE']),
+    is_active: z.boolean(),
+  })
+  .merge(profileFieldsSchema);
 
 const ROLE_LABELS: Record<string, string> = {
   CLIENT_MANAGER: 'Responsable',
@@ -46,12 +70,16 @@ const ROLE_LABELS: Record<string, string> = {
 const CREATE_DEFAULTS: z.infer<typeof createSchema> = {
   first_name: '',
   last_name: '',
-  username: '',
   email: '',
   password: '',
   role: 'TRAINEE',
-  city: '',
-  country: '',
+  is_active: true,
+  address: null,
+  zip_code: null,
+  city: null,
+  country: null,
+  timezone: null,
+  preferred_language: null,
 };
 
 export interface UserFormDrawerProps {
@@ -67,6 +95,8 @@ function UserFormDrawerBase({ open, onClose, onSuccess, user }: UserFormDrawerPr
   const createMutation = useCreateClientUser();
   const updateMutation = useUpdateClientUser();
   const tenantId = useTenantStore((s) => s.tenant?.id ?? null);
+  const pendingPhotoRef = useRef<File | null>(null);
+  const queryClient = useQueryClient();
 
   const schema = isEdit ? updateSchema : createSchema;
 
@@ -75,12 +105,15 @@ function UserFormDrawerBase({ open, onClose, onSuccess, user }: UserFormDrawerPr
       return {
         first_name: u.first_name,
         last_name: u.last_name,
-        username: u.username,
         email: u.email,
-        password: '',
         role: u.role as 'CLIENT_MANAGER' | 'TRAINEE',
-        city: u.city,
-        country: u.country,
+        is_active: u.is_active,
+        address: u.address ?? null,
+        zip_code: u.zip_code ?? null,
+        city: u.city ?? null,
+        country: u.country ?? null,
+        timezone: u.timezone ?? null,
+        preferred_language: u.preferred_language ?? null,
       };
     }
     return CREATE_DEFAULTS;
@@ -105,10 +138,14 @@ function UserFormDrawerBase({ open, onClose, onSuccess, user }: UserFormDrawerPr
         email: values.email,
         password: values.password as string,
         role: values.role as CreateClientUserPayload['role'],
-        city: values.city ?? '',
-        country: values.country ?? '',
         tenant_id: tenantId,
-        ...(values.username ? { username: values.username } : {}),
+        is_active: values.is_active,
+        address: values.address ?? null,
+        zip_code: values.zip_code ?? null,
+        city: values.city ?? null,
+        country: values.country ?? null,
+        timezone: values.timezone ?? null,
+        preferred_language: values.preferred_language ?? null,
       }) as CreateClientUserPayload,
     buildUpdatePayload: (values, id) => ({
       id,
@@ -117,10 +154,13 @@ function UserFormDrawerBase({ open, onClose, onSuccess, user }: UserFormDrawerPr
         last_name: values.last_name,
         email: values.email,
         role: values.role as UpdateClientUserPayload['role'],
-        city: values.city ?? '',
-        country: values.country ?? '',
-        ...(values.username ? { username: values.username } : {}),
-        ...(values.password ? { password: values.password } : {}),
+        is_active: values.is_active,
+        address: values.address ?? null,
+        zip_code: values.zip_code ?? null,
+        city: values.city ?? null,
+        country: values.country ?? null,
+        timezone: values.timezone ?? null,
+        preferred_language: values.preferred_language ?? null,
       } as UpdateClientUserPayload,
     }),
   });
@@ -131,10 +171,106 @@ function UserFormDrawerBase({ open, onClose, onSuccess, user }: UserFormDrawerPr
     }
   }, [open, defaultValues, formState.form]);
 
+  // Submit avec upload photo si fichier sélectionné
+  const onSubmitWithPhoto = useCallback(
+    async (values: Record<string, unknown>) => {
+      if (isEdit && user && pendingPhotoRef.current) {
+        let mediaId: string;
+        try {
+          const media = await uploadUserProfilePhoto(user.id, pendingPhotoRef.current, 'users');
+          mediaId = media.id;
+        } catch {
+          toast.error("Échec de l'upload photo. Réessayez.");
+          return;
+        }
+        try {
+          await updateMutation.mutateAsync({
+            id: user.id,
+            data: {
+              first_name: values.first_name as string,
+              last_name: values.last_name as string,
+              email: values.email as string,
+              role: values.role as UpdateClientUserPayload['role'],
+              is_active: values.is_active as boolean,
+              profile_photo_media_id: mediaId,
+              address: (values.address as string | null) ?? null,
+              zip_code: (values.zip_code as string | null) ?? null,
+              city: (values.city as string | null) ?? null,
+              country: (values.country as string | null) ?? null,
+              timezone: (values.timezone as string | null) ?? null,
+              preferred_language: (values.preferred_language as string | null) ?? null,
+            } as UpdateClientUserPayload,
+          });
+          pendingPhotoRef.current = null;
+          onSuccess?.();
+          onClose();
+        } catch {
+          toast.error("Échec de la mise à jour de l'utilisateur.");
+        }
+      } else if (!isEdit && pendingPhotoRef.current) {
+        // Création : créer d'abord l'utilisateur, puis uploader la photo
+        let newUserId: string;
+        try {
+          const res = await createMutation.mutateAsync({
+            first_name: values.first_name as string,
+            last_name: values.last_name as string,
+            email: values.email as string,
+            password: values.password as string,
+            role: values.role as CreateClientUserPayload['role'],
+            tenant_id: tenantId,
+            is_active: values.is_active as boolean,
+            address: (values.address as string | null) ?? null,
+            zip_code: (values.zip_code as string | null) ?? null,
+            city: (values.city as string | null) ?? null,
+            country: (values.country as string | null) ?? null,
+            timezone: (values.timezone as string | null) ?? null,
+            preferred_language: (values.preferred_language as string | null) ?? null,
+          } as CreateClientUserPayload);
+          newUserId = (res as { data: { id: string } }).data.id;
+        } catch {
+          toast.error("Échec de la création de l'utilisateur.");
+          return;
+        }
+        // Upload séparé — l'utilisateur est déjà créé, l'échec photo ne bloque pas
+        try {
+          await uploadUserProfilePhoto(newUserId, pendingPhotoRef.current, 'users');
+        } catch {
+          toast.error("Utilisateur créé, mais l'upload photo a échoué.");
+        }
+        await queryClient.invalidateQueries({ queryKey: TENANT_USERS_QUERY_KEY });
+        pendingPhotoRef.current = null;
+        onSuccess?.();
+        onClose();
+      } else {
+        formState.onSubmit(values);
+      }
+    },
+    [isEdit, user, createMutation, updateMutation, formState, onSuccess, onClose, tenantId],
+  );
+
+  const activeField = (
+    <FieldRoot
+      control={formState.form.control}
+      name="is_active"
+      render={({ field }) => (
+        <FieldGroup>
+          <div className="flex items-center justify-between">
+            <FieldLabel className="text-xs">Compte actif</FieldLabel>
+            <Switch
+              checked={field.value}
+              onCheckedChange={field.onChange}
+              aria-label="Compte actif"
+            />
+          </div>
+        </FieldGroup>
+      )}
+    />
+  );
+
   return (
     <Sheet open={open} onOpenChange={(nextOpen) => !nextOpen && formState.handleClose()}>
       <SheetContent
-        className="flex w-full flex-col gap-0 p-0 sm:max-w-2xl lg:max-w-4xl"
+        className="flex w-full flex-col gap-0 p-0 overflow-hidden sm:max-w-150! lg:max-w-200!"
         showCloseButton={true}
         onInteractOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
@@ -148,11 +284,25 @@ function UserFormDrawerBase({ open, onClose, onSuccess, user }: UserFormDrawerPr
           mutation={formState.mutation}
           isEdit={formState.isEdit}
           handleClose={formState.handleClose}
-          onSubmit={formState.onSubmit}
+          onSubmit={onSubmitWithPhoto}
           showPassword={formState.showPassword}
           togglePasswordVisibility={formState.togglePasswordVisibility}
           roleLabels={ROLE_LABELS}
-          lastLogin={user?.lastLogin}
+          topFields={
+            <UserPhotoField
+              currentPhotoUrl={user?.profile_photo?.url ?? null}
+              fullName={user ? `${user.first_name} ${user.last_name}` : ''}
+              onFileSelected={(file) => {
+                pendingPhotoRef.current = file;
+              }}
+            />
+          }
+          extraFields={
+            <>
+              {activeField}
+              <UserProfileFields form={formState.form} />
+            </>
+          }
         />
       </SheetContent>
     </Sheet>

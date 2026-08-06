@@ -2,41 +2,54 @@ import { Role, TENANT_ROLES } from '@/shared/constants/roles';
 
 export interface ClientUser {
   id: string;
+  tenant_id: string | null;
+  editor_id: string | null;
   first_name: string;
   last_name: string;
-  username: string;
+  full_name: string;
   email: string;
   role: Role;
-  isActive: boolean;
-  city: string;
-  country: string;
-  lastLogin: string;
-  createdAt: string;
+  is_active: boolean;
+  profile_photo: { id: string; url: string; mime_type: string } | null;
+  address: string | null;
+  zip_code: string | null;
+  city: string | null;
+  country: string | null;
+  timezone: string | null;
+  preferred_language: string | null;
+  created_at: string;
+  updated_at: string | null;
 }
 
 export interface CreateClientUserPayload {
   first_name: string;
   last_name: string;
-  username?: string;
   email: string;
   password: string;
   role: Role;
   tenant_id?: string | null;
   is_active?: boolean;
-  city?: string;
-  country?: string;
+  address?: string | null;
+  zip_code?: string | null;
+  city?: string | null;
+  country?: string | null;
+  timezone?: string | null;
+  preferred_language?: string | null;
 }
 
 export interface UpdateClientUserPayload {
-  first_name: string;
-  last_name: string;
-  username?: string;
-  email: string;
-  password?: string;
-  role: Role;
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  role?: Role;
   is_active?: boolean;
-  city?: string;
-  country?: string;
+  profile_photo_media_id?: string | null;
+  address?: string | null;
+  zip_code?: string | null;
+  city?: string | null;
+  country?: string | null;
+  timezone?: string | null;
+  preferred_language?: string | null;
 }
 
 export const TENANT_USER_ROLES: readonly Role[] = TENANT_ROLES;
@@ -44,7 +57,7 @@ export const TENANT_USER_ROLES: readonly Role[] = TENANT_ROLES;
 export interface ClientUserSearchParams {
   q?: string;
   role?: string;
-  status?: 'active' | 'inactive';
+  is_active?: boolean;
   sort_by?: string;
   sort_dir?: 'asc' | 'desc';
   page?: number;
@@ -52,25 +65,24 @@ export interface ClientUserSearchParams {
 }
 
 export function normalizeClientUser(raw: Record<string, unknown>): ClientUser {
-  const first_name = String(raw.first_name ?? raw.firstName ?? '');
-  const last_name = String(raw.last_name ?? raw.lastName ?? '');
-  const username =
-    String(raw.username ?? '') ||
-    String(raw.full_name ?? '') ||
-    String(raw.name ?? '') ||
-    [first_name, last_name].filter(Boolean).join('.');
-
   return {
-    id: String(raw.id ?? raw._id ?? ''),
-    first_name,
-    last_name,
-    username: username || '—',
+    id: String(raw.id ?? ''),
+    tenant_id: (raw.tenant_id as string | null) ?? null,
+    editor_id: (raw.editor_id as string | null) ?? null,
+    first_name: String(raw.first_name ?? ''),
+    last_name: String(raw.last_name ?? ''),
+    full_name: String(raw.full_name ?? `${raw.first_name ?? ''} ${raw.last_name ?? ''}`.trim()),
     email: String(raw.email ?? ''),
-    role: (raw.role ?? raw.roleAlias ?? Role.TRAINEE) as Role,
-    isActive: Boolean(raw.isActive ?? raw.is_active ?? raw.active ?? true),
-    city: String(raw.city ?? ''),
-    country: String(raw.country ?? ''),
-    lastLogin: String(raw.lastLogin ?? raw.last_login ?? raw.last_logged_in ?? ''),
-    createdAt: String(raw.createdAt ?? raw.created_at ?? ''),
+    role: (raw.role ?? Role.TRAINEE) as Role,
+    is_active: Boolean(raw.is_active ?? raw.isActive ?? true),
+    profile_photo: (raw.profile_photo as ClientUser['profile_photo']) ?? null,
+    address: (raw.address as string | null) ?? null,
+    zip_code: (raw.zip_code as string | null) ?? null,
+    city: (raw.city as string | null) ?? null,
+    country: (raw.country as string | null) ?? null,
+    timezone: (raw.timezone as string | null) ?? null,
+    preferred_language: (raw.preferred_language as string | null) ?? null,
+    created_at: String(raw.created_at ?? ''),
+    updated_at: (raw.updated_at as string | null) ?? null,
   };
 }

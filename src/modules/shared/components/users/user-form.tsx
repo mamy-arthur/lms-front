@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
-import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, Loader2, Save } from 'lucide-react';
 import type { ReactNode } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
@@ -35,6 +35,7 @@ export interface UserFormProps {
   roleLabels: Record<string, string>;
   lastLogin?: string;
   extraFields?: ReactNode;
+  topFields?: ReactNode;
 }
 
 export function UserForm({
@@ -48,10 +49,15 @@ export function UserForm({
   roleLabels,
   lastLogin,
   extraFields,
+  topFields,
 }: UserFormProps) {
   return (
     <Field {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-1 flex-col" noValidate>
+      <form
+        onSubmit={form.handleSubmit(onSubmit)}
+        className="flex flex-1 flex-col min-h-0"
+        noValidate
+      >
         <div className="flex-1 space-y-5 overflow-y-auto px-6 py-4">
           {mutation.isError && (
             <div
@@ -61,6 +67,8 @@ export function UserForm({
               {extractApiError(mutation.error, isEdit)}
             </div>
           )}
+
+          {topFields}
 
           <div className="flex flex-row gap-4">
             <FieldRoot
@@ -90,20 +98,6 @@ export function UserForm({
               )}
             />
           </div>
-
-          <FieldRoot
-            control={form.control}
-            name="username"
-            render={({ field }) => (
-              <FieldGroup>
-                <FieldLabel className="text-xs">Nom d'utilisateur</FieldLabel>
-                <FieldContent>
-                  <Input aria-label="Nom d'utilisateur" className="text-xs" {...field} />
-                </FieldContent>
-                <FieldError />
-              </FieldGroup>
-            )}
-          />
 
           <FieldRoot
             control={form.control}
@@ -146,34 +140,6 @@ export function UserForm({
 
           {extraFields}
 
-          <FieldRoot
-            control={form.control}
-            name="city"
-            render={({ field }) => (
-              <FieldGroup>
-                <FieldLabel className="text-xs">Ville</FieldLabel>
-                <FieldContent>
-                  <Input aria-label="Ville" className="text-xs" {...field} />
-                </FieldContent>
-                <FieldError />
-              </FieldGroup>
-            )}
-          />
-
-          <FieldRoot
-            control={form.control}
-            name="country"
-            render={({ field }) => (
-              <FieldGroup>
-                <FieldLabel className="text-xs">Pays</FieldLabel>
-                <FieldContent>
-                  <Input aria-label="Pays" className="text-xs" {...field} />
-                </FieldContent>
-                <FieldError />
-              </FieldGroup>
-            )}
-          />
-
           {isEdit && lastLogin && (
             <div className="flex flex-col gap-1">
               <span className="text-xs text-muted-foreground">Dernière connexion</span>
@@ -189,37 +155,39 @@ export function UserForm({
             </div>
           )}
 
-          <FieldRoot
-            control={form.control}
-            name="password"
-            render={({ field }) => (
-              <FieldGroup>
-                <FieldLabel className="text-xs">Mot de passe</FieldLabel>
-                <FieldContent>
-                  <div className="relative">
-                    <Input
-                      type={showPassword ? 'text' : 'password'}
-                      aria-label="Mot de passe"
-                      className="text-xs"
-                      {...field}
-                    />
-                    <button
-                      type="button"
-                      onClick={togglePasswordVisibility}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                      tabIndex={-1}
-                      aria-label={
-                        showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'
-                      }
-                    >
-                      {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                    </button>
-                  </div>
-                </FieldContent>
-                <FieldError />
-              </FieldGroup>
-            )}
-          />
+          {!isEdit && (
+            <FieldRoot
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FieldGroup>
+                  <FieldLabel className="text-xs">Mot de passe</FieldLabel>
+                  <FieldContent>
+                    <div className="relative">
+                      <Input
+                        type={showPassword ? 'text' : 'password'}
+                        aria-label="Mot de passe"
+                        className="text-xs"
+                        {...field}
+                      />
+                      <button
+                        type="button"
+                        onClick={togglePasswordVisibility}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                        tabIndex={-1}
+                        aria-label={
+                          showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'
+                        }
+                      >
+                        {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                      </button>
+                    </div>
+                  </FieldContent>
+                  <FieldError />
+                </FieldGroup>
+              )}
+            />
+          )}
         </div>
 
         <div className="flex items-center justify-end gap-3 border-t bg-background px-6 py-4 shrink-0">
@@ -238,14 +206,12 @@ export function UserForm({
             size="lg"
             className="bg-(--color-primary) hover:bg-(--color-primary)/80"
           >
-            {mutation.isPending && <Loader2 className="size-4 animate-spin" />}
-            {mutation.isPending
-              ? isEdit
-                ? 'Enregistrement…'
-                : 'Création…'
-              : isEdit
-                ? 'Enregistrer'
-                : 'Créer'}
+            {mutation.isPending ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Save className="size-4" />
+            )}
+            {mutation.isPending ? 'Enregistrement…' : 'Enregistrer'}
           </Button>
         </div>
       </form>

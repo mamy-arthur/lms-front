@@ -13,7 +13,7 @@ import { useCartActions } from '@/modules/portal/resources/cart/hooks/useCartAct
 import { useShopLearningPathsQuery } from './hooks/useShopLearningPathsQuery';
 import { useShopLearningPathCategoriesQuery } from './hooks/useShopLearningPathCategoriesQuery';
 
-const PAGE_SIZE = 12;
+const PAGE_SIZE = 25;
 
 function FormationCardSkeleton() {
   return (

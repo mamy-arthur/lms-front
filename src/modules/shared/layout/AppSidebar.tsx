@@ -20,7 +20,7 @@ export interface SidebarNavItem {
 
 interface AppSidebarProps {
   navItems: SidebarNavItem[];
-  user: { name: string; avatar?: string } | null;
+  user: { name: string; avatar?: string | null } | null;
   logoUrl: string;
   tenantName: string;
   onLogout: () => void;

@@ -14,6 +14,7 @@ import { useDeletePortalCertificate } from '../hooks/useDeletePortalCertificate'
 import type { Certificate } from '../types';
 import { PortalCertificateFormDrawer } from './_components/portal-certificate-form-drawer';
 import { PortalCertificatesTable } from './_components/portal-certificates-table';
+import { ConfirmDialog } from '@/shared/components/confirm-dialog/ConfirmDialog';
 
 export function PortalCertificatesList() {
   const ctrl = useModuleListController<Certificate>({
@@ -23,6 +24,7 @@ export function PortalCertificatesList() {
   const { data, isLoading } = usePortalCertificatesQuery(ctrl.params);
   const deleteMutation = useDeletePortalCertificate();
   const [previewCert, setPreviewCert] = useState<Certificate | null>(null);
+  const [deletingItem, setDeletingItem] = useState<Certificate | null>(null);
 
   return (
     <div className="bg-background">
@@ -73,7 +75,7 @@ export function PortalCertificatesList() {
         onPageChange={ctrl.handlePageChange}
         onPageSizeChange={ctrl.handlePageSizeChange}
         onEdit={ctrl.handleEdit}
-        onDelete={(cert) => deleteMutation.mutate(cert.id)}
+        onDelete={(cert) => setDeletingItem(cert)}
         onPreview={setPreviewCert}
       />
 
@@ -93,6 +95,22 @@ export function PortalCertificatesList() {
           body={previewCert.body}
         />
       )}
+
+      <ConfirmDialog
+        open={deletingItem !== null}
+        title="Supprimer l'attestation"
+        description={
+          deletingItem
+            ? `Êtes-vous sûr de vouloir supprimer «${deletingItem.name}» ? Cette action est irréversible.`
+            : undefined
+        }
+        confirmLabel="Supprimer"
+        confirmClassName="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+        onClose={() => setDeletingItem(null)}
+        onConfirm={() => {
+          if (deletingItem) deleteMutation.mutate(deletingItem.id);
+        }}
+      />
     </div>
   );
 }

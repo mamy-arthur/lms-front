@@ -6,4 +6,5 @@ import { ADMIN_MAIL_TEMPLATES_QUERY_KEY } from './useMailTemplatesQuery';
 export const useCreateMailTemplate = makeCreateMutation<CreateMailTemplatePayload>(
   adminMailTemplatesApi,
   ADMIN_MAIL_TEMPLATES_QUERY_KEY,
+  { success: 'Template créé', error: 'Échec de la création du template' },
 );

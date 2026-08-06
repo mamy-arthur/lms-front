@@ -18,7 +18,7 @@ interface AdminUsersTableProps {
   onSort?: (column: string) => void;
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
-  onView: (user: User) => void;
+  onView?: (user: User) => void;
   onEdit: (user: User) => void;
   onToggleActive: (user: User) => void;
   onDelete: (user: User) => void;
@@ -57,7 +57,6 @@ export function AdminUsersTable({
       onToggleActive={onToggleActive}
       onDelete={onDelete}
       isActiveSortable={true}
-      showTimeInLastLogin={true}
     />
   );
 }

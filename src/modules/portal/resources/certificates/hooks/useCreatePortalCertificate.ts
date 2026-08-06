@@ -6,4 +6,5 @@ import { PORTAL_CERTIFICATES_QUERY_KEY } from './usePortalCertificatesQuery';
 export const useCreatePortalCertificate = makeCreateMutation<CreateCertificatePayload>(
   portalCertificatesApi,
   PORTAL_CERTIFICATES_QUERY_KEY,
+  { success: 'Attestation créée', error: 'Échec de la création de l’attestation' },
 );

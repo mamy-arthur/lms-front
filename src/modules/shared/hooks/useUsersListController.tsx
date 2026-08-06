@@ -14,9 +14,9 @@ export function useUsersListController<TUser, TParams = Record<string, unknown>>
 ) {
   const {
     includeTenantFilter = false,
-    defaultSortBy = 'username',
-    defaultSortDir = 'asc',
-    defaultPageSize = 12,
+    defaultSortBy = 'created_at',
+    defaultSortDir = 'desc',
+    defaultPageSize = 25,
   } = opts ?? {};
 
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -29,23 +29,23 @@ export function useUsersListController<TUser, TParams = Record<string, unknown>>
 
   type ParamsState = TParams & Record<string, unknown>;
   const [params, setParams] = useState<ParamsState>(
-    () => ({ sort_by: defaultSortBy, sort_dir: defaultSortDir }) as unknown as ParamsState,
+    () =>
+      ({
+        sort_by: defaultSortBy,
+        sort_dir: defaultSortDir,
+        page_size: defaultPageSize,
+      }) as unknown as ParamsState,
   );
 
-  const sort = useMemo(
-    () => ({
-      column: (params.sort_by as string) ?? defaultSortBy,
-      direction: (params.sort_dir as 'asc' | 'desc') ?? defaultSortDir,
-    }),
-    [params.sort_by, params.sort_dir, defaultSortBy, defaultSortDir],
-  );
-
+  // Application explicite uniquement (bouton Appliquer ou touche Entrée)
   const handleSearch = useCallback(() => {
+    const isActive =
+      draftStatus === 'active' ? true : draftStatus === 'inactive' ? false : undefined;
     setParams((prev) => ({
       ...prev,
       q: draftSearch || undefined,
       role: draftRole !== 'all' ? draftRole : undefined,
-      status: draftStatus !== 'all' ? (draftStatus as 'active' | 'inactive') : undefined,
+      is_active: isActive,
       ...(includeTenantFilter
         ? { tenant_id: draftTenant !== 'all' ? draftTenant : undefined }
         : {}),
@@ -88,6 +88,15 @@ export function useUsersListController<TUser, TParams = Record<string, unknown>>
 
   const page = (params.page as number) ?? 0;
   const pageSize = (params.page_size as number) ?? defaultPageSize;
+
+  const sort = useMemo(
+    () => ({
+      column: (params.sort_by as string) ?? defaultSortBy,
+      direction: (params.sort_dir as 'asc' | 'desc') ?? defaultSortDir,
+    }),
+    [params.sort_by, params.sort_dir, defaultSortBy, defaultSortDir],
+  );
+
   const hasQuery = !!(
     draftSearch ||
     draftRole !== 'all' ||

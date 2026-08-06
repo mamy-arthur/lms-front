@@ -18,7 +18,7 @@ interface ClientUsersTableProps {
   onSort?: (column: string) => void;
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
-  onView: (user: ClientUser) => void;
+  onView?: (user: ClientUser) => void;
   onEdit: (user: ClientUser) => void;
   onToggleActive: (user: ClientUser) => void;
   onDelete: (user: ClientUser) => void;
@@ -57,7 +57,6 @@ export function ClientUsersTable({
       onToggleActive={onToggleActive}
       onDelete={onDelete}
       isActiveSortable={false}
-      showTimeInLastLogin={false}
       rowTestId="user-row"
     />
   );

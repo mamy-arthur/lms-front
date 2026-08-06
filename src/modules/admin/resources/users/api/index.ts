@@ -1,37 +1,31 @@
-import { apiGet, apiPost, apiPut, apiDelete } from '@/shared/lib/apiClient';
-import { User, CreateUserPayload } from '../types';
-
-interface UserListParams {
-  page?: number;
-  limit?: number;
-  q?: string;
-  sort_by?: string;
-  sort_order?: 'asc' | 'desc';
-}
+import { apiDelete, apiGet, apiPatch, apiPost } from '@/shared/lib/apiClient';
+import type { CreateUserPayload, UpdateUserPayload, User, UserSearchParams } from '../types';
 
 interface UserListResponse {
-  items?: User[];
-  data?: User[];
-  total?: number;
+  data: User[];
+  total: number;
 }
 
 export const adminUsersApi = {
-  list: (params: UserListParams) => {
-    const query = new URLSearchParams();
-    query.set('page', String(params.page ?? 1));
-    query.set('limit', String(params.limit ?? 25));
-    if (params.q) query.set('q', params.q);
-    if (params.sort_by) query.set('sort_by', params.sort_by);
-    if (params.sort_order) query.set('sort_order', params.sort_order);
-    return apiGet<UserListResponse>(`users?${query.toString()}`);
+  list: (params?: UserSearchParams) => {
+    const query: Record<string, unknown> = {};
+    if (params?.q) query.q = params.q;
+    if (params?.role) query.role = params.role;
+    if (params?.is_active !== undefined) query.is_active = params.is_active;
+    if (params?.tenant_id) query.tenant_id = params.tenant_id;
+    if (params?.sort_by) query.sort_by = params.sort_by;
+    if (params?.sort_dir) query.sort_dir = params.sort_dir;
+    if (params?.page !== undefined) query.page = params.page;
+    if (params?.page_size) query.page_size = params.page_size;
+    return apiGet<UserListResponse>('platform/users', query);
   },
 
-  getById: (id: string) => apiGet<User>(`users/${id}`),
+  getById: (id: string) => apiGet<{ data: User }>(`platform/users/${id}`),
 
-  create: (data: CreateUserPayload) => apiPost<{ data: User }>('users', data),
+  create: (data: CreateUserPayload) => apiPost<{ data: User }>('platform/users', data),
 
-  update: (id: string, data: Partial<CreateUserPayload>) =>
-    apiPut<{ data: User }>(`users/${id}`, data),
+  update: (id: string, data: UpdateUserPayload) =>
+    apiPatch<{ data: User }>(`platform/users/${id}`, data),
 
-  remove: (id: string) => apiDelete(`users/${id}`),
+  remove: (id: string) => apiDelete(`platform/users/${id}`),
 };

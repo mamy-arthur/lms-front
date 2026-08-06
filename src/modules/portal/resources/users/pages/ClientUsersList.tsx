@@ -9,6 +9,9 @@ import type { ClientUser, ClientUserSearchParams } from '../types';
 import { ClientUsersFilter } from './_components/client-users-filters';
 import { ClientUsersTable } from './_components/client-users-table';
 import { useUsersListController } from '@/modules/shared/hooks/useUsersListController';
+import { useToggleClientUserActive } from '../hooks/useToggleClientUserActive';
+import { useDeleteClientUser } from '../hooks/useDeleteClientUser';
+import { useDeleteConfirm } from '@/modules/shared/hooks/useDeleteConfirm';
 
 export function ClientUserList() {
   const {
@@ -33,9 +36,14 @@ export function ClientUserList() {
     page,
     pageSize,
     hasQuery,
-  } = useUsersListController<ClientUser, ClientUserSearchParams>({ defaultPageSize: 12 });
+  } = useUsersListController<ClientUser, ClientUserSearchParams>({ defaultPageSize: 25 });
 
   const { data: queryResult } = useClientUsersQuery(params);
+  const toggleActive = useToggleClientUserActive();
+  const deleteClientUser = useDeleteClientUser();
+  const { openConfirm: confirmDelete, dialog: deleteDialog } = useDeleteConfirm((id) =>
+    deleteClientUser.mutate(id),
+  );
 
   return (
     <div className="bg-background">
@@ -79,10 +87,11 @@ export function ClientUserList() {
           onSort={handleSort}
           onPageChange={handlePageChange}
           onPageSizeChange={handlePageSizeChange}
-          onView={() => {}}
           onEdit={handleEdit}
-          onToggleActive={() => {}}
-          onDelete={() => {}}
+          onToggleActive={(user) =>
+            toggleActive.mutate({ id: user.id, is_active: !user.is_active })
+          }
+          onDelete={(user) => confirmDelete(user)}
         />
       </div>
 
@@ -92,6 +101,8 @@ export function ClientUserList() {
         onSuccess={handleSuccess}
         user={editingUser}
       />
+
+      {deleteDialog}
     </div>
   );
 }

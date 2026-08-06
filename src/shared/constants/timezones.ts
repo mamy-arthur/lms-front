@@ -1,0 +1,26 @@
+export const TIMEZONES = [
+  { value: 'Europe/Paris', label: 'Paris (UTC+1/+2)' },
+  { value: 'Europe/Brussels', label: 'Bruxelles (UTC+1/+2)' },
+  { value: 'Europe/Zurich', label: 'Zurich (UTC+1/+2)' },
+  { value: 'Europe/Luxembourg', label: 'Luxembourg (UTC+1/+2)' },
+  { value: 'Europe/London', label: 'Londres (UTC+0/+1)' },
+  { value: 'Europe/Berlin', label: 'Berlin (UTC+1/+2)' },
+  { value: 'Europe/Madrid', label: 'Madrid (UTC+1/+2)' },
+  { value: 'Europe/Rome', label: 'Rome (UTC+1/+2)' },
+  { value: 'Europe/Lisbon', label: 'Lisbonne (UTC+0/+1)' },
+  { value: 'Europe/Amsterdam', label: 'Amsterdam (UTC+1/+2)' },
+  { value: 'Africa/Casablanca', label: 'Casablanca (UTC+1)' },
+  { value: 'Africa/Tunis', label: 'Tunis (UTC+1)' },
+  { value: 'Africa/Algiers', label: 'Alger (UTC+1)' },
+  { value: 'Africa/Dakar', label: 'Dakar (UTC+0)' },
+  { value: 'Africa/Abidjan', label: 'Abidjan (UTC+0)' },
+  { value: 'Africa/Douala', label: 'Douala (UTC+1)' },
+  { value: 'Africa/Nairobi', label: 'Nairobi (UTC+3)' },
+  { value: 'Indian/Antananarivo', label: 'Antananarivo (UTC+3)' },
+  { value: 'America/New_York', label: 'New York (UTC-5/-4)' },
+  { value: 'America/Toronto', label: 'Toronto (UTC-5/-4)' },
+  { value: 'America/Montreal', label: 'Montréal (UTC-5/-4)' },
+  { value: 'UTC', label: 'UTC' },
+] as const;
+
+export type TimezoneValue = (typeof TIMEZONES)[number]['value'];

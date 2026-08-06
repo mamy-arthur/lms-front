@@ -38,10 +38,14 @@ export function ConfirmDialog({
         if (!isOpen) onClose();
       }}
     >
-      <AlertDialogContent>
+      <AlertDialogContent className="overflow-hidden max-w-sm sm:max-w-md">
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
-          {description ? <AlertDialogDescription>{description}</AlertDialogDescription> : null}
+          {description ? (
+            <AlertDialogDescription className="min-w-0 wrap-break-word">
+              {description}
+            </AlertDialogDescription>
+          ) : null}
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>{cancelLabel}</AlertDialogCancel>

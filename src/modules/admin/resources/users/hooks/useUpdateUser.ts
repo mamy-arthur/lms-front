@@ -1,21 +1,19 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { adminUsersApi } from '../api';
-import type { CreateUserPayload, User } from '../types';
-import { normalizeUser } from '../types';
+import type { UpdateUserPayload } from '../types';
 import { ADMIN_USERS_QUERY_KEY } from './useUsersQuery';
 
 export function useUpdateUser() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<CreateUserPayload> }) =>
+    mutationFn: ({ id, data }: { id: string; data: UpdateUserPayload }) =>
       adminUsersApi.update(id, data),
-    onSuccess: ({ data: rawUser }) => {
-      const updated = normalizeUser(rawUser as unknown as Record<string, unknown>);
-      queryClient.setQueryData<{ data: User[]; total: number }>(ADMIN_USERS_QUERY_KEY, (prev) => ({
-        data: (prev?.data ?? []).map((u) => (u.id === updated.id ? updated : u)),
-        total: prev?.total ?? 0,
-      }));
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ADMIN_USERS_QUERY_KEY });
+      toast.success('Utilisateur mis à jour');
     },
+    onError: () => toast.error("Échec de la mise à jour de l'utilisateur"),
   });
 }
