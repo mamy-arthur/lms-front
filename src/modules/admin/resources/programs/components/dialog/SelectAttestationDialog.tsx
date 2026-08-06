@@ -52,7 +52,9 @@ export function SelectAttestationDialog({
   // Pre-select the current attestation when the list loads
   const displaySelected =
     selected ??
-    (initialAttestationId ? (attestations.find((a) => a.id === initialAttestationId) ?? null) : null);
+    (initialAttestationId
+      ? (attestations.find((a) => a.id === initialAttestationId) ?? null)
+      : null);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -133,11 +135,7 @@ export function SelectAttestationDialog({
             }}
             className="bg-(--color-primary) hover:bg-(--color-primary)/80"
           >
-            {isSaving ? (
-              <Loader2 className="mr-1.5 size-3.5 animate-spin" />
-            ) : (
-              <Plus />
-            )}
+            {isSaving ? <Loader2 className="mr-1.5 size-3.5 animate-spin" /> : <Plus />}
             {initialAttestationId ? "Modifier l'attestation" : "Ajouter l'attestation"}
           </Button>
         </DialogFooter>
