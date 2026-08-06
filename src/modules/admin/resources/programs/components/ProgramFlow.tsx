@@ -463,6 +463,8 @@ export type ProgramFlowProps = {
   onEvalDelete?: (evaluationId: string) => Promise<void>;
   onEvalMove?: (evaluationId: string, position: { x: number; y: number }) => Promise<void>;
   onMailTemplateAssign?: (mailTemplateId: string) => Promise<void>;
+  onCertificateAssign?: (certificateId: string) => Promise<void>;
+  onCertificateDetach?: () => Promise<void>;
 };
 
 const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function ProgramFlow(
@@ -478,6 +480,8 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
     onEvalDelete,
     onEvalMove,
     onMailTemplateAssign,
+    onCertificateAssign,
+    onCertificateDetach,
   },
   ref,
 ) {
@@ -707,6 +711,18 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
         }
       }
 
+      // Detach certificate from the LP when the attestation node is removed
+      if (targetNode?.data.stepType === 'attestation' && targetNode.data.attestationId) {
+        try {
+          if (onCertificateDetach) {
+            await onCertificateDetach();
+          }
+        } catch (err) {
+          toast.error(getApiErrorMessage(err, "Impossible de détacher l'attestation."));
+          return;
+        }
+      }
+
       const order = nodeOrderRef.current;
       const idx = order.indexOf(nodeId);
       const prev = order[idx - 1] ?? null;
@@ -888,13 +904,19 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
 
   // ── Handle attestation selection ──
   const handleAttestationSelect = useCallback(
-    (att: AttestationItem) => {
+    async (att: AttestationItem): Promise<void> => {
+      try {
+        await onCertificateAssign?.(att.id);
+      } catch (err) {
+        toast.error(getApiErrorMessage(err, "Impossible d'assigner l'attestation."));
+        throw err;
+      }
       addStep('attestation', {
         label: att.name,
         attestationId: att.id,
       });
     },
-    [addStep],
+    [addStep, onCertificateAssign],
   );
 
   // ── Edit handlers ──
@@ -954,8 +976,14 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
   );
 
   const handleEditAttestationSave = useCallback(
-    (att: AttestationItem) => {
+    async (att: AttestationItem): Promise<void> => {
       if (!editAttestationDialog) return;
+      try {
+        await onCertificateAssign?.(att.id);
+      } catch (err) {
+        toast.error(getApiErrorMessage(err, "Impossible d'assigner l'attestation."));
+        throw err;
+      }
       setNodes((nds) =>
         nds.map((n) =>
           n.id === editAttestationDialog.nodeId
@@ -965,7 +993,7 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
       );
       setEditAttestationDialog(null);
     },
-    [editAttestationDialog],
+    [editAttestationDialog, onCertificateAssign],
   );
 
   const handleEditEmailSave = useCallback(
