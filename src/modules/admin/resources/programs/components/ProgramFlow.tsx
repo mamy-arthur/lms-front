@@ -749,7 +749,7 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
 
       setNodeOrder((o) => o.filter((id) => id !== nodeId));
     },
-    [onModuleRemove, onEvalDelete],
+    [onModuleRemove, onEvalDelete, onCertificateDetach],
   );
 
   // ── Open the right edit dialog when a node is clicked ──

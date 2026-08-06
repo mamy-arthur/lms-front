@@ -129,6 +129,8 @@ export function SelectAttestationDialog({
                 await onSelect(displaySelected);
                 setSelected(null);
                 onOpenChange(false);
+              } catch {
+                // L'erreur est déjà gérée (toast) dans l'appelant — on garde la modale ouverte
               } finally {
                 setIsSaving(false);
               }
