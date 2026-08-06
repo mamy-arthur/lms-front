@@ -49,6 +49,14 @@ import { useDeleteEvaluation } from '../../hooks/useDeleteEvaluation';
 import { useAssignMailTemplate } from '../../hooks/useAssignMailTemplate';
 import { useAssignCertificate } from '../../hooks/useAssignCertificate';
 import { useDetachCertificate } from '../../hooks/useDetachCertificate';
+import { useCreateProgressionRule } from '../../hooks/useCreateProgressionRule';
+import { usePatchProgressionRule } from '../../hooks/usePatchProgressionRule';
+import { useDeactivateProgressionRule } from '../../hooks/useDeactivateProgressionRule';
+import type {
+  CreateProgressionRulePayload,
+  UpdateProgressionRulePayload,
+  ApiProgressionRule,
+} from '@/shared/types/progression-rule.types';
 import {
   DURATION_UNITS,
   durationToMinutes,
@@ -192,6 +200,9 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
   const assignMailTemplate = useAssignMailTemplate();
   const assignCertificate = useAssignCertificate();
   const detachCertificate = useDetachCertificate();
+  const createProgressionRule = useCreateProgressionRule();
+  const patchProgressionRule = usePatchProgressionRule();
+  const deactivateProgressionRule = useDeactivateProgressionRule();
   const updateCompetencyLocation = useUpdateCompetencyLocation();
   const updateEvaluationLocation = useUpdateEvaluationLocation();
 
@@ -415,6 +426,37 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
     if (!currentLpId) return;
     await detachCertificate.mutateAsync({ learningPathId: currentLpId });
   }, [currentLpId, detachCertificate]);
+
+  // Create a progression rule
+  const handleProgressionRuleCreate = useCallback(
+    async (
+      learningPathId: string,
+      payload: CreateProgressionRulePayload,
+    ): Promise<ApiProgressionRule> => {
+      return createProgressionRule.mutateAsync({ learningPathId, payload });
+    },
+    [createProgressionRule],
+  );
+
+  // Update a progression rule
+  const handleProgressionRuleUpdate = useCallback(
+    async (
+      ruleId: string,
+      learningPathId: string,
+      payload: UpdateProgressionRulePayload,
+    ): Promise<ApiProgressionRule> => {
+      return patchProgressionRule.mutateAsync({ ruleId, learningPathId, payload });
+    },
+    [patchProgressionRule],
+  );
+
+  // Deactivate a progression rule
+  const handleProgressionRuleDeactivate = useCallback(
+    async (ruleId: string, learningPathId: string): Promise<void> => {
+      await deactivateProgressionRule.mutateAsync({ ruleId, learningPathId });
+    },
+    [deactivateProgressionRule],
+  );
 
   // Immediately link a module when added to the flow
   const handleModuleAdd = useCallback(
@@ -691,6 +733,10 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
                 onMailTemplateAssign={handleMailTemplateAssign}
                 onCertificateAssign={handleCertificateAssign}
                 onCertificateDetach={handleCertificateDetach}
+                learningPathId={currentLpId ?? undefined}
+                onProgressionRuleCreate={handleProgressionRuleCreate}
+                onProgressionRuleUpdate={handleProgressionRuleUpdate}
+                onProgressionRuleDeactivate={handleProgressionRuleDeactivate}
               />
             )}
           </div>

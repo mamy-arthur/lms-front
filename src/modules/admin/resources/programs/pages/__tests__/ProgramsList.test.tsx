@@ -101,6 +101,24 @@ jest.mock('@/modules/admin/resources/programs/hooks/useAssignCertificate', () =>
 jest.mock('@/modules/admin/resources/programs/hooks/useDetachCertificate', () => ({
   useDetachCertificate: jest.fn(),
 }));
+jest.mock('@/modules/admin/resources/programs/hooks/useCreateProgressionRule', () => ({
+  useCreateProgressionRule: () => ({
+    mutateAsync: jest.fn().mockResolvedValue({ id: 'rule-1' }),
+    isPending: false,
+  }),
+}));
+jest.mock('@/modules/admin/resources/programs/hooks/usePatchProgressionRule', () => ({
+  usePatchProgressionRule: () => ({
+    mutateAsync: jest.fn().mockResolvedValue({ id: 'rule-1' }),
+    isPending: false,
+  }),
+}));
+jest.mock('@/modules/admin/resources/programs/hooks/useDeactivateProgressionRule', () => ({
+  useDeactivateProgressionRule: () => ({
+    mutateAsync: jest.fn().mockResolvedValue(undefined),
+    isPending: false,
+  }),
+}));
 
 // ─── Imports ──────────────────────────────────────────────────────────────────
 

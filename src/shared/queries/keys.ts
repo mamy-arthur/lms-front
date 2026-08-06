@@ -100,3 +100,9 @@ export const evaluationKeys = {
     [...evaluationKeys.lists(), learningPathId] as const,
   detail: (id: string) => [...evaluationKeys.all, 'detail', id] as const,
 };
+
+export const progressionRuleKeys = {
+  all: ['progression-rules'] as const,
+  listByLearningPath: (learningPathId: string) =>
+    [...progressionRuleKeys.all, 'list', learningPathId] as const,
+};
