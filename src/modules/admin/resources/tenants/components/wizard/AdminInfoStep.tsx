@@ -52,20 +52,6 @@ export const AdminInfoStep = React.memo(function AdminInfoStep({
 
       <FormField
         control={form.control}
-        name="username"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel className="text-xs">Nom d'utilisateur</FormLabel>
-            <FormControl>
-              <Input placeholder="jean.dupont" className="text-xs" {...field} />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-
-      <FormField
-        control={form.control}
         name="email"
         render={({ field }) => (
           <FormItem>

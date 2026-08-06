@@ -94,7 +94,7 @@ export const ADMIN_NAV: AdminNavItem[] = [
     title: 'Tenants',
     icon: Building2,
     access: ACCESS.tenants,
-    items: [{ title: 'Tenants', url: ROUTES.admin.tenants }],
+    items: [],
   },
   {
     url: ROUTES.admin.contentTypes,
