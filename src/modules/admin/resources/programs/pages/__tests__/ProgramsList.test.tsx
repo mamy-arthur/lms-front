@@ -610,7 +610,6 @@ describe('ProgramsList', () => {
   // ── Gestion des évaluations dans le flow ──────────────────────────────────
 
   describe('gestion des évaluations dans le flow', () => {
-
     it("crée l'évaluation via l'API immédiatement lors de l'ajout dans le flow (mode édition)", async () => {
       const createEvaluationMutateAsync = jest.fn().mockResolvedValue({ id: 'eval-new' });
       mockDefaults({ createEvaluationMutateAsync });
@@ -702,7 +701,7 @@ describe('ProgramsList', () => {
       });
     });
 
-    it("crée le parcours puis assigne le template email en mode création", async () => {
+    it('crée le parcours puis assigne le template email en mode création', async () => {
       const createMutateAsync = jest.fn().mockResolvedValue({ data: { id: 'lp-created' } });
       const assignMailTemplateMutateAsync = jest.fn().mockResolvedValue(undefined);
       mockDefaults({ createMutateAsync, assignMailTemplateMutateAsync });
@@ -736,7 +735,11 @@ describe('ProgramsList', () => {
       const createMutateAsync = jest.fn().mockResolvedValue({ data: { id: 'lp-created' } });
       const assignMailTemplateMutateAsync = jest.fn().mockResolvedValue(undefined);
       const createEvaluationMutateAsync = jest.fn().mockResolvedValue({ id: 'eval-new' });
-      mockDefaults({ createMutateAsync, assignMailTemplateMutateAsync, createEvaluationMutateAsync });
+      mockDefaults({
+        createMutateAsync,
+        assignMailTemplateMutateAsync,
+        createEvaluationMutateAsync,
+      });
 
       let capturedOnMailTemplateAssign: ((mailTemplateId: string) => Promise<void>) | undefined;
       let capturedOnEvalCreate: ((data: CreateEvaluationPayload) => Promise<string>) | undefined;
