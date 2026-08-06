@@ -92,6 +92,9 @@ jest.mock('@/modules/admin/resources/programs/hooks/useCreateEvaluation', () => 
 jest.mock('@/modules/admin/resources/programs/hooks/useDeleteEvaluation', () => ({
   useDeleteEvaluation: jest.fn(),
 }));
+jest.mock('@/modules/admin/resources/programs/hooks/useAssignMailTemplate', () => ({
+  useAssignMailTemplate: jest.fn(),
+}));
 
 // ─── Imports ──────────────────────────────────────────────────────────────────
 
@@ -112,6 +115,7 @@ import { useLearningPathQuery } from '../../hooks/useLearningPathQuery';
 import { useEvaluationsQuery } from '../../hooks/useEvaluationsQuery';
 import { useCreateEvaluation } from '../../hooks/useCreateEvaluation';
 import { useDeleteEvaluation } from '../../hooks/useDeleteEvaluation';
+import { useAssignMailTemplate } from '../../hooks/useAssignMailTemplate';
 import type { CreateEvaluationPayload } from '@/shared/api/evaluations.api';
 import ProgramFlow from '../../components/ProgramFlow';
 import type { ProgramFlowProps } from '../../components/ProgramFlow';
@@ -130,6 +134,7 @@ const mockUseLearningPathQuery = jest.mocked(useLearningPathQuery);
 const mockUseEvaluationsQuery = jest.mocked(useEvaluationsQuery);
 const mockUseCreateEvaluation = jest.mocked(useCreateEvaluation);
 const mockUseDeleteEvaluation = jest.mocked(useDeleteEvaluation);
+const mockUseAssignMailTemplate = jest.mocked(useAssignMailTemplate);
 const MockProgramFlow = jest.mocked(ProgramFlow);
 const mockToast = jest.mocked(toast);
 
@@ -189,6 +194,16 @@ const MOCK_PATH_2: LearningPath = {
   idnumber: 'DS-001',
 };
 
+const EVAL_PAYLOAD: CreateEvaluationPayload = {
+  title: 'Évaluation intermédiaire',
+  type: 'PARTIAL',
+  question_bank_ids: ['qb1'],
+  question_count: 10,
+  max_attempts: 2,
+  location_x: 200,
+  location_y: 100,
+};
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function mockDefaults({
@@ -201,6 +216,7 @@ function mockDefaults({
   unlinkMutateAsync = jest.fn().mockResolvedValue(undefined),
   createEvaluationMutateAsync = jest.fn().mockResolvedValue({ id: 'eval-new' }),
   deleteEvaluationMutateAsync = jest.fn().mockResolvedValue(undefined),
+  assignMailTemplateMutateAsync = jest.fn().mockResolvedValue(undefined),
 }: {
   paths?: LearningPath[];
   isLoading?: boolean;
@@ -211,6 +227,7 @@ function mockDefaults({
   unlinkMutateAsync?: jest.Mock;
   createEvaluationMutateAsync?: jest.Mock;
   deleteEvaluationMutateAsync?: jest.Mock;
+  assignMailTemplateMutateAsync?: jest.Mock;
 } = {}) {
   mockUseLearningPathsQuery.mockReturnValue({
     data: paths,
@@ -275,6 +292,11 @@ function mockDefaults({
     mutateAsync: deleteEvaluationMutateAsync,
     isPending: false,
   } as unknown as ReturnType<typeof useDeleteEvaluation>);
+
+  mockUseAssignMailTemplate.mockReturnValue({
+    mutateAsync: assignMailTemplateMutateAsync,
+    isPending: false,
+  } as unknown as ReturnType<typeof useAssignMailTemplate>);
 
   // Par défaut ProgramFlow ne fait rien — les tests spécifiques remplacent cette implémentation
   MockProgramFlow.mockReturnValue(null);
@@ -588,15 +610,6 @@ describe('ProgramsList', () => {
   // ── Gestion des évaluations dans le flow ──────────────────────────────────
 
   describe('gestion des évaluations dans le flow', () => {
-    const EVAL_PAYLOAD: CreateEvaluationPayload = {
-      title: 'Évaluation intermédiaire',
-      type: 'PARTIAL',
-      question_bank_ids: ['qb1'],
-      question_count: 10,
-      max_attempts: 2,
-      location_x: 200,
-      location_y: 100,
-    };
 
     it("crée l'évaluation via l'API immédiatement lors de l'ajout dans le flow (mode édition)", async () => {
       const createEvaluationMutateAsync = jest.fn().mockResolvedValue({ id: 'eval-new' });
@@ -627,10 +640,9 @@ describe('ProgramsList', () => {
       expect(returnedId).toBe('eval-new');
     });
 
-    it("crée le parcours en premier si aucun ID existant, puis crée l'évaluation", async () => {
-      const createMutateAsync = jest.fn().mockResolvedValue({ data: { id: 'lp-created' } });
-      const createEvaluationMutateAsync = jest.fn().mockResolvedValue({ id: 'eval-new' });
-      mockDefaults({ createMutateAsync, createEvaluationMutateAsync });
+    it("affiche une erreur si on tente d'ajouter une évaluation sans avoir configuré l'email", async () => {
+      const createEvaluationMutateAsync = jest.fn();
+      mockDefaults({ createEvaluationMutateAsync });
 
       let capturedOnEvalCreate: ((data: CreateEvaluationPayload) => Promise<string>) | undefined;
       MockProgramFlow.mockImplementation((props: ProgramFlowProps) => {
@@ -641,27 +653,127 @@ describe('ProgramsList', () => {
       const user = userEvent.setup();
       render(<ProgramsList />, { wrapper: createWrapper() });
 
+      // Ouvrir en mode création (aucun email configuré, aucun ID de parcours)
+      await user.click(screen.getByRole('button', { name: /nouveau parcours/i }));
+
+      // Simuler l'ajout d'une évaluation sans email préalable
+      await act(async () => {
+        try {
+          await capturedOnEvalCreate?.(EVAL_PAYLOAD);
+        } catch {
+          // expected
+        }
+      });
+
+      expect(mockToast.error).toHaveBeenCalledWith(
+        "Configurez d'abord l'email de démarrage avant d'ajouter des éléments.",
+      );
+      expect(createEvaluationMutateAsync).not.toHaveBeenCalled();
+    });
+  });
+
+  // ── Assignation de l'email de démarrage ────────────────────────────────────
+
+  describe("assignation de l'email de démarrage", () => {
+    it("assigne le template email via l'API en mode édition", async () => {
+      const assignMailTemplateMutateAsync = jest.fn().mockResolvedValue(undefined);
+      mockDefaults({ assignMailTemplateMutateAsync });
+
+      let capturedOnMailTemplateAssign: ((mailTemplateId: string) => Promise<void>) | undefined;
+      MockProgramFlow.mockImplementation((props: ProgramFlowProps) => {
+        capturedOnMailTemplateAssign = props.onMailTemplateAssign;
+        return null;
+      });
+
+      const user = userEvent.setup();
+      render(<ProgramsList />, { wrapper: createWrapper() });
+
+      // Ouvrir en mode édition (LP avec ID existant)
+      await user.click(screen.getByRole('button', { name: `Actions pour ${MOCK_PATH_1.name}` }));
+      await user.click(screen.getByRole('menuitem', { name: /modifier/i }));
+
+      await act(async () => {
+        await capturedOnMailTemplateAssign?.('mail-tpl-1');
+      });
+
+      expect(assignMailTemplateMutateAsync).toHaveBeenCalledWith({
+        learningPathId: MOCK_PATH_1.id,
+        mailTemplateId: 'mail-tpl-1',
+      });
+    });
+
+    it("crée le parcours puis assigne le template email en mode création", async () => {
+      const createMutateAsync = jest.fn().mockResolvedValue({ data: { id: 'lp-created' } });
+      const assignMailTemplateMutateAsync = jest.fn().mockResolvedValue(undefined);
+      mockDefaults({ createMutateAsync, assignMailTemplateMutateAsync });
+
+      let capturedOnMailTemplateAssign: ((mailTemplateId: string) => Promise<void>) | undefined;
+      MockProgramFlow.mockImplementation((props: ProgramFlowProps) => {
+        capturedOnMailTemplateAssign = props.onMailTemplateAssign;
+        return null;
+      });
+
+      const user = userEvent.setup();
+      render(<ProgramsList />, { wrapper: createWrapper() });
+
       // Ouvrir en mode création
       await user.click(screen.getByRole('button', { name: /nouveau parcours/i }));
 
-      // Saisir un nom (requis pour la création du LP)
-      const nameInput = screen.getByLabelText(/nom du parcours/i);
-      await user.clear(nameInput);
-      await user.type(nameInput, 'Nouveau parcours');
-
-      // Simuler l'ajout d'une évaluation dans le flow
       await act(async () => {
-        await capturedOnEvalCreate?.(EVAL_PAYLOAD);
+        await capturedOnMailTemplateAssign?.('mail-tpl-1');
       });
 
-      // Le LP doit avoir été créé en premier
+      // Le LP doit être créé en premier
       expect(createMutateAsync).toHaveBeenCalled();
-      // Puis l'évaluation avec l'ID du nouveau LP
-      expect(createEvaluationMutateAsync).toHaveBeenCalledWith(
-        expect.objectContaining({ learningPathId: 'lp-created', ...EVAL_PAYLOAD }),
-      );
+      // Puis le template assigné avec l'ID du nouveau LP
+      expect(assignMailTemplateMutateAsync).toHaveBeenCalledWith({
+        learningPathId: 'lp-created',
+        mailTemplateId: 'mail-tpl-1',
+      });
     });
 
+    it("permet d'ajouter une évaluation après avoir configuré l'email en mode création", async () => {
+      const createMutateAsync = jest.fn().mockResolvedValue({ data: { id: 'lp-created' } });
+      const assignMailTemplateMutateAsync = jest.fn().mockResolvedValue(undefined);
+      const createEvaluationMutateAsync = jest.fn().mockResolvedValue({ id: 'eval-new' });
+      mockDefaults({ createMutateAsync, assignMailTemplateMutateAsync, createEvaluationMutateAsync });
+
+      let capturedOnMailTemplateAssign: ((mailTemplateId: string) => Promise<void>) | undefined;
+      let capturedOnEvalCreate: ((data: CreateEvaluationPayload) => Promise<string>) | undefined;
+      MockProgramFlow.mockImplementation((props: ProgramFlowProps) => {
+        capturedOnMailTemplateAssign = props.onMailTemplateAssign;
+        capturedOnEvalCreate = props.onEvalCreate;
+        return null;
+      });
+
+      const user = userEvent.setup();
+      render(<ProgramsList />, { wrapper: createWrapper() });
+
+      // Ouvrir en mode création
+      await user.click(screen.getByRole('button', { name: /nouveau parcours/i }));
+
+      // Configurer l'email en premier (crée le LP automatiquement)
+      await act(async () => {
+        await capturedOnMailTemplateAssign?.('mail-tpl-1');
+      });
+
+      // Ajouter une évaluation (le LP existe maintenant via lazyLpId)
+      let returnedId: string | undefined;
+      await act(async () => {
+        returnedId = await capturedOnEvalCreate?.(EVAL_PAYLOAD);
+      });
+
+      expect(createEvaluationMutateAsync).toHaveBeenCalledWith({
+        learningPathId: 'lp-created',
+        ...EVAL_PAYLOAD,
+      });
+      expect(returnedId).toBe('eval-new');
+    });
+  });
+
+  // ── Gestion des évaluations (suite) ───────────────────────────────────────
+
+  describe('suppression des évaluations dans le flow', () => {
     it("supprime l'évaluation via l'API immédiatement lors du retrait dans le flow (mode édition)", async () => {
       const deleteEvaluationMutateAsync = jest.fn().mockResolvedValue(undefined);
       mockDefaults({ deleteEvaluationMutateAsync });
