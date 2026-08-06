@@ -57,6 +57,7 @@ import {
 import type {
   ProgressionCondition,
   ProgressionNodeRef,
+  ProgressionNodeType,
 } from '@/shared/types/progression-rule.types';
 import { SelectModuleDialog, type ModuleItem } from './dialog/SelectModuleDialog';
 import { AddEvaluationDialog, type EvaluationConfig } from './dialog/AddEvaluationDialog';
@@ -666,12 +667,12 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
       }
 
       // Determine source node type for the API call
-      const nodeTypeForApi: import('@/shared/types/progression-rule.types').ProgressionNodeType =
+      const nodeTypeForApi: ProgressionNodeType =
         sourceNodeType === 'module' ? 'module' : 'evaluation';
 
       // Determine target-on-success node type
       const targetNode = nodesRef.current.find((n) => n.id === targetNodeId);
-      const targetTypeForApi: import('@/shared/types/progression-rule.types').ProgressionNodeType =
+      const targetTypeForApi: ProgressionNodeType =
         targetNode?.data.stepType === 'attestation'
           ? 'certificate'
           : targetNode?.data.stepType === 'module'
@@ -697,12 +698,10 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
         return;
       }
 
-      const buildNodeRef = (
-        nodeId: string,
-      ): import('@/shared/types/progression-rule.types').ProgressionNodeRef | null => {
+      const buildNodeRef = (nodeId: string): ProgressionNodeRef | null => {
         const node = nodesRef.current.find((n) => n.id === nodeId);
         if (!node) return null;
-        const type: import('@/shared/types/progression-rule.types').ProgressionNodeType =
+        const type: ProgressionNodeType =
           node.data.stepType === 'attestation'
             ? 'certificate'
             : node.data.stepType === 'module'
@@ -720,6 +719,7 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
       const failureRef = formData.failureTargetNodeId
         ? buildNodeRef(formData.failureTargetNodeId)
         : null;
+
       const exhaustedRef = formData.exhaustedTargetNodeId
         ? buildNodeRef(formData.exhaustedTargetNodeId)
         : null;

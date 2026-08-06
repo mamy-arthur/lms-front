@@ -1017,6 +1017,7 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
                       checked={watch('show_in_shop') ?? false}
                       onCheckedChange={(v) => setValue('show_in_shop', v)}
                       disabled={!canPublish}
+                      className="data-checked:bg-(--color-primary)"
                     />
                   </div>
                   {!canPublish && (
