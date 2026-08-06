@@ -969,9 +969,15 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
   );
 
   const handleEditEmailSave = useCallback(
-    (template: EmailTemplate) => {
+    async (template: EmailTemplate): Promise<void> => {
       if (!editEmailDialog) return;
-      // Mise à jour locale immédiate
+      try {
+        await onMailTemplateAssign?.(template.id);
+      } catch (err) {
+        toast.error(getApiErrorMessage(err, "Impossible d'assigner le template mail."));
+        throw err;
+      }
+      // Mise à jour locale uniquement après succès API
       setNodes((nds) =>
         nds.map((n) =>
           n.id === editEmailDialog.nodeId
@@ -988,10 +994,6 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
         ),
       );
       setEditEmailDialog(null);
-      // Persistance API en fire-and-forget
-      onMailTemplateAssign?.(template.id).catch((err) => {
-        toast.error(getApiErrorMessage(err, "Impossible d'assigner le template mail."));
-      });
     },
     [editEmailDialog, onMailTemplateAssign],
   );
