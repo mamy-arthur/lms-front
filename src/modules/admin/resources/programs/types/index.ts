@@ -43,6 +43,8 @@ export interface LearningPath {
   duration: number | null;
   competencies: LearningPathCompetency[];
   evaluations: LearningPathEvaluation[];
+  /** Mail template attached as the first node — id + name only, null if none attached yet. */
+  mailTemplate?: { id: string; name: string } | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -87,6 +89,7 @@ export function normalizeLearningPath(api: ApiLearningPath): LearningPath {
       position: e.position,
       precedingCompetencyId: e.preceding_competency_id,
     })),
+    mailTemplate: api.mail_template ?? null,
     createdAt: api.created_at,
     updatedAt: api.updated_at,
   };

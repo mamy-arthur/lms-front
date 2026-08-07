@@ -59,6 +59,7 @@ import { SelectModuleDialog, type ModuleItem } from './dialog/SelectModuleDialog
 import { AddEvaluationDialog, type EvaluationConfig } from './dialog/AddEvaluationDialog';
 import { SelectAttestationDialog, type AttestationItem } from './dialog/SelectAttestationDialog';
 import { SelectEmailTemplateDialog, type EmailTemplate } from './dialog/SelectEmailTemplateDialog';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
 import { evaluationsApi } from '@/shared/api/evaluations.api';
 import type { CreateEvaluationPayload } from '@/shared/api/evaluations.api';
@@ -276,11 +277,11 @@ function ProgramStepNode({ id, data, isConnectable }: NodeProps<StepNode>) {
     <div
       className={cn(
         'min-w-55 rounded-md border px-4 py-3 shadow-sm',
-        isConfigured ? 'cursor-default' : 'cursor-pointer',
+        isConfigured && !isEmail ? 'cursor-default' : 'cursor-pointer',
         cfg.border,
         cfg.bg,
       )}
-      onClick={isConfigured ? undefined : () => onEditNode(id)}
+      onClick={isConfigured && !isEmail ? undefined : () => onEditNode(id)}
     >
       <Handle type="target" position={Position.Top} isConnectable={isConnectable} />
 
@@ -445,7 +446,7 @@ const initialEmailNode: StepNode = {
   id: EMAIL_NODE_ID,
   type: 'programStep',
   position: { x: CANVAS_X, y: 0 },
-  data: { stepType: 'email', label: 'Email de démarrage' },
+  data: { stepType: 'email', label: "Choisir l'email de démarrage" },
 };
 
 // ─── ProgramFlow ──────────────────────────────────────────────────────────────
@@ -461,6 +462,9 @@ export type ProgramFlowProps = {
   onEvalCreate?: (data: CreateEvaluationPayload) => Promise<string>;
   onEvalDelete?: (evaluationId: string) => Promise<void>;
   onEvalMove?: (evaluationId: string, position: { x: number; y: number }) => Promise<void>;
+  onMailTemplateAssign?: (mailTemplateId: string) => Promise<void>;
+  onCertificateAssign?: (certificateId: string) => Promise<void>;
+  onCertificateDetach?: () => Promise<void>;
 };
 
 const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function ProgramFlow(
@@ -475,6 +479,9 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
     onEvalCreate,
     onEvalDelete,
     onEvalMove,
+    onMailTemplateAssign,
+    onCertificateAssign,
+    onCertificateDetach,
   },
   ref,
 ) {
@@ -533,30 +540,38 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
   } | null>(null);
 
   // ── Business rule flags ──
-  const { hasFinalEval, hasAttestation, hasModule, hasPartialForLastModule, lastNodeIsEvaluation } =
-    useMemo(() => {
-      const lastNodeId = nodeOrder.at(-1);
-      const lastNodeStepType = nodes.find((n) => n.id === lastNodeId)?.data.stepType;
+  const {
+    hasFinalEval,
+    hasAttestation,
+    hasModule,
+    hasPartialForLastModule,
+    lastNodeIsEvaluation,
+    hasEmailConfigured,
+  } = useMemo(() => {
+    const lastNodeId = nodeOrder.at(-1);
+    const lastNodeStepType = nodes.find((n) => n.id === lastNodeId)?.data.stepType;
 
-      const lastModuleIdx = nodeOrder.reduce<number>(
-        (last, id, idx) =>
-          nodes.find((n) => n.id === id)?.data.stepType === 'module' ? idx : last,
-        -1,
-      );
-      const partialAfterLastModule =
-        lastModuleIdx !== -1 &&
-        nodeOrder.slice(lastModuleIdx + 1).some((id) => {
-          return nodes.find((n) => n.id === id)?.data.stepType === 'evaluation-intermediate';
-        });
-      return {
-        hasModule: nodes.some((n) => n.data.stepType === 'module'),
-        hasFinalEval: nodes.some((n) => n.data.stepType === 'evaluation-final'),
-        hasAttestation: nodes.some((n) => n.data.stepType === 'attestation'),
-        hasPartialForLastModule: partialAfterLastModule,
-        lastNodeIsEvaluation:
-          lastNodeStepType === 'evaluation-intermediate' || lastNodeStepType === 'evaluation-final',
-      };
-    }, [nodes, nodeOrder]);
+    const lastModuleIdx = nodeOrder.reduce<number>(
+      (last, id, idx) => (nodes.find((n) => n.id === id)?.data.stepType === 'module' ? idx : last),
+      -1,
+    );
+    const partialAfterLastModule =
+      lastModuleIdx !== -1 &&
+      nodeOrder.slice(lastModuleIdx + 1).some((id) => {
+        return nodes.find((n) => n.id === id)?.data.stepType === 'evaluation-intermediate';
+      });
+    return {
+      hasModule: nodes.some((n) => n.data.stepType === 'module'),
+      hasFinalEval: nodes.some((n) => n.data.stepType === 'evaluation-final'),
+      hasAttestation: nodes.some((n) => n.data.stepType === 'attestation'),
+      hasPartialForLastModule: partialAfterLastModule,
+      lastNodeIsEvaluation:
+        lastNodeStepType === 'evaluation-intermediate' || lastNodeStepType === 'evaluation-final',
+      hasEmailConfigured: nodes.some(
+        (n) => n.data.stepType === 'email' && !!n.data.emailTemplateId,
+      ),
+    };
+  }, [nodes, nodeOrder]);
 
   // Notify parent whenever the presence of module nodes changes
   useEffect(() => {
@@ -696,6 +711,18 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
         }
       }
 
+      // Detach certificate from the LP when the attestation node is removed
+      if (targetNode?.data.stepType === 'attestation' && targetNode.data.attestationId) {
+        try {
+          if (onCertificateDetach) {
+            await onCertificateDetach();
+          }
+        } catch (err) {
+          toast.error(getApiErrorMessage(err, "Impossible de détacher l'attestation."));
+          return;
+        }
+      }
+
       const order = nodeOrderRef.current;
       const idx = order.indexOf(nodeId);
       const prev = order[idx - 1] ?? null;
@@ -722,7 +749,7 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
 
       setNodeOrder((o) => o.filter((id) => id !== nodeId));
     },
-    [onModuleRemove, onEvalDelete],
+    [onModuleRemove, onEvalDelete, onCertificateDetach],
   );
 
   // ── Open the right edit dialog when a node is clicked ──
@@ -877,13 +904,19 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
 
   // ── Handle attestation selection ──
   const handleAttestationSelect = useCallback(
-    (att: AttestationItem) => {
+    async (att: AttestationItem): Promise<void> => {
+      try {
+        await onCertificateAssign?.(att.id);
+      } catch (err) {
+        toast.error(getApiErrorMessage(err, "Impossible d'assigner l'attestation."));
+        throw err;
+      }
       addStep('attestation', {
         label: att.name,
         attestationId: att.id,
       });
     },
-    [addStep],
+    [addStep, onCertificateAssign],
   );
 
   // ── Edit handlers ──
@@ -943,8 +976,14 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
   );
 
   const handleEditAttestationSave = useCallback(
-    (att: AttestationItem) => {
+    async (att: AttestationItem): Promise<void> => {
       if (!editAttestationDialog) return;
+      try {
+        await onCertificateAssign?.(att.id);
+      } catch (err) {
+        toast.error(getApiErrorMessage(err, "Impossible d'assigner l'attestation."));
+        throw err;
+      }
       setNodes((nds) =>
         nds.map((n) =>
           n.id === editAttestationDialog.nodeId
@@ -954,12 +993,19 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
       );
       setEditAttestationDialog(null);
     },
-    [editAttestationDialog],
+    [editAttestationDialog, onCertificateAssign],
   );
 
   const handleEditEmailSave = useCallback(
-    (template: EmailTemplate) => {
+    async (template: EmailTemplate): Promise<void> => {
       if (!editEmailDialog) return;
+      try {
+        await onMailTemplateAssign?.(template.id);
+      } catch (err) {
+        toast.error(getApiErrorMessage(err, "Impossible d'assigner le template mail."));
+        throw err;
+      }
+      // Mise à jour locale uniquement après succès API
       setNodes((nds) =>
         nds.map((n) =>
           n.id === editEmailDialog.nodeId
@@ -977,7 +1023,7 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
       );
       setEditEmailDialog(null);
     },
-    [editEmailDialog],
+    [editEmailDialog, onMailTemplateAssign],
   );
 
   // ── Used module IDs excluding the one currently being edited ──
@@ -1143,16 +1189,26 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
       <div className="flex h-175 flex-col overflow-hidden">
         {/* ── Toolbar ── */}
         <div className="flex flex-wrap items-center gap-2 px-4 py-3">
-          <Button
-            variant="outline"
-            disabled={hasFinalEval || hasAttestation}
-            onClick={() => setModuleDialogOpen(true)}
-            className="gap-1.5"
-          >
-            <BookOpen className="size-3.5" />
-            Module
-          </Button>
-
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                disabled={hasFinalEval || hasAttestation}
+                onClick={() => {
+                  if (hasEmailConfigured) setModuleDialogOpen(true);
+                }}
+                className="gap-1.5"
+              >
+                <BookOpen className="size-3.5" />
+                Module
+              </Button>
+            </TooltipTrigger>
+            {!hasEmailConfigured && (
+              <TooltipContent side="bottom">
+                Configurez d&apos;abord l&apos;email de démarrage
+              </TooltipContent>
+            )}
+          </Tooltip>
           <Button
             variant="outline"
             disabled={
