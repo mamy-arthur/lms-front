@@ -453,9 +453,17 @@ export type ProgramFlowProps = {
   onEvalCreate?: (data: CreateEvaluationPayload) => Promise<string>;
   onEvalDelete?: (evaluationId: string) => Promise<void>;
   onEvalMove?: (evaluationId: string, position: { x: number; y: number }) => Promise<void>;
-  onMailTemplateAssign?: (mailTemplateId: string) => Promise<void>;
-  onCertificateAssign?: (certificateId: string) => Promise<void>;
+  onMailTemplateAssign?: (
+    mailTemplateId: string,
+    position: { x: number; y: number },
+  ) => Promise<void>;
+  onCertificateAssign?: (
+    certificateId: string,
+    position: { x: number; y: number },
+  ) => Promise<void>;
   onCertificateDetach?: () => Promise<void>;
+  onMailTemplateMove?: (position: { x: number; y: number }) => Promise<void>;
+  onCertificateMove?: (position: { x: number; y: number }) => Promise<void>;
   learningPathId?: string;
   onProgressionRuleCreate?: (
     learningPathId: string,
@@ -484,6 +492,8 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
     onMailTemplateAssign,
     onCertificateAssign,
     onCertificateDetach,
+    onMailTemplateMove,
+    onCertificateMove,
     learningPathId,
     onProgressionRuleCreate,
     onProgressionRuleUpdate,
@@ -1037,8 +1047,11 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
   // ── Handle attestation selection ──
   const handleAttestationSelect = useCallback(
     async (att: AttestationItem): Promise<void> => {
+      const lastId = nodeOrderRef.current.at(-1) ?? null;
+      const lastNode = lastId ? nodesRef.current.find((n) => n.id === lastId) : null;
+      const position = { x: CANVAS_X, y: lastNode ? lastNode.position.y + NODE_GAP : 0 };
       try {
-        await onCertificateAssign?.(att.id);
+        await onCertificateAssign?.(att.id, position);
       } catch (err) {
         toast.error(getApiErrorMessage(err, "Impossible d'assigner l'attestation."));
         throw err;
@@ -1110,8 +1123,12 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
   const handleEditAttestationSave = useCallback(
     async (att: AttestationItem): Promise<void> => {
       if (!editAttestationDialog) return;
+      const node = nodesRef.current.find((n) => n.id === editAttestationDialog.nodeId);
+      const position = node
+        ? { x: Math.round(node.position.x), y: Math.round(node.position.y) }
+        : { x: CANVAS_X, y: 0 };
       try {
-        await onCertificateAssign?.(att.id);
+        await onCertificateAssign?.(att.id, position);
       } catch (err) {
         toast.error(getApiErrorMessage(err, "Impossible d'assigner l'attestation."));
         throw err;
@@ -1131,8 +1148,12 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
   const handleEditEmailSave = useCallback(
     async (template: EmailTemplate): Promise<void> => {
       if (!editEmailDialog) return;
+      const emailNode = nodesRef.current.find((n) => n.id === editEmailDialog.nodeId);
+      const position = emailNode
+        ? { x: Math.round(emailNode.position.x), y: Math.round(emailNode.position.y) }
+        : { x: CANVAS_X, y: 0 };
       try {
-        await onMailTemplateAssign?.(template.id);
+        await onMailTemplateAssign?.(template.id, position);
       } catch (err) {
         toast.error(getApiErrorMessage(err, "Impossible d'assigner le template mail."));
         throw err;
@@ -1178,9 +1199,13 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
         onEvalMove
       ) {
         onEvalMove(evaluationId, pos).catch(() => {});
+      } else if (stepType === 'email' && onMailTemplateMove) {
+        onMailTemplateMove(pos).catch(() => {});
+      } else if (stepType === 'attestation' && onCertificateMove) {
+        onCertificateMove(pos).catch(() => {});
       }
     },
-    [onModuleMove, onEvalMove],
+    [onModuleMove, onEvalMove, onMailTemplateMove, onCertificateMove],
   );
 
   // ── Build the serializable payload ──

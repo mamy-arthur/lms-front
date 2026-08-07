@@ -64,9 +64,19 @@ export interface ApiLearningPath {
   /** Only present in detail endpoint responses — absent from list/shop endpoints */
   evaluations?: ApiLearningPathEvaluation[];
   /** Mail template attached as the first node of the LP — id + name only, null if none attached yet. Present in both list and detail responses. */
-  mail_template?: { id: string; name: string } | null;
+  mail_template?: {
+    id: string;
+    name: string;
+    location_x: number | null;
+    location_y: number | null;
+  } | null;
   /** Certificate attached to the LP — id + name only, null if none attached yet. */
-  certificate?: { id: string; name: string } | null;
+  certificate?: {
+    id: string;
+    name: string;
+    location_x: number | null;
+    location_y: number | null;
+  } | null;
   created_at: string;
   updated_at: string;
 }

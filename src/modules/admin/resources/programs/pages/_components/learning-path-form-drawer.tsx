@@ -39,6 +39,8 @@ import { useLinkCompetencyToLearningPath } from '../../hooks/useLinkCompetencyTo
 import { useUnlinkCompetencyFromLearningPath } from '../../hooks/useUnlinkCompetencyFromLearningPath';
 import { useUpdateCompetencyLocation } from '../../hooks/useUpdateCompetencyLocation';
 import { useUpdateEvaluationLocation } from '../../hooks/useUpdateEvaluationLocation';
+import { useUpdateMailTemplateLocation } from '../../hooks/useUpdateMailTemplateLocation';
+import { useUpdateCertificateLocation } from '../../hooks/useUpdateCertificateLocation';
 import { useModules } from '@/modules/admin/resources/modules/hooks/useModules';
 import { useLearningPathQuery } from '../../hooks/useLearningPathQuery';
 import { useEvaluationsQuery } from '../../hooks/useEvaluationsQuery';
@@ -212,6 +214,8 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
   const deactivateProgressionRule = useDeactivateProgressionRule();
   const updateCompetencyLocation = useUpdateCompetencyLocation();
   const updateEvaluationLocation = useUpdateEvaluationLocation();
+  const updateMailTemplateLocation = useUpdateMailTemplateLocation();
+  const updateCertificateLocation = useUpdateCertificateLocation();
 
   // Pre-fetch all modules so competency names are ready when the flow renders
   const { data: modulesResult, isLoading: isLoadingModules } = useModules();
@@ -238,7 +242,10 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
     const emailNode: StepNode = {
       id: emailNodeId,
       type: 'programStep',
-      position: { x: CANVAS_X, y: 0 },
+      position: {
+        x: learningPath.mailTemplate?.locationX ?? CANVAS_X,
+        y: learningPath.mailTemplate?.locationY ?? 0,
+      },
       data: {
         stepType: 'email',
         label: learningPath.mailTemplate?.name ?? "Choisir l'email",
@@ -332,7 +339,10 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
       allNodes.push({
         id: 'attestation-end',
         type: 'programStep',
-        position: { x: CANVAS_X, y: currentY },
+        position: {
+          x: learningPath.certificate.locationX ?? CANVAS_X,
+          y: learningPath.certificate.locationY ?? currentY,
+        },
         data: {
           stepType: 'attestation',
           label: learningPath.certificate.name,
@@ -460,7 +470,7 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
 
   // Assign mail template — auto-creates the LP if it doesn't exist yet
   const handleMailTemplateAssign = useCallback(
-    async (mailTemplateId: string) => {
+    async (mailTemplateId: string, position: { x: number; y: number }) => {
       let lpId = currentLpId;
       if (!lpId) {
         const name = getValues('name')?.trim() || 'Nouvelle formation';
@@ -479,16 +489,26 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
         lpId = result.data.id;
         setLazyLpId(lpId);
       }
-      await assignMailTemplate.mutateAsync({ learningPathId: lpId, mailTemplateId });
+      await assignMailTemplate.mutateAsync({
+        learningPathId: lpId,
+        mailTemplateId,
+        locationX: position.x,
+        locationY: position.y,
+      });
     },
     [currentLpId, getValues, setValue, createMutation, assignMailTemplate],
   );
 
   // Assign certificate — LP must already exist (requires mail template first)
   const handleCertificateAssign = useCallback(
-    async (certificateId: string) => {
+    async (certificateId: string, position: { x: number; y: number }) => {
       const lpId = await getOrCreateLpId();
-      await assignCertificate.mutateAsync({ learningPathId: lpId, certificateId });
+      await assignCertificate.mutateAsync({
+        learningPathId: lpId,
+        certificateId,
+        locationX: position.x,
+        locationY: position.y,
+      });
     },
     [getOrCreateLpId, assignCertificate],
   );
@@ -598,6 +618,32 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
       });
     },
     [currentLpId, updateEvaluationLocation],
+  );
+
+  // Update mail template node canvas position when dragged
+  const handleMailTemplateMove = useCallback(
+    async (position: { x: number; y: number }) => {
+      if (!currentLpId) return;
+      await updateMailTemplateLocation.mutateAsync({
+        learningPathId: currentLpId,
+        locationX: position.x,
+        locationY: position.y,
+      });
+    },
+    [currentLpId, updateMailTemplateLocation],
+  );
+
+  // Update certificate node canvas position when dragged
+  const handleCertificateMove = useCallback(
+    async (position: { x: number; y: number }) => {
+      if (!currentLpId) return;
+      await updateCertificateLocation.mutateAsync({
+        learningPathId: currentLpId,
+        locationX: position.x,
+        locationY: position.y,
+      });
+    },
+    [currentLpId, updateCertificateLocation],
   );
 
   const watchedPrice = watch('price');
@@ -806,6 +852,8 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
                 onMailTemplateAssign={handleMailTemplateAssign}
                 onCertificateAssign={handleCertificateAssign}
                 onCertificateDetach={handleCertificateDetach}
+                onMailTemplateMove={handleMailTemplateMove}
+                onCertificateMove={handleCertificateMove}
                 learningPathId={currentLpId ?? undefined}
                 onProgressionRuleCreate={handleProgressionRuleCreate}
                 onProgressionRuleUpdate={handleProgressionRuleUpdate}
