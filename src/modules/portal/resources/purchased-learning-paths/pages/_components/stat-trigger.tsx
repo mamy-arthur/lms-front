@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { ChevronRight } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
+import { ChevronRight } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 interface PurchasedLearningPathStatTriggerProps {
   label: string;
@@ -23,9 +23,9 @@ export function PurchasedLearningPathStatTrigger({
         onClick();
       }}
       className={cn(
-        'group inline-flex w-full items-center justify-between rounded-md border border-transparent bg-muted/60 px-2 py-1 text-xs transition-colors',
-        'hover:border-primary/25 hover:bg-primary/10 hover:text-(--color-primary)',
-        'focus-visible:ring-ring/50 cursor-pointer focus-visible:outline-none focus-visible:ring-2',
+        "group inline-flex w-full items-center justify-between rounded-md border border-transparent bg-muted/60 px-2 py-1 text-xs transition-colors",
+        "hover:border-primary/25 hover:bg-primary/10 hover:text-(--color-primary)",
+        "focus-visible:ring-ring/50 cursor-pointer focus-visible:outline-none focus-visible:ring-2",
       )}
     >
       <span className="truncate text-muted-foreground group-hover:text-(--color-primary)">

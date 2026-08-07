@@ -1,1 +1,1 @@
-export { PurchasedLearningPathList } from './pages/PurchasedLearningPathList';
+export { PurchasedLearningPathList } from "./pages/PurchasedLearningPathList";

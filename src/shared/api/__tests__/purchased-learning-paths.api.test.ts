@@ -28,7 +28,13 @@ const MOCK_PURCHASED: ApiPurchasedLearningPath = {
   id: 'aa0e8400-e29b-41d4-a716-446655440090',
   tenant_id: '660e8400-e29b-41d4-a716-446655440000',
   user_id: '660e8400-e29b-41d4-a716-446655440010',
-  purchased: 5,
+  purchased: 12,
+  used: 5,
+  credits_available: 7,
+  enrollments_not_started_count: 3,
+  enrollments_in_progress_count: 2,
+  enrollments_completed_count: 0,
+  enrollments_expired_count: 0,
   learning_path: {
     id: '660e8400-e29b-41d4-a716-446655440060',
     name: 'Devenir chef de projet digital',
@@ -78,7 +84,7 @@ describe('purchasedLearningPathsApi', () => {
 
       expect(result).toEqual(MOCK_RESPONSE);
       expect(result.data).toHaveLength(1);
-      expect(result.data[0].purchased).toBe(5);
+      expect(result.data[0].purchased).toBe(12);
       expect(result.meta).toEqual({ total: 42, page: 1, per_page: 20 });
     });
 

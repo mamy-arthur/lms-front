@@ -1,6 +1,11 @@
-import { purchasedLearningPathsApi } from '@/shared/api/purchased-learning-paths.api';
-import { mapToPurchasedLearningPath } from '../lib/mappers';
-import type { PurchasedLearningPathQueryParams, PurchasedLearningPathsQueryResult } from '../types';
+import { purchasedLearningPathsApi } from "@/shared/api/purchased-learning-paths.api";
+import type { ApiEnrollment } from "@/shared/types/enrollment.types";
+import type { PurchasedLearningPathEnrollmentsParams } from "@/shared/types/purchased-learning-path.types";
+import { mapToPurchasedLearningPath } from "../lib/mappers";
+import type {
+  PurchasedLearningPathQueryParams,
+  PurchasedLearningPathsQueryResult,
+} from "../types";
 
 export const purchasedLearningPathsManagementApi = {
   async list(
@@ -19,5 +24,16 @@ export const purchasedLearningPathsManagementApi = {
         perPage: response.meta.per_page,
       },
     };
+  },
+
+  async listEnrollments(
+    id: string,
+    params: PurchasedLearningPathEnrollmentsParams = {},
+  ): Promise<ApiEnrollment[]> {
+    const response = await purchasedLearningPathsApi.listEnrollments(
+      id,
+      params,
+    );
+    return response.data;
   },
 } as const;

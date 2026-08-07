@@ -1,7 +1,11 @@
-'use client';
+"use client";
 
-import { useEffect, useMemo, useState } from 'react';
-import { Loader2, Plus, Save, UserPlus } from 'lucide-react';
+import { Loader2, Plus, Save, UserPlus } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Sheet,
   SheetContent,
@@ -9,43 +13,53 @@ import {
   SheetFooter,
   SheetHeader,
   SheetTitle,
-} from '@/components/ui/sheet';
-import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Badge } from '@/components/ui/badge';
-import { toast } from 'sonner';
-import { getApiErrorMessage } from '@/shared/lib/errors';
+} from "@/components/ui/sheet";
+import { getApiErrorMessage } from "@/shared/lib/errors";
 import type {
-  CreateAssignmentPayload,
-  CreateAssignmentResponse,
-} from '@/shared/types/assignment.types';
-import type { AssignableGroup, PurchasedLearningPathRow, TenantAssignableUser } from '../../types';
-import { AddUsersDialog } from './add-users-dialog';
-import { CreateGroupDialog } from './create-group-dialog';
-import { UserCard, GroupCard } from './cards';
+  CreateEnrollmentPayload,
+  CreateEnrollmentResponse,
+} from "@/shared/types/enrollment.types";
+import { usePurchasedLearningPathEnrollmentsQuery } from "../../hooks/usePurchasedLearningPathEnrollmentsQuery";
+import type {
+  AssignableGroup,
+  PurchasedLearningPathRow,
+  TenantAssignableUser,
+} from "../../types";
+import { AddUsersDialog } from "./add-users-dialog";
+import { GroupCard, UserCard } from "./cards";
+import { CreateGroupDialog } from "./create-group-dialog";
 
-interface PurchasedLearningPathAssignmentDrawerProps {
+interface PurchasedLearningPathEnrollmentDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   purchasedLearningPath: PurchasedLearningPathRow | null;
   users: TenantAssignableUser[];
   groups: AssignableGroup[];
-  onCreateGroup: (name: string, traineeIds: string[]) => Promise<AssignableGroup>;
-  onEditGroup: (group: AssignableGroup, name: string, traineeIds: string[]) => Promise<void>;
+  onCreateGroup: (
+    name: string,
+    traineeIds: string[],
+  ) => Promise<AssignableGroup>;
+  onEditGroup: (
+    group: AssignableGroup,
+    name: string,
+    traineeIds: string[],
+  ) => Promise<void>;
   onDeleteGroup: (groupId: string) => Promise<void>;
-  onAssign: (payload: CreateAssignmentPayload) => Promise<CreateAssignmentResponse>;
+  onAssign: (
+    payload: CreateEnrollmentPayload,
+  ) => Promise<CreateEnrollmentResponse>;
   isCreatingGroup?: boolean;
   isUpdatingGroup?: boolean;
   isDeletingGroup?: boolean;
   isAssigning?: boolean;
 }
 
-export function PurchasedLearningPathAssignmentDrawer({
+export function PurchasedLearningPathEnrollmentDrawer({
   open,
   onOpenChange,
   purchasedLearningPath,
-  users,
-  groups,
+  users = [],
+  groups = [],
   onCreateGroup,
   onEditGroup,
   onDeleteGroup,
@@ -54,15 +68,25 @@ export function PurchasedLearningPathAssignmentDrawer({
   isUpdatingGroup = false,
   isDeletingGroup = false,
   isAssigning = false,
-}: PurchasedLearningPathAssignmentDrawerProps) {
+}: PurchasedLearningPathEnrollmentDrawerProps) {
   const [pendingAddIds, setPendingAddIds] = useState<Set<string>>(new Set());
-  const [selectedGroupIds, setSelectedGroupIds] = useState<Set<string>>(new Set());
-  const [editingGroup, setEditingGroup] = useState<AssignableGroup | null>(null);
+  const [selectedGroupIds, setSelectedGroupIds] = useState<Set<string>>(
+    new Set(),
+  );
+  const [editingGroup, setEditingGroup] = useState<AssignableGroup | null>(
+    null,
+  );
 
   const [showAddUsers, setShowAddUsers] = useState(false);
   const [showCreateGroup, setShowCreateGroup] = useState(false);
 
-  const isBusy = isCreatingGroup || isUpdatingGroup || isDeletingGroup || isAssigning;
+  const isBusy =
+    isCreatingGroup || isUpdatingGroup || isDeletingGroup || isAssigning;
+
+  const { enrollments: enrolledUsers } =
+    usePurchasedLearningPathEnrollmentsQuery(
+      open ? purchasedLearningPath?.id : null,
+    );
 
   useEffect(() => {
     if (!purchasedLearningPath || !open) return;
@@ -74,12 +98,15 @@ export function PurchasedLearningPathAssignmentDrawer({
   }, [purchasedLearningPath, open]);
 
   const enrolledUserIds = useMemo(
-    () => new Set(purchasedLearningPath?.enrollments.map((e) => e.userId) ?? []),
-    [purchasedLearningPath],
+    () => new Set(enrolledUsers.map((e) => e.userId)),
+    [enrolledUsers],
   );
 
   const availableToAdd = useMemo(
-    () => users.filter((u) => !enrolledUserIds.has(u.id) && !pendingAddIds.has(u.id)),
+    () =>
+      users.filter(
+        (u) => !enrolledUserIds.has(u.id) && !pendingAddIds.has(u.id),
+      ),
     [users, enrolledUserIds, pendingAddIds],
   );
 
@@ -96,7 +123,7 @@ export function PurchasedLearningPathAssignmentDrawer({
       setShowCreateGroup(false);
       toast.success(`Groupe "${group.name}" créé.`);
     } catch (err) {
-      toast.error(getApiErrorMessage(err, 'Impossible de créer le groupe.'));
+      toast.error(getApiErrorMessage(err, "Impossible de créer le groupe."));
     }
   };
 
@@ -107,7 +134,7 @@ export function PurchasedLearningPathAssignmentDrawer({
       setEditingGroup(null);
       toast.success(`Groupe "${name}" mis à jour.`);
     } catch (err) {
-      toast.error(getApiErrorMessage(err, 'Impossible de modifier le groupe.'));
+      toast.error(getApiErrorMessage(err, "Impossible de modifier le groupe."));
     }
   };
 
@@ -119,9 +146,11 @@ export function PurchasedLearningPathAssignmentDrawer({
         next.delete(groupId);
         return next;
       });
-      toast.success('Groupe supprimé.');
+      toast.success("Groupe supprimé.");
     } catch (err) {
-      toast.error(getApiErrorMessage(err, 'Impossible de supprimer le groupe.'));
+      toast.error(
+        getApiErrorMessage(err, "Impossible de supprimer le groupe."),
+      );
     }
   };
 
@@ -143,27 +172,29 @@ export function PurchasedLearningPathAssignmentDrawer({
     const groupIds = [...selectedGroupIds];
 
     if (traineeIds.length === 0 && groupIds.length === 0) {
-      toast.info('Aucune modification à enregistrer.');
+      toast.info("Aucune modification à enregistrer.");
       return;
     }
 
-    const payload: CreateAssignmentPayload = {
+    const payload: CreateEnrollmentPayload = {
       learning_path_id: learningPathId,
-      ...(traineeIds.length > 0 ? { trainee_ids: traineeIds } : {}),
+      ...(traineeIds.length > 0 ? { learner_ids: traineeIds } : {}),
       ...(groupIds.length > 0 ? { group_ids: groupIds } : {}),
     };
 
     try {
       const response = await onAssign(payload);
 
-      if (response.meta.assigned_count > 0) {
+      if (response.meta.enrolled_count > 0) {
         toast.success(response.message);
       } else {
         toast.info(response.message);
       }
       onOpenChange(false);
     } catch (err) {
-      toast.error(getApiErrorMessage(err, "Impossible d'enregistrer les assignations."));
+      toast.error(
+        getApiErrorMessage(err, "Impossible d'enregistrer les inscriptions."),
+      );
     }
   };
 
@@ -200,9 +231,10 @@ export function PurchasedLearningPathAssignmentDrawer({
           showCloseButton={true}
         >
           <SheetHeader className="border-b px-5 py-4">
-            <SheetTitle>Assigner — {purchasedLearningPath.name}</SheetTitle>
+            <SheetTitle>Inscrire — {purchasedLearningPath.name}</SheetTitle>
             <SheetDescription>
-              Configurez les utilisateurs et les groupes, puis validez en une seule action.
+              Sélectionnez les stagiaires à inscrire et les groupes, puis
+              validez en une seule action.
             </SheetDescription>
           </SheetHeader>
 
@@ -216,7 +248,7 @@ export function PurchasedLearningPathAssignmentDrawer({
                       variant="secondary"
                       className="ml-2 bg-(--color-primary)/20 text-(--color-primary)"
                     >
-                      {(purchasedLearningPath.enrollments.length ?? 0) + pendingAddIds.size}
+                      {enrolledUsers.length + pendingAddIds.size}
                     </Badge>
                   </h3>
                   <Button
@@ -232,9 +264,9 @@ export function PurchasedLearningPathAssignmentDrawer({
                   </Button>
                 </div>
 
-                {purchasedLearningPath.enrollments.length > 0 || pendingAddIds.size > 0 ? (
+                {enrolledUsers.length > 0 || pendingAddIds.size > 0 ? (
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                    {purchasedLearningPath.enrollments.map((enrollment) => (
+                    {enrolledUsers.map((enrollment) => (
                       <UserCard
                         key={enrollment.userId}
                         id={enrollment.userId}
@@ -263,7 +295,7 @@ export function PurchasedLearningPathAssignmentDrawer({
                   </div>
                 ) : (
                   <p className="text-xs italic text-muted-foreground">
-                    Aucun utilisateur assigné pour l'instant.
+                    Aucun stagiaire inscrit pour l'instant.
                   </p>
                 )}
               </section>
@@ -293,7 +325,8 @@ export function PurchasedLearningPathAssignmentDrawer({
 
                 {groups.length === 0 ? (
                   <p className="text-xs italic text-muted-foreground">
-                    Aucun groupe disponible. Créez-en un via le bouton ci-dessus.
+                    Aucun groupe disponible. Créez-en un via le bouton
+                    ci-dessus.
                   </p>
                 ) : (
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">

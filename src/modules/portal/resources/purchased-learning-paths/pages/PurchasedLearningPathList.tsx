@@ -1,60 +1,44 @@
-'use client';
+"use client";
 
-import { useMemo, useState } from 'react';
-import { RoleGuard } from '@/modules/auth/guards/RoleGuard';
-import { ACCESS } from '@/shared/auth/permissions';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { usePurchasedLearningPathsQuery } from '../hooks/usePurchasedLearningPathsQuery';
 import {
-  filterEnrollmentsByStat,
-  usePurchasedLearningPathsController,
-} from '../hooks/usePurchasedLearningPathsController';
-import type { PurchasedLearningPathRow, PurchasedLearningPathStatKey } from '../types';
-import { PurchasedLearningPathsTable } from './_components/paths-table';
-import { PurchasedLearningPathStatsUsersDrawer } from './_components/stats-users-drawer';
-import { PurchasedLearningPathAssignmentDrawer } from './_components/assignment-drawer';
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { RoleGuard } from "@/modules/auth/guards/RoleGuard";
+import { ACCESS } from "@/shared/auth/permissions";
+import { usePurchasedLearningPathList } from "../hooks/usePurchasedLearningPathList";
+import { PurchasedLearningPathEnrollmentDrawer } from "./_components/enrollment-drawer";
+import { PurchasedLearningPathsTable } from "./_components/paths-table";
+import { PurchasedLearningPathStatsUsersDrawer } from "./_components/stats-users-drawer";
 
 export function PurchasedLearningPathList() {
-  /** Index 0-based pour DataTable ; l’API attend page 1-based. */
-  const [page, setPage] = useState(0);
-  const [pageSize, setPageSize] = useState(25);
-
-  const [statsDrawer, setStatsDrawer] = useState<{
-    purchasedLearningPath: PurchasedLearningPathRow | null;
-    stat: PurchasedLearningPathStatKey;
-  }>({
-    purchasedLearningPath: null,
-    stat: 'cumulative',
-  });
-
-  const [assignmentTarget, setAssignmentTarget] = useState<PurchasedLearningPathRow | null>(null);
-
-  const { data, isLoading } = usePurchasedLearningPathsQuery({
-    page: page + 1,
-    perPage: pageSize,
-  });
-
-  const controller = usePurchasedLearningPathsController({
-    purchasedLearningPaths: data?.purchasedLearningPaths ?? [],
-    users: data?.users ?? [],
-    groups: data?.groups ?? [],
-  });
-
-  const total = data?.meta.total ?? 0;
-
-  const statsUsers = useMemo(() => {
-    if (!statsDrawer.purchasedLearningPath) {
-      return [];
-    }
-
-    return filterEnrollmentsByStat(statsDrawer.purchasedLearningPath, statsDrawer.stat);
-  }, [statsDrawer]);
-
-  const handlePageSizeChange = (newPageSize: number) => {
-    setPageSize(newPageSize);
-    setPage(0);
-  };
+  const {
+    page,
+    pageSize,
+    total,
+    isLoading,
+    sortedRows,
+    statsDrawer,
+    assignmentTargetRow,
+    trainees,
+    groups,
+    setPage,
+    setStatsDrawer,
+    setAssignmentTarget,
+    handlePageSizeChange,
+    handleCreateGroup,
+    handleEditGroup,
+    handleDeleteGroup,
+    handleAssign,
+    isCreatingGroup,
+    isUpdatingGroup,
+    isDeletingGroup,
+    isAssigning,
+  } = usePurchasedLearningPathList();
 
   return (
     <RoleGuard
@@ -77,7 +61,8 @@ export function PurchasedLearningPathList() {
               Gestion des parcours de formations
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Gérez vos parcours de formation et leur affectation aux utilisateurs.
+              Gérez vos parcours de formation et leur affectation aux
+              utilisateurs.
             </p>
           </div>
         </header>
@@ -92,7 +77,7 @@ export function PurchasedLearningPathList() {
           </Card>
         ) : (
           <PurchasedLearningPathsTable
-            purchasedLearningPaths={controller.purchasedLearningPathRows}
+            purchasedLearningPaths={sortedRows}
             page={page}
             pageSize={pageSize}
             total={total}
@@ -101,7 +86,9 @@ export function PurchasedLearningPathList() {
             onStatClick={(purchasedLearningPath, stat) =>
               setStatsDrawer({ purchasedLearningPath, stat })
             }
-            onAssign={(purchasedLearningPath) => setAssignmentTarget(purchasedLearningPath)}
+            onAssign={(purchasedLearningPath) =>
+              setAssignmentTarget(purchasedLearningPath)
+            }
           />
         )}
       </div>
@@ -110,37 +97,34 @@ export function PurchasedLearningPathList() {
         open={Boolean(statsDrawer.purchasedLearningPath)}
         onOpenChange={(open) => {
           if (!open) {
-            setStatsDrawer({ purchasedLearningPath: null, stat: 'cumulative' });
+            setStatsDrawer({ purchasedLearningPath: null, stat: "cumulative" });
           }
         }}
-        purchasedLearningPathName={statsDrawer.purchasedLearningPath?.name ?? ''}
+        purchasedLearningPathId={statsDrawer.purchasedLearningPath?.id ?? null}
+        purchasedLearningPathName={
+          statsDrawer.purchasedLearningPath?.name ?? ""
+        }
         stat={statsDrawer.stat}
-        users={statsUsers}
       />
 
-      <PurchasedLearningPathAssignmentDrawer
-        open={Boolean(assignmentTarget)}
+      <PurchasedLearningPathEnrollmentDrawer
+        open={Boolean(assignmentTargetRow)}
         onOpenChange={(open) => {
           if (!open) {
             setAssignmentTarget(null);
           }
         }}
-        purchasedLearningPath={assignmentTarget}
-        users={controller.users}
-        groups={controller.groups}
-        onAssignUsers={(purchasedLearningPathId, userIds) =>
-          controller.assignToUsers({ purchasedLearningPathId, userIds })
-        }
-        onAssignGroup={(purchasedLearningPathId, groupId) =>
-          controller.assignToGroup({ purchasedLearningPathId, groupId })
-        }
-        onCreateGroup={(nextTenantId, name, userIds) =>
-          controller.createGroup({ tenantId: nextTenantId, name, userIds })
-        }
-        onEditGroup={(groupId, name, userIds) =>
-          controller.updateGroup({ id: groupId, name, userIds })
-        }
-        onDeleteGroup={controller.deleteGroup}
+        purchasedLearningPath={assignmentTargetRow}
+        users={trainees}
+        groups={groups}
+        onCreateGroup={handleCreateGroup}
+        onEditGroup={handleEditGroup}
+        onDeleteGroup={handleDeleteGroup}
+        onAssign={handleAssign}
+        isCreatingGroup={isCreatingGroup}
+        isUpdatingGroup={isUpdatingGroup}
+        isDeletingGroup={isDeletingGroup}
+        isAssigning={isAssigning}
       />
     </RoleGuard>
   );
