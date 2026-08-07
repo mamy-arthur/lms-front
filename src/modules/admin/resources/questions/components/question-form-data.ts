@@ -13,75 +13,16 @@ const pairSchema = z.object({
   right: z.string().min(1, 'Droite requise'),
 });
 
-export const formSchema = z
-  .object({
-    type: z.string().min(1, 'Type requis'),
-    competencyId: z.string().min(1, 'Module requis'),
-    question: z.string().min(1, 'Question requise'),
-    commentIfCorrect: z.string().nullable().optional(),
-    commentIfIncorrect: z.string().nullable().optional(),
-    correctAnswer: z.boolean(),
-    options: z.array(optionSchema),
-    pairs: z.array(pairSchema),
-  })
-  .superRefine((data, ctx) => {
-    if (data.type === 'single_choice' || data.type === 'multiple_choice') {
-      if (data.options.length < 2) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'Ajoutez au moins 2 choix',
-          path: ['options'],
-        });
-      }
-    }
-    if (data.type === 'single_choice') {
-      const correctCount = data.options.filter((o) => o.isCorrect).length;
-      if (correctCount !== 1) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'Exactement un choix doit être correct',
-          path: ['options'],
-        });
-      }
-    }
-    if (data.type === 'multiple_choice') {
-      const correctCount = data.options.filter((o) => o.isCorrect).length;
-      if (correctCount < 1) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'Au moins un choix doit être correct',
-          path: ['options'],
-        });
-      }
-
-      data.options.forEach((o, i) => {
-        const w = o.weightPercentage ?? 0;
-        if (o.isCorrect && (w < 0 || w > 100)) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: 'Le poids doit être compris entre 0 et 100',
-            path: ['options', i, 'weightPercentage'],
-          });
-        }
-        if (!o.isCorrect && (w < -100 || w > 0)) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: 'Le poids doit être compris entre -100 et 0',
-            path: ['options', i, 'weightPercentage'],
-          });
-        }
-      });
-    }
-    if (data.type === 'matching') {
-      if (data.pairs.length < 2) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'Ajoutez au moins 2 paires',
-          path: ['pairs'],
-        });
-      }
-    }
-  });
+export const formSchema = z.object({
+  type: z.string().min(1, 'Type requis'),
+  competencyId: z.string().min(1, 'Module requis'),
+  question: z.string().min(1, 'Question requise'),
+  commentIfCorrect: z.string().nullable().optional(),
+  commentIfIncorrect: z.string().nullable().optional(),
+  correctAnswer: z.boolean(),
+  options: z.array(optionSchema),
+  pairs: z.array(pairSchema),
+});
 
 export type FormValues = z.infer<typeof formSchema>;
 

@@ -151,6 +151,28 @@ function QuestionFormDrawerBase({
     onClose();
   }, [onClose]);
 
+  // Manual array-level validation — runs after Zod validates the scalar fields.
+  // Errors are displayed via local state in the field components (useFormState + useState).
+  const handleFormSubmit = modal.form.handleSubmit((rawValues: FieldValues) => {
+    const values = rawValues as FormValues;
+    let hasError = false;
+
+    if (values.type === 'single_choice' || values.type === 'multiple_choice') {
+      if (values.options.length < 2) {
+        hasError = true;
+      } else {
+        const correctCount = values.options.filter((o) => o.isCorrect).length;
+        if (values.type === 'single_choice' && correctCount !== 1) hasError = true;
+        else if (values.type === 'multiple_choice' && correctCount < 1) hasError = true;
+      }
+    }
+
+    if (values.type === 'matching' && values.pairs.length < 2) hasError = true;
+
+    if (hasError) return;
+    modal.onSubmit(rawValues);
+  });
+
   const selectedTypeLabel = QUESTION_TYPE_OPTIONS.find((o) => o.value === selectedType)?.label;
 
   const drawerTitle = isDuplicate ? 'Dupliquer la question' : (selectedTypeLabel ?? 'Question');
@@ -187,11 +209,7 @@ function QuestionFormDrawerBase({
             </div>
           </SheetHeader>
           <Field {...modal.form}>
-            <form
-              onSubmit={modal.form.handleSubmit(modal.onSubmit)}
-              className="flex min-h-0 flex-1 flex-col"
-              noValidate
-            >
+            <form onSubmit={handleFormSubmit} className="flex min-h-0 flex-1 flex-col" noValidate>
               {/* Scrollable content */}
               <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
                 {modal.mutation.isError && (

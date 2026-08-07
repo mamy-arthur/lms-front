@@ -1,9 +1,9 @@
 'use client';
 
 import { Check, Plus, Trash2 } from 'lucide-react';
-import { useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
-import { useFieldArray, useWatch } from 'react-hook-form';
+import { useFieldArray, useFormState, useWatch } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
 import { FieldContent, FieldError, FieldGroup, FieldLabel, FieldRoot } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
@@ -31,6 +31,32 @@ export function QuestionFormFieldsChoices({ form, selectedType }: ChoicesFieldsP
 
   const isMultipleChoice = selectedType === 'multiple_choice';
   const totalChoices = optionFields.length;
+
+  // useFormState creates a proper subscription in this child component, so
+  // submitCount is reactive (unlike form.formState.submitCount which is not).
+  const { submitCount } = useFormState({ control: form.control });
+  const [optionsError, setOptionsError] = useState<string | null>(null);
+
+  // Recompute the array-level error whenever options or submitCount change.
+  useEffect(() => {
+    if (submitCount === 0) {
+      setOptionsError(null);
+      return;
+    }
+
+    const options = watchedOptions ?? [];
+    const correctCount = options.filter((o) => o?.isCorrect).length;
+
+    if (options.length < 2) {
+      setOptionsError('Ajoutez au moins 2 choix');
+    } else if (selectedType === 'single_choice' && correctCount !== 1) {
+      setOptionsError('Exactement 1 choix doit être correct');
+    } else if (selectedType === 'multiple_choice' && correctCount < 1) {
+      setOptionsError('Au moins un choix doit être correct');
+    } else {
+      setOptionsError(null);
+    }
+  }, [watchedOptions, submitCount, selectedType]);
   const correctCount = watchedOptions?.filter((o) => o?.isCorrect).length ?? 0;
 
   const positiveUsed =
@@ -256,9 +282,9 @@ export function QuestionFormFieldsChoices({ form, selectedType }: ChoicesFieldsP
           </div>
         )}
 
-        {form.formState.errors.options && (
+        {optionsError && (
           <p className="mt-2 text-xs text-destructive" role="alert">
-            {String(form.formState.errors.options.message ?? '')}
+            {optionsError}
           </p>
         )}
       </div>
