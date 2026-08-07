@@ -3,6 +3,7 @@
 import { forwardRef, useCallback, useImperativeHandle, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import { Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
@@ -19,6 +20,7 @@ import { Switch } from '@/components/ui/switch';
 import { UserPhotoField } from '@modules/shared/components/users/user-photo-field';
 import { UserProfileFields } from '@modules/shared/components/users/user-profile-fields';
 import { adminUsersApi } from '@/modules/admin/resources/users/api';
+import { ADMIN_USERS_QUERY_KEY } from '@/modules/admin/resources/users/hooks/useUsersQuery';
 import { Role } from '@/shared/constants/roles';
 import { uploadUserProfilePhoto } from '@/modules/shared/lib/uploadUserProfilePhoto';
 
@@ -33,7 +35,7 @@ const editorUserSchema = z.object({
     .regex(/[a-z]/, 'Au moins une minuscule')
     .regex(/[0-9]/, 'Au moins un chiffre')
     .max(255),
-  is_active: z.boolean().default(true),
+  is_active: z.boolean(),
   address: z.string().max(255).nullable().optional(),
   zip_code: z.string().max(20).nullable().optional(),
   city: z.string().max(100).nullable().optional(),
@@ -79,11 +81,16 @@ export const CreateEditorUserStep = forwardRef<CreateEditorUserStepHandle, Props
       },
     });
 
+    const queryClient = useQueryClient();
+    const { mutateAsync: createEditorUser } = useMutation({
+      mutationFn: adminUsersApi.create,
+    });
+
     const onSubmit = useCallback(
       async (values: EditorUserFormData) => {
         onLoadingChange(true);
         try {
-          const res = await adminUsersApi.create({
+          const res = await createEditorUser({
             first_name: values.first_name,
             last_name: values.last_name,
             email: values.email,
@@ -101,14 +108,14 @@ export const CreateEditorUserStep = forwardRef<CreateEditorUserStepHandle, Props
           });
 
           if (pendingPhotoRef.current) {
-            const newUserId = (res as { data: { id: string } }).data.id;
             try {
-              await uploadUserProfilePhoto(newUserId, pendingPhotoRef.current, 'platform/users');
+              await uploadUserProfilePhoto(res.data.id, pendingPhotoRef.current, 'platform/users');
             } catch {
               toast.error("Éditeur créé, mais l'upload photo a échoué.");
             }
           }
 
+          queryClient.invalidateQueries({ queryKey: ADMIN_USERS_QUERY_KEY });
           toast.success("L'éditeur a été créé avec succès.");
           onSuccess();
         } catch {
@@ -116,7 +123,7 @@ export const CreateEditorUserStep = forwardRef<CreateEditorUserStepHandle, Props
           onLoadingChange(false);
         }
       },
-      [tenantId, editorId, onSuccess, onLoadingChange],
+      [tenantId, editorId, onSuccess, onLoadingChange, createEditorUser, queryClient],
     );
 
     useImperativeHandle(ref, () => ({ triggerSubmit: form.handleSubmit(onSubmit) }), [

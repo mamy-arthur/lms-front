@@ -197,18 +197,15 @@ export function CreateTenantWizard({ open, onOpenChange }: Props) {
                     type="button"
                     onClick={handleNext}
                     disabled={hasStep1Error || loadingTenant}
-                    variant="outline"
                     size="lg"
-                    className="text-white bg-(--color-primary) hover:bg-(--color-primary) hover:text-white"
+                    className="bg-(--color-primary) hover:bg-(--color-primary)/80"
                   >
                     {loadingTenant ? (
                       <Loader2 className="size-4 animate-spin" />
                     ) : (
-                      <>
-                        <Save className="size-4" />
-                        Créer le tenant
-                      </>
+                      <Save className="size-4" />
                     )}
+                    {loadingTenant ? 'Création…' : 'Enregistrer'}
                   </Button>
                 ) : (
                   <Button
@@ -216,10 +213,14 @@ export function CreateTenantWizard({ open, onOpenChange }: Props) {
                     disabled={loading}
                     onClick={() => editorStepRef.current?.triggerSubmit()}
                     size="lg"
-                    className="text-white bg-(--color-primary) hover:bg-(--color-primary) hover:text-white"
+                    className="bg-(--color-primary) hover:bg-(--color-primary)/80"
                   >
-                    {loading ? <Loader2 className="size-4 animate-spin" /> : null}
-                    Créer l'éditeur
+                    {loading ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <Save className="size-4" />
+                    )}
+                    {loading ? 'Création…' : 'Enregistrer'}
                   </Button>
                 )}
               </div>

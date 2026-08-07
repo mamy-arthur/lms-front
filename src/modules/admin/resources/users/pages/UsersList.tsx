@@ -35,6 +35,7 @@ export function UsersList() {
     params,
     sort,
     handleSearch,
+    handleSearchOnly,
     handleSort,
     handleOpenCreate,
     handleCloseDrawer,
@@ -73,7 +74,7 @@ export function UsersList() {
 
       <div className="space-y-4">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <UserSearch value={draftSearch} onChange={setDraftSearch} onSearch={handleSearch} />
+          <UserSearch value={draftSearch} onChange={setDraftSearch} onSearch={handleSearchOnly} />
           <div className="flex items-center gap-2 sm:ml-auto">
             <UsersFilter
               roleFilter={draftRole}

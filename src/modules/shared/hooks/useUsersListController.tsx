@@ -53,6 +53,11 @@ export function useUsersListController<TUser, TParams = Record<string, unknown>>
     }));
   }, [draftSearch, draftRole, draftStatus, draftTenant, includeTenantFilter]);
 
+  // Utilisé par le debounce de la barre de recherche — n'applique que q
+  const handleSearchOnly = useCallback(() => {
+    setParams((prev) => ({ ...prev, q: draftSearch || undefined, page: 0 }));
+  }, [draftSearch]);
+
   const handleSort = useCallback((column: string) => {
     setParams((prev) => ({
       ...prev,
@@ -119,6 +124,7 @@ export function useUsersListController<TUser, TParams = Record<string, unknown>>
     setParams,
     sort,
     handleSearch,
+    handleSearchOnly,
     handleSort,
     handleOpenCreate,
     handleCloseDrawer,
