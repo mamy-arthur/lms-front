@@ -118,11 +118,16 @@ describe('learning paths APIs', () => {
       expect(mockApiPost).toHaveBeenCalledWith('platform/learning-paths/lp-1/competencies', {
         competency_id: 'comp-1',
       });
-      expect(mockApiPatch).toHaveBeenCalledWith('platform/learning-paths/lp-1/competencies/comp-1', {
-        location_x: 10,
-        location_y: 20,
-      });
-      expect(mockApiDelete).toHaveBeenCalledWith('platform/learning-paths/lp-1/competencies/comp-1');
+      expect(mockApiPatch).toHaveBeenCalledWith(
+        'platform/learning-paths/lp-1/competencies/comp-1',
+        {
+          location_x: 10,
+          location_y: 20,
+        },
+      );
+      expect(mockApiDelete).toHaveBeenCalledWith(
+        'platform/learning-paths/lp-1/competencies/comp-1',
+      );
       expect(mockApiGet).toHaveBeenCalledWith('platform/learning-path-competencies');
       expect(mockApiPost).toHaveBeenCalledWith('platform/learning-paths/lp-1/mail-template', {
         mail_template_id: 'mt-1',
@@ -141,10 +146,13 @@ describe('learning paths APIs', () => {
           location_y: 222,
         },
       );
-      expect(mockApiPatch).toHaveBeenCalledWith('platform/learning-paths/lp-1/certificate/location', {
-        location_x: 333,
-        location_y: 444,
-      });
+      expect(mockApiPatch).toHaveBeenCalledWith(
+        'platform/learning-paths/lp-1/certificate/location',
+        {
+          location_x: 333,
+          location_y: 444,
+        },
+      );
       expect(mockApiDelete).toHaveBeenCalledWith('platform/learning-paths/lp-1/certificate');
     });
   });

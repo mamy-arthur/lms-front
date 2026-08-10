@@ -43,7 +43,10 @@ describe('evaluationsApi', () => {
     await evaluationsApi.create('lp-1', createPayload);
     await evaluationsApi.update('eval-1', { title: 'Eval modifiee', is_published: true });
 
-    expect(mockApiPost).toHaveBeenCalledWith('platform/learning-paths/lp-1/evaluations', createPayload);
+    expect(mockApiPost).toHaveBeenCalledWith(
+      'platform/learning-paths/lp-1/evaluations',
+      createPayload,
+    );
     expect(mockApiPatch).toHaveBeenCalledWith('platform/evaluations/eval-1', {
       title: 'Eval modifiee',
       is_published: true,

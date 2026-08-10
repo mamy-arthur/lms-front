@@ -32,7 +32,10 @@ describe('progressionRulesApi', () => {
 
     await progressionRulesApi.create('lp-1', payload as never);
 
-    expect(mockApiPost).toHaveBeenCalledWith('platform/learning-paths/lp-1/progression-rules', payload);
+    expect(mockApiPost).toHaveBeenCalledWith(
+      'platform/learning-paths/lp-1/progression-rules',
+      payload,
+    );
   });
 
   it('calls update and deactivate endpoints', async () => {

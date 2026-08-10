@@ -50,7 +50,9 @@ describe('coursesApi family', () => {
     expect(mockApiGet).toHaveBeenNthCalledWith(1, 'platform/course-categories');
     expect(mockApiGet).toHaveBeenNthCalledWith(2, 'platform/course-categories/cat-1');
     expect(mockApiPost).toHaveBeenCalledWith('platform/course-categories', { name: 'Cat A' });
-    expect(mockApiPatch).toHaveBeenCalledWith('platform/course-categories/cat-1', { name: 'Cat B' });
+    expect(mockApiPatch).toHaveBeenCalledWith('platform/course-categories/cat-1', {
+      name: 'Cat B',
+    });
     expect(mockApiDelete).toHaveBeenCalledWith('platform/course-categories/cat-1');
   });
 

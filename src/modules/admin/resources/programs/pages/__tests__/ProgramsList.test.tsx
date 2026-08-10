@@ -731,8 +731,7 @@ describe('ProgramsList', () => {
       mockDefaults({ assignMailTemplateMutateAsync });
 
       let capturedOnMailTemplateAssign:
-        | ((mailTemplateId: string, position: { x: number; y: number }) => Promise<void>)
-        | undefined;
+        ((mailTemplateId: string, position: { x: number; y: number }) => Promise<void>) | undefined;
       MockProgramFlow.mockImplementation((props: ProgramFlowProps) => {
         capturedOnMailTemplateAssign = props.onMailTemplateAssign;
         return null;
@@ -763,8 +762,7 @@ describe('ProgramsList', () => {
       mockDefaults({ createMutateAsync, assignMailTemplateMutateAsync });
 
       let capturedOnMailTemplateAssign:
-        | ((mailTemplateId: string, position: { x: number; y: number }) => Promise<void>)
-        | undefined;
+        ((mailTemplateId: string, position: { x: number; y: number }) => Promise<void>) | undefined;
       MockProgramFlow.mockImplementation((props: ProgramFlowProps) => {
         capturedOnMailTemplateAssign = props.onMailTemplateAssign;
         return null;
@@ -802,8 +800,7 @@ describe('ProgramsList', () => {
       });
 
       let capturedOnMailTemplateAssign:
-        | ((mailTemplateId: string, position: { x: number; y: number }) => Promise<void>)
-        | undefined;
+        ((mailTemplateId: string, position: { x: number; y: number }) => Promise<void>) | undefined;
       let capturedOnEvalCreate: ((data: CreateEvaluationPayload) => Promise<string>) | undefined;
       MockProgramFlow.mockImplementation((props: ProgramFlowProps) => {
         capturedOnMailTemplateAssign = props.onMailTemplateAssign;
@@ -844,8 +841,7 @@ describe('ProgramsList', () => {
       mockDefaults({ assignCertificateMutateAsync });
 
       let capturedOnCertificateAssign:
-        | ((certificateId: string, position: { x: number; y: number }) => Promise<void>)
-        | undefined;
+        ((certificateId: string, position: { x: number; y: number }) => Promise<void>) | undefined;
       MockProgramFlow.mockImplementation((props: ProgramFlowProps) => {
         capturedOnCertificateAssign = props.onCertificateAssign;
         return null;
