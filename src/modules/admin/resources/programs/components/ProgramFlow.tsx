@@ -41,6 +41,7 @@ import {
   BookOpen,
   ClipboardCheck,
   Info,
+  Lock,
   Mail,
   Settings2,
   Trash2,
@@ -49,12 +50,16 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/shared/lib/cn';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { AccessRulesDialog, type AccessRules } from './dialog/AccessRulesDialog';
 import {
-  AttestationRulesDialog,
-  type AttestationRules,
+  ProgressionRuleDialog,
   type NodeOption,
-} from './dialog/AttestationRulesDialog';
+  type ProgressionRuleFormData,
+} from './dialog/ProgressionRuleDialog';
+import type {
+  ProgressionCondition,
+  ProgressionNodeRef,
+  ProgressionNodeType,
+} from '@/shared/types/progression-rule.types';
 import { SelectModuleDialog, type ModuleItem } from './dialog/SelectModuleDialog';
 import { AddEvaluationDialog, type EvaluationConfig } from './dialog/AddEvaluationDialog';
 import { SelectAttestationDialog, type AttestationItem } from './dialog/SelectAttestationDialog';
@@ -82,10 +87,19 @@ export type StepNodeData = {
 
 export type StepNode = Node<StepNodeData, 'programStep'>;
 
+export type ProgressionRuleData = {
+  progressionRuleId: string;
+  condition: ProgressionCondition;
+  failureTargetNodeId: string | null;
+  maxAttempts: number | null;
+  exhaustedTargetNodeId: string | null;
+};
+
 export type EdgeRuleData = {
   kind?: 'retake';
-  accessRules?: AccessRules;
-  attestationRules?: AttestationRules;
+  retakeForRuleId?: string;
+  retakeForEdgeId?: string;
+  progressionRule?: ProgressionRuleData;
 };
 
 // ─── Payload Types ────────────────────────────────────────────────────────────
@@ -135,33 +149,18 @@ export type AttestationStepPayload = {
 export type FlowStepPayload =
   EmailStepPayload | ModuleStepPayload | EvaluationStepPayload | AttestationStepPayload;
 
-export type AccessRulesPayload = {
-  modulePrecedentTermine: boolean;
-  tousLesAutresModulesTermines: boolean;
-  modulePrecedentScoreMinimumAtteint: boolean;
-  /** Valeur du score minimum — non null uniquement si `modulePrecedentScoreMinimumAtteint` est vrai */
-  scoreMinimum: number | null;
-};
-
-export type AttestationRulesPayload = {
-  scoreMoyenRequis: boolean;
-  /** Non null uniquement si `scoreMoyenRequis` est vrai */
-  scoreMoyenMinimum: number | null;
-  scoreFinalRequis: boolean;
-  /** Non null uniquement si `scoreFinalRequis` est vrai */
-  scoreFinalMinimum: number | null;
-  aucuneRegle: boolean;
-  reprise: boolean;
-  /** Non null uniquement si `reprise` est vrai */
-  repriseVersNoeudId: string | null;
-};
-
 export type FlowConnectionPayload = {
   sourceId: string;
   targetId: string;
   estReprise: boolean;
-  reglesAcces?: AccessRulesPayload;
-  reglesAttestation?: AttestationRulesPayload;
+  progressionRule?: {
+    ruleId: string | null;
+    condition: ProgressionCondition;
+    targetOnSuccess: ProgressionNodeRef;
+    targetOnFailure: ProgressionNodeRef | null;
+    maxAttempts: number | null;
+    targetOnExhausted: ProgressionNodeRef | null;
+  };
 };
 
 export type ProgramFlowPayload = {
@@ -260,6 +259,7 @@ function ProgramStepNode({ id, data, isConnectable }: NodeProps<StepNode>) {
   const cfg = STEP_CONFIG[data.stepType];
   const { Icon } = cfg;
   const isEmail = data.stepType === 'email';
+  const isAttestation = data.stepType === 'attestation';
 
   const isConfigured =
     (data.stepType === 'email' && !!data.emailTemplateId) ||
@@ -277,11 +277,11 @@ function ProgramStepNode({ id, data, isConnectable }: NodeProps<StepNode>) {
     <div
       className={cn(
         'min-w-55 rounded-md border px-4 py-3 shadow-sm',
-        isConfigured && !isEmail ? 'cursor-default' : 'cursor-pointer',
+        isConfigured && !isEmail && !isAttestation ? 'cursor-default' : 'cursor-pointer',
         cfg.border,
         cfg.bg,
       )}
-      onClick={isConfigured && !isEmail ? undefined : () => onEditNode(id)}
+      onClick={isConfigured && !isEmail && !isAttestation ? undefined : () => onEditNode(id)}
     >
       <Handle type="target" position={Position.Top} isConnectable={isConnectable} />
 
@@ -372,16 +372,7 @@ function ConfigurableEdge({
   const ruleData = data as EdgeRuleData | undefined;
   const isRetake = ruleData?.kind === 'retake';
 
-  const hasRules =
-    (ruleData?.accessRules &&
-      (ruleData.accessRules.prevModuleCompleted ||
-        ruleData.accessRules.allModulesCompleted ||
-        ruleData.accessRules.prevModuleMinScore)) ||
-    (ruleData?.attestationRules &&
-      (ruleData.attestationRules.avgScore ||
-        ruleData.attestationRules.finalScore ||
-        ruleData.attestationRules.noRule ||
-        ruleData.attestationRules.retake));
+  const hasRules = !!ruleData?.progressionRule;
 
   const [edgePath, labelX, labelY] = getSmoothStepPath({
     sourceX,
@@ -420,9 +411,11 @@ function ConfigurableEdge({
             }}
             title="Configurer les règles d'accès"
           >
-            <Settings2
-              className={hasRules ? 'size-3 text-indigo-500' : 'size-3 text-muted-foreground'}
-            />
+            {hasRules ? (
+              <Lock className="size-3 text-indigo-500" />
+            ) : (
+              <Settings2 className="size-3 text-muted-foreground" />
+            )}
           </button>
         </EdgeLabelRenderer>
       )}
@@ -462,9 +455,28 @@ export type ProgramFlowProps = {
   onEvalCreate?: (data: CreateEvaluationPayload) => Promise<string>;
   onEvalDelete?: (evaluationId: string) => Promise<void>;
   onEvalMove?: (evaluationId: string, position: { x: number; y: number }) => Promise<void>;
-  onMailTemplateAssign?: (mailTemplateId: string) => Promise<void>;
-  onCertificateAssign?: (certificateId: string) => Promise<void>;
+  onMailTemplateAssign?: (
+    mailTemplateId: string,
+    position: { x: number; y: number },
+  ) => Promise<void>;
+  onCertificateAssign?: (
+    certificateId: string,
+    position: { x: number; y: number },
+  ) => Promise<void>;
   onCertificateDetach?: () => Promise<void>;
+  onMailTemplateMove?: (position: { x: number; y: number }) => Promise<void>;
+  onCertificateMove?: (position: { x: number; y: number }) => Promise<void>;
+  learningPathId?: string;
+  onProgressionRuleCreate?: (
+    learningPathId: string,
+    payload: import('@/shared/types/progression-rule.types').CreateProgressionRulePayload,
+  ) => Promise<import('@/shared/types/progression-rule.types').ApiProgressionRule>;
+  onProgressionRuleUpdate?: (
+    ruleId: string,
+    learningPathId: string,
+    payload: import('@/shared/types/progression-rule.types').UpdateProgressionRulePayload,
+  ) => Promise<import('@/shared/types/progression-rule.types').ApiProgressionRule>;
+  onProgressionRuleDeactivate?: (ruleId: string, learningPathId: string) => Promise<void>;
 };
 
 const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function ProgramFlow(
@@ -482,6 +494,12 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
     onMailTemplateAssign,
     onCertificateAssign,
     onCertificateDetach,
+    onMailTemplateMove,
+    onCertificateMove,
+    learningPathId,
+    onProgressionRuleCreate,
+    onProgressionRuleUpdate,
+    onProgressionRuleDeactivate,
   },
   ref,
 ) {
@@ -502,18 +520,14 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
   const [evalDialogOpen, setEvalDialogOpen] = useState(false);
   const [attestationDialogOpen, setAttestationDialogOpen] = useState(false);
 
-  // ── Rule configuration dialog states ──
-  const [accessDialog, setAccessDialog] = useState<{
+  // ── Rule configuration dialog state ──
+  const [progressionRuleDialog, setProgressionRuleDialog] = useState<{
     edgeId: string;
     sourceNodeId: string;
-    initialRules?: AccessRules;
-  } | null>(null);
-
-  const [attestationDialog, setAttestationDialog] = useState<{
-    edgeId: string;
-    attestationNodeId: string;
-    incomingSourceNodeId: string;
-    initialRules?: AttestationRules;
+    targetNodeId: string;
+    sourceNodeType: 'module' | 'evaluation';
+    initialFormData?: ProgressionRuleFormData;
+    hasExistingRule: boolean;
   } | null>(null);
 
   // ── Edit-node dialog states ──
@@ -603,80 +617,235 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
     [nodes],
   );
 
-  // ── Open the right dialog when an edge settings button is clicked ──
+  // ── Open the rule dialog when an edge settings button is clicked ──
   const onConfigureEdge = useCallback((edgeId: string) => {
     const edge = edgesRef.current.find((e) => e.id === edgeId);
     if (!edge) return;
 
-    const targetNode = nodesRef.current.find((n) => n.id === edge.target);
+    const sourceNode = nodesRef.current.find((n) => n.id === edge.source);
+    if (!sourceNode) return;
 
-    if (targetNode?.data.stepType === 'attestation') {
-      setAttestationDialog({
-        edgeId,
-        attestationNodeId: edge.target,
-        incomingSourceNodeId: edge.source,
-        initialRules: edge.data?.attestationRules,
-      });
-    } else {
-      setAccessDialog({
-        edgeId,
-        sourceNodeId: edge.source,
-        initialRules: edge.data?.accessRules,
-      });
-    }
+    const stepType = sourceNode.data.stepType;
+    // Only modules and evaluations can be rule sources
+    if (
+      stepType !== 'module' &&
+      stepType !== 'evaluation-intermediate' &&
+      stepType !== 'evaluation-final'
+    )
+      return;
+
+    const sourceNodeType: 'module' | 'evaluation' = stepType === 'module' ? 'module' : 'evaluation';
+
+    const existing = edge.data?.progressionRule;
+    const initialFormData: ProgressionRuleFormData | undefined = existing
+      ? {
+          condition: existing.condition,
+          failureTargetNodeId: existing.failureTargetNodeId,
+          maxAttempts: existing.maxAttempts,
+          exhaustedTargetNodeId: existing.exhaustedTargetNodeId,
+        }
+      : undefined;
+
+    setProgressionRuleDialog({
+      edgeId,
+      sourceNodeId: edge.source,
+      targetNodeId: edge.target,
+      sourceNodeType,
+      initialFormData,
+      hasExistingRule: !!existing,
+    });
   }, []);
 
-  // ── Save access rules ──
-  const handleAccessSave = useCallback(
-    (rules: AccessRules) => {
-      if (!accessDialog) return;
-      setEdges((eds) =>
-        eds.map((e) =>
-          e.id === accessDialog.edgeId ? { ...e, data: { ...e.data, accessRules: rules } } : e,
-        ),
-      );
-      setAccessDialog(null);
-    },
-    [accessDialog],
-  );
+  // ── Save progression rule ──
+  const handleProgressionRuleSave = useCallback(
+    async (formData: ProgressionRuleFormData) => {
+      if (!progressionRuleDialog) return;
+      const { edgeId, sourceNodeId, targetNodeId, sourceNodeType } = progressionRuleDialog;
+      const existing = edgesRef.current.find((e) => e.id === edgeId)?.data?.progressionRule;
 
-  // ── Save attestation rules (also handles retake edge) ──
-  const handleAttestationSave = useCallback(
-    (rules: AttestationRules) => {
-      if (!attestationDialog) return;
-      const { edgeId, attestationNodeId, incomingSourceNodeId } = attestationDialog;
-      const retakePrefix = `retake-${attestationNodeId}-`;
+      // "Deactivate" path — condition set to null means the user wants to remove the rule
+      if (formData.condition === null) {
+        const deactivatedRuleId = existing?.progressionRuleId ?? null;
+        if (existing?.progressionRuleId && onProgressionRuleDeactivate && learningPathId) {
+          try {
+            await onProgressionRuleDeactivate(existing.progressionRuleId, learningPathId);
+          } catch (err) {
+            toast.error(getApiErrorMessage(err, 'Impossible de désactiver la règle.'));
+            return;
+          }
+        }
+        setEdges((eds) => {
+          const withoutRetakeForRule = deactivatedRuleId
+            ? eds.filter(
+                (e) =>
+                  !(
+                    e.data?.kind === 'retake' &&
+                    (e.data.retakeForEdgeId === edgeId ||
+                      e.data.retakeForRuleId === deactivatedRuleId ||
+                      e.id.startsWith(`retake-${deactivatedRuleId}-`))
+                  ),
+              )
+            : eds.filter((e) => !(e.data?.kind === 'retake' && e.data.retakeForEdgeId === edgeId));
+
+          return withoutRetakeForRule.map((e) =>
+            e.id === edgeId ? { ...e, data: { ...e.data, progressionRule: undefined } } : e,
+          );
+        });
+        setProgressionRuleDialog(null);
+        return;
+      }
+
+      // Determine source node type for the API call
+      const nodeTypeForApi: ProgressionNodeType =
+        sourceNodeType === 'module' ? 'module' : 'evaluation';
+
+      // Determine target-on-success node type
+      const targetNode = nodesRef.current.find((n) => n.id === targetNodeId);
+      const targetTypeForApi: ProgressionNodeType =
+        targetNode?.data.stepType === 'attestation'
+          ? 'certificate'
+          : targetNode?.data.stepType === 'module'
+            ? 'module'
+            : 'evaluation';
+
+      // Source entity ID (moduleId or evaluationId)
+      const sourceEntityId =
+        sourceNodeType === 'module'
+          ? nodesRef.current.find((n) => n.id === sourceNodeId)?.data.moduleId
+          : nodesRef.current.find((n) => n.id === sourceNodeId)?.data.evaluationId;
+
+      // Target-on-success entity ID
+      const targetEntityId =
+        targetTypeForApi === 'certificate'
+          ? nodesRef.current.find((n) => n.id === targetNodeId)?.data.attestationId
+          : targetTypeForApi === 'module'
+            ? nodesRef.current.find((n) => n.id === targetNodeId)?.data.moduleId
+            : nodesRef.current.find((n) => n.id === targetNodeId)?.data.evaluationId;
+
+      if (!sourceEntityId || !targetEntityId) {
+        toast.error('Impossible de trouver les identifiants des nœuds.');
+        return;
+      }
+
+      const buildNodeRef = (nodeId: string): ProgressionNodeRef | null => {
+        const node = nodesRef.current.find((n) => n.id === nodeId);
+        if (!node) return null;
+        const type: ProgressionNodeType =
+          node.data.stepType === 'attestation'
+            ? 'certificate'
+            : node.data.stepType === 'module'
+              ? 'module'
+              : 'evaluation';
+        const id =
+          type === 'certificate'
+            ? node.data.attestationId
+            : type === 'module'
+              ? node.data.moduleId
+              : node.data.evaluationId;
+        return id ? { type, id } : null;
+      };
+
+      const failureRef = formData.failureTargetNodeId
+        ? buildNodeRef(formData.failureTargetNodeId)
+        : null;
+
+      const exhaustedRef = formData.exhaustedTargetNodeId
+        ? buildNodeRef(formData.exhaustedTargetNodeId)
+        : null;
+
+      const rulePayload = {
+        condition: formData.condition,
+        target_on_success: { type: targetTypeForApi, id: targetEntityId },
+        target_on_failure: failureRef,
+        max_attempts: formData.maxAttempts,
+        target_on_exhausted: exhaustedRef,
+      };
+
+      let ruleId = existing?.progressionRuleId ?? null;
+
+      if (learningPathId) {
+        try {
+          if (ruleId && onProgressionRuleUpdate) {
+            await onProgressionRuleUpdate(ruleId, learningPathId, rulePayload);
+          } else if (!ruleId && onProgressionRuleCreate) {
+            const created = await onProgressionRuleCreate(learningPathId, {
+              source: { type: nodeTypeForApi, id: sourceEntityId },
+              ...rulePayload,
+            });
+            ruleId = created.id;
+          }
+        } catch (err) {
+          toast.error(getApiErrorMessage(err, 'Impossible de sauvegarder la règle.'));
+          return;
+        }
+      }
 
       setEdges((eds) => {
-        const withRules = eds.map((e) =>
-          e.id === edgeId
-            ? {
-                ...e,
-                data: { ...e.data, attestationRules: rules },
-              }
-            : e,
-        );
-        const withoutOldRetake = withRules.filter((e) => !e.id.startsWith(retakePrefix));
+        const retakeRuleId = ruleId ?? existing?.progressionRuleId ?? null;
+        const cleaned = eds
+          .filter(
+            (e) =>
+              !(
+                e.data?.kind === 'retake' &&
+                (e.data.retakeForEdgeId === edgeId ||
+                  (retakeRuleId && e.data.retakeForRuleId === retakeRuleId) ||
+                  (retakeRuleId && e.id.startsWith(`retake-${retakeRuleId}-`)))
+              ),
+          )
+          .map((e) =>
+            e.id === edgeId
+              ? {
+                  ...e,
+                  data: {
+                    ...e.data,
+                    progressionRule: ruleId
+                      ? {
+                          progressionRuleId: ruleId,
+                          condition: formData.condition!,
+                          failureTargetNodeId: formData.failureTargetNodeId,
+                          maxAttempts: formData.maxAttempts,
+                          exhaustedTargetNodeId: formData.exhaustedTargetNodeId,
+                        }
+                      : undefined,
+                  },
+                }
+              : e,
+          );
 
-        if (rules.retake && rules.retakeTargetNodeId) {
-          return [
-            ...withoutOldRetake,
-            {
-              id: `${retakePrefix}${rules.retakeTargetNodeId}`,
-              source: incomingSourceNodeId,
-              target: rules.retakeTargetNodeId,
-              type: 'configurableEdge',
-              animated: false,
-              data: { kind: 'retake' as const },
-            },
-          ];
+        if (!formData.failureTargetNodeId) {
+          return cleaned;
         }
-        return withoutOldRetake;
+
+        const retakeId = retakeRuleId
+          ? `retake-${retakeRuleId}-${formData.failureTargetNodeId}`
+          : `retake-${edgeId}-${formData.failureTargetNodeId}`;
+
+        return [
+          ...cleaned,
+          {
+            id: retakeId,
+            source: sourceNodeId,
+            target: formData.failureTargetNodeId,
+            type: 'configurableEdge',
+            animated: false,
+            data: {
+              kind: 'retake',
+              retakeForRuleId: retakeRuleId ?? undefined,
+              retakeForEdgeId: edgeId,
+            },
+          },
+        ];
       });
 
-      setAttestationDialog(null);
+      setProgressionRuleDialog(null);
     },
-    [attestationDialog],
+    [
+      progressionRuleDialog,
+      learningPathId,
+      onProgressionRuleCreate,
+      onProgressionRuleUpdate,
+      onProgressionRuleDeactivate,
+    ],
   );
 
   // ── Delete a node and reconnect its neighbours ──
@@ -723,6 +892,23 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
         }
       }
 
+      // Deactivate any progression rules attached to edges incident on this node
+      if (learningPathId && onProgressionRuleDeactivate) {
+        const incidentEdges = edgesRef.current.filter(
+          (e) => e.source === nodeId || e.target === nodeId,
+        );
+        for (const edge of incidentEdges) {
+          const ruleId = edge.data?.progressionRule?.progressionRuleId;
+          if (ruleId) {
+            try {
+              await onProgressionRuleDeactivate(ruleId, learningPathId);
+            } catch {
+              // Best-effort — don't block node deletion if deactivation fails
+            }
+          }
+        }
+      }
+
       const order = nodeOrderRef.current;
       const idx = order.indexOf(nodeId);
       const prev = order[idx - 1] ?? null;
@@ -749,7 +935,13 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
 
       setNodeOrder((o) => o.filter((id) => id !== nodeId));
     },
-    [onModuleRemove, onEvalDelete, onCertificateDetach],
+    [
+      onModuleRemove,
+      onEvalDelete,
+      onCertificateDetach,
+      learningPathId,
+      onProgressionRuleDeactivate,
+    ],
   );
 
   // ── Open the right edit dialog when a node is clicked ──
@@ -905,8 +1097,11 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
   // ── Handle attestation selection ──
   const handleAttestationSelect = useCallback(
     async (att: AttestationItem): Promise<void> => {
+      const lastId = nodeOrderRef.current.at(-1) ?? null;
+      const lastNode = lastId ? nodesRef.current.find((n) => n.id === lastId) : null;
+      const position = { x: CANVAS_X, y: lastNode ? lastNode.position.y + NODE_GAP : 0 };
       try {
-        await onCertificateAssign?.(att.id);
+        await onCertificateAssign?.(att.id, position);
       } catch (err) {
         toast.error(getApiErrorMessage(err, "Impossible d'assigner l'attestation."));
         throw err;
@@ -978,8 +1173,12 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
   const handleEditAttestationSave = useCallback(
     async (att: AttestationItem): Promise<void> => {
       if (!editAttestationDialog) return;
+      const node = nodesRef.current.find((n) => n.id === editAttestationDialog.nodeId);
+      const position = node
+        ? { x: Math.round(node.position.x), y: Math.round(node.position.y) }
+        : { x: CANVAS_X, y: 0 };
       try {
-        await onCertificateAssign?.(att.id);
+        await onCertificateAssign?.(att.id, position);
       } catch (err) {
         toast.error(getApiErrorMessage(err, "Impossible d'assigner l'attestation."));
         throw err;
@@ -999,8 +1198,12 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
   const handleEditEmailSave = useCallback(
     async (template: EmailTemplate): Promise<void> => {
       if (!editEmailDialog) return;
+      const emailNode = nodesRef.current.find((n) => n.id === editEmailDialog.nodeId);
+      const position = emailNode
+        ? { x: Math.round(emailNode.position.x), y: Math.round(emailNode.position.y) }
+        : { x: CANVAS_X, y: 0 };
       try {
-        await onMailTemplateAssign?.(template.id);
+        await onMailTemplateAssign?.(template.id, position);
       } catch (err) {
         toast.error(getApiErrorMessage(err, "Impossible d'assigner le template mail."));
         throw err;
@@ -1046,9 +1249,13 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
         onEvalMove
       ) {
         onEvalMove(evaluationId, pos).catch(() => {});
+      } else if (stepType === 'email' && onMailTemplateMove) {
+        onMailTemplateMove(pos).catch(() => {});
+      } else if (stepType === 'attestation' && onCertificateMove) {
+        onCertificateMove(pos).catch(() => {});
       }
     },
-    [onModuleMove, onEvalMove],
+    [onModuleMove, onEvalMove, onMailTemplateMove, onCertificateMove],
   );
 
   // ── Build the serializable payload ──
@@ -1106,42 +1313,64 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
       const ruleData = edge.data as EdgeRuleData | undefined;
       const isRetake = ruleData?.kind === 'retake';
 
-      let reglesAcces: AccessRulesPayload | undefined;
-      if (!isRetake && ruleData?.accessRules) {
-        const r = ruleData.accessRules;
-        if (r.prevModuleCompleted || r.allModulesCompleted || r.prevModuleMinScore) {
-          reglesAcces = {
-            modulePrecedentTermine: r.prevModuleCompleted,
-            tousLesAutresModulesTermines: r.allModulesCompleted,
-            modulePrecedentScoreMinimumAtteint: r.prevModuleMinScore,
-            scoreMinimum: r.prevModuleMinScore ? r.prevModuleMinScoreValue : null,
-          };
-        }
-      }
-
-      let reglesAttestation: AttestationRulesPayload | undefined;
-      if (!isRetake && ruleData?.attestationRules) {
-        const r = ruleData.attestationRules;
-        if (r.avgScore || r.finalScore || r.noRule || r.retake) {
-          reglesAttestation = {
-            scoreMoyenRequis: r.avgScore,
-            scoreMoyenMinimum: r.avgScore ? r.avgScoreMin : null,
-            scoreFinalRequis: r.finalScore,
-            scoreFinalMinimum: r.finalScore ? r.finalScoreMin : null,
-            aucuneRegle: r.noRule,
-            reprise: r.retake,
-            repriseVersNoeudId: r.retake ? r.retakeTargetNodeId : null,
-          };
-        }
-      }
-
       const conn: FlowConnectionPayload = {
         sourceId: edge.source,
         targetId: edge.target,
         estReprise: isRetake,
       };
-      if (reglesAcces) conn.reglesAcces = reglesAcces;
-      if (reglesAttestation) conn.reglesAttestation = reglesAttestation;
+
+      if (!isRetake && ruleData?.progressionRule) {
+        const r = ruleData.progressionRule;
+        const sourceNode = nodesRef.current.find((n) => n.id === edge.source);
+        const targetNode = nodesRef.current.find((n) => n.id === edge.target);
+        if (sourceNode && targetNode) {
+          const sourceType: ProgressionNodeRef['type'] =
+            sourceNode.data.stepType === 'module' ? 'module' : 'evaluation';
+          const targetType: ProgressionNodeRef['type'] =
+            targetNode.data.stepType === 'attestation'
+              ? 'certificate'
+              : targetNode.data.stepType === 'module'
+                ? 'module'
+                : 'evaluation';
+          const sourceId =
+            sourceType === 'module' ? sourceNode.data.moduleId : sourceNode.data.evaluationId;
+          const targetId =
+            targetType === 'certificate'
+              ? targetNode.data.attestationId
+              : targetType === 'module'
+                ? targetNode.data.moduleId
+                : targetNode.data.evaluationId;
+          if (sourceId && targetId) {
+            const buildRef = (nodeId: string | null): ProgressionNodeRef | null => {
+              if (!nodeId) return null;
+              const node = nodesRef.current.find((n) => n.id === nodeId);
+              if (!node) return null;
+              const type: ProgressionNodeRef['type'] =
+                node.data.stepType === 'attestation'
+                  ? 'certificate'
+                  : node.data.stepType === 'module'
+                    ? 'module'
+                    : 'evaluation';
+              const id =
+                type === 'certificate'
+                  ? node.data.attestationId
+                  : type === 'module'
+                    ? node.data.moduleId
+                    : node.data.evaluationId;
+              return id ? { type, id } : null;
+            };
+            conn.progressionRule = {
+              ruleId: r.progressionRuleId,
+              condition: r.condition,
+              targetOnSuccess: { type: targetType, id: targetId },
+              targetOnFailure: buildRef(r.failureTargetNodeId),
+              maxAttempts: r.maxAttempts,
+              targetOnExhausted: buildRef(r.exhaustedTargetNodeId),
+            };
+          }
+        }
+      }
+
       return conn;
     });
 
@@ -1282,25 +1511,17 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
         onSelect={handleAttestationSelect}
       />
 
-      {/* ── Access rules dialog (modules & evaluations) ── */}
-      <AccessRulesDialog
-        open={accessDialog !== null}
+      {/* ── Progression rule dialog ── */}
+      <ProgressionRuleDialog
+        open={progressionRuleDialog !== null}
         onOpenChange={(open) => {
-          if (!open) setAccessDialog(null);
+          if (!open) setProgressionRuleDialog(null);
         }}
-        initialRules={accessDialog?.initialRules}
-        onSave={handleAccessSave}
-      />
-
-      {/* ── Attestation rules dialog ── */}
-      <AttestationRulesDialog
-        open={attestationDialog !== null}
-        onOpenChange={(open) => {
-          if (!open) setAttestationDialog(null);
-        }}
-        initialRules={attestationDialog?.initialRules}
+        sourceNodeType={progressionRuleDialog?.sourceNodeType ?? 'module'}
+        hasExistingRule={progressionRuleDialog?.hasExistingRule ?? false}
+        initialFormData={progressionRuleDialog?.initialFormData}
         nodeOptions={retakeNodeOptions}
-        onSave={handleAttestationSave}
+        onSave={handleProgressionRuleSave}
       />
 
       {/* ── Edit-node dialogs ── */}

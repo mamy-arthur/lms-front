@@ -5,7 +5,12 @@ const optionSchema = z.object({
   id: z.string().optional(),
   label: z.string().min(1, 'Libellé requis'),
   isCorrect: z.boolean(),
-  weightPercentage: z.number().int().optional(),
+  weightPercentage: z
+    .number()
+    .int()
+    .min(-100, 'Le poids doit être entre -100 et 100')
+    .max(100, 'Le poids doit être entre -100 et 100')
+    .optional(),
 });
 
 const pairSchema = z.object({
@@ -24,62 +29,62 @@ export const formSchema = z
     options: z.array(optionSchema),
     pairs: z.array(pairSchema),
   })
-  .superRefine((data, ctx) => {
-    if (data.type === 'single_choice' || data.type === 'multiple_choice') {
-      if (data.options.length < 2) {
+  .superRefine((values, ctx) => {
+    if (values.type === 'single_choice') {
+      if (values.options.length < 2) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
+          path: ['options'],
           message: 'Ajoutez au moins 2 choix',
-          path: ['options'],
-        });
-      }
-    }
-    if (data.type === 'single_choice') {
-      const correctCount = data.options.filter((o) => o.isCorrect).length;
-      if (correctCount !== 1) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'Exactement un choix doit être correct',
-          path: ['options'],
-        });
-      }
-    }
-    if (data.type === 'multiple_choice') {
-      const correctCount = data.options.filter((o) => o.isCorrect).length;
-      if (correctCount < 1) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'Au moins un choix doit être correct',
-          path: ['options'],
         });
       }
 
-      data.options.forEach((o, i) => {
-        const w = o.weightPercentage ?? 0;
-        if (o.isCorrect && (w < 0 || w > 100)) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: 'Le poids doit être compris entre 0 et 100',
-            path: ['options', i, 'weightPercentage'],
-          });
-        }
-        if (!o.isCorrect && (w < -100 || w > 0)) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: 'Le poids doit être compris entre -100 et 0',
-            path: ['options', i, 'weightPercentage'],
-          });
-        }
-      });
-    }
-    if (data.type === 'matching') {
-      if (data.pairs.length < 2) {
+      const correctCount = values.options.filter((o) => o.isCorrect).length;
+      if (correctCount !== 1) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: 'Ajoutez au moins 2 paires',
-          path: ['pairs'],
+          path: ['options'],
+          message: 'Exactement un choix correct est requis',
         });
       }
+    }
+
+    if (values.type === 'multiple_choice') {
+      const correctOptions = values.options.filter((o) => o.isCorrect);
+
+      if (correctOptions.length === 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['options'],
+          message: 'Au moins un choix correct est requis',
+        });
+      }
+
+      for (const [index, option] of values.options.entries()) {
+        const weight = option.weightPercentage ?? 0;
+        if (option.isCorrect && (weight < 0 || weight > 100)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['options', index, 'weightPercentage'],
+            message: 'Le poids des réponses correctes doit être entre 0 et 100',
+          });
+        }
+        if (!option.isCorrect && (weight < -100 || weight > 0)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['options', index, 'weightPercentage'],
+            message: 'Le poids des réponses incorrectes doit être entre -100 et 0',
+          });
+        }
+      }
+    }
+
+    if (values.type === 'matching' && values.pairs.length < 2) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['pairs'],
+        message: 'Ajoutez au moins 2 paires',
+      });
     }
   });
 

@@ -108,7 +108,7 @@ export function StorePage() {
                     setPerPage(PAGE_SIZE);
                   }}
                   className={cn(
-                    'inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium transition-colors',
+                    'inline-flex items-center rounded-sm border px-3 py-1 text-xs font-medium transition-colors',
                     active
                       ? 'border-(--color-primary) bg-(--color-primary) text-white'
                       : 'border-border bg-muted text-muted-foreground hover:border-primary/50 hover:text-foreground',
@@ -153,6 +153,7 @@ export function StorePage() {
                 key={lp.id}
                 id={lp.id}
                 title={lp.name}
+                description={lp.description}
                 author=""
                 category={categoryName(lp.category_id)}
                 coverImage={lp.image?.url}

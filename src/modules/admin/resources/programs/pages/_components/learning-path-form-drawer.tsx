@@ -39,16 +39,28 @@ import { useLinkCompetencyToLearningPath } from '../../hooks/useLinkCompetencyTo
 import { useUnlinkCompetencyFromLearningPath } from '../../hooks/useUnlinkCompetencyFromLearningPath';
 import { useUpdateCompetencyLocation } from '../../hooks/useUpdateCompetencyLocation';
 import { useUpdateEvaluationLocation } from '../../hooks/useUpdateEvaluationLocation';
+import { useUpdateMailTemplateLocation } from '../../hooks/useUpdateMailTemplateLocation';
+import { useUpdateCertificateLocation } from '../../hooks/useUpdateCertificateLocation';
 import { useModules } from '@/modules/admin/resources/modules/hooks/useModules';
 import { useLearningPathQuery } from '../../hooks/useLearningPathQuery';
 import { useEvaluationsQuery } from '../../hooks/useEvaluationsQuery';
-import ProgramFlow, { type StepNode } from '../../components/ProgramFlow';
+import ProgramFlow, { EdgeRuleData, type StepNode } from '../../components/ProgramFlow';
 import type { CreateEvaluationPayload } from '@/shared/api/evaluations.api';
 import { useCreateEvaluation } from '../../hooks/useCreateEvaluation';
 import { useDeleteEvaluation } from '../../hooks/useDeleteEvaluation';
 import { useAssignMailTemplate } from '../../hooks/useAssignMailTemplate';
 import { useAssignCertificate } from '../../hooks/useAssignCertificate';
 import { useDetachCertificate } from '../../hooks/useDetachCertificate';
+import { useCreateProgressionRule } from '../../hooks/useCreateProgressionRule';
+import { usePatchProgressionRule } from '../../hooks/usePatchProgressionRule';
+import { useDeactivateProgressionRule } from '../../hooks/useDeactivateProgressionRule';
+import { useProgressionRulesQuery } from '../../hooks/useProgressionRulesQuery';
+import type {
+  CreateProgressionRulePayload,
+  UpdateProgressionRulePayload,
+  ApiProgressionRule,
+  ProgressionNodeRef,
+} from '@/shared/types/progression-rule.types';
 import {
   DURATION_UNITS,
   durationToMinutes,
@@ -177,6 +189,11 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
     open && isEdit ? learningPathId : null,
   );
 
+  // Fetch existing progression rules to pre-populate edge data
+  const { data: progressionRules, isLoading: isLoadingRules } = useProgressionRulesQuery(
+    open && isEdit ? (learningPathId ?? null) : null,
+  );
+
   const hasCompetencies = isEdit && (learningPath?.competencies?.length ?? 0) > 0;
 
   const [flowHasModules, setFlowHasModules] = useState(hasCompetencies);
@@ -192,8 +209,13 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
   const assignMailTemplate = useAssignMailTemplate();
   const assignCertificate = useAssignCertificate();
   const detachCertificate = useDetachCertificate();
+  const createProgressionRule = useCreateProgressionRule();
+  const patchProgressionRule = usePatchProgressionRule();
+  const deactivateProgressionRule = useDeactivateProgressionRule();
   const updateCompetencyLocation = useUpdateCompetencyLocation();
   const updateEvaluationLocation = useUpdateEvaluationLocation();
+  const updateMailTemplateLocation = useUpdateMailTemplateLocation();
+  const updateCertificateLocation = useUpdateCertificateLocation();
 
   // Pre-fetch all modules so competency names are ready when the flow renders
   const { data: modulesResult, isLoading: isLoadingModules } = useModules();
@@ -220,7 +242,10 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
     const emailNode: StepNode = {
       id: emailNodeId,
       type: 'programStep',
-      position: { x: CANVAS_X, y: 0 },
+      position: {
+        x: learningPath.mailTemplate?.locationX ?? CANVAS_X,
+        y: learningPath.mailTemplate?.locationY ?? 0,
+      },
       data: {
         stepType: 'email',
         label: learningPath.mailTemplate?.name ?? "Choisir l'email",
@@ -314,7 +339,10 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
       allNodes.push({
         id: 'attestation-end',
         type: 'programStep',
-        position: { x: CANVAS_X, y: currentY },
+        position: {
+          x: learningPath.certificate.locationX ?? CANVAS_X,
+          y: learningPath.certificate.locationY ?? currentY,
+        },
         data: {
           stepType: 'attestation',
           label: learningPath.certificate.name,
@@ -324,16 +352,87 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
     }
 
     const nodeOrder = allNodes.map((n) => n.id);
-    const edges = nodeOrder.slice(1).map((targetId, idx) => ({
-      id: `e-${nodeOrder[idx]}-${targetId}`,
-      source: nodeOrder[idx],
-      target: targetId,
-      type: 'configurableEdge' as const,
-      animated: true,
-    }));
+    const nodeIdSet = new Set(nodeOrder);
+
+    // Helper: map an API node reference to a canvas node ID
+    const apiRefToCanvasId = (ref: ProgressionNodeRef): string | null => {
+      if (ref.type === 'module') return `step-module-${ref.id}`;
+      if (ref.type === 'evaluation') return `step-eval-${ref.id}`;
+      if (ref.type === 'certificate') return 'attestation-end';
+      return null;
+    };
+
+    type FlowEdge = {
+      id: string;
+      source: string;
+      target: string;
+      type: 'configurableEdge';
+      animated: boolean;
+      data?: EdgeRuleData;
+    };
+
+    // Build a mutable edge map keyed by "sourceId→targetId" for fast rule lookup
+    const edgeMap = new Map<string, FlowEdge>();
+    const edges: FlowEdge[] = nodeOrder.slice(1).map((targetId, idx) => {
+      const edge = {
+        id: `e-${nodeOrder[idx]}-${targetId}`,
+        source: nodeOrder[idx],
+        target: targetId,
+        type: 'configurableEdge' as const,
+        animated: true,
+      };
+      edgeMap.set(`${nodeOrder[idx]}→${targetId}`, edge);
+      return edge;
+    });
+
+    // Apply active progression rules to their matching edges
+    const activeRules = (progressionRules ?? []).filter((r) => r.is_active);
+    for (const rule of activeRules) {
+      const sourceCanvasId = apiRefToCanvasId(rule.source);
+      const successCanvasId = apiRefToCanvasId(rule.target_on_success);
+      if (!sourceCanvasId || !successCanvasId) continue;
+
+      const edge = edgeMap.get(`${sourceCanvasId}→${successCanvasId}`);
+      if (!edge) continue;
+
+      const failureCanvasId = rule.target_on_failure
+        ? apiRefToCanvasId(rule.target_on_failure)
+        : null;
+      const exhaustedCanvasId = rule.target_on_exhausted
+        ? apiRefToCanvasId(rule.target_on_exhausted)
+        : null;
+
+      edge.data = {
+        progressionRule: {
+          progressionRuleId: rule.id,
+          condition: rule.condition,
+          failureTargetNodeId:
+            failureCanvasId && nodeIdSet.has(failureCanvasId) ? failureCanvasId : null,
+          maxAttempts: rule.max_attempts,
+          exhaustedTargetNodeId:
+            exhaustedCanvasId && nodeIdSet.has(exhaustedCanvasId) ? exhaustedCanvasId : null,
+        },
+      };
+
+      // Add a visual retake edge for failure paths
+      if (failureCanvasId && nodeIdSet.has(failureCanvasId)) {
+        edges.push({
+          id: `retake-${rule.id}-${failureCanvasId}`,
+          source: sourceCanvasId,
+          target: failureCanvasId,
+          type: 'configurableEdge' as const,
+          animated: false,
+          data: {
+            kind: 'retake' as const,
+            retakeForRuleId: rule.id,
+            retakeForEdgeId: edge.id,
+          },
+        });
+      }
+    }
 
     return { nodes: allNodes, edges, nodeOrder };
-  }, [learningPath, moduleNameMap, evaluationsData]);
+  }, [learningPath, moduleNameMap, evaluationsData, progressionRules]);
 
   const imageInputRef = useRef<HTMLInputElement>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -377,7 +476,7 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
 
   // Assign mail template — auto-creates the LP if it doesn't exist yet
   const handleMailTemplateAssign = useCallback(
-    async (mailTemplateId: string) => {
+    async (mailTemplateId: string, position: { x: number; y: number }) => {
       let lpId = currentLpId;
       if (!lpId) {
         const name = getValues('name')?.trim() || 'Nouvelle formation';
@@ -396,16 +495,26 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
         lpId = result.data.id;
         setLazyLpId(lpId);
       }
-      await assignMailTemplate.mutateAsync({ learningPathId: lpId, mailTemplateId });
+      await assignMailTemplate.mutateAsync({
+        learningPathId: lpId,
+        mailTemplateId,
+        locationX: position.x,
+        locationY: position.y,
+      });
     },
     [currentLpId, getValues, setValue, createMutation, assignMailTemplate],
   );
 
   // Assign certificate — LP must already exist (requires mail template first)
   const handleCertificateAssign = useCallback(
-    async (certificateId: string) => {
+    async (certificateId: string, position: { x: number; y: number }) => {
       const lpId = await getOrCreateLpId();
-      await assignCertificate.mutateAsync({ learningPathId: lpId, certificateId });
+      await assignCertificate.mutateAsync({
+        learningPathId: lpId,
+        certificateId,
+        locationX: position.x,
+        locationY: position.y,
+      });
     },
     [getOrCreateLpId, assignCertificate],
   );
@@ -415,6 +524,37 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
     if (!currentLpId) return;
     await detachCertificate.mutateAsync({ learningPathId: currentLpId });
   }, [currentLpId, detachCertificate]);
+
+  // Create a progression rule
+  const handleProgressionRuleCreate = useCallback(
+    async (
+      learningPathId: string,
+      payload: CreateProgressionRulePayload,
+    ): Promise<ApiProgressionRule> => {
+      return createProgressionRule.mutateAsync({ learningPathId, payload });
+    },
+    [createProgressionRule],
+  );
+
+  // Update a progression rule
+  const handleProgressionRuleUpdate = useCallback(
+    async (
+      ruleId: string,
+      learningPathId: string,
+      payload: UpdateProgressionRulePayload,
+    ): Promise<ApiProgressionRule> => {
+      return patchProgressionRule.mutateAsync({ ruleId, learningPathId, payload });
+    },
+    [patchProgressionRule],
+  );
+
+  // Deactivate a progression rule
+  const handleProgressionRuleDeactivate = useCallback(
+    async (ruleId: string, learningPathId: string): Promise<void> => {
+      await deactivateProgressionRule.mutateAsync({ ruleId, learningPathId });
+    },
+    [deactivateProgressionRule],
+  );
 
   // Immediately link a module when added to the flow
   const handleModuleAdd = useCallback(
@@ -484,6 +624,32 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
       });
     },
     [currentLpId, updateEvaluationLocation],
+  );
+
+  // Update mail template node canvas position when dragged
+  const handleMailTemplateMove = useCallback(
+    async (position: { x: number; y: number }) => {
+      if (!currentLpId) return;
+      await updateMailTemplateLocation.mutateAsync({
+        learningPathId: currentLpId,
+        locationX: position.x,
+        locationY: position.y,
+      });
+    },
+    [currentLpId, updateMailTemplateLocation],
+  );
+
+  // Update certificate node canvas position when dragged
+  const handleCertificateMove = useCallback(
+    async (position: { x: number; y: number }) => {
+      if (!currentLpId) return;
+      await updateCertificateLocation.mutateAsync({
+        learningPathId: currentLpId,
+        locationX: position.x,
+        locationY: position.y,
+      });
+    },
+    [currentLpId, updateCertificateLocation],
   );
 
   const watchedPrice = watch('price');
@@ -671,7 +837,8 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
         <div className="flex min-h-0 flex-1 overflow-hidden">
           {/* Flow canvas */}
           <div className="flex-6 overflow-hidden">
-            {isEdit && (isLoadingModules || isLoadingPath || isLoadingEvaluations) ? (
+            {isEdit &&
+            (isLoadingModules || isLoadingPath || isLoadingEvaluations || isLoadingRules) ? (
               <div className="flex h-full items-center justify-center">
                 <Loader2 className="size-5 animate-spin text-muted-foreground" />
               </div>
@@ -691,6 +858,12 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
                 onMailTemplateAssign={handleMailTemplateAssign}
                 onCertificateAssign={handleCertificateAssign}
                 onCertificateDetach={handleCertificateDetach}
+                onMailTemplateMove={handleMailTemplateMove}
+                onCertificateMove={handleCertificateMove}
+                learningPathId={currentLpId ?? undefined}
+                onProgressionRuleCreate={handleProgressionRuleCreate}
+                onProgressionRuleUpdate={handleProgressionRuleUpdate}
+                onProgressionRuleDeactivate={handleProgressionRuleDeactivate}
               />
             )}
           </div>
@@ -898,6 +1071,7 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
                       checked={watch('show_in_shop') ?? false}
                       onCheckedChange={(v) => setValue('show_in_shop', v)}
                       disabled={!canPublish}
+                      className="data-checked:bg-(--color-primary)"
                     />
                   </div>
                   {!canPublish && (

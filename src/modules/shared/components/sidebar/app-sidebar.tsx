@@ -2,15 +2,8 @@
 import * as React from 'react';
 import { AudioWaveform, Command, GalleryVerticalEnd } from 'lucide-react';
 import { NavMain } from './nav-main';
-import { NavUser } from './nav-user';
 import { TeamSwitcher } from './team-switcher';
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarHeader,
-  SidebarRail,
-} from '@/components/ui/sidebar';
+import { Sidebar, SidebarContent, SidebarHeader, SidebarRail } from '@/components/ui/sidebar';
 import { AdminNavItem } from '@/modules/admin/config/navigation';
 
 const data = {
@@ -40,10 +33,9 @@ const data = {
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
   navItems?: AdminNavItem[];
-  onLogout?: () => void;
 }
 
-export function AppSidebar({ navItems, onLogout, ...props }: AppSidebarProps) {
+export function AppSidebar({ navItems, ...props }: AppSidebarProps) {
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
@@ -52,9 +44,6 @@ export function AppSidebar({ navItems, onLogout, ...props }: AppSidebarProps) {
       <SidebarContent>
         <NavMain items={navItems ?? []} />
       </SidebarContent>
-      <SidebarFooter>
-        <NavUser onLogout={onLogout} />
-      </SidebarFooter>
       <SidebarRail />
     </Sidebar>
   );

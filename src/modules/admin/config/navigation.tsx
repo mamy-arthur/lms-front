@@ -9,7 +9,7 @@ import {
   Store,
   LayoutTemplate,
   Layers,
-  Wallet,
+  // Wallet,
 } from 'lucide-react';
 import { ROUTES } from '@/shared/constants/routes';
 import { ACCESS } from '@/shared/auth/permissions';
@@ -37,13 +37,14 @@ export const ADMIN_NAV: AdminNavItem[] = [
     icon: Store,
     items: [],
   },
-  {
-    url: ROUTES.admin.wallet,
-    title: 'Portefeuille',
-    icon: Wallet,
-    access: ACCESS.wallet,
-    items: [],
-  },
+
+  // {
+  //   url: ROUTES.admin.wallet,
+  //   title: 'Portefeuille',
+  //   icon: Wallet,
+  //   access: ACCESS.wallet,
+  //   items: [],
+  // },
   {
     url: ROUTES.admin.users,
     title: 'Utilisateurs',
@@ -61,8 +62,7 @@ export const ADMIN_NAV: AdminNavItem[] = [
       { title: 'Modules', url: ROUTES.admin.modules },
       { title: 'Quiz', url: ROUTES.admin.quizzes },
       { title: 'Parcours', url: ROUTES.admin.programs },
-      { title: 'Notes', url: ROUTES.admin.clientEvaluationNotes },
-      // { title: "Attestation", url: ROUTES.admin.certificate},
+      // { title: 'Notes', url: ROUTES.admin.clientEvaluationNotes },
     ],
   },
   {

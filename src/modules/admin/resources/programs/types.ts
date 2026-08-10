@@ -95,9 +95,19 @@ export interface LearningPath {
   competencies: LearningPathCompetency[];
   evaluations: LearningPathEvaluation[];
   /** Mail template attached as the first node — id + name only, null if none attached yet. */
-  mailTemplate?: { id: string; name: string } | null;
+  mailTemplate?: {
+    id: string;
+    name: string;
+    locationX: number | null;
+    locationY: number | null;
+  } | null;
   /** Certificate attached to the LP — id + name only, null if none attached yet. */
-  certificate?: { id: string; name: string } | null;
+  certificate?: {
+    id: string;
+    name: string;
+    locationX: number | null;
+    locationY: number | null;
+  } | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -142,8 +152,22 @@ export function normalizeLearningPath(api: ApiLearningPath): LearningPath {
       position: e.position,
       precedingCompetencyId: e.preceding_competency_id,
     })),
-    mailTemplate: api.mail_template ?? null,
-    certificate: api.certificate ?? null,
+    mailTemplate: api.mail_template
+      ? {
+          id: api.mail_template.id,
+          name: api.mail_template.name,
+          locationX: api.mail_template.location_x,
+          locationY: api.mail_template.location_y,
+        }
+      : null,
+    certificate: api.certificate
+      ? {
+          id: api.certificate.id,
+          name: api.certificate.name,
+          locationX: api.certificate.location_x,
+          locationY: api.certificate.location_y,
+        }
+      : null,
     createdAt: api.created_at,
     updatedAt: api.updated_at,
   };

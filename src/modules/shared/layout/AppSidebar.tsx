@@ -59,9 +59,9 @@ export function LayoutSideBar({
 
   return (
     <SidebarProvider>
-      <AppSidebar navItems={navItems} onLogout={onLogout} />
+      <AppSidebar navItems={navItems} />
       <SidebarInset>
-        <AppHeader />
+        <AppHeader onLogout={onLogout} />
         <div className="flex flex-1 flex-col gap-4 p-4 pt-5">{children}</div>
       </SidebarInset>
     </SidebarProvider>

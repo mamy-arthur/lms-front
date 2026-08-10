@@ -5,14 +5,26 @@ import { learningPathKeys } from '@/shared/queries/keys';
 interface AssignCertificateVariables {
   learningPathId: string;
   certificateId: string;
+  locationX?: number | null;
+  locationY?: number | null;
 }
 
 export function useAssignCertificate() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ learningPathId, certificateId }: AssignCertificateVariables) =>
-      learningPathsApi.assignCertificate(learningPathId, certificateId).then((r) => r.data),
+    mutationFn: ({
+      learningPathId,
+      certificateId,
+      locationX,
+      locationY,
+    }: AssignCertificateVariables) =>
+      learningPathsApi
+        .assignCertificate(learningPathId, certificateId, {
+          location_x: locationX ?? null,
+          location_y: locationY ?? null,
+        })
+        .then((r) => r.data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
         queryKey: learningPathKeys.detail(variables.learningPathId),

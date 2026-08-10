@@ -67,15 +67,43 @@ export const learningPathsApi = {
   listCompetencyAssociations: () =>
     apiGet<{ data: ApiLpCompetencyItem[] }>('platform/learning-path-competencies'),
 
-  assignMailTemplate: (learningPathId: string, mailTemplateId: string) =>
+  assignMailTemplate: (
+    learningPathId: string,
+    mailTemplateId: string,
+    location?: { location_x: number | null; location_y: number | null },
+  ) =>
     apiPost<{ data: ApiLearningPath }>(`platform/learning-paths/${learningPathId}/mail-template`, {
       mail_template_id: mailTemplateId,
+      ...location,
     }),
 
-  assignCertificate: (learningPathId: string, certificateId: string) =>
+  assignCertificate: (
+    learningPathId: string,
+    certificateId: string,
+    location?: { location_x: number | null; location_y: number | null },
+  ) =>
     apiPost<{ data: ApiLearningPath }>(`platform/learning-paths/${learningPathId}/certificate`, {
       certificate_id: certificateId,
+      ...location,
     }),
+
+  updateMailTemplateLocation: (
+    learningPathId: string,
+    location: { location_x: number | null; location_y: number | null },
+  ) =>
+    apiPatch<{ data: ApiLearningPath }>(
+      `platform/learning-paths/${learningPathId}/mail-template/location`,
+      location,
+    ),
+
+  updateCertificateLocation: (
+    learningPathId: string,
+    location: { location_x: number | null; location_y: number | null },
+  ) =>
+    apiPatch<{ data: ApiLearningPath }>(
+      `platform/learning-paths/${learningPathId}/certificate/location`,
+      location,
+    ),
 
   detachCertificate: (learningPathId: string) =>
     apiDelete(`platform/learning-paths/${learningPathId}/certificate`),

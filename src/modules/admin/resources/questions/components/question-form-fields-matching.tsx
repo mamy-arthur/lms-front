@@ -1,8 +1,9 @@
 'use client';
 
 import { ArrowRight, Plus, Trash2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
-import { useFieldArray, useWatch } from 'react-hook-form';
+import { useFieldArray, useFormState, useWatch } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
 import { FieldContent, FieldError, FieldGroup, FieldLabel, FieldRoot } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
@@ -25,6 +26,23 @@ export function QuestionFormFieldsMatching({ form }: MatchingFieldsProps) {
 
   const autoWeight = pairFields.length > 0 ? Math.round(100 / pairFields.length) : 0;
   const watchedPairs = useWatch({ control: form.control, name: 'pairs' });
+
+  // useFormState creates a proper subscription in this child component.
+  const { submitCount } = useFormState({ control: form.control });
+  const [pairsError, setPairsError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (submitCount === 0) {
+      setPairsError(null);
+      return;
+    }
+
+    if ((watchedPairs ?? []).length < 2) {
+      setPairsError('Ajoutez au moins 2 paires');
+    } else {
+      setPairsError(null);
+    }
+  }, [watchedPairs, submitCount]);
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -146,10 +164,9 @@ export function QuestionFormFieldsMatching({ form }: MatchingFieldsProps) {
           </div>
         )}
 
-        {(form.formState.errors.pairs?.root?.message || form.formState.errors.pairs?.message) && (
+        {pairsError && (
           <p className="mt-2 text-xs text-destructive" role="alert">
-            {form.formState.errors.pairs?.root?.message ??
-              String(form.formState.errors.pairs?.message ?? '')}
+            {pairsError}
           </p>
         )}
       </div>

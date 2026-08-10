@@ -86,6 +86,9 @@ jest.mock('@/modules/admin/resources/programs/hooks/useLearningPathQuery', () =>
 jest.mock('@/modules/admin/resources/programs/hooks/useEvaluationsQuery', () => ({
   useEvaluationsQuery: jest.fn(),
 }));
+jest.mock('@/modules/admin/resources/programs/hooks/useProgressionRulesQuery', () => ({
+  useProgressionRulesQuery: jest.fn(),
+}));
 jest.mock('@/modules/admin/resources/programs/hooks/useCreateEvaluation', () => ({
   useCreateEvaluation: jest.fn(),
 }));
@@ -100,6 +103,24 @@ jest.mock('@/modules/admin/resources/programs/hooks/useAssignCertificate', () =>
 }));
 jest.mock('@/modules/admin/resources/programs/hooks/useDetachCertificate', () => ({
   useDetachCertificate: jest.fn(),
+}));
+jest.mock('@/modules/admin/resources/programs/hooks/useCreateProgressionRule', () => ({
+  useCreateProgressionRule: () => ({
+    mutateAsync: jest.fn().mockResolvedValue({ id: 'rule-1' }),
+    isPending: false,
+  }),
+}));
+jest.mock('@/modules/admin/resources/programs/hooks/usePatchProgressionRule', () => ({
+  usePatchProgressionRule: () => ({
+    mutateAsync: jest.fn().mockResolvedValue({ id: 'rule-1' }),
+    isPending: false,
+  }),
+}));
+jest.mock('@/modules/admin/resources/programs/hooks/useDeactivateProgressionRule', () => ({
+  useDeactivateProgressionRule: () => ({
+    mutateAsync: jest.fn().mockResolvedValue(undefined),
+    isPending: false,
+  }),
 }));
 
 // ─── Imports ──────────────────────────────────────────────────────────────────
@@ -119,6 +140,7 @@ import { useLinkCompetencyToLearningPath } from '../../hooks/useLinkCompetencyTo
 import { useUnlinkCompetencyFromLearningPath } from '../../hooks/useUnlinkCompetencyFromLearningPath';
 import { useLearningPathQuery } from '../../hooks/useLearningPathQuery';
 import { useEvaluationsQuery } from '../../hooks/useEvaluationsQuery';
+import { useProgressionRulesQuery } from '../../hooks/useProgressionRulesQuery';
 import { useCreateEvaluation } from '../../hooks/useCreateEvaluation';
 import { useDeleteEvaluation } from '../../hooks/useDeleteEvaluation';
 import { useAssignMailTemplate } from '../../hooks/useAssignMailTemplate';
@@ -140,6 +162,7 @@ const mockUseLinkCompetency = jest.mocked(useLinkCompetencyToLearningPath);
 const mockUseUnlinkCompetency = jest.mocked(useUnlinkCompetencyFromLearningPath);
 const mockUseLearningPathQuery = jest.mocked(useLearningPathQuery);
 const mockUseEvaluationsQuery = jest.mocked(useEvaluationsQuery);
+const mockUseProgressionRulesQuery = jest.mocked(useProgressionRulesQuery);
 const mockUseCreateEvaluation = jest.mocked(useCreateEvaluation);
 const mockUseDeleteEvaluation = jest.mocked(useDeleteEvaluation);
 const mockUseAssignMailTemplate = jest.mocked(useAssignMailTemplate);
@@ -296,6 +319,11 @@ function mockDefaults({
     data: undefined,
     isLoading: false,
   } as unknown as ReturnType<typeof useEvaluationsQuery>);
+
+  mockUseProgressionRulesQuery.mockReturnValue({
+    data: undefined,
+    isLoading: false,
+  } as unknown as ReturnType<typeof useProgressionRulesQuery>);
 
   mockUseCreateEvaluation.mockReturnValue({
     mutateAsync: createEvaluationMutateAsync,
@@ -702,7 +730,8 @@ describe('ProgramsList', () => {
       const assignMailTemplateMutateAsync = jest.fn().mockResolvedValue(undefined);
       mockDefaults({ assignMailTemplateMutateAsync });
 
-      let capturedOnMailTemplateAssign: ((mailTemplateId: string) => Promise<void>) | undefined;
+      let capturedOnMailTemplateAssign:
+        ((mailTemplateId: string, position: { x: number; y: number }) => Promise<void>) | undefined;
       MockProgramFlow.mockImplementation((props: ProgramFlowProps) => {
         capturedOnMailTemplateAssign = props.onMailTemplateAssign;
         return null;
@@ -716,12 +745,14 @@ describe('ProgramsList', () => {
       await user.click(screen.getByRole('menuitem', { name: /modifier/i }));
 
       await act(async () => {
-        await capturedOnMailTemplateAssign?.('mail-tpl-1');
+        await capturedOnMailTemplateAssign?.('mail-tpl-1', { x: 120, y: 240 });
       });
 
       expect(assignMailTemplateMutateAsync).toHaveBeenCalledWith({
         learningPathId: MOCK_PATH_1.id,
         mailTemplateId: 'mail-tpl-1',
+        locationX: 120,
+        locationY: 240,
       });
     });
 
@@ -730,7 +761,8 @@ describe('ProgramsList', () => {
       const assignMailTemplateMutateAsync = jest.fn().mockResolvedValue(undefined);
       mockDefaults({ createMutateAsync, assignMailTemplateMutateAsync });
 
-      let capturedOnMailTemplateAssign: ((mailTemplateId: string) => Promise<void>) | undefined;
+      let capturedOnMailTemplateAssign:
+        ((mailTemplateId: string, position: { x: number; y: number }) => Promise<void>) | undefined;
       MockProgramFlow.mockImplementation((props: ProgramFlowProps) => {
         capturedOnMailTemplateAssign = props.onMailTemplateAssign;
         return null;
@@ -743,7 +775,7 @@ describe('ProgramsList', () => {
       await user.click(screen.getByRole('button', { name: /nouveau parcours/i }));
 
       await act(async () => {
-        await capturedOnMailTemplateAssign?.('mail-tpl-1');
+        await capturedOnMailTemplateAssign?.('mail-tpl-1', { x: 90, y: 180 });
       });
 
       // Le LP doit être créé en premier
@@ -752,6 +784,8 @@ describe('ProgramsList', () => {
       expect(assignMailTemplateMutateAsync).toHaveBeenCalledWith({
         learningPathId: 'lp-created',
         mailTemplateId: 'mail-tpl-1',
+        locationX: 90,
+        locationY: 180,
       });
     });
 
@@ -765,7 +799,8 @@ describe('ProgramsList', () => {
         createEvaluationMutateAsync,
       });
 
-      let capturedOnMailTemplateAssign: ((mailTemplateId: string) => Promise<void>) | undefined;
+      let capturedOnMailTemplateAssign:
+        ((mailTemplateId: string, position: { x: number; y: number }) => Promise<void>) | undefined;
       let capturedOnEvalCreate: ((data: CreateEvaluationPayload) => Promise<string>) | undefined;
       MockProgramFlow.mockImplementation((props: ProgramFlowProps) => {
         capturedOnMailTemplateAssign = props.onMailTemplateAssign;
@@ -781,7 +816,7 @@ describe('ProgramsList', () => {
 
       // Configurer l'email en premier (crée le LP automatiquement)
       await act(async () => {
-        await capturedOnMailTemplateAssign?.('mail-tpl-1');
+        await capturedOnMailTemplateAssign?.('mail-tpl-1', { x: 200, y: 110 });
       });
 
       // Ajouter une évaluation (le LP existe maintenant via lazyLpId)
@@ -805,7 +840,8 @@ describe('ProgramsList', () => {
       const assignCertificateMutateAsync = jest.fn().mockResolvedValue(undefined);
       mockDefaults({ assignCertificateMutateAsync });
 
-      let capturedOnCertificateAssign: ((certificateId: string) => Promise<void>) | undefined;
+      let capturedOnCertificateAssign:
+        ((certificateId: string, position: { x: number; y: number }) => Promise<void>) | undefined;
       MockProgramFlow.mockImplementation((props: ProgramFlowProps) => {
         capturedOnCertificateAssign = props.onCertificateAssign;
         return null;
@@ -818,12 +854,14 @@ describe('ProgramsList', () => {
       await user.click(screen.getByRole('menuitem', { name: /modifier/i }));
 
       await act(async () => {
-        await capturedOnCertificateAssign?.('cert-1');
+        await capturedOnCertificateAssign?.('cert-1', { x: 310, y: 95 });
       });
 
       expect(assignCertificateMutateAsync).toHaveBeenCalledWith({
         learningPathId: MOCK_PATH_1.id,
         certificateId: 'cert-1',
+        locationX: 310,
+        locationY: 95,
       });
     });
 
