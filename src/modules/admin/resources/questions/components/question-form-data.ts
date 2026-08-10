@@ -22,6 +22,63 @@ export const formSchema = z.object({
   correctAnswer: z.boolean(),
   options: z.array(optionSchema),
   pairs: z.array(pairSchema),
+}).superRefine((values, ctx) => {
+  if (values.type === 'single_choice') {
+    if (values.options.length < 2) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['options'],
+        message: 'Ajoutez au moins 2 choix',
+      });
+    }
+
+    const correctCount = values.options.filter((o) => o.isCorrect).length;
+    if (correctCount !== 1) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['options'],
+        message: 'Exactement un choix correct est requis',
+      });
+    }
+  }
+
+  if (values.type === 'multiple_choice') {
+    const correctOptions = values.options.filter((o) => o.isCorrect);
+
+    if (correctOptions.length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['options'],
+        message: 'Au moins un choix correct est requis',
+      });
+    }
+
+    for (const [index, option] of values.options.entries()) {
+      const weight = option.weightPercentage ?? 0;
+      if (option.isCorrect && (weight < 0 || weight > 100)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['options', index, 'weightPercentage'],
+          message: 'Le poids des réponses correctes doit être entre 0 et 100',
+        });
+      }
+      if (!option.isCorrect && (weight < -100 || weight > 0)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['options', index, 'weightPercentage'],
+          message: 'Le poids des réponses incorrectes doit être entre -100 et 0',
+        });
+      }
+    }
+  }
+
+  if (values.type === 'matching' && values.pairs.length < 2) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['pairs'],
+      message: 'Ajoutez au moins 2 paires',
+    });
+  }
 });
 
 export type FormValues = z.infer<typeof formSchema>;
