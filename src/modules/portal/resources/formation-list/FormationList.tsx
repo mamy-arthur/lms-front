@@ -26,11 +26,11 @@ export default function FormationListPage() {
   }, [filter]);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="bg-background">
       <div className="mx-auto w-full space-y-6">
         <div>
           <h1 className="text-xl font-bold text-slate-900">Mes formations</h1>
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-sm text-muted-foreground">
             Retrouvez toutes vos formations, leur progression et vos attestations.
           </p>
         </div>
