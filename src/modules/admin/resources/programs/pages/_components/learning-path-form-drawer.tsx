@@ -362,16 +362,18 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
       return null;
     };
 
-    // Build a mutable edge map keyed by "sourceId→targetId" for fast rule lookup
-    const edgeMap = new Map<string, (typeof edges)[number]>();
-    const edges: {
+    type FlowEdge = {
       id: string;
       source: string;
       target: string;
       type: 'configurableEdge';
       animated: boolean;
       data?: EdgeRuleData;
-    }[] = nodeOrder.slice(1).map((targetId, idx) => {
+    };
+
+    // Build a mutable edge map keyed by "sourceId→targetId" for fast rule lookup
+    const edgeMap = new Map<string, FlowEdge>();
+    const edges: FlowEdge[] = nodeOrder.slice(1).map((targetId, idx) => {
       const edge = {
         id: `e-${nodeOrder[idx]}-${targetId}`,
         source: nodeOrder[idx],
@@ -420,7 +422,11 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
           target: failureCanvasId,
           type: 'configurableEdge' as const,
           animated: false,
-          data: { kind: 'retake' as const },
+          data: {
+            kind: 'retake' as const,
+            retakeForRuleId: rule.id,
+            retakeForEdgeId: edge.id,
+          },
         });
       }
     }

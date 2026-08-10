@@ -97,6 +97,8 @@ export type ProgressionRuleData = {
 
 export type EdgeRuleData = {
   kind?: 'retake';
+  retakeForRuleId?: string;
+  retakeForEdgeId?: string;
   progressionRule?: ProgressionRuleData;
 };
 
@@ -663,6 +665,7 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
 
       // "Deactivate" path — condition set to null means the user wants to remove the rule
       if (formData.condition === null) {
+        const deactivatedRuleId = existing?.progressionRuleId ?? null;
         if (existing?.progressionRuleId && onProgressionRuleDeactivate && learningPathId) {
           try {
             await onProgressionRuleDeactivate(existing.progressionRuleId, learningPathId);
@@ -671,11 +674,23 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
             return;
           }
         }
-        setEdges((eds) =>
-          eds.map((e) =>
+        setEdges((eds) => {
+          const withoutRetakeForRule = deactivatedRuleId
+            ? eds.filter(
+                (e) =>
+                  !(
+                    e.data?.kind === 'retake' &&
+                    (e.data.retakeForEdgeId === edgeId ||
+                      e.data.retakeForRuleId === deactivatedRuleId ||
+                      e.id.startsWith(`retake-${deactivatedRuleId}-`))
+                  ),
+              )
+            : eds.filter((e) => !(e.data?.kind === 'retake' && e.data.retakeForEdgeId === edgeId));
+
+          return withoutRetakeForRule.map((e) =>
             e.id === edgeId ? { ...e, data: { ...e.data, progressionRule: undefined } } : e,
-          ),
-        );
+          );
+        });
         setProgressionRuleDialog(null);
         return;
       }
@@ -765,27 +780,62 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
         }
       }
 
-      setEdges((eds) =>
-        eds.map((e) =>
-          e.id === edgeId
-            ? {
-                ...e,
-                data: {
-                  ...e.data,
-                  progressionRule: ruleId
-                    ? {
-                        progressionRuleId: ruleId,
-                        condition: formData.condition!,
-                        failureTargetNodeId: formData.failureTargetNodeId,
-                        maxAttempts: formData.maxAttempts,
-                        exhaustedTargetNodeId: formData.exhaustedTargetNodeId,
-                      }
-                    : undefined,
-                },
-              }
-            : e,
-        ),
-      );
+      setEdges((eds) => {
+        const retakeRuleId = ruleId ?? existing?.progressionRuleId ?? null;
+        const cleaned = eds
+          .filter(
+            (e) =>
+              !(
+                e.data?.kind === 'retake' &&
+                (e.data.retakeForEdgeId === edgeId ||
+                  (retakeRuleId && e.data.retakeForRuleId === retakeRuleId) ||
+                  (retakeRuleId && e.id.startsWith(`retake-${retakeRuleId}-`)))
+              ),
+          )
+          .map((e) =>
+            e.id === edgeId
+              ? {
+                  ...e,
+                  data: {
+                    ...e.data,
+                    progressionRule: ruleId
+                      ? {
+                          progressionRuleId: ruleId,
+                          condition: formData.condition!,
+                          failureTargetNodeId: formData.failureTargetNodeId,
+                          maxAttempts: formData.maxAttempts,
+                          exhaustedTargetNodeId: formData.exhaustedTargetNodeId,
+                        }
+                      : undefined,
+                  },
+                }
+              : e,
+          );
+
+        if (!formData.failureTargetNodeId) {
+          return cleaned;
+        }
+
+        const retakeId = retakeRuleId
+          ? `retake-${retakeRuleId}-${formData.failureTargetNodeId}`
+          : `retake-${edgeId}-${formData.failureTargetNodeId}`;
+
+        return [
+          ...cleaned,
+          {
+            id: retakeId,
+            source: sourceNodeId,
+            target: formData.failureTargetNodeId,
+            type: 'configurableEdge',
+            animated: false,
+            data: {
+              kind: 'retake',
+              retakeForRuleId: retakeRuleId ?? undefined,
+              retakeForEdgeId: edgeId,
+            },
+          },
+        ];
+      });
 
       setProgressionRuleDialog(null);
     },

@@ -5,7 +5,12 @@ const optionSchema = z.object({
   id: z.string().optional(),
   label: z.string().min(1, 'Libellé requis'),
   isCorrect: z.boolean(),
-  weightPercentage: z.number().int().optional(),
+  weightPercentage: z
+    .number()
+    .int()
+    .min(-100, 'Le poids doit être entre -100 et 100')
+    .max(100, 'Le poids doit être entre -100 et 100')
+    .optional(),
 });
 
 const pairSchema = z.object({

@@ -30,6 +30,12 @@ interface AppHeaderProps {
   onLogout?: () => void;
 }
 
+function formatRole(role?: string | null) {
+  if (!role) return 'Aucun role';
+  const normalized = role.toLowerCase().replace(/_/g, ' ');
+  return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+}
+
 export function AppHeader({ onLogout }: AppHeaderProps) {
   const [cartOpen, setCartOpen] = useState(false);
   const cartQuery = useCartQuery();
@@ -38,6 +44,7 @@ export function AppHeader({ onLogout }: AppHeaderProps) {
   const isAdmin = pathname?.startsWith('/admin') ?? false;
   const { user } = useAuthStore();
   const profileHref = isAdmin ? ROUTES.admin.profile : ROUTES.portal.profile;
+  const roleLabel = formatRole(user?.role);
 
   return (
     <>
@@ -104,13 +111,21 @@ export function AppHeader({ onLogout }: AppHeaderProps) {
           {/* USER MENU */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-9 w-9 rounded-full p-0 hover:bg-accent">
+              <Button className="h-9 max-w-45 rounded-full px-1.5 py-2 bg-transparent hover:bg-gray-100 sm:gap-2 sm:px-2">
                 <Avatar className="h-8 w-8 rounded-full">
                   <AvatarImage src={user?.avatar ?? undefined} alt={user?.name ?? ''} />
                   <AvatarFallback className="rounded-full bg-(--color-primary) text-[11px] font-semibold text-white">
                     {getInitials(user?.name)}
                   </AvatarFallback>
                 </Avatar>
+                <div className="hidden flex-col items-start sm:flex">
+                  <span className="hidden max-w-27.5 truncate text-xs text-black font-medium sm:inline">
+                    {user?.name ?? 'Utilisateur'}
+                  </span>
+                  <span className="hidden max-w-30 truncate text-xs text-muted-foreground md:inline">
+                    {roleLabel}
+                  </span>
+                </div>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
@@ -133,7 +148,7 @@ export function AppHeader({ onLogout }: AppHeaderProps) {
                 <DropdownMenuItem asChild>
                   <Link href={profileHref}>
                     <User className="mr-2 size-4" />
-                    Profile
+                    Profil
                   </Link>
                 </DropdownMenuItem>
               </DropdownMenuGroup>
