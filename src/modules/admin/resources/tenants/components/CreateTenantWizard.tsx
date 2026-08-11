@@ -5,6 +5,7 @@ import { Loader2, Save } from 'lucide-react';
 import { useCallback, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Form } from '@/components/ui/form';
 import {
@@ -95,7 +96,7 @@ export function CreateTenantWizard({ open, onOpenChange }: Props) {
         });
         setStep(1);
       } catch {
-        // l'erreur réseau est déjà gérée par React Query
+        toast.error('Échec de la création du tenant.');
       }
     }
   }, [trigger, form, mutateAsync]);

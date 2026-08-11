@@ -14,8 +14,13 @@ export interface UserSearchProps {
 export function UserSearch({ value, onChange, onSearch, debounceMs = 400 }: UserSearchProps) {
   const onSearchRef = useRef(onSearch);
   onSearchRef.current = onSearch;
+  const isMounted = useRef(false);
 
   useEffect(() => {
+    if (!isMounted.current) {
+      isMounted.current = true;
+      return;
+    }
     const timer = setTimeout(() => onSearchRef.current(), debounceMs);
     return () => clearTimeout(timer);
   }, [value, debounceMs]);

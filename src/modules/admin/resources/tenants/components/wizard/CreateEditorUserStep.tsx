@@ -19,8 +19,7 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { UserPhotoField } from '@modules/shared/components/users/user-photo-field';
 import { UserProfileFields } from '@modules/shared/components/users/user-profile-fields';
-import { adminUsersApi } from '@/modules/admin/resources/users/api';
-import { ADMIN_USERS_QUERY_KEY } from '@/modules/admin/resources/users/hooks/useUsersQuery';
+import { adminUsersApi, ADMIN_USERS_QUERY_KEY } from '@/modules/admin/resources/users';
 import { Role } from '@/shared/constants/roles';
 import { uploadUserProfilePhoto } from '@/modules/shared/lib/uploadUserProfilePhoto';
 
