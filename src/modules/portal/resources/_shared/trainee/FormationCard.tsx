@@ -13,7 +13,7 @@ interface FormationCardProps {
 export function FormationCard({ formation }: FormationCardProps) {
   const router = useRouter();
 
-  const navigate = () => router.push(`/mes-formations/${formation.slug}`);
+  const navigate = () => router.push(`/my-learning-paths/${formation.slug}`);
 
   return (
     <Card

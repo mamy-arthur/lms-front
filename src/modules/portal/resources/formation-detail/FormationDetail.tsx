@@ -64,7 +64,7 @@ export default function FormationDetail({ formation }: FormationDetailProps) {
 
                     <button
                       type="button"
-                      onClick={() => router.push(`/mes-formations/${formation.slug}/learn`)}
+                      onClick={() => router.push(`/my-learning-paths/${formation.slug}/learn`)}
                       className="flex shrink-0 items-center gap-1 rounded-xl bg-[var(--color-primary)] px-5 py-1.5 text-xs font-semibold text-white shadow-sm hover:opacity-90 active:scale-95 transition-all"
                     >
                       Continuer <Play className="h-2 w-3 fill-white" />
