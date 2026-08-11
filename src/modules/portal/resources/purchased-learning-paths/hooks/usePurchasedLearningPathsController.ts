@@ -1,13 +1,11 @@
-import { useMemo } from "react";
+import { useMemo } from 'react';
 import type {
   PurchasedLearningPath,
   PurchasedLearningPathRow,
   PurchasedLearningPathStats,
-} from "../types";
+} from '../types';
 
-function buildPurchasedLearningPathStats(
-  plp: PurchasedLearningPath,
-): PurchasedLearningPathStats {
+function buildPurchasedLearningPathStats(plp: PurchasedLearningPath): PurchasedLearningPathStats {
   return {
     cumulative:
       plp.enrollmentsNotStartedCount +

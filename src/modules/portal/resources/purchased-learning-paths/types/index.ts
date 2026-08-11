@@ -1,7 +1,4 @@
-export type PurchasedLearningPathStatKey =
-  | "cumulative"
-  | "inProgress"
-  | "notStarted";
+export type PurchasedLearningPathStatKey = 'cumulative' | 'inProgress' | 'notStarted';
 
 export interface PurchasedLearningPathEnrollment {
   id: string;

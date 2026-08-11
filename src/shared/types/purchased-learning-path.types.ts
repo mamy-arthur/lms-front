@@ -1,4 +1,4 @@
-import type { ApiLearningPathImage } from "@/shared/types/learning-path.types";
+import type { ApiLearningPathImage } from '@/shared/types/learning-path.types';
 
 export interface ApiPurchasedLearningPathNested {
   id: string;

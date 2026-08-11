@@ -1,14 +1,14 @@
-"use client";
+'use client';
 
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Sheet,
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
-} from "@/components/ui/sheet";
-import { Skeleton } from "@/components/ui/skeleton";
+} from '@/components/ui/sheet';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
   TableBody,
@@ -16,15 +16,15 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { formatDate } from "@/shared/lib/date";
-import { usePurchasedLearningPathEnrollmentsQuery } from "../../hooks/usePurchasedLearningPathEnrollmentsQuery";
-import type { PurchasedLearningPathStatKey } from "../../types";
+} from '@/components/ui/table';
+import { formatDate } from '@/shared/lib/date';
+import { usePurchasedLearningPathEnrollmentsQuery } from '../../hooks/usePurchasedLearningPathEnrollmentsQuery';
+import type { PurchasedLearningPathStatKey } from '../../types';
 
 const STAT_LABELS: Record<PurchasedLearningPathStatKey, string> = {
-  cumulative: "Inscrits cumulés",
-  inProgress: "En cours",
-  notStarted: "Non commencés",
+  cumulative: 'Inscrits cumulés',
+  inProgress: 'En cours',
+  notStarted: 'Non commencés',
 };
 
 interface PurchasedLearningPathStatsUsersDrawerProps {
@@ -49,17 +49,13 @@ export function PurchasedLearningPathStatsUsersDrawer({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        className="flex flex-col gap-0 p-0 max-w-225!"
-        showCloseButton={true}
-      >
+      <SheetContent className="flex flex-col gap-0 p-0 max-w-225!" showCloseButton={true}>
         <SheetHeader className="border-b px-4 py-4">
           <SheetTitle>
             {purchasedLearningPathName} — {STAT_LABELS[stat]}
           </SheetTitle>
           <SheetDescription>
-            Liste des stagiaires correspondant au filtre sélectionné (
-            {enrollments.length}).
+            Liste des stagiaires correspondant au filtre sélectionné ({enrollments.length}).
           </SheetDescription>
         </SheetHeader>
 
@@ -84,31 +80,20 @@ export function PurchasedLearningPathStatsUsersDrawer({
                 <TableBody>
                   {enrollments.length === 0 ? (
                     <TableRow>
-                      <TableCell
-                        colSpan={4}
-                        className="py-8 text-center text-muted-foreground"
-                      >
+                      <TableCell colSpan={4} className="py-8 text-center text-muted-foreground">
                         Aucun stagiaire pour ce filtre.
                       </TableCell>
                     </TableRow>
                   ) : (
                     enrollments.map((enrollment) => (
                       <TableRow key={enrollment.id}>
-                        <TableCell className="font-medium">
-                          {enrollment.fullName}
+                        <TableCell className="font-medium">{enrollment.fullName}</TableCell>
+                        <TableCell>{formatDate(enrollment.enrolledAt)}</TableCell>
+                        <TableCell>
+                          {enrollment.startedAt ? formatDate(enrollment.startedAt) : '—'}
                         </TableCell>
                         <TableCell>
-                          {formatDate(enrollment.enrolledAt)}
-                        </TableCell>
-                        <TableCell>
-                          {enrollment.startedAt
-                            ? formatDate(enrollment.startedAt)
-                            : "—"}
-                        </TableCell>
-                        <TableCell>
-                          {enrollment.completedAt
-                            ? formatDate(enrollment.completedAt)
-                            : "—"}
+                          {enrollment.completedAt ? formatDate(enrollment.completedAt) : '—'}
                         </TableCell>
                       </TableRow>
                     ))

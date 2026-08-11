@@ -1,11 +1,11 @@
-"use client";
+'use client';
 
-import { Search, UserPlus } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
-import { toast } from "sonner";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Search, UserPlus } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { toast } from 'sonner';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -13,11 +13,11 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { getInitials } from "@/shared/lib/string/getInitials";
-import type { TenantAssignableUser } from "../../types";
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { getInitials } from '@/shared/lib/string/getInitials';
+import type { TenantAssignableUser } from '../../types';
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -34,12 +34,12 @@ export function AddUsersDialog({
   availableUsers,
   onConfirm,
 }: AddUsersDialogProps) {
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (open) {
-      setSearch("");
+      setSearch('');
       setSelectedIds(new Set());
     }
   }, [open]);
@@ -64,7 +64,7 @@ export function AddUsersDialog({
 
   const handleConfirm = () => {
     if (selectedIds.size === 0) {
-      toast.error("Sélectionnez au moins un utilisateur.");
+      toast.error('Sélectionnez au moins un utilisateur.');
       return;
     }
     onConfirm([...selectedIds]);
@@ -77,8 +77,7 @@ export function AddUsersDialog({
         <DialogHeader className="border-b px-5 py-4">
           <DialogTitle>Ajouter des utilisateurs</DialogTitle>
           <DialogDescription>
-            Recherchez et sélectionnez les utilisateurs à ajouter à cette
-            formation.
+            Recherchez et sélectionnez les utilisateurs à ajouter à cette formation.
           </DialogDescription>
         </DialogHeader>
 
@@ -99,8 +98,8 @@ export function AddUsersDialog({
           {filtered.length === 0 ? (
             <p className="py-6 text-center text-xs italic text-muted-foreground">
               {availableUsers.length === 0
-                ? "Tous les utilisateurs sont déjà assignés."
-                : "Aucun résultat pour cette recherche."}
+                ? 'Tous les utilisateurs sont déjà assignés.'
+                : 'Aucun résultat pour cette recherche.'}
             </p>
           ) : (
             <div className="space-y-1">
@@ -109,9 +108,11 @@ export function AddUsersDialog({
                 return (
                   <label
                     key={user.id}
+                    htmlFor={user.id}
                     className="flex cursor-pointer items-center gap-3 rounded-md px-2 py-2 hover:bg-muted/60"
                   >
                     <Checkbox
+                      id={user.id}
                       checked={checked}
                       onCheckedChange={() => toggleUser(user.id)}
                     />
@@ -138,7 +139,7 @@ export function AddUsersDialog({
             className="gap-1.5 bg-(--color-primary) hover:bg-(--color-primary)/50 text-white"
           >
             <UserPlus className="size-4" />
-            Ajouter{selectedIds.size > 0 ? ` (${selectedIds.size})` : ""}
+            Ajouter{selectedIds.size > 0 ? ` (${selectedIds.size})` : ''}
           </Button>
         </DialogFooter>
       </DialogContent>

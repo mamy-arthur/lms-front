@@ -1,11 +1,11 @@
-"use client";
+'use client';
 
-import { Check, Loader2, Save, Search } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
-import { toast } from "sonner";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Check, Loader2, Save, Search } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { toast } from 'sonner';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -13,12 +13,12 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { getInitials } from "@/shared/lib/string/getInitials";
-import type { TenantAssignableUser } from "../../types";
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { getInitials } from '@/shared/lib/string/getInitials';
+import type { TenantAssignableUser } from '../../types';
 
 interface CreateGroupDialogProps {
   open: boolean;
@@ -41,14 +41,14 @@ export function CreateGroupDialog({
   isSubmitting = false,
 }: CreateGroupDialogProps) {
   const isEditing = Boolean(initialName);
-  const [groupName, setGroupName] = useState("");
-  const [search, setSearch] = useState("");
+  const [groupName, setGroupName] = useState('');
+  const [search, setSearch] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (open) {
-      setGroupName(initialName ?? "");
-      setSearch("");
+      setGroupName(initialName ?? '');
+      setSearch('');
       setSelectedIds(initialUserIds ? new Set(initialUserIds) : new Set());
     }
   }, [open, initialName, initialUserIds]);
@@ -74,11 +74,11 @@ export function CreateGroupDialog({
   const handleConfirm = async () => {
     const name = groupName.trim();
     if (!name) {
-      toast.error("Le nom du groupe est obligatoire.");
+      toast.error('Le nom du groupe est obligatoire.');
       return;
     }
     if (selectedIds.size === 0) {
-      toast.error("Sélectionnez au moins un membre.");
+      toast.error('Sélectionnez au moins un membre.');
       return;
     }
     await onConfirm(name, [...selectedIds]);
@@ -94,13 +94,11 @@ export function CreateGroupDialog({
     >
       <DialogContent className="flex flex-col gap-0 p-0 sm:max-w-lg">
         <DialogHeader className="border-b px-5 py-4">
-          <DialogTitle>
-            {isEditing ? "Modifier le groupe" : "Créer un groupe"}
-          </DialogTitle>
+          <DialogTitle>{isEditing ? 'Modifier le groupe' : 'Créer un groupe'}</DialogTitle>
           <DialogDescription>
             {isEditing
-              ? "Modifiez le nom et les membres du groupe."
-              : "Donnez un nom au groupe et sélectionnez ses membres."}
+              ? 'Modifiez le nom et les membres du groupe.'
+              : 'Donnez un nom au groupe et sélectionnez ses membres.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -144,9 +142,11 @@ export function CreateGroupDialog({
                 return (
                   <label
                     key={user.id}
+                    htmlFor={user.id}
                     className="flex cursor-pointer items-center gap-3 rounded-md px-2 py-2 hover:bg-muted/60"
                   >
                     <Checkbox
+                      id={user.id}
                       checked={checked}
                       onCheckedChange={() => toggleUser(user.id)}
                       disabled={isSubmitting}
@@ -157,9 +157,7 @@ export function CreateGroupDialog({
                       </AvatarFallback>
                     </Avatar>
                     <span className="truncate text-sm">{user.fullName}</span>
-                    {checked && (
-                      <Check className="ml-auto size-3.5 shrink-0 text-primary" />
-                    )}
+                    {checked && <Check className="ml-auto size-3.5 shrink-0 text-primary" />}
                   </label>
                 );
               })}
@@ -169,25 +167,18 @@ export function CreateGroupDialog({
 
         {selectedIds.size > 0 && (
           <p className="px-5 pb-2 text-xs text-muted-foreground">
-            {selectedIds.size} membre{selectedIds.size > 1 ? "s" : ""}{" "}
-            sélectionné
-            {selectedIds.size > 1 ? "s" : ""}
+            {selectedIds.size} membre{selectedIds.size > 1 ? 's' : ''} sélectionné
+            {selectedIds.size > 1 ? 's' : ''}
           </p>
         )}
 
         <DialogFooter className="border-t px-5 py-4">
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={isSubmitting}
-          >
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
             Annuler
           </Button>
           <Button
             onClick={() => void handleConfirm()}
-            disabled={
-              !groupName.trim() || selectedIds.size === 0 || isSubmitting
-            }
+            disabled={!groupName.trim() || selectedIds.size === 0 || isSubmitting}
             className="gap-1.5 bg-(--color-primary) hover:bg-(--color-primary)/50 text-white"
           >
             {isSubmitting ? (
@@ -195,7 +186,7 @@ export function CreateGroupDialog({
             ) : (
               <Save className="size-4" />
             )}
-            {isEditing ? "Enregistrer" : "Créer le groupe"}
+            {isEditing ? 'Enregistrer' : 'Créer le groupe'}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -1,17 +1,11 @@
-"use client";
+'use client';
 
-import { ChevronRight } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  DataTable,
-  type DataTableColumn,
-} from "@/shared/components/ui/DataTable";
-import type {
-  PurchasedLearningPathRow,
-  PurchasedLearningPathStatKey,
-} from "../../types";
-import { PurchasedLearningPathStatTrigger } from "./stat-trigger";
+import { ChevronRight } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { DataTable, type DataTableColumn } from '@/shared/components/ui/DataTable';
+import type { PurchasedLearningPathRow, PurchasedLearningPathStatKey } from '../../types';
+import { PurchasedLearningPathStatTrigger } from './stat-trigger';
 
 interface PurchasedLearningPathsTableProps {
   purchasedLearningPaths: PurchasedLearningPathRow[];
@@ -43,48 +37,46 @@ export function PurchasedLearningPathsTable({
 }: PurchasedLearningPathsTableProps) {
   const columns: DataTableColumn<PurchasedLearningPathRow>[] = [
     {
-      key: "name",
-      label: "Parcours de formation",
-      render: (row) => (
-        <span className="font-medium text-foreground">{row.name}</span>
-      ),
+      key: 'name',
+      label: 'Parcours de formation',
+      render: (row) => <span className="font-medium text-foreground">{row.name}</span>,
     },
     {
-      key: "cumulative",
-      label: "Inscrits cumulés",
+      key: 'cumulative',
+      label: 'Inscrits cumulés',
       render: (row) => (
         <PurchasedLearningPathStatTrigger
           label="Cumulés"
           value={row.stats.cumulative}
-          onClick={() => onStatClick(row, "cumulative")}
+          onClick={() => onStatClick(row, 'cumulative')}
         />
       ),
     },
     {
-      key: "inProgress",
-      label: "Inscrits en cours",
+      key: 'inProgress',
+      label: 'Inscrits en cours',
       render: (row) => (
         <PurchasedLearningPathStatTrigger
           label="En cours"
           value={row.stats.inProgress}
-          onClick={() => onStatClick(row, "inProgress")}
+          onClick={() => onStatClick(row, 'inProgress')}
         />
       ),
     },
     {
-      key: "notStarted",
-      label: "Non commencés",
+      key: 'notStarted',
+      label: 'Non commencés',
       render: (row) => (
         <PurchasedLearningPathStatTrigger
           label="Non commencés"
           value={row.stats.notStarted}
-          onClick={() => onStatClick(row, "notStarted")}
+          onClick={() => onStatClick(row, 'notStarted')}
         />
       ),
     },
     {
-      key: "availableCredits",
-      label: "Crédits disponibles",
+      key: 'availableCredits',
+      label: 'Crédits disponibles',
       render: (row) => (
         <Badge variant="outline" className="rounded-full px-2 py-0.5 text-xs">
           {row.stats.availableCredits}
@@ -92,14 +84,14 @@ export function PurchasedLearningPathsTable({
       ),
     },
     {
-      key: "assign",
-      label: "",
+      key: 'assign',
+      label: '',
       render: (row) => (
         <Button
           type="button"
           size="sm"
           onClick={() => onAssign(row)}
-          variant={"outline"}
+          variant={'outline'}
           className=" text-black"
         >
           <ChevronRight className="size-3" />
@@ -121,7 +113,7 @@ export function PurchasedLearningPathsTable({
       onPageSizeChange={onPageSizeChange}
       onRowClick={onAssign}
       emptyState={{
-        title: "Aucune formation achetée",
+        title: 'Aucune formation achetée',
         description:
           "Aucune formation achetée n'est disponible. Les formations non achetées sont masquées.",
       }}

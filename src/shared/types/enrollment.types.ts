@@ -1,17 +1,12 @@
-export type EnrollmentStatus =
-  | "not_started"
-  | "in_progress"
-  | "completed"
-  | "expired";
+export type EnrollmentStatus = 'not_started' | 'in_progress' | 'completed' | 'expired';
 
 export interface ApiEnrollment {
   id: string;
   tenant_id: string;
-  user_id: string;
+  assigned_by: string;
   learning_path_id: string;
   learner_id: string;
   status: EnrollmentStatus;
-  progress_percentage: number;
   enrolled_at: string;
   started_at: string | null;
   completed_at: string | null;

@@ -1,11 +1,11 @@
-"use client";
+'use client';
 
-import { Loader2, Plus, Save, UserPlus } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
-import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Loader2, Plus, Save, UserPlus } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { toast } from 'sonner';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Sheet,
   SheetContent,
@@ -13,21 +13,17 @@ import {
   SheetFooter,
   SheetHeader,
   SheetTitle,
-} from "@/components/ui/sheet";
-import { getApiErrorMessage } from "@/shared/lib/errors";
+} from '@/components/ui/sheet';
+import { getApiErrorMessage } from '@/shared/lib/errors';
 import type {
   CreateEnrollmentPayload,
   CreateEnrollmentResponse,
-} from "@/shared/types/enrollment.types";
-import { usePurchasedLearningPathEnrollmentsQuery } from "../../hooks/usePurchasedLearningPathEnrollmentsQuery";
-import type {
-  AssignableGroup,
-  PurchasedLearningPathRow,
-  TenantAssignableUser,
-} from "../../types";
-import { AddUsersDialog } from "./add-users-dialog";
-import { GroupCard, UserCard } from "./cards";
-import { CreateGroupDialog } from "./create-group-dialog";
+} from '@/shared/types/enrollment.types';
+import { usePurchasedLearningPathEnrollmentsQuery } from '../../hooks/usePurchasedLearningPathEnrollmentsQuery';
+import type { AssignableGroup, PurchasedLearningPathRow, TenantAssignableUser } from '../../types';
+import { AddUsersDialog } from './add-users-dialog';
+import { GroupCard, UserCard } from './cards';
+import { CreateGroupDialog } from './create-group-dialog';
 
 interface PurchasedLearningPathEnrollmentDrawerProps {
   open: boolean;
@@ -35,19 +31,10 @@ interface PurchasedLearningPathEnrollmentDrawerProps {
   purchasedLearningPath: PurchasedLearningPathRow | null;
   users: TenantAssignableUser[];
   groups: AssignableGroup[];
-  onCreateGroup: (
-    name: string,
-    traineeIds: string[],
-  ) => Promise<AssignableGroup>;
-  onEditGroup: (
-    group: AssignableGroup,
-    name: string,
-    traineeIds: string[],
-  ) => Promise<void>;
+  onCreateGroup: (name: string, traineeIds: string[]) => Promise<AssignableGroup>;
+  onEditGroup: (group: AssignableGroup, name: string, traineeIds: string[]) => Promise<void>;
   onDeleteGroup: (groupId: string) => Promise<void>;
-  onAssign: (
-    payload: CreateEnrollmentPayload,
-  ) => Promise<CreateEnrollmentResponse>;
+  onAssign: (payload: CreateEnrollmentPayload) => Promise<CreateEnrollmentResponse>;
   isCreatingGroup?: boolean;
   isUpdatingGroup?: boolean;
   isDeletingGroup?: boolean;
@@ -70,23 +57,17 @@ export function PurchasedLearningPathEnrollmentDrawer({
   isAssigning = false,
 }: PurchasedLearningPathEnrollmentDrawerProps) {
   const [pendingAddIds, setPendingAddIds] = useState<Set<string>>(new Set());
-  const [selectedGroupIds, setSelectedGroupIds] = useState<Set<string>>(
-    new Set(),
-  );
-  const [editingGroup, setEditingGroup] = useState<AssignableGroup | null>(
-    null,
-  );
+  const [selectedGroupIds, setSelectedGroupIds] = useState<Set<string>>(new Set());
+  const [editingGroup, setEditingGroup] = useState<AssignableGroup | null>(null);
 
   const [showAddUsers, setShowAddUsers] = useState(false);
   const [showCreateGroup, setShowCreateGroup] = useState(false);
 
-  const isBusy =
-    isCreatingGroup || isUpdatingGroup || isDeletingGroup || isAssigning;
+  const isBusy = isCreatingGroup || isUpdatingGroup || isDeletingGroup || isAssigning;
 
-  const { enrollments: enrolledUsers } =
-    usePurchasedLearningPathEnrollmentsQuery(
-      open ? purchasedLearningPath?.id : null,
-    );
+  const { enrollments: enrolledUsers } = usePurchasedLearningPathEnrollmentsQuery(
+    open ? purchasedLearningPath?.id : null,
+  );
 
   useEffect(() => {
     if (!purchasedLearningPath || !open) return;
@@ -103,14 +84,38 @@ export function PurchasedLearningPathEnrollmentDrawer({
   );
 
   const availableToAdd = useMemo(
-    () =>
-      users.filter(
-        (u) => !enrolledUserIds.has(u.id) && !pendingAddIds.has(u.id),
-      ),
+    () => users.filter((u) => !enrolledUserIds.has(u.id) && !pendingAddIds.has(u.id)),
     [users, enrolledUserIds, pendingAddIds],
   );
 
+  const selectedGroupUserIds = useMemo(() => {
+    const ids = new Set<string>();
+
+    for (const group of groups) {
+      if (!selectedGroupIds.has(group.id)) continue;
+      for (const userId of group.userIds) {
+        ids.add(userId);
+      }
+    }
+
+    return ids;
+  }, [groups, selectedGroupIds]);
+
+  const netAssignableUserIds = useMemo(() => {
+    const unionUserIds = new Set<string>([...pendingAddIds, ...selectedGroupUserIds]);
+
+    for (const enrolledUserId of enrolledUserIds) {
+      unionUserIds.delete(enrolledUserId);
+    }
+
+    return unionUserIds;
+  }, [pendingAddIds, selectedGroupUserIds, enrolledUserIds]);
+
+  const netAssignableCount = netAssignableUserIds.size;
+
   if (!purchasedLearningPath) return null;
+
+  const hasInsufficientCredits = netAssignableCount > purchasedLearningPath.creditsAvailable;
 
   const handleAddUsersConfirm = (userIds: string[]) => {
     setPendingAddIds((prev) => new Set([...prev, ...userIds]));
@@ -123,7 +128,7 @@ export function PurchasedLearningPathEnrollmentDrawer({
       setShowCreateGroup(false);
       toast.success(`Groupe "${group.name}" créé.`);
     } catch (err) {
-      toast.error(getApiErrorMessage(err, "Impossible de créer le groupe."));
+      toast.error(getApiErrorMessage(err, 'Impossible de créer le groupe.'));
     }
   };
 
@@ -134,7 +139,7 @@ export function PurchasedLearningPathEnrollmentDrawer({
       setEditingGroup(null);
       toast.success(`Groupe "${name}" mis à jour.`);
     } catch (err) {
-      toast.error(getApiErrorMessage(err, "Impossible de modifier le groupe."));
+      toast.error(getApiErrorMessage(err, 'Impossible de modifier le groupe.'));
     }
   };
 
@@ -146,11 +151,9 @@ export function PurchasedLearningPathEnrollmentDrawer({
         next.delete(groupId);
         return next;
       });
-      toast.success("Groupe supprimé.");
+      toast.success('Groupe supprimé.');
     } catch (err) {
-      toast.error(
-        getApiErrorMessage(err, "Impossible de supprimer le groupe."),
-      );
+      toast.error(getApiErrorMessage(err, 'Impossible de supprimer le groupe.'));
     }
   };
 
@@ -167,12 +170,19 @@ export function PurchasedLearningPathEnrollmentDrawer({
   };
 
   const handleAssign = async () => {
+    if (hasInsufficientCredits) {
+      toast.error(
+        `Crédits insuffisants: ${purchasedLearningPath.creditsAvailable} disponible(s) pour ${netAssignableCount} stagiaire(s) à inscrire.`,
+      );
+      return;
+    }
+
     const learningPathId = purchasedLearningPath.learningPathId;
     const traineeIds = [...pendingAddIds];
     const groupIds = [...selectedGroupIds];
 
     if (traineeIds.length === 0 && groupIds.length === 0) {
-      toast.info("Aucune modification à enregistrer.");
+      toast.info('Aucune modification à enregistrer.');
       return;
     }
 
@@ -186,15 +196,13 @@ export function PurchasedLearningPathEnrollmentDrawer({
       const response = await onAssign(payload);
 
       if (response.meta.enrolled_count > 0) {
-        toast.success(response.message);
+        toast.success(`${response.meta.enrolled_count} stagiaire(s) inscrit(s) avec succès.`);
       } else {
-        toast.info(response.message);
+        toast.info('Aucun nouvel inscrit — les stagiaires sélectionnés étaient déjà inscrits.');
       }
       onOpenChange(false);
-    } catch (err) {
-      toast.error(
-        getApiErrorMessage(err, "Impossible d'enregistrer les inscriptions."),
-      );
+    } catch {
+      toast.error("Impossible d'enregistrer les inscriptions.");
     }
   };
 
@@ -225,7 +233,12 @@ export function PurchasedLearningPathEnrollmentDrawer({
         isSubmitting={isUpdatingGroup}
       />
 
-      <Sheet open={open} onOpenChange={onOpenChange}>
+      <Sheet
+        open={open}
+        onOpenChange={(next) => {
+          if (!isBusy) onOpenChange(next);
+        }}
+      >
         <SheetContent
           className="flex w-full flex-col gap-0 p-0 max-w-225! overflow-auto"
           showCloseButton={true}
@@ -233,9 +246,29 @@ export function PurchasedLearningPathEnrollmentDrawer({
           <SheetHeader className="border-b px-5 py-4">
             <SheetTitle>Inscrire — {purchasedLearningPath.name}</SheetTitle>
             <SheetDescription>
-              Sélectionnez les stagiaires à inscrire et les groupes, puis
-              validez en une seule action.
+              Sélectionnez les stagiaires à inscrire et les groupes, puis validez en une seule
+              action.
             </SheetDescription>
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              <Badge variant="secondary">
+                Crédits disponibles : {purchasedLearningPath.creditsAvailable}
+              </Badge>
+              <Badge
+                variant="secondary"
+                className={
+                  hasInsufficientCredits
+                    ? 'bg-red-100 text-red-700'
+                    : 'bg-(--color-primary)/20 text-(--color-primary)'
+                }
+              >
+                Assignation à faire : {netAssignableCount}
+              </Badge>
+              {hasInsufficientCredits ? (
+                <p className="text-xs font-medium text-red-700">
+                  Crédits insuffisants pour cette sélection.
+                </p>
+              ) : null}
+            </div>
           </SheetHeader>
 
           <ScrollArea className="flex-1">
@@ -325,8 +358,7 @@ export function PurchasedLearningPathEnrollmentDrawer({
 
                 {groups.length === 0 ? (
                   <p className="text-xs italic text-muted-foreground">
-                    Aucun groupe disponible. Créez-en un via le bouton
-                    ci-dessus.
+                    Aucun groupe disponible. Créez-en un via le bouton ci-dessus.
                   </p>
                 ) : (
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -363,7 +395,7 @@ export function PurchasedLearningPathEnrollmentDrawer({
                 className="gap-2 bg-(--color-primary) text-white hover:bg-(--color-primary)/80"
                 size="lg"
                 onClick={() => void handleAssign()}
-                disabled={isBusy}
+                disabled={isBusy || hasInsufficientCredits}
               >
                 {isAssigning ? (
                   <Loader2 className="size-4 animate-spin" />

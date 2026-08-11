@@ -1,18 +1,16 @@
-import { useQuery } from "@tanstack/react-query";
-import { purchasedLearningPathKeys } from "@/shared/queries/keys";
-import type { EnrollmentStatus } from "@/shared/types/enrollment.types";
-import { purchasedLearningPathsManagementApi } from "../api";
-import { mapEnrollmentToRow } from "../lib/mappers";
-import type { PurchasedLearningPathStatKey } from "../types";
-import { useAssignableTraineesQuery } from "./useAssignableTraineesQuery";
+import { useQuery } from '@tanstack/react-query';
+import { purchasedLearningPathKeys } from '@/shared/queries/keys';
+import type { EnrollmentStatus } from '@/shared/types/enrollment.types';
+import { purchasedLearningPathsManagementApi } from '../api';
+import { ASSIGNABLE_LIST_PAGE_SIZE } from '../lib/constants';
+import { mapEnrollmentToRow } from '../lib/mappers';
+import type { PurchasedLearningPathStatKey } from '../types';
+import { useAssignableTraineesQuery } from './useAssignableTraineesQuery';
 
-const STAT_TO_STATUS: Record<
-  PurchasedLearningPathStatKey,
-  EnrollmentStatus | undefined
-> = {
+const STAT_TO_STATUS: Record<PurchasedLearningPathStatKey, EnrollmentStatus | undefined> = {
   cumulative: undefined,
-  inProgress: "in_progress",
-  notStarted: "not_started",
+  inProgress: 'in_progress',
+  notStarted: 'not_started',
 };
 
 /**
@@ -22,18 +20,18 @@ const STAT_TO_STATUS: Record<
  */
 export function usePurchasedLearningPathEnrollmentsQuery(
   plpId: string | null | undefined,
-  stat: PurchasedLearningPathStatKey = "cumulative",
+  stat: PurchasedLearningPathStatKey = 'cumulative',
 ) {
   const status = STAT_TO_STATUS[stat];
   const { data: trainees = [] } = useAssignableTraineesQuery();
 
   const query = useQuery({
-    queryKey: purchasedLearningPathKeys.enrollments(plpId ?? "", { status }),
+    queryKey: purchasedLearningPathKeys.enrollments(plpId ?? '', { status }),
     queryFn: () => {
       if (!plpId) return Promise.resolve([]);
       return purchasedLearningPathsManagementApi.listEnrollments(plpId, {
         ...(status ? { status } : {}),
-        per_page: 100,
+        per_page: ASSIGNABLE_LIST_PAGE_SIZE,
       });
     },
     enabled: Boolean(plpId),
@@ -42,9 +40,7 @@ export function usePurchasedLearningPathEnrollmentsQuery(
 
   const usersById = new Map(trainees.map((u) => [u.id, u]));
 
-  const enrollments = (query.data ?? []).map((e) =>
-    mapEnrollmentToRow(e, usersById),
-  );
+  const enrollments = (query.data ?? []).map((e) => mapEnrollmentToRow(e, usersById));
 
   return {
     enrollments,

@@ -1,19 +1,13 @@
-"use client";
+'use client';
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
-import { RoleGuard } from "@/modules/auth/guards/RoleGuard";
-import { ACCESS } from "@/shared/auth/permissions";
-import { usePurchasedLearningPathList } from "../hooks/usePurchasedLearningPathList";
-import { PurchasedLearningPathEnrollmentDrawer } from "./_components/enrollment-drawer";
-import { PurchasedLearningPathsTable } from "./_components/paths-table";
-import { PurchasedLearningPathStatsUsersDrawer } from "./_components/stats-users-drawer";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { RoleGuard } from '@/modules/auth/guards/RoleGuard';
+import { ACCESS } from '@/shared/auth/permissions';
+import { usePurchasedLearningPathList } from '../hooks/usePurchasedLearningPathList';
+import { PurchasedLearningPathEnrollmentDrawer } from './_components/enrollment-drawer';
+import { PurchasedLearningPathsTable } from './_components/paths-table';
+import { PurchasedLearningPathStatsUsersDrawer } from './_components/stats-users-drawer';
 
 export function PurchasedLearningPathList() {
   const {
@@ -61,8 +55,7 @@ export function PurchasedLearningPathList() {
               Gestion des parcours de formations
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Gérez vos parcours de formation et leur affectation aux
-              utilisateurs.
+              Gérez vos parcours de formation et leur affectation aux utilisateurs.
             </p>
           </div>
         </header>
@@ -86,9 +79,7 @@ export function PurchasedLearningPathList() {
             onStatClick={(purchasedLearningPath, stat) =>
               setStatsDrawer({ purchasedLearningPath, stat })
             }
-            onAssign={(purchasedLearningPath) =>
-              setAssignmentTarget(purchasedLearningPath)
-            }
+            onAssign={(purchasedLearningPath) => setAssignmentTarget(purchasedLearningPath)}
           />
         )}
       </div>
@@ -97,13 +88,11 @@ export function PurchasedLearningPathList() {
         open={Boolean(statsDrawer.purchasedLearningPath)}
         onOpenChange={(open) => {
           if (!open) {
-            setStatsDrawer({ purchasedLearningPath: null, stat: "cumulative" });
+            setStatsDrawer({ purchasedLearningPath: null, stat: 'cumulative' });
           }
         }}
         purchasedLearningPathId={statsDrawer.purchasedLearningPath?.id ?? null}
-        purchasedLearningPathName={
-          statsDrawer.purchasedLearningPath?.name ?? ""
-        }
+        purchasedLearningPathName={statsDrawer.purchasedLearningPath?.name ?? ''}
         stat={statsDrawer.stat}
       />
 

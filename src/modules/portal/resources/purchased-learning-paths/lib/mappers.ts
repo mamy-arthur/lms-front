@@ -1,18 +1,16 @@
-import type { ApiEnrollment } from "@/shared/types/enrollment.types";
-import type { ApiGroup } from "@/shared/types/group.types";
-import type { ApiPurchasedLearningPath } from "@/shared/types/purchased-learning-path.types";
-import type { ApiAssignableTraineeUser } from "@/shared/types/user.types";
+import type { ApiEnrollment } from '@/shared/types/enrollment.types';
+import type { ApiGroup } from '@/shared/types/group.types';
+import type { ApiPurchasedLearningPath } from '@/shared/types/purchased-learning-path.types';
+import type { ApiAssignableTraineeUser } from '@/shared/types/user.types';
 import type {
   AssignableGroup,
   PurchasedLearningPath,
   PurchasedLearningPathEnrollment,
   TenantAssignableUser,
-} from "../types";
+} from '../types';
 
 /** Mappe une ressource API vers le modèle UI purchasedLearningPath. */
-export function mapToPurchasedLearningPath(
-  api: ApiPurchasedLearningPath,
-): PurchasedLearningPath {
+export function mapToPurchasedLearningPath(api: ApiPurchasedLearningPath): PurchasedLearningPath {
   return {
     id: api.id,
     tenantId: api.tenant_id,
@@ -34,7 +32,7 @@ export function mapToAssignableUser(
 ): TenantAssignableUser {
   const fullName =
     user.full_name?.trim() ||
-    [user.first_name, user.last_name].filter(Boolean).join(" ").trim() ||
+    [user.first_name, user.last_name].filter(Boolean).join(' ').trim() ||
     user.id;
 
   return {
@@ -60,8 +58,7 @@ export function mapEnrollmentToRow(
   return {
     id: enrollment.id,
     userId: enrollment.learner_id,
-    fullName:
-      usersById.get(enrollment.learner_id)?.fullName ?? enrollment.learner_id,
+    fullName: usersById.get(enrollment.learner_id)?.fullName ?? enrollment.learner_id,
     enrolledAt: enrollment.enrolled_at,
     startedAt: enrollment.started_at,
     completedAt: enrollment.completed_at,

@@ -1,6 +1,6 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { groupsApi } from "@/shared/api/groups.api";
-import { groupKeys } from "@/shared/queries/keys";
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { groupsApi } from '@/shared/api/groups.api';
+import { groupKeys } from '@/shared/queries/keys';
 
 export function useUpdateGroupWithMembers() {
   const queryClient = useQueryClient();
@@ -26,19 +26,13 @@ export function useUpdateGroupWithMembers() {
       const previousSet = new Set(previousTraineeIds);
       const nextSet = new Set(traineeIds);
 
-      const toAdd = traineeIds.filter(
-        (traineeId) => !previousSet.has(traineeId),
-      );
-      const toRemove = previousTraineeIds.filter(
-        (traineeId) => !nextSet.has(traineeId),
-      );
+      const toAdd = traineeIds.filter((traineeId) => !previousSet.has(traineeId));
+      const toRemove = previousTraineeIds.filter((traineeId) => !nextSet.has(traineeId));
 
-      for (const traineeId of toAdd) {
-        await groupsApi.addMember(id, { trainee_id: traineeId });
-      }
-      for (const traineeId of toRemove) {
-        await groupsApi.removeMember(id, traineeId);
-      }
+      await Promise.all([
+        ...toAdd.map((traineeId) => groupsApi.addMember(id, { trainee_id: traineeId })),
+        ...toRemove.map((traineeId) => groupsApi.removeMember(id, traineeId)),
+      ]);
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: groupKeys.all });

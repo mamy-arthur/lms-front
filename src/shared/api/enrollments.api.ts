@@ -1,10 +1,10 @@
-import { apiGet, apiPost } from "@/shared/lib/apiClient";
+import { apiGet, apiPost } from '@/shared/lib/apiClient';
 import type {
   ApiEnrollmentsListResponse,
   CreateEnrollmentPayload,
   CreateEnrollmentResponse,
   EnrollmentsListParams,
-} from "@/shared/types/enrollment.types";
+} from '@/shared/types/enrollment.types';
 
 /**
  * Enrollments CM — routes /enrollments
@@ -12,11 +12,7 @@ import type {
  */
 export const enrollmentsApi = {
   list: (params?: EnrollmentsListParams) =>
-    apiGet<ApiEnrollmentsListResponse>(
-      "enrollments",
-      params as Record<string, unknown>,
-    ),
+    apiGet<ApiEnrollmentsListResponse>('enrollments', params as Record<string, unknown>),
 
-  create: (data: CreateEnrollmentPayload) =>
-    apiPost<CreateEnrollmentResponse>("enrollments", data),
+  create: (data: CreateEnrollmentPayload) => apiPost<CreateEnrollmentResponse>('enrollments', data),
 };

@@ -10,12 +10,12 @@ jest.mock('@/shared/lib/apiClient', () => ({
 }));
 
 import { apiGet, apiPost } from '@/shared/lib/apiClient';
-import { enrollmentsApi } from '../enrollments.api';
 import type {
   ApiEnrollment,
   ApiEnrollmentsListResponse,
   CreateEnrollmentResponse,
 } from '@/shared/types/enrollment.types';
+import { enrollmentsApi } from '../enrollments.api';
 
 const mockApiGet = jest.mocked(apiGet);
 const mockApiPost = jest.mocked(apiPost);
@@ -23,11 +23,10 @@ const mockApiPost = jest.mocked(apiPost);
 const MOCK_ENROLLMENT: ApiEnrollment = {
   id: 'aa0e8400-e29b-41d4-a716-446655440200',
   tenant_id: '660e8400-e29b-41d4-a716-446655440000',
-  user_id: '660e8400-e29b-41d4-a716-446655440010',
+  assigned_by: '660e8400-e29b-41d4-a716-446655440010',
   learning_path_id: '660e8400-e29b-41d4-a716-446655440060',
   learner_id: '660e8400-e29b-41d4-a716-446655440020',
   status: 'not_started',
-  progress_percentage: 0,
   enrolled_at: '2026-07-30T10:00:00+00:00',
   started_at: null,
   completed_at: null,
@@ -61,7 +60,10 @@ describe('enrollmentsApi', () => {
 
     const result = await enrollmentsApi.list({ page: 1, per_page: 100 });
 
-    expect(mockApiGet).toHaveBeenCalledWith('enrollments', { page: 1, per_page: 100 });
+    expect(mockApiGet).toHaveBeenCalledWith('enrollments', {
+      page: 1,
+      per_page: 100,
+    });
     expect(result.data[0].status).toBe('not_started');
     expect(result.meta.total).toBe(1);
   });
@@ -72,19 +74,13 @@ describe('enrollmentsApi', () => {
     const result = await enrollmentsApi.create({
       learning_path_id: MOCK_ENROLLMENT.learning_path_id,
       learner_ids: [MOCK_ENROLLMENT.learner_id],
-      group_ids: [
-        'aa0e8400-e29b-41d4-a716-446655440100',
-        'aa0e8400-e29b-41d4-a716-446655440101',
-      ],
+      group_ids: ['aa0e8400-e29b-41d4-a716-446655440100', 'aa0e8400-e29b-41d4-a716-446655440101'],
     });
 
     expect(mockApiPost).toHaveBeenCalledWith('enrollments', {
       learning_path_id: MOCK_ENROLLMENT.learning_path_id,
       learner_ids: [MOCK_ENROLLMENT.learner_id],
-      group_ids: [
-        'aa0e8400-e29b-41d4-a716-446655440100',
-        'aa0e8400-e29b-41d4-a716-446655440101',
-      ],
+      group_ids: ['aa0e8400-e29b-41d4-a716-446655440100', 'aa0e8400-e29b-41d4-a716-446655440101'],
     });
     expect(result.meta.enrolled_count).toBe(3);
     expect(result.meta.skipped_count).toBe(2);
