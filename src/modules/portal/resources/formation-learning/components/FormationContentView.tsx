@@ -7,6 +7,8 @@ import { getContentPosition } from '../lib/course-utils';
 import type { Formation } from '../lib/types';
 import type { Resolved } from '../lib/course-utils';
 import type { ApiPortalContentEntry } from '@/shared/types/portal.types';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft, ArrowRight } from 'lucide-react';
 
 interface Props {
   formation: Formation;
@@ -52,9 +54,15 @@ export default function FormationContentView({
         <h1 className="text-xl font-bold text-slate-800">
           {(portalEntry?.data?.title as string | undefined) ?? content.title}
         </h1>
+        {(() => {
+          const desc =
+            (portalEntry?.data?.description as string | undefined) ??
+            (portalEntry?.data?.describe as string | undefined);
+          return desc ? <p className="mt-2 text-sm  leading-relaxed">{desc}</p> : null;
+        })()}
       </div>
 
-      <div className="flex-1 min-h-0 px-6 py-6 overflow-y-auto">
+      <div className="flex-1 px-6 py-6 overflow-y-auto">
         {usePortal ? (
           <PortalContentRenderer
             entry={portalEntry ?? undefined}
@@ -66,28 +74,26 @@ export default function FormationContentView({
       </div>
 
       <div className="shrink-0 px-6 py-4 border-t border-slate-100 bg-slate-50/60 flex items-center justify-between gap-4">
-        <button
-          type="button"
+        <Button
           onClick={() => onNavigate(prev)}
           disabled={!prev}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed text-sm font-medium text-slate-600 transition-colors"
+          className="flex items-center gap-2 rounded-sm border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-medium text-slate-600 transition-colors"
         >
-          ← Précédent
-        </button>
+          <ArrowLeft /> Précédent
+        </Button>
 
         <span className="text-xs text-slate-400">
           {pos.index} / {pos.total}
         </span>
 
-        <button
-          type="button"
+        <Button
           onClick={() => onNavigate(next)}
           disabled={!next}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed text-sm font-medium text-white transition-colors"
+          className="flex items-center gap-2 rounded-sm disabled:opacity-40 disabled:cursor-not-allowed text-xs font-medium text-white transition-colors"
           style={{ background: 'var(--color-primary)' }}
         >
-          Suivant →
-        </button>
+          Suivant <ArrowRight />
+        </Button>
       </div>
     </div>
   );

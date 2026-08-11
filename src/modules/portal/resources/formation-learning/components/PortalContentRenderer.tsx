@@ -81,6 +81,8 @@ function FieldsRenderer({
     }
 
     if (type === 'textarea' && typeof value === 'string' && value) {
+      // description fields are shown in the FormationContentView header — skip here.
+      if (key === 'describe' || key === 'description') continue;
       rendered.push(
         <p key={key} className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
           {value}
@@ -90,6 +92,8 @@ function FieldsRenderer({
     }
 
     if (type === 'text' && typeof value === 'string' && value) {
+      // 'title' is already rendered in the FormationContentView header — skip it here.
+      if (key === 'title') continue;
       // URL fields — try to embed as iframe
       if (key === 'url' || value.startsWith('http')) {
         rendered.push(
