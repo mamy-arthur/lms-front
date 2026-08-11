@@ -17,39 +17,39 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { formatDate } from '@/shared/lib/date';
-import type { FormationEnrollment, FormationStatKey } from '../../types';
+import type { PurchasedLearningPathEnrollment, PurchasedLearningPathStatKey } from '../../types';
 
-const STAT_LABELS: Record<FormationStatKey, string> = {
+const STAT_LABELS: Record<PurchasedLearningPathStatKey, string> = {
   cumulative: 'Inscrits cumulés',
   month: 'Inscrits du mois',
   inProgress: 'Inscrits en cours',
   notStarted: 'Inscrits non commencés',
 };
 
-interface FormationStatsUsersDrawerProps {
+interface PurchasedLearningPathStatsUsersDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  formationName: string;
-  stat: FormationStatKey;
-  users: FormationEnrollment[];
+  purchasedLearningPathName: string;
+  stat: PurchasedLearningPathStatKey;
+  users: PurchasedLearningPathEnrollment[];
 }
 
-export function FormationStatsUsersDrawer({
+export function PurchasedLearningPathStatsUsersDrawer({
   open,
   onOpenChange,
-  formationName,
+  purchasedLearningPathName,
   stat,
   users,
-}: FormationStatsUsersDrawerProps) {
+}: PurchasedLearningPathStatsUsersDrawerProps) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="flex flex-col gap-0 p-0 max-w-225!" showCloseButton={true}>
         <SheetHeader className="border-b px-4 py-4">
           <SheetTitle>
-            {formationName} - {STAT_LABELS[stat]}
+            {purchasedLearningPathName} - {STAT_LABELS[stat]}
           </SheetTitle>
           <SheetDescription>
-            Liste des utilisateurs correspondant au filtre selectionne ({users.length}).
+            Liste des utilisateurs correspondant au filtre sélectionné ({users.length}).
           </SheetDescription>
         </SheetHeader>
 

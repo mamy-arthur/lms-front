@@ -508,19 +508,19 @@ describe('ProgramsList', () => {
     });
 
     it('affiche un toast de succès après la modification', async () => {
+      const updateMutateAsync = jest.fn().mockResolvedValue(undefined);
+      mockDefaults({ updateMutateAsync });
+
       const user = userEvent.setup();
       render(<ProgramsList />, { wrapper: createWrapper() });
 
       await user.click(screen.getByRole('button', { name: `Actions pour ${MOCK_PATH_1.name}` }));
       await user.click(screen.getByRole('menuitem', { name: /modifier/i }));
 
-      const nameInput = screen.getByLabelText(/nom du parcours/i);
-      await user.clear(nameInput);
-      await user.type(nameInput, 'Nom modifié');
-
       await user.click(screen.getByRole('button', { name: /enregistrer/i }));
 
       await waitFor(() => {
+        expect(updateMutateAsync).toHaveBeenCalled();
         expect(mockToast.success).toHaveBeenCalledWith('Parcours mis à jour');
       });
     });
@@ -534,10 +534,6 @@ describe('ProgramsList', () => {
 
       await user.click(screen.getByRole('button', { name: `Actions pour ${MOCK_PATH_1.name}` }));
       await user.click(screen.getByRole('menuitem', { name: /modifier/i }));
-
-      const nameInput = screen.getByLabelText(/nom du parcours/i);
-      await user.clear(nameInput);
-      await user.type(nameInput, 'Nom modifié');
 
       await user.click(screen.getByRole('button', { name: /enregistrer/i }));
 

@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
-import type { FormationGroup, TenantAssignableUser } from '../../types';
+import type { AssignableGroup, TenantAssignableUser } from '../../types';
 import { getInitials } from '@/shared/lib/string/getInitials';
 
 // ── UserCard ──────────────────────────────────────────────────────────────────
@@ -64,7 +64,7 @@ export function UserCard({ fullName, pending = false, onRemove }: UserCardProps)
 // ── GroupCard ─────────────────────────────────────────────────────────────────
 
 interface GroupCardProps {
-  group: FormationGroup;
+  group: AssignableGroup;
   users: TenantAssignableUser[];
   selected: boolean;
   onClick: () => void;

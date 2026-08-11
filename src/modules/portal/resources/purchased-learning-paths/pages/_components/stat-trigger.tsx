@@ -4,13 +4,17 @@ import { ChevronRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
-interface FormationStatTriggerProps {
+interface PurchasedLearningPathStatTriggerProps {
   label: string;
   value: number;
   onClick: () => void;
 }
 
-export function FormationStatTrigger({ label, value, onClick }: FormationStatTriggerProps) {
+export function PurchasedLearningPathStatTrigger({
+  label,
+  value,
+  onClick,
+}: PurchasedLearningPathStatTriggerProps) {
   return (
     <button
       type="button"
