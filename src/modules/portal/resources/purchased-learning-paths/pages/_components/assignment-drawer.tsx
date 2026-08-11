@@ -14,62 +14,55 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import type { FormationGroup, PurchasedFormationRow, TenantAssignableUser } from '../../types';
+import type { AssignableGroup, PurchasedLearningPathRow, TenantAssignableUser } from '../../types';
 import { AddUsersDialog } from './add-users-dialog';
 import { CreateGroupDialog } from './create-group-dialog';
-import { UserCard, GroupCard } from './formation-cards';
+import { UserCard, GroupCard } from './cards';
 
-// ── FormationAssignmentDrawer ─────────────────────────────────────────────────
-
-interface FormationAssignmentDrawerProps {
+interface PurchasedLearningPathAssignmentDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  formation: PurchasedFormationRow | null;
+  purchasedLearningPath: PurchasedLearningPathRow | null;
   users: TenantAssignableUser[];
-  groups: FormationGroup[];
-  onUpdateDuration: (formationId: string, durationMonths: number) => void;
-  onAssignUsers: (formationId: string, userIds: string[], durationMonths: number) => number;
-  onAssignGroup: (formationId: string, groupId: string, durationMonths: number) => number;
-  onCreateGroup: (tenantId: string, name: string, userIds: string[]) => FormationGroup;
+  groups: AssignableGroup[];
+  onAssignUsers: (purchasedLearningPathId: string, userIds: string[]) => number;
+  onAssignGroup: (purchasedLearningPathId: string, groupId: string) => number;
+  onCreateGroup: (tenantId: string, name: string, userIds: string[]) => AssignableGroup;
   onEditGroup: (groupId: string, name: string, userIds: string[]) => void;
   onDeleteGroup: (groupId: string) => void;
 }
 
-export function FormationAssignmentDrawer({
+export function PurchasedLearningPathAssignmentDrawer({
   open,
   onOpenChange,
-  formation,
+  purchasedLearningPath,
   users,
   groups,
-  onUpdateDuration,
   onAssignUsers,
   onAssignGroup,
   onCreateGroup,
   onEditGroup,
   onDeleteGroup,
-}: FormationAssignmentDrawerProps) {
-  const [durationMonths, setDurationMonths] = useState(1);
-
+}: PurchasedLearningPathAssignmentDrawerProps) {
   const [pendingAddIds, setPendingAddIds] = useState<Set<string>>(new Set());
   const [selectedGroupIds, setSelectedGroupIds] = useState<Set<string>>(new Set());
-  const [editingGroup, setEditingGroup] = useState<FormationGroup | null>(null);
+  const [editingGroup, setEditingGroup] = useState<AssignableGroup | null>(null);
 
   const [showAddUsers, setShowAddUsers] = useState(false);
   const [showCreateGroup, setShowCreateGroup] = useState(false);
 
   useEffect(() => {
-    if (!formation || !open) return;
-    setDurationMonths(formation.durationMonths);
+    if (!purchasedLearningPath || !open) return;
     setPendingAddIds(new Set());
     setSelectedGroupIds(new Set());
     setEditingGroup(null);
     setShowAddUsers(false);
     setShowCreateGroup(false);
-  }, [formation, open]);
+  }, [purchasedLearningPath, open]);
 
   const enrolledUserIds = useMemo(
-    () => new Set(formation?.enrollments.map((e) => e.userId) ?? []),
-    [formation],
+    () => new Set(purchasedLearningPath?.enrollments.map((e) => e.userId) ?? []),
+    [purchasedLearningPath],
   );
 
   const availableToAdd = useMemo(
@@ -77,14 +70,14 @@ export function FormationAssignmentDrawer({
     [users, enrolledUserIds, pendingAddIds],
   );
 
-  if (!formation) return null;
+  if (!purchasedLearningPath) return null;
 
   const handleAddUsersConfirm = (userIds: string[]) => {
     setPendingAddIds((prev) => new Set([...prev, ...userIds]));
   };
 
   const handleCreateGroupConfirm = (name: string, userIds: string[]) => {
-    const group = onCreateGroup(formation.tenantId, name, userIds);
+    const group = onCreateGroup(purchasedLearningPath.tenantId, name, userIds);
     setSelectedGroupIds((prev) => new Set([...prev, group.id]));
     toast.success(`Groupe "${group.name}" créé.`);
   };
@@ -102,20 +95,13 @@ export function FormationAssignmentDrawer({
   };
 
   const handleAssign = () => {
-    if (durationMonths < 1) {
-      toast.error('La durée doit être supérieure ou égale à 1 mois.');
-      return;
-    }
-
-    onUpdateDuration(formation.id, durationMonths);
-
     if (pendingAddIds.size > 0) {
-      onAssignUsers(formation.id, [...pendingAddIds], durationMonths);
+      onAssignUsers(purchasedLearningPath.id, [...pendingAddIds]);
     }
 
     let groupCount = 0;
     for (const groupId of selectedGroupIds) {
-      groupCount += onAssignGroup(formation.id, groupId, durationMonths);
+      groupCount += onAssignGroup(purchasedLearningPath.id, groupId);
     }
 
     const parts: string[] = [];
@@ -147,8 +133,8 @@ export function FormationAssignmentDrawer({
       />
       <CreateGroupDialog
         open={Boolean(editingGroup)}
-        onOpenChange={(open) => {
-          if (!open) setEditingGroup(null);
+        onOpenChange={(dialogOpen) => {
+          if (!dialogOpen) setEditingGroup(null);
         }}
         allUsers={users}
         initialName={editingGroup?.name}
@@ -167,16 +153,14 @@ export function FormationAssignmentDrawer({
           showCloseButton={true}
         >
           <SheetHeader className="border-b px-5 py-4">
-            <SheetTitle>Assigner — {formation.name}</SheetTitle>
+            <SheetTitle>Assigner — {purchasedLearningPath.name}</SheetTitle>
             <SheetDescription>
-              Configurez la durée, les utilisateurs et les groupes, puis validez en une seule
-              action.
+              Configurez les utilisateurs et les groupes, puis validez en une seule action.
             </SheetDescription>
           </SheetHeader>
 
           <ScrollArea className="flex-1">
             <div className="space-y-6 px-5 py-5">
-              {/* ── Utilisateurs ──────────────────────────────────────────── */}
               <section className="space-y-3">
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-semibold">
@@ -185,7 +169,7 @@ export function FormationAssignmentDrawer({
                       variant="secondary"
                       className="ml-2 bg-(--color-primary)/20 text-(--color-primary)"
                     >
-                      {(formation?.enrollments.length ?? 0) + pendingAddIds.size}
+                      {(purchasedLearningPath.enrollments.length ?? 0) + pendingAddIds.size}
                     </Badge>
                   </h3>
                   <Button
@@ -201,9 +185,9 @@ export function FormationAssignmentDrawer({
                   </Button>
                 </div>
 
-                {(formation?.enrollments.length ?? 0) > 0 || pendingAddIds.size > 0 ? (
+                {purchasedLearningPath.enrollments.length > 0 || pendingAddIds.size > 0 ? (
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                    {formation?.enrollments.map((enrollment) => (
+                    {purchasedLearningPath.enrollments.map((enrollment) => (
                       <UserCard
                         key={enrollment.userId}
                         id={enrollment.userId}
@@ -237,7 +221,6 @@ export function FormationAssignmentDrawer({
                 )}
               </section>
 
-              {/* ── Groupes ───────────────────────────────────────────────── */}
               <section className="space-y-3">
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-semibold">

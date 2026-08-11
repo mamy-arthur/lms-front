@@ -1,57 +1,51 @@
 'use client';
 
-import {
-  DataTable,
-  type DataTableColumn,
-  type DataTableSort,
-} from '@/shared/components/ui/DataTable';
+import { DataTable, type DataTableColumn } from '@/shared/components/ui/DataTable';
 import { Badge } from '@/components/ui/badge';
-import type { FormationStatKey, PurchasedFormationRow } from '../../types';
-import { FormationStatTrigger } from './formation-stat-trigger';
+import type { PurchasedLearningPathRow, PurchasedLearningPathStatKey } from '../../types';
+import { PurchasedLearningPathStatTrigger } from './stat-trigger';
 import { Button } from '@/components/ui/button';
 import { ChevronRight } from 'lucide-react';
 
-interface FormationsTableProps {
-  formations: PurchasedFormationRow[];
+interface PurchasedLearningPathsTableProps {
+  purchasedLearningPaths: PurchasedLearningPathRow[];
   page: number;
   pageSize: number;
   total: number;
-  sort?: DataTableSort;
   hasQuery?: boolean;
   isLoading?: boolean;
-  onSort: (column: string) => void;
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
-  onStatClick: (formation: PurchasedFormationRow, stat: FormationStatKey) => void;
-  onAssign: (formation: PurchasedFormationRow) => void;
+  onStatClick: (
+    purchasedLearningPath: PurchasedLearningPathRow,
+    stat: PurchasedLearningPathStatKey,
+  ) => void;
+  onAssign: (purchasedLearningPath: PurchasedLearningPathRow) => void;
 }
 
-export function FormationsTable({
-  formations,
+export function PurchasedLearningPathsTable({
+  purchasedLearningPaths,
   page,
   pageSize,
   total,
-  sort,
   hasQuery = false,
   isLoading = false,
-  onSort,
   onPageChange,
   onPageSizeChange,
   onStatClick,
   onAssign,
-}: FormationsTableProps) {
-  const columns: DataTableColumn<PurchasedFormationRow>[] = [
+}: PurchasedLearningPathsTableProps) {
+  const columns: DataTableColumn<PurchasedLearningPathRow>[] = [
     {
       key: 'name',
-      label: 'Nom de la formation',
-      sortable: true,
+      label: 'Parcours de formation',
       render: (row) => <span className="font-medium text-foreground">{row.name}</span>,
     },
     {
       key: 'cumulative',
       label: 'Inscrits cumulés',
       render: (row) => (
-        <FormationStatTrigger
+        <PurchasedLearningPathStatTrigger
           label="Cumulés"
           value={row.stats.cumulative}
           onClick={() => onStatClick(row, 'cumulative')}
@@ -62,7 +56,7 @@ export function FormationsTable({
       key: 'inProgress',
       label: 'Inscrits en cours',
       render: (row) => (
-        <FormationStatTrigger
+        <PurchasedLearningPathStatTrigger
           label="En cours"
           value={row.stats.inProgress}
           onClick={() => onStatClick(row, 'inProgress')}
@@ -73,7 +67,7 @@ export function FormationsTable({
       key: 'notStarted',
       label: 'Non commencés',
       render: (row) => (
-        <FormationStatTrigger
+        <PurchasedLearningPathStatTrigger
           label="Non commencés"
           value={row.stats.notStarted}
           onClick={() => onStatClick(row, 'notStarted')}
@@ -108,15 +102,13 @@ export function FormationsTable({
 
   return (
     <DataTable
-      data={formations}
+      data={purchasedLearningPaths}
       columns={columns}
       page={page}
       pageSize={pageSize}
       total={total}
-      sort={sort}
       isLoading={isLoading}
       hasQuery={hasQuery}
-      onSort={onSort}
       onPageChange={onPageChange}
       onPageSizeChange={onPageSizeChange}
       onRowClick={onAssign}

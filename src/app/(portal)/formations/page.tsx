@@ -1,5 +1,5 @@
-import { ClientFormationsManagementPage } from '@/modules/portal/resources/formations';
+import { PurchasedLearningPathList } from '@/modules/portal/resources/purchased-learning-paths';
 
-export default function FormationsPage() {
-  return <ClientFormationsManagementPage />;
+export default function PurchasedLearningPathsPage() {
+  return <PurchasedLearningPathList />;
 }

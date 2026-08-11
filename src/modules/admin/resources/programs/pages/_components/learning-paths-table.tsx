@@ -234,6 +234,7 @@ function LearningPathsTableBase({
         columns={columns}
         isLoading={isLoading}
         hasQuery={search.trim().length > 0}
+        onRowClick={onEdit}
         emptyState={{
           icon: <MapIcon className="size-6 text-muted-foreground" />,
           title: 'Aucun parcours trouvé',

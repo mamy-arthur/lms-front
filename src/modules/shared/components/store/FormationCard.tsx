@@ -15,6 +15,7 @@ import {
 export interface FormationCardProps {
   id?: string;
   title: string;
+  description?: string | null;
   author: string;
   category: string;
   coverImage?: string;
@@ -53,6 +54,7 @@ function formatPrice(price: number): string {
 export function FormationCard({
   id,
   title,
+  description,
   category,
   coverImage,
   price,
@@ -84,7 +86,7 @@ export function FormationCard({
   return (
     <Card
       className={cn(
-        'flex flex-col overflow-hidden pt-0 transition-shadow hover:shadow-md',
+        'flex flex-col overflow-hidden pt-0 transition-shadow hover:shadow-md rounded-sm',
         isClickable && 'cursor-pointer',
         className,
       )}
@@ -120,9 +122,12 @@ export function FormationCard({
 
       <CardHeader>
         <CardTitle className="line-clamp-2 text-sm leading-snug">{title}</CardTitle>
+        {description && (
+          <p className="line-clamp-2 text-[12px] text-muted-foreground">{description}</p>
+        )}
       </CardHeader>
 
-      <CardContent className="flex flex-1 flex-col gap-2 text-xs text-muted-foreground">
+      <CardContent className="flex flex-1 flex-col gap-3 text-xs text-muted-foreground -mt-1">
         <div className="flex flex-wrap items-center gap-1 pb-1">
           <div className="flex flex-wrap gap-2">
             <Badge variant="secondary" className="rounded-sm px-2.5 py-1 font-medium">
@@ -153,7 +158,7 @@ export function FormationCard({
         <div className="mt-auto grid grid-cols-3 items-center gap-2 pt-3">
           <div className="col-span-1">
             {isFree ? (
-              <span className="font-semibold text-primary">Gratuit</span>
+              <span className="font-semibold text-green-500">Gratuit</span>
             ) : (
               <span className="bg-background/90 text-lg font-medium text-foreground">
                 {formatPrice(price)}

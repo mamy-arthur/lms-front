@@ -90,60 +90,57 @@ function e(source: string, target: string, data: EdgeRuleData = {}): ProgramEdge
 
 // Pre-built edge rule presets
 const prevCompleted: EdgeRuleData = {
-  accessRules: {
-    prevModuleCompleted: true,
-    allModulesCompleted: false,
-    prevModuleMinScore: false,
-    prevModuleMinScoreValue: 50,
+  progressionRule: {
+    progressionRuleId: 'mock-prev-completed',
+    condition: { type: 'module_completed', rule_type: 'any' },
+    failureTargetNodeId: null,
+    maxAttempts: null,
+    exhaustedTargetNodeId: null,
   },
 };
 const allCompleted: EdgeRuleData = {
-  accessRules: {
-    prevModuleCompleted: false,
-    allModulesCompleted: true,
-    prevModuleMinScore: false,
-    prevModuleMinScoreValue: 50,
+  progressionRule: {
+    progressionRuleId: 'mock-all-completed',
+    condition: { type: 'module_completed', rule_type: 'all' },
+    failureTargetNodeId: null,
+    maxAttempts: null,
+    exhaustedTargetNodeId: null,
   },
 };
 const minScore = (value: number): EdgeRuleData => ({
-  accessRules: {
-    prevModuleCompleted: false,
-    allModulesCompleted: false,
-    prevModuleMinScore: true,
-    prevModuleMinScoreValue: value,
+  progressionRule: {
+    progressionRuleId: `mock-min-score-${value}`,
+    condition: { type: 'evaluation_passed', min_score_percentage: value },
+    failureTargetNodeId: null,
+    maxAttempts: null,
+    exhaustedTargetNodeId: null,
   },
 });
 const finalScore = (min: number): EdgeRuleData => ({
-  attestationRules: {
-    avgScore: false,
-    avgScoreMin: 10,
-    finalScore: true,
-    finalScoreMin: min,
-    noRule: false,
-    retake: false,
-    retakeTargetNodeId: null,
+  progressionRule: {
+    progressionRuleId: `mock-final-score-${min}`,
+    condition: { type: 'evaluation_passed', min_score_percentage: min },
+    failureTargetNodeId: null,
+    maxAttempts: null,
+    exhaustedTargetNodeId: null,
   },
 });
 const avgScore = (min: number): EdgeRuleData => ({
-  attestationRules: {
-    avgScore: true,
-    avgScoreMin: min,
-    finalScore: false,
-    finalScoreMin: 10,
-    noRule: false,
-    retake: false,
-    retakeTargetNodeId: null,
+  progressionRule: {
+    progressionRuleId: `mock-avg-score-${min}`,
+    condition: { type: 'evaluation_passed', min_score_percentage: min },
+    failureTargetNodeId: null,
+    maxAttempts: null,
+    exhaustedTargetNodeId: null,
   },
 });
 const noRule: EdgeRuleData = {
-  attestationRules: {
-    avgScore: false,
-    avgScoreMin: 10,
-    finalScore: false,
-    finalScoreMin: 10,
-    noRule: true,
-    retake: false,
-    retakeTargetNodeId: null,
+  progressionRule: {
+    progressionRuleId: 'mock-evaluation-completed',
+    condition: { type: 'evaluation_completed' },
+    failureTargetNodeId: null,
+    maxAttempts: null,
+    exhaustedTargetNodeId: null,
   },
 };
 

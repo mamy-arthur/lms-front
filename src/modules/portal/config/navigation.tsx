@@ -3,10 +3,10 @@ import {
   LayoutDashboard,
   Users,
   LayoutTemplate,
-  Wallet,
+  // Wallet,
   Store,
   GraduationCap,
-  ClipboardList,
+  // ClipboardList,
 } from 'lucide-react';
 import { ROUTES } from '@/shared/constants/routes';
 import { ACCESS } from '@/shared/auth/permissions';
@@ -48,13 +48,14 @@ export const PORTAL_NAV: PortalNavItem[] = [
   //     // { title: "Attestation", url: ROUTES.portal.certificate}
   //   ],
   // },
-  {
-    url: ROUTES.portal.wallet,
-    title: 'Portefeuille',
-    access: ACCESS.wallet,
-    icon: Wallet,
-    items: [],
-  },
+  // {
+  //   url: ROUTES.portal.wallet,
+  //   title: 'Portefeuille',
+  //   access: ACCESS.wallet,
+  //   icon: Wallet,
+  //   items: [],
+  // },
+
   {
     url: ROUTES.portal.formations,
     title: 'Formations',
@@ -78,13 +79,13 @@ export const PORTAL_NAV: PortalNavItem[] = [
   //     icon: Award,
   //     items: [],
   // },
-  {
-    url: ROUTES.portal.evaluationNotes,
-    title: 'Notes des stagiaires',
-    access: ACCESS.notes,
-    icon: ClipboardList,
-    items: [],
-  },
+  // {
+  //   url: ROUTES.portal.evaluationNotes,
+  //   title: 'Notes des stagiaires',
+  //   access: ACCESS.notes,
+  //   icon: ClipboardList,
+  //   items: [],
+  // },
   {
     url: ROUTES.portal.users,
     title: 'Utilisateurs',
