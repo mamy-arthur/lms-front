@@ -6,7 +6,7 @@ export const MOCK_FORMATIONS: TraineeFormation[] = [
     slug: 'developpement-flutter-avance',
     title: 'Développement Flutter Avancé',
     description:
-      "Maîtrisez les concepts avancés de Flutter : gestion d'état, animations et architecture clean.",
+      'Au cours de cette formation, vous découvrirez les bonnes pratiques du développement Flutter, l’architecture d’applications complexes, la gestion avancée de l’état, l’intégration avec des API et des services externes, ainsi que les techniques permettant d’améliorer les performances et la qualité de vos applications. Au cours de cette formation, vous découvrirez les bonnes pratiques du développement Flutter, l’architecture d’applications complexes, la gestion avancée de l’état, l’intégration avec des API et des services externes, ainsi que les techniques permettant d’améliorer les performances et la qualité de vos applications.',
     category: 'Mobile',
     coverImage:
       'https://images.unsplash.com/photo-1513258496099-48168024aec0?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
