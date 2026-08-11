@@ -78,7 +78,7 @@ export const purchasedLearningPathKeys = {
   all: ['purchased-learning-paths'] as const,
   lists: () => [...purchasedLearningPathKeys.all, 'list'] as const,
   list: (filters: object) => [...purchasedLearningPathKeys.lists(), filters] as const,
-  enrollments: (id: string, filters?: object) =>
+  enrollments: (id: string, filters: object = {}) =>
     [...purchasedLearningPathKeys.all, id, 'enrollments', filters] as const,
 };
 
