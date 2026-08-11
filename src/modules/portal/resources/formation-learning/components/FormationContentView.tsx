@@ -1,16 +1,21 @@
 'use client';
 
 import ContentRenderer from './ContentRenderer';
+import PortalContentRenderer from './PortalContentRenderer';
 import EvaluationRunner from './EvaluationRunner';
 import { getContentPosition } from '../lib/course-utils';
 import type { Formation } from '../lib/types';
 import type { Resolved } from '../lib/course-utils';
+import type { ApiPortalContentEntry } from '@/shared/types/portal.types';
 
 interface Props {
   formation: Formation;
   resolved: Resolved;
   onNavigate: (id: string | null) => void;
   onEvaluationComplete: (score: number, passed: boolean) => void;
+  /** When provided, uses the real API entry instead of mock content.data. */
+  portalEntry?: ApiPortalContentEntry | null;
+  portalEntryLoading?: boolean;
 }
 
 export default function FormationContentView({
@@ -18,6 +23,8 @@ export default function FormationContentView({
   resolved,
   onNavigate,
   onEvaluationComplete,
+  portalEntry,
+  portalEntryLoading,
 }: Props) {
   if (!resolved) {
     return (
@@ -35,25 +42,27 @@ export default function FormationContentView({
     );
   }
 
-  const { node, sectionTitle, content, prev, next } = resolved;
+  const { content, prev, next } = resolved;
   const pos = getContentPosition(formation, content.id);
+  const usePortal = portalEntry !== undefined || portalEntryLoading;
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-1 flex-col min-h-0">
       <div className="px-6 py-5 border-b border-slate-100 shrink-0">
-        <div className="flex items-center gap-2 text-xs text-slate-400 mb-1.5">
-          <span>{node.title}</span>
-          <span>›</span>
-          <span>{sectionTitle}</span>
-        </div>
-        <h1 className="text-xl font-bold text-slate-800">{content.title}</h1>
-        {content.durationMin && (
-          <p className="text-xs text-slate-400 mt-1">⏱ {content.durationMin} min</p>
-        )}
+        <h1 className="text-xl font-bold text-slate-800">
+          {(portalEntry?.data?.title as string | undefined) ?? content.title}
+        </h1>
       </div>
 
-      <div className="flex-1 px-6 py-6 overflow-y-auto">
-        <ContentRenderer content={content} />
+      <div className="flex-1 min-h-0 px-6 py-6 overflow-y-auto">
+        {usePortal ? (
+          <PortalContentRenderer
+            entry={portalEntry ?? undefined}
+            isLoading={portalEntryLoading ?? false}
+          />
+        ) : (
+          <ContentRenderer content={content} />
+        )}
       </div>
 
       <div className="shrink-0 px-6 py-4 border-t border-slate-100 bg-slate-50/60 flex items-center justify-between gap-4">
