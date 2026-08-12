@@ -20,8 +20,8 @@ export function useUpdateCompetencyLocation() {
       locationY,
     }: UpdateCompetencyLocationVars) =>
       learningPathsApi.updateCompetencyLocation(learningPathId, competencyId, {
-        location_x: locationX,
-        location_y: locationY,
+        location_x: locationX != null ? Math.round(locationX) : null,
+        location_y: locationY != null ? Math.round(locationY) : null,
       }),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({

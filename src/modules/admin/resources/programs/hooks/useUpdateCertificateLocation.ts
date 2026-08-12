@@ -14,8 +14,8 @@ export function useUpdateCertificateLocation() {
   return useMutation({
     mutationFn: ({ learningPathId, locationX, locationY }: UpdateCertificateLocationVars) =>
       learningPathsApi.updateCertificateLocation(learningPathId, {
-        location_x: locationX,
-        location_y: locationY,
+        location_x: locationX != null ? Math.round(locationX) : null,
+        location_y: locationY != null ? Math.round(locationY) : null,
       }),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({

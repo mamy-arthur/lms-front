@@ -16,8 +16,8 @@ export function useLinkCompetencyToLearningPath() {
     mutationFn: ({ id, competencyId, locationX, locationY }: LinkCompetencyVars) =>
       learningPathsApi.linkCompetency(id, {
         competency_id: competencyId,
-        location_x: locationX ?? null,
-        location_y: locationY ?? null,
+        location_x: locationX != null ? Math.round(locationX) : null,
+        location_y: locationY != null ? Math.round(locationY) : null,
       }),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: learningPathKeys.lists() });
