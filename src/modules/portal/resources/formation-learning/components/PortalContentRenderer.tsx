@@ -1,6 +1,7 @@
 import type { ApiPortalContentEntry } from '@/shared/types/portal.types';
 import ReactMarkdown from 'react-markdown';
 import { Loader2, FileDown, ExternalLink, FolderOpen } from 'lucide-react';
+import { toYouTubeEmbedUrl } from '@/lib/utils';
 import { getMediaCategory } from '@/modules/shared/components/courses/contents/forms/fields/media-utils';
 
 interface Props {
@@ -107,7 +108,10 @@ function FieldsRenderer({
               <ExternalLink className="h-4 w-4 shrink-0" />
               {value}
             </a>
-            <iframe src={value} className="w-full rounded-lg border border-slate-200 h-[60vh]" />
+            <iframe
+              src={toYouTubeEmbedUrl(value)}
+              className="w-full rounded-lg border border-slate-200 h-[60vh]"
+            />
           </div>,
         );
       } else {
