@@ -1,4 +1,4 @@
-import type { ApiEnrollment } from '@/shared/types/enrollment.types';
+import type { ApiEnrollmentWithLearner } from '@/shared/types/enrollment.types';
 import type { ApiGroup } from '@/shared/types/group.types';
 import type { ApiPurchasedLearningPath } from '@/shared/types/purchased-learning-path.types';
 import type { ApiAssignableTraineeUser } from '@/shared/types/user.types';
@@ -52,13 +52,15 @@ export function mapApiGroupToAssignable(group: ApiGroup): AssignableGroup {
 }
 
 export function mapEnrollmentToRow(
-  enrollment: ApiEnrollment,
-  usersById: Map<string, TenantAssignableUser>,
+  enrollment: ApiEnrollmentWithLearner,
 ): PurchasedLearningPathEnrollment {
+  const fullName = enrollment.learner
+    ? `${enrollment.learner.first_name} ${enrollment.learner.last_name}`.trim()
+    : enrollment.learner_id;
   return {
     id: enrollment.id,
     userId: enrollment.learner_id,
-    fullName: usersById.get(enrollment.learner_id)?.fullName ?? enrollment.learner_id,
+    fullName,
     enrolledAt: enrollment.enrolled_at,
     startedAt: enrollment.started_at,
     completedAt: enrollment.completed_at,

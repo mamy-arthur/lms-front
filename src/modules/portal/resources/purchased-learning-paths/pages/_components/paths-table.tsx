@@ -92,7 +92,7 @@ export function PurchasedLearningPathsTable({
           size="sm"
           onClick={() => onAssign(row)}
           variant={'outline'}
-          className=" text-black"
+          className="text-foreground"
         >
           <ChevronRight className="size-3" />
         </Button>

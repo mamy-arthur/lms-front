@@ -40,9 +40,9 @@ export function PurchasedLearningPathList() {
       fallback={
         <Card>
           <CardHeader>
-            <CardTitle>Acces non autorise</CardTitle>
+            <CardTitle>Accès non autorisé</CardTitle>
             <CardDescription>
-              Cette fonctionnalite est reservee au profil client manager.
+              Cette fonctionnalité est réservée au profil client manager.
             </CardDescription>
           </CardHeader>
         </Card>

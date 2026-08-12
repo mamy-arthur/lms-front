@@ -150,6 +150,7 @@ export function CreateGroupDialog({
                       checked={checked}
                       onCheckedChange={() => toggleUser(user.id)}
                       disabled={isSubmitting}
+                      className="mt-0.5 data-[state=checked]:bg-(--color-primary) data-[state=checked]:border-(--color-primary)"
                     />
                     <Avatar className="size-7 shrink-0">
                       <AvatarFallback className="text-[10px] font-semibold">

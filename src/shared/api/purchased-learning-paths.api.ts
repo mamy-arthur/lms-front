@@ -1,5 +1,5 @@
 import { apiGet } from '@/shared/lib/apiClient';
-import type { ApiEnrollmentsListResponse } from '@/shared/types/enrollment.types';
+import type { ApiEnrollmentsWithLearnerListResponse } from '@/shared/types/enrollment.types';
 import type {
   ApiPurchasedLearningPathsResponse,
   PurchasedLearningPathEnrollmentsParams,
@@ -19,7 +19,7 @@ export const purchasedLearningPathsApi = {
     ),
 
   listEnrollments: (id: string, params?: PurchasedLearningPathEnrollmentsParams) =>
-    apiGet<ApiEnrollmentsListResponse>(
+    apiGet<ApiEnrollmentsWithLearnerListResponse>(
       `purchased-learning-paths/${id}/enrollments`,
       params as Record<string, unknown>,
     ),

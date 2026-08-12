@@ -1,5 +1,6 @@
 'use client';
 
+import { Loader2 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Sheet,
@@ -42,7 +43,7 @@ export function PurchasedLearningPathStatsUsersDrawer({
   purchasedLearningPathName,
   stat,
 }: PurchasedLearningPathStatsUsersDrawerProps) {
-  const { enrollments, isLoading } = usePurchasedLearningPathEnrollmentsQuery(
+  const { enrollments, isLoading, isFetching, total } = usePurchasedLearningPathEnrollmentsQuery(
     open ? purchasedLearningPathId : null,
     stat,
   );
@@ -51,8 +52,11 @@ export function PurchasedLearningPathStatsUsersDrawer({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="flex flex-col gap-0 p-0 max-w-225!" showCloseButton={true}>
         <SheetHeader className="border-b px-4 py-4">
-          <SheetTitle>
+          <SheetTitle className="flex items-center gap-2">
             {purchasedLearningPathName} — {STAT_LABELS[stat]}
+            {isFetching && !isLoading && (
+              <Loader2 className="size-4 animate-spin text-muted-foreground" />
+            )}
           </SheetTitle>
           <SheetDescription>
             Liste des stagiaires correspondant au filtre sélectionné ({enrollments.length}).
@@ -67,40 +71,47 @@ export function PurchasedLearningPathStatsUsersDrawer({
               <Skeleton className="h-8 w-full" />
             </div>
           ) : (
-            <div className="overflow-hidden rounded-xl border">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/50 hover:bg-muted/50">
-                    <TableHead>Nom complet</TableHead>
-                    <TableHead>Date d'inscription</TableHead>
-                    <TableHead>Date de début</TableHead>
-                    <TableHead>Date de fin</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {enrollments.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={4} className="py-8 text-center text-muted-foreground">
-                        Aucun stagiaire pour ce filtre.
-                      </TableCell>
+            <>
+              <div className="overflow-hidden rounded-xl border">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/50 hover:bg-muted/50">
+                      <TableHead>Nom complet</TableHead>
+                      <TableHead>Date d'inscription</TableHead>
+                      <TableHead>Date de début</TableHead>
+                      <TableHead>Date de fin</TableHead>
                     </TableRow>
-                  ) : (
-                    enrollments.map((enrollment) => (
-                      <TableRow key={enrollment.id}>
-                        <TableCell className="font-medium">{enrollment.fullName}</TableCell>
-                        <TableCell>{formatDate(enrollment.enrolledAt)}</TableCell>
-                        <TableCell>
-                          {enrollment.startedAt ? formatDate(enrollment.startedAt) : '—'}
-                        </TableCell>
-                        <TableCell>
-                          {enrollment.completedAt ? formatDate(enrollment.completedAt) : '—'}
+                  </TableHeader>
+                  <TableBody>
+                    {enrollments.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="py-8 text-center text-muted-foreground">
+                          Aucun stagiaire pour ce filtre.
                         </TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+                    ) : (
+                      enrollments.map((enrollment) => (
+                        <TableRow key={enrollment.id}>
+                          <TableCell className="font-medium">{enrollment.fullName}</TableCell>
+                          <TableCell>{formatDate(enrollment.enrolledAt)}</TableCell>
+                          <TableCell>
+                            {enrollment.startedAt ? formatDate(enrollment.startedAt) : '—'}
+                          </TableCell>
+                          <TableCell>
+                            {enrollment.completedAt ? formatDate(enrollment.completedAt) : '—'}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+              {total > enrollments.length && (
+                <p className="mt-3 text-xs text-muted-foreground">
+                  {enrollments.length} résultats affichés sur {total}.
+                </p>
+              )}
+            </>
           )}
         </ScrollArea>
       </SheetContent>

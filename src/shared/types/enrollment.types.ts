@@ -17,12 +17,35 @@ export interface ApiEnrollment {
 export interface EnrollmentsListParams {
   page?: number;
   per_page?: number;
-  status?: EnrollmentStatus;
-  learning_path_id?: string;
 }
 
 export interface ApiEnrollmentsListResponse {
   data: ApiEnrollment[];
+  meta: {
+    total: number;
+    page: number;
+    per_page: number;
+  };
+}
+
+/** Shape retourné par GET /purchased-learning-paths/{id}/enrollments */
+export interface ApiEnrollmentWithLearner {
+  id: string;
+  learner_id: string;
+  status: EnrollmentStatus;
+  enrolled_at: string;
+  started_at: string | null;
+  completed_at: string | null;
+  learner: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    email: string;
+  } | null;
+}
+
+export interface ApiEnrollmentsWithLearnerListResponse {
+  data: ApiEnrollmentWithLearner[];
   meta: {
     total: number;
     page: number;

@@ -29,10 +29,14 @@ export function useUpdateGroupWithMembers() {
       const toAdd = traineeIds.filter((traineeId) => !previousSet.has(traineeId));
       const toRemove = previousTraineeIds.filter((traineeId) => !nextSet.has(traineeId));
 
-      await Promise.all([
+      const results = await Promise.allSettled([
         ...toAdd.map((traineeId) => groupsApi.addMember(id, { trainee_id: traineeId })),
         ...toRemove.map((traineeId) => groupsApi.removeMember(id, traineeId)),
       ]);
+      const failures = results.filter((r) => r.status === 'rejected');
+      if (failures.length > 0) {
+        throw new Error(`Mise à jour partielle : ${failures.length} opération(s) ont échoué.`);
+      }
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: groupKeys.all });

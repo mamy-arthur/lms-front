@@ -115,6 +115,7 @@ export function AddUsersDialog({
                       id={user.id}
                       checked={checked}
                       onCheckedChange={() => toggleUser(user.id)}
+                      className="mt-0.5 data-[state=checked]:bg-(--color-primary) data-[state=checked]:border-(--color-primary)"
                     />
                     <Avatar className="size-7 shrink-0">
                       <AvatarFallback className="text-[10px] font-semibold">

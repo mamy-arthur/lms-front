@@ -1,3 +1,4 @@
+import type { EnrollmentStatus } from '@/shared/types/enrollment.types';
 import type { ApiLearningPathImage } from '@/shared/types/learning-path.types';
 
 export interface ApiPurchasedLearningPathNested {
@@ -28,7 +29,7 @@ export interface PurchasedLearningPathListParams {
 }
 
 export interface PurchasedLearningPathEnrollmentsParams {
-  status?: string;
+  status?: EnrollmentStatus;
   page?: number;
   per_page?: number;
 }
