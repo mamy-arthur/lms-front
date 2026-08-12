@@ -116,6 +116,7 @@ export const CreateEditorUserStep = forwardRef<CreateEditorUserStepHandle, Props
 
           queryClient.invalidateQueries({ queryKey: ADMIN_USERS_QUERY_KEY });
           toast.success("L'éditeur a été créé avec succès.");
+          onLoadingChange(false);
           onSuccess();
         } catch {
           toast.error("Échec de la création de l'éditeur.");

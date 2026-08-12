@@ -15,14 +15,17 @@ export function UserSearch({ value, onChange, onSearch, debounceMs = 400 }: User
   const onSearchRef = useRef(onSearch);
   onSearchRef.current = onSearch;
   const isMounted = useRef(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!isMounted.current) {
       isMounted.current = true;
       return;
     }
-    const timer = setTimeout(() => onSearchRef.current(), debounceMs);
-    return () => clearTimeout(timer);
+    timerRef.current = setTimeout(() => onSearchRef.current(), debounceMs);
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
   }, [value, debounceMs]);
 
   return (
@@ -34,7 +37,10 @@ export function UserSearch({ value, onChange, onSearch, debounceMs = 400 }: User
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={(e) => {
-          if (e.key === 'Enter') onSearch();
+          if (e.key === 'Enter') {
+            if (timerRef.current) clearTimeout(timerRef.current);
+            onSearch();
+          }
         }}
         className="pl-9"
       />
