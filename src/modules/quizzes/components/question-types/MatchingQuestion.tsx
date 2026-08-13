@@ -1,7 +1,6 @@
 'use client';
 
 import { Fragment, useMemo, useState } from 'react';
-import { ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Question } from '../../types';
 import type { MatchingAnswer } from '../../types';
@@ -88,10 +87,10 @@ export function MatchingQuestion({
                   'rounded-xl border-2 px-5 py-4 text-left text-sm font-medium transition-all duration-150',
                   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                   isLeftSelected
-                    ? 'border-(--color-primary) bg-(--color-primary)/10 shadow-md'
+                    ? 'border-(--color-primary) bg-primary/10 shadow-md'
                     : isLeftMatched
                       ? 'border-2 bg-card'
-                      : 'border-border bg-card hover:border-(--color-primary)/40 hover:bg-(--color-primary)/4',
+                      : 'border-border bg-card hover:border-primary/40 hover:bg-(--color-primary)/4',
                   disabled && 'cursor-not-allowed opacity-60',
                 )}
                 style={
@@ -104,22 +103,7 @@ export function MatchingQuestion({
               </button>
 
               {/* Connector — arrow when matched, faint dot otherwise */}
-              <div className="flex items-center justify-center">
-                {isLeftMatched && leftColor ? (
-                  <ArrowRight
-                    className="size-4 transition-colors"
-                    style={{ color: leftColor }}
-                    strokeWidth={2.5}
-                  />
-                ) : (
-                  <div
-                    className={cn(
-                      'size-2 rounded-full transition-colors',
-                      isLeftSelected ? 'bg-(--color-primary)/50' : 'bg-muted-foreground/20',
-                    )}
-                  />
-                )}
-              </div>
+              <div className="flex items-center justify-center"></div>
 
               {/* Right cell */}
               {rightItem && (
@@ -133,7 +117,7 @@ export function MatchingQuestion({
                     isRightMatched
                       ? 'border-2 bg-card'
                       : isTargetable
-                        ? 'border-(--color-primary)/50 bg-(--color-primary)/6 hover:border-(--color-primary) hover:shadow-md'
+                        ? 'border-primary/50 bg-(--color-primary)/6 hover:border-(--color-primary) hover:shadow-md'
                         : 'border-border bg-card opacity-70',
                     disabled && 'cursor-not-allowed opacity-60',
                   )}
