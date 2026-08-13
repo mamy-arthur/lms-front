@@ -1078,6 +1078,7 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
             max_attempts: cfg.attemptCount > 0 ? cfg.attemptCount : null,
             location_x: Math.round(CANVAS_X),
             location_y: Math.round(locationY),
+            is_published: true,
           });
         } catch (err) {
           toast.error(getApiErrorMessage(err, "Impossible d'ajouter l'évaluation."));
