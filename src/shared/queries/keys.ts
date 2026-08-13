@@ -85,8 +85,8 @@ export const portalLearningPathKeys = {
 
 export const portalContentEntryKeys = {
   all: ['portal', 'content-entries'] as const,
-  detail: (courseId: string, entryId: string) =>
-    [...portalContentEntryKeys.all, 'detail', courseId, entryId] as const,
+  detail: (learningPathId: string, courseId: string, entryId: string) =>
+    [...portalContentEntryKeys.all, 'detail', learningPathId, courseId, entryId] as const,
 };
 
 export const questionBankKeys = {

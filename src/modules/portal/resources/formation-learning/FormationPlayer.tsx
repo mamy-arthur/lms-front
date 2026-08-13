@@ -34,7 +34,11 @@ export default function FormationPlayer({ learningPathId }: Props) {
     isRealMode && resolved?.kind === 'content' ? resolved.content.sectionId : null;
   const activeEntryId = isRealMode && resolved?.kind === 'content' ? resolved.content.id : null;
 
-  const entryQuery = usePortalContentEntryQuery(activeCourseId, activeEntryId);
+  const entryQuery = usePortalContentEntryQuery(
+    isRealMode ? (learningPathId ?? null) : null,
+    activeCourseId,
+    activeEntryId,
+  );
 
   function handleSelect(id: string) {
     setActiveId(id);

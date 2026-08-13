@@ -10,6 +10,8 @@ export const portalLearningPathsApi = {
 };
 
 export const portalContentEntriesApi = {
-  get: (courseId: string, entryId: string) =>
-    apiGet<{ data: ApiPortalContentEntry }>(`courses/${courseId}/entries/${entryId}`),
+  get: (learningPathId: string, courseId: string, entryId: string) =>
+    apiGet<{ data: ApiPortalContentEntry }>(
+      `learning-paths/${learningPathId}/courses/${courseId}/entries/${entryId}`,
+    ),
 };
