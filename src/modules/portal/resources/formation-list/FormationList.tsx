@@ -1,7 +1,16 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { LayoutGrid, List, ChevronDown, BookOpen, CheckCircle2, Clock, Play } from 'lucide-react';
+import {
+  LayoutGrid,
+  List,
+  ChevronDown,
+  BookOpen,
+  CheckCircle2,
+  Clock,
+  Play,
+  Search,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { FormationCard } from '@/modules/portal/resources/_shared/trainee/FormationCard';
 import { MOCK_FORMATIONS } from '@/modules/portal/resources/_shared/trainee/mock-data';
@@ -19,11 +28,17 @@ const FILTER_TABS: { label: string; value: FilterTab; icon: React.ReactNode }[] 
 export default function FormationListPage() {
   const [filter, setFilter] = useState<FilterTab>('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [search, setSearch] = useState('');
 
   const filtered = useMemo(() => {
-    if (filter === 'all') return MOCK_FORMATIONS;
-    return MOCK_FORMATIONS.filter((c) => c.status === filter);
-  }, [filter]);
+    let result =
+      filter === 'all' ? MOCK_FORMATIONS : MOCK_FORMATIONS.filter((c) => c.status === filter);
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      result = result.filter((c) => c.title.toLowerCase().includes(q));
+    }
+    return result;
+  }, [filter, search]);
 
   return (
     <div className="bg-background">
@@ -68,6 +83,16 @@ export default function FormationListPage() {
             >
               Statut <ChevronDown className="h-4 w-4 text-slate-400" />
             </button>
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              <input
+                type="search"
+                placeholder="Rechercher..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="h-8 w-44 rounded-lg border border-slate-200 bg-white pl-8 pr-3 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-(--color-primary)"
+              />
+            </div>
             <button
               type="button"
               className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors"
