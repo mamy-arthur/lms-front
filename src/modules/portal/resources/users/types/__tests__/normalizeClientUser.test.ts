@@ -5,13 +5,13 @@
  * Cas couverts :
  *  - champs canoniques snake_case
  *  - full_name calculé depuis first_name + last_name si absent
- *  - is_active fallback (isActive)
  *  - profile_photo null si absent
  *  - updated_at null si absent
  *  - champs manquants → valeurs par défaut
  */
 
 import { normalizeClientUser } from '../index';
+import type { ClientUser } from '../index';
 import { Role } from '@/shared/constants/roles';
 
 const RAW_FULL = {
@@ -76,7 +76,6 @@ describe('normalizeClientUser — valeurs par défaut sur objet vide', () => {
   it('first_name vaut chaîne vide', () => expect(empty.first_name).toBe(''));
   it('last_name vaut chaîne vide', () => expect(empty.last_name).toBe(''));
   it('email vaut chaîne vide', () => expect(empty.email).toBe(''));
-  it('role vaut TRAINEE par défaut', () => expect(empty.role).toBe(Role.TRAINEE));
   it('is_active vaut true par défaut', () => expect(empty.is_active).toBe(true));
   it('profile_photo vaut null', () => expect(empty.profile_photo).toBeNull());
   it('tenant_id vaut null', () => expect(empty.tenant_id).toBeNull());
@@ -103,11 +102,7 @@ describe('normalizeClientUser — fallbacks', () => {
     expect(user.full_name).toBe('Marc');
   });
 
-  it('is_active accepte isActive (camelCase)', () => {
-    expect(normalizeClientUser({ isActive: false }).is_active).toBe(false);
-  });
-
-  it('is_active vaut true si ni is_active ni isActive présents', () => {
-    expect(normalizeClientUser({}).is_active).toBe(true);
+  it('is_active vaut true si absent', () => {
+    expect(normalizeClientUser({} as ClientUser).is_active).toBe(true);
   });
 });

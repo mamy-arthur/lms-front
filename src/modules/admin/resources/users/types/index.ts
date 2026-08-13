@@ -65,25 +65,25 @@ export interface UserSearchParams {
   page_size?: number;
 }
 
-export function normalizeUser(raw: Record<string, unknown>): User {
+export function normalizeUser(raw: User): User {
   return {
     id: String(raw.id ?? ''),
-    tenant_id: (raw.tenant_id as string | null) ?? null,
-    editor_id: (raw.editor_id as string | null) ?? null,
+    tenant_id: raw.tenant_id ?? null,
+    editor_id: raw.editor_id ?? null,
     first_name: String(raw.first_name ?? ''),
     last_name: String(raw.last_name ?? ''),
     full_name: String(raw.full_name ?? `${raw.first_name ?? ''} ${raw.last_name ?? ''}`.trim()),
     email: String(raw.email ?? ''),
-    role: (raw.role ?? Role.TRAINEE) as Role,
-    is_active: Boolean(raw.is_active ?? raw.isActive ?? true),
-    profile_photo: (raw.profile_photo as User['profile_photo']) ?? null,
-    address: (raw.address as string | null) ?? null,
-    zip_code: (raw.zip_code as string | null) ?? null,
-    city: (raw.city as string | null) ?? null,
-    country: (raw.country as string | null) ?? null,
-    timezone: (raw.timezone as string | null) ?? null,
-    preferred_language: (raw.preferred_language as string | null) ?? null,
+    role: raw.role,
+    is_active: Boolean(raw.is_active ?? true),
+    profile_photo: raw.profile_photo ?? null,
+    address: raw.address ?? null,
+    zip_code: raw.zip_code ?? null,
+    city: raw.city ?? null,
+    country: raw.country ?? null,
+    timezone: raw.timezone ?? null,
+    preferred_language: raw.preferred_language ?? null,
     created_at: String(raw.created_at ?? ''),
-    updated_at: (raw.updated_at as string | null) ?? null,
+    updated_at: raw.updated_at ?? null,
   };
 }

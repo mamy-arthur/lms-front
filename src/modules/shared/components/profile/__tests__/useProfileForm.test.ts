@@ -26,7 +26,9 @@ jest.mock('sonner', () => ({
   toast: { success: jest.fn(), error: jest.fn() },
 }));
 
+import React from 'react';
 import { act, renderHook, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { apiGet, apiPatch } from '@/shared/lib/apiClient';
 import { uploadUserProfilePhoto } from '@/modules/shared/lib/uploadUserProfilePhoto';
 import { toast } from 'sonner';
@@ -59,31 +61,39 @@ const PROFILE_DATA = {
   preferred_language: 'fr',
 };
 
+let queryClient: QueryClient;
+
+const getWrapper = () =>
+  function Wrapper({ children }: { children: React.ReactNode }) {
+    return React.createElement(QueryClientProvider, { client: queryClient }, children);
+  };
+
 describe('useProfileForm', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     useAuthStore.setState({ user: null, role: null });
+    queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   });
 
   // ── État initial ──────────────────────────────────────────────────────────
 
   it('photoPreview vaut null initialement', () => {
-    const { result } = renderHook(() => useProfileForm());
+    const { result } = renderHook(() => useProfileForm(), { wrapper: getWrapper() });
     expect(result.current.photoPreview).toBeNull();
   });
 
   it('uploadError vaut null initialement', () => {
-    const { result } = renderHook(() => useProfileForm());
+    const { result } = renderHook(() => useProfileForm(), { wrapper: getWrapper() });
     expect(result.current.uploadError).toBeNull();
   });
 
   it('loadError vaut null initialement', () => {
-    const { result } = renderHook(() => useProfileForm());
+    const { result } = renderHook(() => useProfileForm(), { wrapper: getWrapper() });
     expect(result.current.loadError).toBeNull();
   });
 
   it('fileInputRef est présent', () => {
-    const { result } = renderHook(() => useProfileForm());
+    const { result } = renderHook(() => useProfileForm(), { wrapper: getWrapper() });
     expect(result.current.fileInputRef).toBeDefined();
   });
 
@@ -93,7 +103,7 @@ describe('useProfileForm', () => {
     mockApiGet.mockResolvedValue({ data: PROFILE_DATA });
     useAuthStore.setState({ user: MOCK_USER, role: Role.TRAINEE });
 
-    renderHook(() => useProfileForm({ patchPath: 'platform/users' }));
+    renderHook(() => useProfileForm({ patchPath: 'platform/users' }), { wrapper: getWrapper() });
 
     await waitFor(() => {
       expect(mockApiGet).toHaveBeenCalledWith('platform/users/u-001');
@@ -101,7 +111,7 @@ describe('useProfileForm', () => {
   });
 
   it("ne fait pas d'appel API si user absent", async () => {
-    renderHook(() => useProfileForm());
+    renderHook(() => useProfileForm(), { wrapper: getWrapper() });
     await new Promise((r) => setTimeout(r, 50));
     expect(mockApiGet).not.toHaveBeenCalled();
   });
@@ -110,7 +120,7 @@ describe('useProfileForm', () => {
     mockApiGet.mockRejectedValue(new Error('Network'));
     useAuthStore.setState({ user: MOCK_USER, role: Role.TRAINEE });
 
-    const { result } = renderHook(() => useProfileForm());
+    const { result } = renderHook(() => useProfileForm(), { wrapper: getWrapper() });
 
     await waitFor(() => {
       expect(result.current.loadError).toBe('Impossible de charger le profil. Veuillez réessayer.');
@@ -121,7 +131,7 @@ describe('useProfileForm', () => {
   // ── handlePhotoSelect ─────────────────────────────────────────────────────
 
   it("ignore handlePhotoSelect si aucun fichier dans l'input", () => {
-    const { result } = renderHook(() => useProfileForm());
+    const { result } = renderHook(() => useProfileForm(), { wrapper: getWrapper() });
     const event = { target: { files: null } } as unknown as React.ChangeEvent<HTMLInputElement>;
     act(() => result.current.handlePhotoSelect(event));
     expect(result.current.photoPreview).toBeNull();
@@ -133,7 +143,9 @@ describe('useProfileForm', () => {
     useAuthStore.setState({ user: MOCK_USER, role: Role.TRAINEE });
     mockApiPatch.mockResolvedValue(undefined);
 
-    const { result } = renderHook(() => useProfileForm({ patchPath: 'platform/users' }));
+    const { result } = renderHook(() => useProfileForm({ patchPath: 'platform/users' }), {
+      wrapper: getWrapper(),
+    });
 
     await act(async () => {
       await result.current.handleSave({
@@ -158,7 +170,7 @@ describe('useProfileForm', () => {
     useAuthStore.setState({ user: MOCK_USER, role: Role.TRAINEE });
     mockApiPatch.mockResolvedValue(undefined);
 
-    const { result } = renderHook(() => useProfileForm());
+    const { result } = renderHook(() => useProfileForm(), { wrapper: getWrapper() });
 
     await act(async () => {
       await result.current.handleSave({ first_name: 'Alice', last_name: 'Dupont' });
@@ -168,7 +180,7 @@ describe('useProfileForm', () => {
   });
 
   it('handleSave ne fait rien si user absent', async () => {
-    const { result } = renderHook(() => useProfileForm());
+    const { result } = renderHook(() => useProfileForm(), { wrapper: getWrapper() });
 
     await act(async () => {
       await result.current.handleSave({ first_name: 'Alice', last_name: 'Dupont' });
@@ -188,8 +200,9 @@ describe('useProfileForm', () => {
     });
     mockApiPatch.mockResolvedValue(undefined);
 
-    const { result } = renderHook(() =>
-      useProfileForm({ uploadPath: 'platform/users', patchPath: 'platform/users' }),
+    const { result } = renderHook(
+      () => useProfileForm({ uploadPath: 'platform/users', patchPath: 'platform/users' }),
+      { wrapper: getWrapper() },
     );
 
     // Simuler un fichier en attente via handlePhotoSelect
@@ -209,7 +222,7 @@ describe('useProfileForm', () => {
     useAuthStore.setState({ user: MOCK_USER, role: Role.TRAINEE });
     mockUpload.mockRejectedValue(new Error('Upload failed'));
 
-    const { result } = renderHook(() => useProfileForm());
+    const { result } = renderHook(() => useProfileForm(), { wrapper: getWrapper() });
 
     const file = new File(['img'], 'photo.jpg', { type: 'image/jpeg' });
     const event = { target: { files: [file] } } as unknown as React.ChangeEvent<HTMLInputElement>;

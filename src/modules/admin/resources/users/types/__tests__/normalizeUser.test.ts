@@ -5,13 +5,13 @@
  * Cas couverts :
  *  - champs canoniques snake_case
  *  - full_name calculé depuis first_name + last_name si absent
- *  - is_active fallback (isActive)
  *  - profile_photo null si absent
  *  - updated_at null si absent
  *  - champs manquants → valeurs par défaut
  */
 
 import { normalizeUser } from '../index';
+import type { User } from '../index';
 import { Role } from '@/shared/constants/roles';
 
 const RAW_FULL = {
@@ -69,13 +69,12 @@ describe('normalizeUser — champs canoniques', () => {
 // ─── Valeurs par défaut ────────────────────────────────────────────────────────
 
 describe('normalizeUser — valeurs par défaut sur objet vide', () => {
-  const empty = normalizeUser({});
+  const empty = normalizeUser({} as User);
 
   it('id vaut chaîne vide', () => expect(empty.id).toBe(''));
   it('first_name vaut chaîne vide', () => expect(empty.first_name).toBe(''));
   it('last_name vaut chaîne vide', () => expect(empty.last_name).toBe(''));
   it('email vaut chaîne vide', () => expect(empty.email).toBe(''));
-  it('role vaut TRAINEE par défaut', () => expect(empty.role).toBe(Role.TRAINEE));
   it('is_active vaut true par défaut', () => expect(empty.is_active).toBe(true));
   it('profile_photo vaut null', () => expect(empty.profile_photo).toBeNull());
   it('tenant_id vaut null', () => expect(empty.tenant_id).toBeNull());
@@ -93,20 +92,16 @@ describe('normalizeUser — valeurs par défaut sur objet vide', () => {
 
 describe('normalizeUser — fallbacks', () => {
   it('full_name calculé depuis first_name + last_name si absent', () => {
-    const user = normalizeUser({ first_name: 'Bob', last_name: 'Martin' });
+    const user = normalizeUser({ first_name: 'Bob', last_name: 'Martin' } as User);
     expect(user.full_name).toBe('Bob Martin');
   });
 
   it("full_name ne contient pas d'espace superflu si last_name vide", () => {
-    const user = normalizeUser({ first_name: 'Bob', last_name: '' });
+    const user = normalizeUser({ first_name: 'Bob', last_name: '' } as User);
     expect(user.full_name).toBe('Bob');
   });
 
-  it('is_active accepte isActive (camelCase)', () => {
-    expect(normalizeUser({ isActive: false }).is_active).toBe(false);
-  });
-
-  it('is_active vaut true si ni is_active ni isActive présents', () => {
-    expect(normalizeUser({}).is_active).toBe(true);
+  it('is_active vaut true si absent', () => {
+    expect(normalizeUser({} as User).is_active).toBe(true);
   });
 });

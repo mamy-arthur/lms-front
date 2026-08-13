@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAuthStore } from '@/shared/stores/auth.store';
 import { apiGet, apiPatch } from '@/shared/lib/apiClient';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { uploadUserProfilePhoto } from '@/modules/shared/lib/uploadUserProfilePhoto';
 import { toast } from 'sonner';
 
@@ -30,11 +31,24 @@ export function useProfileForm({
   patchPath = 'platform/users',
 }: UseProfileFormOptions = {}) {
   const { user, setAuth } = useAuthStore();
+  const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const pendingPhotoRef = useRef<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
+
+  // Query avant useForm — dataUpdatedAt sert de déclencheur fiable pour le reset
+  const {
+    data: profileData,
+    isError: isProfileError,
+    isLoading,
+    dataUpdatedAt,
+  } = useQuery({
+    queryKey: ['profile', patchPath, user?.id],
+    queryFn: () => apiGet<{ data: ProfileFormValues }>(`${patchPath}/${user!.id}`),
+    enabled: !!user?.id,
+    gcTime: 0, // pas de cache inter-navigations — fetch frais à chaque visite de la page
+  });
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
@@ -50,29 +64,36 @@ export function useProfileForm({
     },
   });
 
-  const { reset } = form;
+  // dataUpdatedAt est un timestamp qui change à chaque mise à jour des données,
+  // garantissant que reset() s'exécute même si la référence profileData est identique
+  useEffect(() => {
+    if (!profileData) return;
+    const { data } = profileData;
+    form.reset({
+      first_name: data.first_name ?? '',
+      last_name: data.last_name ?? '',
+      address: data.address ?? null,
+      zip_code: data.zip_code ?? null,
+      city: data.city ?? null,
+      country: data.country ?? null,
+      timezone: data.timezone ?? null,
+      preferred_language: data.preferred_language ?? null,
+    });
+    // Sync avatar only when the API provides one — never clear an existing avatar
+    const raw = data as ProfileFormValues & { profile_photo?: { url: string } | null };
+    const freshAvatar = raw.profile_photo?.url ?? null;
+    const storeUser = useAuthStore.getState().user;
+    if (storeUser && freshAvatar && freshAvatar !== storeUser.avatar) {
+      useAuthStore.getState().setAuth({ ...storeUser, avatar: freshAvatar });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dataUpdatedAt, form]);
 
   useEffect(() => {
-    if (!user?.id) return;
-    setLoadError(null);
-    apiGet<{ data: ProfileFormValues }>(`${patchPath}/${user.id}`)
-      .then(({ data }) => {
-        reset({
-          first_name: data.first_name ?? '',
-          last_name: data.last_name ?? '',
-          address: data.address ?? null,
-          zip_code: data.zip_code ?? null,
-          city: data.city ?? null,
-          country: data.country ?? null,
-          timezone: data.timezone ?? null,
-          preferred_language: data.preferred_language ?? null,
-        });
-      })
-      .catch(() => {
-        setLoadError('Impossible de charger le profil. Veuillez réessayer.');
-        toast.error('Impossible de charger le profil');
-      });
-  }, [user?.id, patchPath, reset]);
+    if (isProfileError) toast.error('Impossible de charger le profil');
+  }, [isProfileError]);
+
+  const loadError = isProfileError ? 'Impossible de charger le profil. Veuillez réessayer.' : null;
 
   const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -117,6 +138,7 @@ export function useProfileForm({
       });
       setAuth({ ...updatedUser, name: `${values.first_name} ${values.last_name}`.trim() });
       toast.success('Profil mis à jour');
+      void queryClient.invalidateQueries({ queryKey: ['profile', patchPath, user.id] });
     } catch {
       toast.error('Échec de la mise à jour du profil');
     }
@@ -124,6 +146,7 @@ export function useProfileForm({
 
   return {
     form,
+    isLoading,
     fileInputRef,
     photoPreview,
     uploadError,
