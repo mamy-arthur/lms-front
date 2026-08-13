@@ -65,13 +65,13 @@ export function CourseContentPage({ courseId }: Props) {
           </p>
         </div>
         <div>
-          <Button
+          {/* <Button
             className="bg-(--color-primary) hover:bg-(--color-primary)/80"
             onClick={() => setPreviewOpen(true)}
           >
             <BookOpen className="size-4" />
             Prévisualisation
-          </Button>
+          </Button> */}
         </div>
       </header>
 
