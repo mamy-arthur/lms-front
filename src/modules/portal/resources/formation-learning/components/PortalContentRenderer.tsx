@@ -19,25 +19,43 @@ function isResolvedMedia(v: unknown): v is ResolvedMedia {
   return !!v && typeof v === 'object' && 'url' in v && 'mime_type' in v;
 }
 
+/** Upgrades http:// → https:// when the page itself is served over HTTPS (avoids mixed-content blocks). */
+function secureUrl(url: string): string {
+  if (typeof window !== 'undefined' && window.location.protocol === 'https:') {
+    return url.replace(/^http:\/\//i, 'https://');
+  }
+  return url;
+}
+
 /** Renders a single resolved media object using the same logic as MediaPreviewModal. */
 function MediaPlayer({ media }: { media: ResolvedMedia }) {
   const category = getMediaCategory(media.mime_type);
 
   if (category === 'video') {
-    return <video src={media.url} controls className="max-h-[70vh] w-full rounded-lg bg-black" />;
+    return (
+      <video
+        src={secureUrl(media.url)}
+        controls
+        className="max-h-[70vh] w-full rounded-lg bg-black"
+      />
+    );
   }
   if (category === 'audio') {
-    return <audio src={media.url} controls className="w-full" />;
+    return <audio src={secureUrl(media.url)} controls className="w-full" />;
   }
   if (category === 'image') {
     return (
-      <img src={media.url} alt="" className="max-w-full max-h-[70vh] rounded-lg object-contain" />
+      <img
+        src={secureUrl(media.url)}
+        alt=""
+        className="max-w-full max-h-[70vh] rounded-lg object-contain"
+      />
     );
   }
   if (category === 'pdf') {
     return (
       <iframe
-        src={media.url}
+        src={secureUrl(media.url)}
         title="PDF"
         className="w-full h-[70vh] rounded-lg border border-slate-200"
       />
@@ -46,7 +64,7 @@ function MediaPlayer({ media }: { media: ResolvedMedia }) {
   // Generic file download
   return (
     <a
-      href={media.url}
+      href={secureUrl(media.url)}
       download
       className="flex items-center gap-2 text-sm font-medium text-slate-700 hover:text-slate-900"
     >
@@ -100,7 +118,7 @@ function FieldsRenderer({
         rendered.push(
           <div key={key} className="flex flex-col gap-3">
             <a
-              href={value}
+              href={secureUrl(value)}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1.5 text-sm text-blue-600 hover:underline"
@@ -109,7 +127,7 @@ function FieldsRenderer({
               {value}
             </a>
             <iframe
-              src={toYouTubeEmbedUrl(value)}
+              src={toYouTubeEmbedUrl(secureUrl(value))}
               className="w-full rounded-lg border border-slate-200 h-[60vh]"
             />
           </div>,
