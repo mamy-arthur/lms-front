@@ -1,7 +1,16 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { LayoutGrid, List, ChevronDown, BookOpen, CheckCircle2, Clock, Play } from 'lucide-react';
+import {
+  LayoutGrid,
+  List,
+  ChevronDown,
+  BookOpen,
+  CheckCircle2,
+  Clock,
+  Play,
+  Search,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { FormationCard } from '@/modules/portal/resources/_shared/trainee/FormationCard';
 import { MOCK_FORMATIONS } from '@/modules/portal/resources/_shared/trainee/mock-data';
@@ -16,40 +25,27 @@ const FILTER_TABS: { label: string; value: FilterTab; icon: React.ReactNode }[] 
   { label: 'À commencer', value: 'not_started', icon: <Play className="h-3.5 w-3.5" /> },
 ];
 
-const KPI_ICONS = [
-  { icon: BookOpen, bg: 'bg-orange-50', color: 'text-[var(--color-primary)]' },
-  { icon: Clock, bg: 'bg-orange-50', color: 'text-[var(--color-primary)]' },
-  { icon: CheckCircle2, bg: 'bg-green-50', color: 'text-green-600' },
-  { icon: Play, bg: 'bg-purple-50', color: 'text-purple-600' },
-];
-
 export default function FormationListPage() {
   const [filter, setFilter] = useState<FilterTab>('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-
-  const total = MOCK_FORMATIONS.length;
-  const inProgress = MOCK_FORMATIONS.filter((c) => c.status === 'in_progress').length;
-  const completed = MOCK_FORMATIONS.filter((c) => c.status === 'completed').length;
-  const notStarted = MOCK_FORMATIONS.filter((c) => c.status === 'not_started').length;
-
-  const kpis = [
-    { value: total, label: ['Formations', 'Inscrites'] },
-    { value: inProgress, label: ['Formations', 'En Cours'] },
-    { value: completed, label: ['Formations', 'Terminées'] },
-    { value: notStarted, label: ['Formation', 'À commencer'] },
-  ];
+  const [search, setSearch] = useState('');
 
   const filtered = useMemo(() => {
-    if (filter === 'all') return MOCK_FORMATIONS;
-    return MOCK_FORMATIONS.filter((c) => c.status === filter);
-  }, [filter]);
+    let result =
+      filter === 'all' ? MOCK_FORMATIONS : MOCK_FORMATIONS.filter((c) => c.status === filter);
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      result = result.filter((c) => c.title.toLowerCase().includes(q));
+    }
+    return result;
+  }, [filter, search]);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="bg-background">
       <div className="mx-auto w-full space-y-6">
         <div>
           <h1 className="text-xl font-bold text-slate-900">Mes formations</h1>
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-sm text-muted-foreground">
             Retrouvez toutes vos formations, leur progression et vos attestations.
           </p>
         </div>
@@ -64,7 +60,7 @@ export default function FormationListPage() {
                 className={cn(
                   'flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-medium transition-all',
                   filter === tab.value
-                    ? 'bg-[var(--color-primary)] text-white shadow-sm'
+                    ? 'bg-(--color-primary) text-white shadow-sm'
                     : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50',
                 )}
               >
@@ -87,6 +83,16 @@ export default function FormationListPage() {
             >
               Statut <ChevronDown className="h-4 w-4 text-slate-400" />
             </button>
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              <input
+                type="search"
+                placeholder="Rechercher..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="h-8 w-44 rounded-lg border border-slate-200 bg-white pl-8 pr-3 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-(--color-primary)"
+              />
+            </div>
             <button
               type="button"
               className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors"
@@ -124,35 +130,6 @@ export default function FormationListPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-          {kpis.map((kpi, i) => {
-            const { icon: Icon, bg, color } = KPI_ICONS[i];
-            return (
-              <div
-                key={kpi.label.join()}
-                className="flex items-center gap-4 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm"
-              >
-                <div
-                  className={cn(
-                    'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl',
-                    bg,
-                  )}
-                >
-                  <Icon className={cn('h-5 w-5', color)} />
-                </div>
-                <div>
-                  <p className="text-xl font-bold text-slate-800">{kpi.value}</p>
-                  <p className="text-xs text-slate-400 leading-tight">
-                    {kpi.label[0]}
-                    <br />
-                    {kpi.label[1]}
-                  </p>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-slate-200 bg-white py-20">
             <BookOpen className="h-10 w-10 text-slate-300" />
@@ -165,39 +142,6 @@ export default function FormationListPage() {
             ))}
           </div>
         )}
-
-        <div className="flex items-center justify-center gap-2 py-2">
-          <span className="text-sm text-slate-400">
-            1-{filtered.length} sur {total} formations
-          </span>
-          <div className="flex items-center gap-1 ml-4">
-            <button
-              type="button"
-              className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 hover:bg-slate-50 disabled:opacity-40"
-              disabled
-            >
-              <ChevronDown className="h-4 w-4 rotate-90" />
-            </button>
-            <button
-              type="button"
-              className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--color-primary)] text-sm font-semibold text-white shadow-sm"
-            >
-              1
-            </button>
-            <button
-              type="button"
-              className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-sm font-medium text-slate-600 hover:bg-slate-50"
-            >
-              2
-            </button>
-            <button
-              type="button"
-              className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 hover:bg-slate-50"
-            >
-              <ChevronDown className="h-4 w-4 -rotate-90" />
-            </button>
-          </div>
-        </div>
       </div>
     </div>
   );

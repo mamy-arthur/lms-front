@@ -26,7 +26,7 @@ export default function FormationDetailPage({ params }: Props) {
       status: trainee.status,
       category: trainee.category,
       level: 'Tous niveaux',
-      description: `Découvrez la formation "${trainee.title}" et progressez à votre rythme.`,
+      description: trainee.description ?? '',
       coverImage: trainee.coverImage,
       progress: trainee.progress,
       completedModules: trainee.completedModules,

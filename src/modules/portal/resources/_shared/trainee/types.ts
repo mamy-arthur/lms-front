@@ -4,6 +4,7 @@ export interface TraineeFormation {
   id: string;
   slug: string;
   title: string;
+  description?: string | null;
   category: string;
   coverImage: string;
   progress: number;
