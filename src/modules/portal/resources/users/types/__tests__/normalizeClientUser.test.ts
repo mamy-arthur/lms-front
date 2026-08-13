@@ -11,7 +11,6 @@
  */
 
 import { normalizeClientUser } from '../index';
-import type { ClientUser } from '../index';
 import { Role } from '@/shared/constants/roles';
 
 const RAW_FULL = {
@@ -103,6 +102,6 @@ describe('normalizeClientUser — fallbacks', () => {
   });
 
   it('is_active vaut true si absent', () => {
-    expect(normalizeClientUser({} as ClientUser).is_active).toBe(true);
+    expect(normalizeClientUser({}).is_active).toBe(true);
   });
 });

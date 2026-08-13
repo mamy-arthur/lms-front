@@ -64,7 +64,7 @@ export interface ClientUserSearchParams {
   page_size?: number;
 }
 
-export function normalizeClientUser(raw: ClientUser): ClientUser {
+export function normalizeClientUser(raw: Partial<ClientUser>): ClientUser {
   return {
     id: String(raw.id ?? ''),
     tenant_id: raw.tenant_id ?? null,
@@ -73,7 +73,7 @@ export function normalizeClientUser(raw: ClientUser): ClientUser {
     last_name: String(raw.last_name ?? ''),
     full_name: String(raw.full_name ?? `${raw.first_name ?? ''} ${raw.last_name ?? ''}`.trim()),
     email: String(raw.email ?? ''),
-    role: raw.role,
+    role: raw.role ?? Role.TRAINEE,
     is_active: Boolean(raw.is_active ?? true),
     profile_photo: raw.profile_photo ?? null,
     address: raw.address ?? null,
