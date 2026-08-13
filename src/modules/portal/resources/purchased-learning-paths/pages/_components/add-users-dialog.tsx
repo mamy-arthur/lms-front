@@ -1,23 +1,23 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
 import { Search, UserPlus } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { toast } from 'sonner';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { toast } from 'sonner';
-import type { TenantAssignableUser } from '../../types';
 import { getInitials } from '@/shared/lib/string/getInitials';
+import type { TenantAssignableUser } from '../../types';
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -108,9 +108,15 @@ export function AddUsersDialog({
                 return (
                   <label
                     key={user.id}
+                    htmlFor={user.id}
                     className="flex cursor-pointer items-center gap-3 rounded-md px-2 py-2 hover:bg-muted/60"
                   >
-                    <Checkbox checked={checked} onCheckedChange={() => toggleUser(user.id)} />
+                    <Checkbox
+                      id={user.id}
+                      checked={checked}
+                      onCheckedChange={() => toggleUser(user.id)}
+                      className="mt-0.5 data-[state=checked]:bg-(--color-primary) data-[state=checked]:border-(--color-primary)"
+                    />
                     <Avatar className="size-7 shrink-0">
                       <AvatarFallback className="text-[10px] font-semibold">
                         {getInitials(user.fullName)}

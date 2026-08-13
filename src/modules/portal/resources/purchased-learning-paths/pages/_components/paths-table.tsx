@@ -1,11 +1,11 @@
 'use client';
 
-import { DataTable, type DataTableColumn } from '@/shared/components/ui/DataTable';
+import { ChevronRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { DataTable, type DataTableColumn } from '@/shared/components/ui/DataTable';
 import type { PurchasedLearningPathRow, PurchasedLearningPathStatKey } from '../../types';
 import { PurchasedLearningPathStatTrigger } from './stat-trigger';
-import { Button } from '@/components/ui/button';
-import { ChevronRight } from 'lucide-react';
 
 interface PurchasedLearningPathsTableProps {
   purchasedLearningPaths: PurchasedLearningPathRow[];
@@ -92,7 +92,7 @@ export function PurchasedLearningPathsTable({
           size="sm"
           onClick={() => onAssign(row)}
           variant={'outline'}
-          className=" text-black"
+          className="text-foreground"
         >
           <ChevronRight className="size-3" />
         </Button>
