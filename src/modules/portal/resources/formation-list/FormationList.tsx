@@ -13,7 +13,8 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { FormationCard } from '@/modules/portal/resources/_shared/trainee/FormationCard';
-import { MOCK_FORMATIONS } from '@/modules/portal/resources/_shared/trainee/mock-data';
+import { useMyEnrollmentsQuery } from './hooks/useMyEnrollmentsQuery';
+import { Skeleton } from '@/components/ui/skeleton';
 import type { FormationStatus } from '@/modules/portal/resources/_shared/trainee/types';
 
 type FilterTab = 'all' | FormationStatus;
@@ -30,15 +31,17 @@ export default function FormationListPage() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [search, setSearch] = useState('');
 
+  const { data: formations = [], isLoading } = useMyEnrollmentsQuery();
+
   const filtered = useMemo(() => {
     let result =
-      filter === 'all' ? MOCK_FORMATIONS : MOCK_FORMATIONS.filter((c) => c.status === filter);
+      filter === 'all' ? formations : formations.filter((c) => c.status === filter);
     if (search.trim()) {
       const q = search.trim().toLowerCase();
       result = result.filter((c) => c.title.toLowerCase().includes(q));
     }
     return result;
-  }, [filter, search]);
+  }, [filter, search, formations]);
 
   return (
     <div className="bg-background">
@@ -130,7 +133,13 @@ export default function FormationListPage() {
           </div>
         </div>
 
-        {filtered.length === 0 ? (
+        {isLoading ? (
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-64 rounded-sm" />
+            ))}
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-slate-200 bg-white py-20">
             <BookOpen className="h-10 w-10 text-slate-300" />
             <p className="text-sm font-medium text-slate-400">Aucune formation trouvée</p>

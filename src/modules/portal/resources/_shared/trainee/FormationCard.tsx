@@ -79,11 +79,7 @@ export function FormationCard({ formation }: FormationCardProps) {
         ) : (
           <div className="flex items-center gap-1.5">
             <Clock className="size-3.5 shrink-0" />
-            <span>
-              {formation.status === 'not_started'
-                ? formation.lastActivity
-                : `Dernier accès : ${formation.lastActivity}`}
-            </span>
+            <span>Dernier accès : {formation.lastActivity}</span>
           </div>
         )}
       </CardContent>

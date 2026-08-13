@@ -3,6 +3,7 @@ import type {
   ApiPortalLearningPathSummary,
   ApiPortalContentEntry,
 } from '@/shared/types/portal.types';
+import type { ApiMeEnrollmentsResponse } from '@/shared/types/enrollment.types';
 
 export const portalLearningPathsApi = {
   summary: (id: string) =>
@@ -14,4 +15,9 @@ export const portalContentEntriesApi = {
     apiGet<{ data: ApiPortalContentEntry }>(
       `learning-paths/${learningPathId}/courses/${courseId}/entries/${entryId}`,
     ),
+};
+
+export const meApi = {
+  enrollments: (params?: { page?: number; per_page?: number }) =>
+    apiGet<ApiMeEnrollmentsResponse>('me/enrollments', params as Record<string, unknown>),
 };

@@ -3,8 +3,9 @@
 import { use } from 'react';
 import { notFound } from 'next/navigation';
 import FormationDetail from '@/modules/portal/resources/formation-detail/FormationDetail';
-import { getFormationDetail } from '@/modules/portal/resources/formation-detail/lib/mock-data';
-import { MOCK_FORMATIONS } from '@/modules/portal/resources/_shared/trainee/mock-data';
+import { useMyEnrollmentsQuery } from '@/modules/portal/resources/formation-list/hooks/useMyEnrollmentsQuery';
+import type { FormationDetailData } from '@/modules/portal/resources/formation-detail/lib/types';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -12,32 +13,37 @@ interface Props {
 
 export default function FormationDetailPage({ params }: Props) {
   const { slug } = use(params);
+  const { data: formations = [], isLoading } = useMyEnrollmentsQuery();
 
-  // Try to get full detail data
-  let detail = getFormationDetail(slug);
-
-  // Fallback: build a minimal detail from the formation-list mock data
-  if (!detail) {
-    const trainee = MOCK_FORMATIONS.find((c) => c.slug === slug);
-    if (!trainee) notFound();
-    detail = {
-      slug: trainee.slug,
-      title: trainee.title,
-      status: trainee.status,
-      category: trainee.category,
-      level: 'Tous niveaux',
-      description: trainee.description ?? '',
-      coverImage: trainee.coverImage,
-      progress: trainee.progress,
-      completedModules: trainee.completedModules,
-      totalModules: trainee.totalModules,
-      totalDurationMin: trainee.totalModules * 30,
-      lastActivity: trainee.lastActivity,
-      hasCertificate: trainee.hasAttestation ?? false,
-      modules: [],
-      resources: [],
-    };
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-64 w-full rounded-sm" />
+        <Skeleton className="h-6 w-1/2" />
+      </div>
+    );
   }
 
-  return <FormationDetail formation={detail!} />;
+  const trainee = formations.find((c) => c.slug === slug);
+  if (!trainee) notFound();
+
+  const detail: FormationDetailData = {
+    slug: trainee.slug,
+    title: trainee.title,
+    status: trainee.status,
+    category: trainee.category,
+    level: 'Tous niveaux',
+    description: trainee.description ?? '',
+    coverImage: trainee.coverImage,
+    progress: 0,
+    completedModules: 0,
+    totalModules: trainee.totalModules,
+    totalDurationMin: 0,
+    lastActivity: trainee.lastActivity,
+    hasCertificate: trainee.hasAttestation ?? false,
+    modules: [],
+    resources: [],
+  };
+
+  return <FormationDetail formation={detail} />;
 }

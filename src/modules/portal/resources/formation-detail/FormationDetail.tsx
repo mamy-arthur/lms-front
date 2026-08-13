@@ -42,7 +42,7 @@ export default function FormationDetail({ formation }: FormationDetailProps) {
                     </div>
                     <Button
                       onClick={() =>
-                        router.push(`/my-learning-paths/ffb0511a-44c8-47bd-a9e6-0daec8bcd912/learn`)
+                        router.push(`/my-learning-paths/${formation.slug}/learn`)
                       }
                       className="flex w-fit items-center gap-1 rounded-sm bg-(--color-primary)  text-xs font-semibold text-white shadow-sm hover:opacity-90 transition-all"
                     >
