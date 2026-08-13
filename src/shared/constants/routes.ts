@@ -35,6 +35,7 @@ export const ROUTES = {
     dashboard: '/dashboard',
     formations: '/formations',
     store: '/store',
+    checkout: '/checkout',
     wallet: '/wallet',
     // courses: "/courses",
     // category: "/category",

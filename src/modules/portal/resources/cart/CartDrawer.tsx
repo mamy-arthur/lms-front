@@ -65,7 +65,7 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
                 </div>
 
                 <div className="lg:col-span-1 lg:sticky lg:top-0 lg:self-start">
-                  <CartSummary cart={cart!} />
+                  <CartSummary cart={cart!} onCheckout={() => onOpenChange(false)} />
                 </div>
               </div>
             </div>
