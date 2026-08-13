@@ -25,6 +25,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { useAuthStore } from '@/shared/stores/auth.store';
 import { getInitials } from '@/shared/lib/string/getInitials';
 import { ROUTES } from '@/shared/constants/routes';
+import { Role } from '@/shared/constants/roles';
 
 interface AppHeaderProps {
   onLogout?: () => void;
@@ -93,8 +94,8 @@ export function AppHeader({ onLogout }: AppHeaderProps) {
             </PopoverContent>
           </Popover>
 
-          {/* CART — client uniquement */}
-          {!isAdmin && (
+          {/* CART — ClientManager uniquement */}
+          {user?.role === Role.CLIENT_MANAGER && (
             <Button
               size="icon"
               className="relative h-9 w-9 hover:bg-accent bg-gray-200/50 text-black"
@@ -162,7 +163,7 @@ export function AppHeader({ onLogout }: AppHeaderProps) {
         </div>
       </header>
 
-      {!isAdmin && <CartDrawer open={cartOpen} onOpenChange={setCartOpen} />}
+      {user?.role === Role.CLIENT_MANAGER && <CartDrawer open={cartOpen} onOpenChange={setCartOpen} />}
     </>
   );
 }
