@@ -23,6 +23,8 @@ import {
 } from '@/components/ui/accordion';
 import { useCartActions } from '@/modules/portal/resources/cart/hooks/useCartActions';
 import { CartQuantityControls } from '@/modules/shared/components/store/CartQuantityControls';
+import { usePermissions } from '@/shared/hooks/usePermissions';
+import { ACCESS } from '@/shared/auth/permissions';
 import type {
   StoreFormationDetails,
   StoreModuleStep,
@@ -104,6 +106,8 @@ function ProgramEvaluation({ step, stepIndex }: { step: StoreEvaluationStep; ste
 
 export function FormationDetailsPage({ formation }: FormationDetailsPageProps) {
   const { add, increase, decrease, setQuantity, findItem, isMutatingFor } = useCartActions();
+  const { can } = usePermissions();
+  const canManageCart = can(ACCESS.cart);
 
   const cartItem = findItem(formation.id);
   const isInCart = Boolean(cartItem);
@@ -154,23 +158,25 @@ export function FormationDetailsPage({ formation }: FormationDetailsPageProps) {
             <div className="mt-auto flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-3xl text-foreground">{formatPrice(formation.price)}</p>
               <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-                {isInCart && cartItem ? (
-                  <CartQuantityControls
-                    quantity={cartItem.quantity}
-                    onDecrease={() => decrease(cartItem.id)}
-                    onIncrease={() => increase(cartItem.id)}
-                    onQuantityChange={(quantity) => setQuantity(cartItem.id, quantity)}
-                    disabled={isCartMutating}
-                  />
-                ) : (
-                  <Button
-                    className="bg-(--color-primary) hover:bg-(--color-primary)/80"
-                    onClick={() => add(formation.id)}
-                    disabled={isCartMutating}
-                  >
-                    <ShoppingCart />
-                    Ajouter au panier
-                  </Button>
+                {canManageCart && (
+                  isInCart && cartItem ? (
+                    <CartQuantityControls
+                      quantity={cartItem.quantity}
+                      onDecrease={() => decrease(cartItem.id)}
+                      onIncrease={() => increase(cartItem.id)}
+                      onQuantityChange={(quantity) => setQuantity(cartItem.id, quantity)}
+                      disabled={isCartMutating}
+                    />
+                  ) : (
+                    <Button
+                      className="bg-(--color-primary) hover:bg-(--color-primary)/80"
+                      onClick={() => add(formation.id)}
+                      disabled={isCartMutating}
+                    >
+                      <ShoppingCart />
+                      Ajouter au panier
+                    </Button>
+                  )
                 )}
               </div>
             </div>
