@@ -39,7 +39,21 @@ export function PurchasedLearningPathsTable({
     {
       key: 'name',
       label: 'Parcours de formation',
-      render: (row) => <span className="font-medium text-foreground">{row.name}</span>,
+      render: (row) => (
+        <div className="flex items-center gap-3">
+          {row.imageUrl ? (
+            // biome-ignore lint/performance/noImgElement: external backend URL, domain unknown at build time
+            <img
+              src={row.imageUrl}
+              alt={row.name}
+              className="size-11 shrink-0 rounded-md object-cover"
+            />
+          ) : (
+            <div className="size-10 shrink-0 rounded-md bg-muted" />
+          )}
+          <span className="font-medium text-foreground">{row.name}</span>
+        </div>
+      ),
     },
     {
       key: 'cumulative',

@@ -16,6 +16,7 @@ export function mapToPurchasedLearningPath(api: ApiPurchasedLearningPath): Purch
     tenantId: api.tenant_id,
     learningPathId: api.learning_path.id,
     name: api.learning_path.name,
+    imageUrl: api.learning_path.image?.url ?? null,
     creditsTotal: api.purchased,
     creditsUsed: api.used,
     creditsAvailable: api.credits_available,
