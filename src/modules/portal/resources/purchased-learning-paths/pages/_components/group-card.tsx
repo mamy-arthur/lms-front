@@ -169,7 +169,7 @@ export function GroupCard({
       </div>
 
       {selected && availableCount > 0 && (
-        <span className="inline-flex w-fit items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium bg-(--color-primary)/70 text-primary-foreground">
+        <span className="inline-flex w-fit items-center gap-1 text-[10px] rounded-full border px-2 py-0.5 text-xs font-medium bg-(--color-primary)/70 text-primary-foreground">
           {availableCount === 1
             ? '+ 1 membre sera inscrit'
             : `+ ${availableCount} membres seront inscrits`}
