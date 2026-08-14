@@ -158,8 +158,8 @@ export function FormationDetailsPage({ formation }: FormationDetailsPageProps) {
             <div className="mt-auto flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-3xl text-foreground">{formatPrice(formation.price)}</p>
               <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-                {canManageCart && (
-                  isInCart && cartItem ? (
+                {canManageCart &&
+                  (isInCart && cartItem ? (
                     <CartQuantityControls
                       quantity={cartItem.quantity}
                       onDecrease={() => decrease(cartItem.id)}
@@ -176,8 +176,7 @@ export function FormationDetailsPage({ formation }: FormationDetailsPageProps) {
                       <ShoppingCart />
                       Ajouter au panier
                     </Button>
-                  )
-                )}
+                  ))}
               </div>
             </div>
           </div>

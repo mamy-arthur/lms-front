@@ -124,8 +124,7 @@ export function GroupCard({
         <div className="min-w-0 flex-1">
           <p className="truncate text-xs font-semibold leading-tight">{group.name}</p>
           <p className="text-xs text-muted-foreground">
-            {enrolledCount > 0 &&
-              `${enrolledCount} déjà inscrit${enrolledCount !== 1 ? 's' : ''}`}
+            {enrolledCount > 0 && `${enrolledCount} déjà inscrit${enrolledCount !== 1 ? 's' : ''}`}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-1">

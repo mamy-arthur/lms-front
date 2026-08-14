@@ -1,7 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { meApi } from '@/shared/api/portal.api';
 import type { ApiMeEnrollment } from '@/shared/types/enrollment.types';
-import type { TraineeFormation, FormationStatus } from '@/modules/portal/resources/_shared/trainee/types';
+import type {
+  TraineeFormation,
+  FormationStatus,
+} from '@/modules/portal/resources/_shared/trainee/types';
 
 export const MY_ENROLLMENTS_QUERY_KEY = ['portal', 'me', 'enrollments'] as const;
 

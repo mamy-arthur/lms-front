@@ -34,8 +34,7 @@ export default function FormationListPage() {
   const { data: formations = [], isLoading } = useMyEnrollmentsQuery();
 
   const filtered = useMemo(() => {
-    let result =
-      filter === 'all' ? formations : formations.filter((c) => c.status === filter);
+    let result = filter === 'all' ? formations : formations.filter((c) => c.status === filter);
     if (search.trim()) {
       const q = search.trim().toLowerCase();
       result = result.filter((c) => c.title.toLowerCase().includes(q));

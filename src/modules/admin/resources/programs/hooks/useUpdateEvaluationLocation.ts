@@ -14,7 +14,10 @@ export function useUpdateEvaluationLocation() {
 
   return useMutation({
     mutationFn: ({ evaluationId, locationX, locationY }: UpdateEvaluationLocationVars) =>
-      evaluationsApi.update(evaluationId, { location_x: Math.round(locationX), location_y: Math.round(locationY) }),
+      evaluationsApi.update(evaluationId, {
+        location_x: Math.round(locationX),
+        location_y: Math.round(locationY),
+      }),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
         queryKey: evaluationKeys.listByLearningPath(variables.learningPathId),

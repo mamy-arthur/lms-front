@@ -41,9 +41,7 @@ export default function FormationDetail({ formation }: FormationDetailProps) {
                       <p className="text-sm text-muted-foreground">{formation.description}</p>
                     </div>
                     <Button
-                      onClick={() =>
-                        router.push(`/my-learning-paths/${formation.slug}/learn`)
-                      }
+                      onClick={() => router.push(`/my-learning-paths/${formation.slug}/learn`)}
                       className="flex w-fit items-center gap-1 rounded-sm bg-(--color-primary)  text-xs font-semibold text-white shadow-sm hover:opacity-90 transition-all"
                     >
                       <span>Accéder au cours</span>
