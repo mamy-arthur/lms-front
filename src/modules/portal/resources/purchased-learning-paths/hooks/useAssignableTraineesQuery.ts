@@ -5,7 +5,8 @@ import { ASSIGNABLE_LIST_PAGE_SIZE } from '../lib/constants';
 import { mapToAssignableUser } from '../lib/mappers';
 import type { TenantAssignableUser } from '../types';
 
-export function useAssignableTraineesQuery() {
+export function useAssignableTraineesQuery(enabled = true) {
+
   return useQuery({
     queryKey: userKeys.list({
       role: 'TRAINEE',
@@ -20,6 +21,8 @@ export function useAssignableTraineesQuery() {
       });
       return response.data.map((user) => mapToAssignableUser(user));
     },
+    enabled,
+    staleTime: 5 * 60 * 1000,
     placeholderData: (prev) => prev,
   });
 }
