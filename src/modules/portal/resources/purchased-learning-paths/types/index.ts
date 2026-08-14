@@ -15,6 +15,7 @@ export interface PurchasedLearningPath {
   id: string;
   learningPathId: string;
   name: string;
+  imageUrl?: string | null;
   creditsTotal: number;
   creditsUsed: number;
   creditsAvailable: number;
