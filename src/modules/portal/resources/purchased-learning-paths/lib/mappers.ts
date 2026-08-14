@@ -62,6 +62,7 @@ export function mapEnrollmentToRow(
     id: enrollment.id,
     userId: enrollment.learner_id,
     fullName,
+    avatarUrl: enrollment.learner?.profile_photo?.url ?? null,
     enrolledAt: enrollment.enrolled_at,
     startedAt: enrollment.started_at,
     completedAt: enrollment.completed_at,

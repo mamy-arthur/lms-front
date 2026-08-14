@@ -1,7 +1,7 @@
 'use client';
 
 import { X } from 'lucide-react';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { getInitials } from '@/shared/lib/string/getInitials';
 
@@ -9,11 +9,12 @@ export type StagiaireChipStatus = 'already-enrolled' | 'will-enroll';
 
 interface StagiaireChipProps {
   name: string;
+  avatarUrl?: string | null;
   status: StagiaireChipStatus;
   onRemove?: () => void;
 }
 
-export function StagiaireChip({ name, status, onRemove }: StagiaireChipProps) {
+export function StagiaireChip({ name, avatarUrl, status, onRemove }: StagiaireChipProps) {
   const isWillEnroll = status === 'will-enroll';
   return (
     <div
@@ -24,7 +25,8 @@ export function StagiaireChip({ name, status, onRemove }: StagiaireChipProps) {
           : 'border-border opacity-60',
       )}
     >
-      <Avatar className="size-5 shrink-0">
+      <Avatar className="size-7 shrink-0">
+        <AvatarImage src={avatarUrl ?? undefined} alt={name} />
         <AvatarFallback
           className="text-[9px] font-bold"
           style={{ fontFamily: '"Space Grotesk", sans-serif' }}

@@ -308,6 +308,7 @@ export function PurchasedLearningPathEnrollmentDrawer({
                       <StagiaireChip
                         key={enrollment.userId}
                         name={enrollment.fullName}
+                        avatarUrl={enrollment.avatarUrl}
                         status="already-enrolled"
                       />
                     ))}
@@ -318,6 +319,7 @@ export function PurchasedLearningPathEnrollmentDrawer({
                         <StagiaireChip
                           key={userId}
                           name={user.fullName}
+                          avatarUrl={user.avatarUrl}
                           status="will-enroll"
                           onRemove={() =>
                             setSelectedUserIds((prev) => {
