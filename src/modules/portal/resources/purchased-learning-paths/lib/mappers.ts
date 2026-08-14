@@ -39,6 +39,7 @@ export function mapToAssignableUser(
     id: user.id,
     tenantId,
     fullName,
+    avatarUrl: user.profile_photo?.url ?? null,
   };
 }
 

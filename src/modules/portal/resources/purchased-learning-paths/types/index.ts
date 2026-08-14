@@ -27,6 +27,7 @@ export interface TenantAssignableUser {
   id: string;
   tenantId: string;
   fullName: string;
+  avatarUrl?: string | null;
 }
 
 export interface AssignableGroup {

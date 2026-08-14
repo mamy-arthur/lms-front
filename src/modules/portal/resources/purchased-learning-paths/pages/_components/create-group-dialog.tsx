@@ -3,7 +3,7 @@
 import { Check, Loader2, Save, Search } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -153,6 +153,7 @@ export function CreateGroupDialog({
                       className="mt-0.5 data-[state=checked]:bg-(--color-primary) data-[state=checked]:border-(--color-primary)"
                     />
                     <Avatar className="size-7 shrink-0">
+                      <AvatarImage src={user.avatarUrl ?? undefined} alt={user.fullName} />
                       <AvatarFallback className="text-[10px] font-semibold">
                         {getInitials(user.fullName)}
                       </AvatarFallback>
