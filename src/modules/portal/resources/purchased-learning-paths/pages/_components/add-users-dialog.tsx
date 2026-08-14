@@ -127,7 +127,12 @@ export function AddUsersDialog({
                         {getInitials(user.fullName)}
                       </AvatarFallback>
                     </Avatar>
-                    <span className="min-w-0 flex-1 truncate text-sm">{user.fullName}</span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm">{user.fullName}</p>
+                      {user.email && (
+                        <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+                      )}
+                    </div>
                     {enrolledAtMap?.has(user.id) && (
                       <span className="shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
                         Inscrit le {formatDate(enrolledAtMap.get(user.id)!)}

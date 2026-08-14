@@ -10,6 +10,7 @@ export type StagiaireChipStatus = 'already-enrolled' | 'will-enroll';
 
 interface StagiaireChipProps {
   name: string;
+  email?: string | null;
   avatarUrl?: string | null;
   status: StagiaireChipStatus;
   enrolledAt?: string;
@@ -18,7 +19,7 @@ interface StagiaireChipProps {
   onSelect?: () => void;
 }
 
-export function StagiaireChip({ name, avatarUrl, status, enrolledAt, isReEnrollment = false, onRemove, onSelect }: StagiaireChipProps) {
+export function StagiaireChip({ name, email, avatarUrl, status, enrolledAt, isReEnrollment = false, onRemove, onSelect }: StagiaireChipProps) {
   const isWillEnroll = status === 'will-enroll';
   const isSelectable = !isWillEnroll && Boolean(onSelect);
   return (
@@ -56,7 +57,10 @@ export function StagiaireChip({ name, avatarUrl, status, enrolledAt, isReEnrollm
       </Avatar>
       <div className="min-w-0 flex-1">
         <p className="truncate text-xs font-semibold leading-tight">{name}</p>
-        <p className="flex items-center gap-1 text-xs text-muted-foreground">
+        {email && (
+          <p className="truncate text-[10px] text-muted-foreground">{email}</p>
+        )}
+        <p className="flex items-center gap-1 text-[10px] text-muted-foreground">
           {isWillEnroll && (
             <span className="inline-block size-[6px] shrink-0 rounded-full bg-(--color-primary)" />
           )}

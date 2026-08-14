@@ -340,6 +340,7 @@ export function PurchasedLearningPathEnrollmentDrawer({
                         <StagiaireChip
                           key={enrollment.userId}
                           name={enrollment.fullName}
+                          email={enrollment.email}
                           avatarUrl={enrollment.avatarUrl}
                           status="already-enrolled"
                           enrolledAt={enrollment.enrolledAt}
@@ -361,6 +362,10 @@ export function PurchasedLearningPathEnrollmentDrawer({
                         <StagiaireChip
                           key={userId}
                           name={name}
+                          email={
+                            users.find((u) => u.id === userId)?.email ??
+                            enrolledUsers.find((e) => e.userId === userId)?.email
+                          }
                           avatarUrl={avatarUrl}
                           status="will-enroll"
                           isReEnrollment={isReEnrollment}

@@ -34,6 +34,7 @@ export function mapToAssignableUser(user: ApiAssignableTraineeUser): TenantAssig
   return {
     id: user.id,
     fullName,
+    email: user.email ?? null,
     avatarUrl: user.profile_photo?.url ?? null,
   };
 }
@@ -57,6 +58,7 @@ export function mapEnrollmentToRow(
     id: enrollment.id,
     userId: enrollment.learner_id,
     fullName,
+    email: enrollment.learner?.email ?? null,
     avatarUrl: enrollment.learner?.profile_photo?.url ?? null,
     enrolledAt: enrollment.enrolled_at,
     startedAt: enrollment.started_at,

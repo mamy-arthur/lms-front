@@ -108,7 +108,12 @@ export function GroupCard({
                         {getInitials(m.fullName)}
                       </AvatarFallback>
                     </Avatar>
-                    <span className="min-w-0 flex-1 truncate text-xs">{m.fullName}</span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-xs">{m.fullName}</p>
+                      {m.email && (
+                        <p className="truncate text-[10px] text-muted-foreground">{m.email}</p>
+                      )}
+                    </div>
                     {selected && enrolledAtMap?.has(m.id) ? (
                       <label
                         htmlFor={`re-enroll-${group.id}-${m.id}`}
