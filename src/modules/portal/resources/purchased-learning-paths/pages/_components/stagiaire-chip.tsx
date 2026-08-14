@@ -1,7 +1,7 @@
 'use client';
 
 import { X } from 'lucide-react';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { formatDate } from '@/shared/lib/date';
 import { getInitials } from '@/shared/lib/string/getInitials';
@@ -10,6 +10,7 @@ export type StagiaireChipStatus = 'already-enrolled' | 'will-enroll';
 
 interface StagiaireChipProps {
   name: string;
+  avatarUrl?: string | null;
   status: StagiaireChipStatus;
   enrolledAt?: string;
   isReEnrollment?: boolean;
@@ -17,14 +18,7 @@ interface StagiaireChipProps {
   onSelect?: () => void;
 }
 
-export function StagiaireChip({
-  name,
-  status,
-  enrolledAt,
-  isReEnrollment = false,
-  onRemove,
-  onSelect,
-}: StagiaireChipProps) {
+export function StagiaireChip({ name, avatarUrl, status, enrolledAt, isReEnrollment = false, onRemove, onSelect }: StagiaireChipProps) {
   const isWillEnroll = status === 'will-enroll';
   const isSelectable = !isWillEnroll && Boolean(onSelect);
   return (
@@ -51,7 +45,8 @@ export function StagiaireChip({
             : 'border-border opacity-60',
       )}
     >
-      <Avatar className="size-5 shrink-0">
+      <Avatar className="size-7 shrink-0">
+        <AvatarImage src={avatarUrl ?? undefined} alt={name} />
         <AvatarFallback
           className="text-[9px] font-bold"
           style={{ fontFamily: '"Space Grotesk", sans-serif' }}

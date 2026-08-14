@@ -41,6 +41,7 @@ export interface ApiEnrollmentWithLearner {
     first_name: string;
     last_name: string;
     email: string;
+    profile_photo: { url: string } | null;
   } | null;
 }
 
