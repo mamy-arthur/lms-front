@@ -311,10 +311,7 @@ export function PurchasedLearningPathEnrollmentDrawer({
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-semibold">
                     Stagiaires
-                    <Badge
-                      variant="secondary"
-                      className="ml-2 bg-(--color-primary)/20 text-(--color-primary)"
-                    >
+                    <Badge variant="secondary" className="ml-2 bg-primary/20 text-primary">
                       {enrolledUsers.filter((e) => !selectedUserIds.has(e.userId)).length +
                         netAssignableUserIds.size}
                     </Badge>
@@ -483,7 +480,7 @@ export function PurchasedLearningPathEnrollmentDrawer({
                   Annuler
                 </Button>
                 <Button
-                  className="gap-2 bg-(--color-primary) text-white hover:bg-(--color-primary)/80"
+                  className="gap-2 bg-primary text-white hover:bg-primary/80"
                   onClick={() => void handleAssign()}
                   disabled={isBusy || hasInsufficientCredits || netAssignableCount === 0}
                 >
