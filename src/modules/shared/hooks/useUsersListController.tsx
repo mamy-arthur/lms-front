@@ -53,7 +53,7 @@ export function useUsersListController<TUser, TParams = Record<string, unknown>>
     }));
   }, [draftSearch, draftRole, draftStatus, draftTenant, includeTenantFilter]);
 
-  // Utilisé par le debounce de la barre de recherche — n'applique que q
+  // Utilisé par le debounce de la barre de recherche — n'applique que le filtre `q` sans toucher aux autres filtres
   const handleSearchOnly = useCallback(() => {
     setParams((prev) => ({ ...prev, q: draftSearch || undefined, page: 0 }));
   }, [draftSearch]);

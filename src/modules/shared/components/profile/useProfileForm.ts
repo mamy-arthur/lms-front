@@ -88,9 +88,8 @@ export function useProfileForm({
     if (storeUser && freshAvatar && freshAvatar !== storeUser.avatar) {
       useAuthStore.getState().setAuth({ ...storeUser, avatar: freshAvatar });
     }
-    // Clear the preview only once the server-confirmed URL is in the store,
-    // so the avatar never shows a transient storage URL that may be inaccessible.
-    if (photoJustUploadedRef.current) {
+    // Clear the preview only when the server has confirmed a new avatar URL.
+    if (photoJustUploadedRef.current && freshAvatar) {
       photoJustUploadedRef.current = false;
       setPhotoPreview(null);
     }
