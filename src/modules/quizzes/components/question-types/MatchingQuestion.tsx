@@ -102,7 +102,6 @@ export function MatchingQuestion({
                 {pair.question}
               </button>
 
-              {/* Connector — arrow when matched, faint dot otherwise */}
               <div className="flex items-center justify-center"></div>
 
               {/* Right cell */}
@@ -117,7 +116,7 @@ export function MatchingQuestion({
                     isRightMatched
                       ? 'border-2 bg-card'
                       : isTargetable
-                        ? 'border-primary/50 bg-(--color-primary)/6 hover:border-(--color-primary) hover:shadow-md'
+                        ? 'border-primary/50 bg-(--color-primary)/10 hover:border-(--color-primary) hover:shadow-md'
                         : 'border-border bg-card opacity-70',
                     disabled && 'cursor-not-allowed opacity-60',
                   )}

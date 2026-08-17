@@ -127,8 +127,10 @@ function FieldsRenderer({
               {value}
             </a>
             <iframe
+              title="Contenu externe"
               src={toYouTubeEmbedUrl(secureUrl(value))}
               className="w-full rounded-lg border border-slate-200 h-[60vh]"
+              allowFullScreen
             />
           </div>,
         );
