@@ -51,7 +51,6 @@ import { cn } from '@/lib/utils';
 import type { MutationLike } from '@/shared/types/mutation';
 import { extractApiError } from '@/shared/utils/api-error';
 import type { genIdentifier } from './module-form-utils';
-import { CompetencyCategoryModal } from '../../components/categories/CompetencyCategoryModal';
 import { CompetencyCategorySelect } from '../../components/categories/CompetencyCategorySelect';
 
 interface Course {
@@ -210,8 +209,6 @@ export function ModuleForm({
   setCoursePopoverOpen,
   genIdentifierFn,
 }: ModuleFormProps) {
-  const [categoryModalOpen, setCategoryModalOpen] = useState(false);
-
   const courseMap = useMemo(() => {
     const map = new Map<string, { fullName: string; categoryName: string }>();
     for (const group of coursesByCategory) {
@@ -264,13 +261,7 @@ export function ModuleForm({
             render={({ field }) => (
               <FieldGroup>
                 <FieldLabel className="text-xs">Catégorie</FieldLabel>
-                <CompetencyCategorySelect
-                  value={field.value ?? ''}
-                  onChange={field.onChange}
-                  onCreate={() => {
-                    setCategoryModalOpen(true);
-                  }}
-                />
+                <CompetencyCategorySelect value={field.value ?? ''} onChange={field.onChange} />
                 <FieldError />
               </FieldGroup>
             )}
@@ -485,14 +476,6 @@ export function ModuleForm({
           </Button>
         </div>
       </form>
-
-      <CompetencyCategoryModal
-        open={categoryModalOpen}
-        onOpenChange={setCategoryModalOpen}
-        onCreated={(created) => {
-          form.setValue('category_id', created.id, { shouldValidate: true });
-        }}
-      />
     </Field>
   );
 }

@@ -22,7 +22,6 @@ import { generateIdnumberFromName } from './category-idnumber';
 interface CompetencyCategorySelectProps {
   value: string;
   onChange: (value: string) => void;
-  onCreate?: () => void;
   disabled?: boolean;
 }
 

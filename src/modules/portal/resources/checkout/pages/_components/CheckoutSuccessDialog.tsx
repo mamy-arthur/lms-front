@@ -20,16 +20,11 @@ export function CheckoutSuccessDialog({
   onNavigate,
 }: CheckoutSuccessDialogProps) {
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(isOpen) => {
-        if (!isOpen) onNavigate();
-      }}
-    >
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onNavigate()}>
       <DialogContent
         className="max-w-sm text-center"
-        onInteractOutside={onNavigate}
-        onEscapeKeyDown={onNavigate}
+        onInteractOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => e.preventDefault()}
       >
         <DialogTitle className="sr-only">Paiement réussi</DialogTitle>
         <div className="flex flex-col items-center gap-4 py-4">
