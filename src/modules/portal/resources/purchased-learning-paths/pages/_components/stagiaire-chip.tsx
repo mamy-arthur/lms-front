@@ -17,7 +17,14 @@ interface StagiaireChipProps {
   onSelect?: () => void;
 }
 
-export function StagiaireChip({ name, status, enrolledAt, isReEnrollment = false, onRemove, onSelect }: StagiaireChipProps) {
+export function StagiaireChip({
+  name,
+  status,
+  enrolledAt,
+  isReEnrollment = false,
+  onRemove,
+  onSelect,
+}: StagiaireChipProps) {
   const isWillEnroll = status === 'will-enroll';
   const isSelectable = !isWillEnroll && Boolean(onSelect);
   return (
@@ -58,7 +65,13 @@ export function StagiaireChip({ name, status, enrolledAt, isReEnrollment = false
           {isWillEnroll && (
             <span className="inline-block size-[6px] shrink-0 rounded-full bg-(--color-primary)" />
           )}
-          {isWillEnroll ? (isReEnrollment ? 'à réinscrire' : 'à inscrire') : enrolledAt ? `Inscrit le ${formatDate(enrolledAt)}` : 'inscrit'}
+          {isWillEnroll
+            ? isReEnrollment
+              ? 'à réinscrire'
+              : 'à inscrire'
+            : enrolledAt
+              ? `Inscrit le ${formatDate(enrolledAt)}`
+              : 'inscrit'}
         </p>
       </div>
       {onRemove && (

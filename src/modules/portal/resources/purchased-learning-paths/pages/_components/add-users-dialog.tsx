@@ -47,7 +47,7 @@ export function AddUsersDialog({
       setSearch('');
       setSelectedIds(new Set(initialSelectedIds));
     }
-  // biome-ignore lint/correctness/useExhaustiveDependencies: snapshot on open only
+    // biome-ignore lint/correctness/useExhaustiveDependencies: snapshot on open only
   }, [open]);
 
   const filtered = useMemo(() => {

@@ -59,7 +59,9 @@ export function PurchasedLearningPathEnrollmentDrawer({
 }: PurchasedLearningPathEnrollmentDrawerProps) {
   const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
   const [selectedGroupIds, setSelectedGroupIds] = useState<Set<string>>(new Set());
-  const [groupReEnrollMemberIds, setGroupReEnrollMemberIds] = useState<Map<string, Set<string>>>(new Map());
+  const [groupReEnrollMemberIds, setGroupReEnrollMemberIds] = useState<Map<string, Set<string>>>(
+    new Map(),
+  );
   const [editingGroup, setEditingGroup] = useState<AssignableGroup | null>(null);
   const [showAddUsers, setShowAddUsers] = useState(false);
   const [showCreateGroup, setShowCreateGroup] = useState(false);
@@ -118,7 +120,11 @@ export function PurchasedLearningPathEnrollmentDrawer({
       const next = new Set(prev);
       if (next.has(groupId)) {
         next.delete(groupId);
-        setGroupReEnrollMemberIds((m) => { const n = new Map(m); n.delete(groupId); return n; });
+        setGroupReEnrollMemberIds((m) => {
+          const n = new Map(m);
+          n.delete(groupId);
+          return n;
+        });
       } else {
         next.add(groupId);
         setGroupReEnrollMemberIds((m) => new Map([...m, [groupId, new Set()]]));
@@ -418,7 +424,9 @@ export function PurchasedLearningPathEnrollmentDrawer({
                           selected={selectedGroupIds.has(group.id)}
                           reEnrollMemberIds={groupReEnrollMemberIds.get(group.id)}
                           onClick={() => toggleGroup(group.id)}
-                          onToggleReEnrollMember={(uid, v) => handleToggleReEnrollMember(group.id, uid, v)}
+                          onToggleReEnrollMember={(uid, v) =>
+                            handleToggleReEnrollMember(group.id, uid, v)
+                          }
                           onEdit={() => setEditingGroup(group)}
                           onDelete={() => void handleDeleteGroup(group.id)}
                         />
