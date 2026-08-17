@@ -1,3 +1,5 @@
+'use client';
+
 import { Lock, ImageIcon } from 'lucide-react';
 
 import { Separator } from '@/components/ui/separator';
