@@ -93,7 +93,6 @@ export function useProfileForm({
       photoJustUploadedRef.current = false;
       setPhotoPreview(null);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dataUpdatedAt, form]);
 
   useEffect(() => {

@@ -11,7 +11,6 @@
  */
 
 import { normalizeUser } from '../index';
-import type { User } from '../index';
 import { Role } from '@/shared/constants/roles';
 
 const RAW_FULL = {
