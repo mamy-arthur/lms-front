@@ -69,12 +69,13 @@ describe('normalizeUser — champs canoniques', () => {
 // ─── Valeurs par défaut ────────────────────────────────────────────────────────
 
 describe('normalizeUser — valeurs par défaut sur objet vide', () => {
-  const empty = normalizeUser({} as User);
+  const empty = normalizeUser({});
 
   it('id vaut chaîne vide', () => expect(empty.id).toBe(''));
   it('first_name vaut chaîne vide', () => expect(empty.first_name).toBe(''));
   it('last_name vaut chaîne vide', () => expect(empty.last_name).toBe(''));
   it('email vaut chaîne vide', () => expect(empty.email).toBe(''));
+  it('role vaut TRAINEE par défaut', () => expect(empty.role).toBe(Role.TRAINEE));
   it('is_active vaut true par défaut', () => expect(empty.is_active).toBe(true));
   it('profile_photo vaut null', () => expect(empty.profile_photo).toBeNull());
   it('tenant_id vaut null', () => expect(empty.tenant_id).toBeNull());
@@ -92,16 +93,16 @@ describe('normalizeUser — valeurs par défaut sur objet vide', () => {
 
 describe('normalizeUser — fallbacks', () => {
   it('full_name calculé depuis first_name + last_name si absent', () => {
-    const user = normalizeUser({ first_name: 'Bob', last_name: 'Martin' } as User);
+    const user = normalizeUser({ first_name: 'Bob', last_name: 'Martin' });
     expect(user.full_name).toBe('Bob Martin');
   });
 
   it("full_name ne contient pas d'espace superflu si last_name vide", () => {
-    const user = normalizeUser({ first_name: 'Bob', last_name: '' } as User);
+    const user = normalizeUser({ first_name: 'Bob', last_name: '' });
     expect(user.full_name).toBe('Bob');
   });
 
   it('is_active vaut true si absent', () => {
-    expect(normalizeUser({} as User).is_active).toBe(true);
+    expect(normalizeUser({}).is_active).toBe(true);
   });
 });

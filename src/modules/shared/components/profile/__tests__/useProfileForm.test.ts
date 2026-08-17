@@ -218,6 +218,35 @@ describe('useProfileForm', () => {
     expect(mockApiPatch).toHaveBeenCalled();
   });
 
+  it("ne met pas à jour user.avatar avec l'URL de stockage après l'upload", async () => {
+    useAuthStore.setState({ user: MOCK_USER, role: Role.TRAINEE });
+    mockUpload.mockResolvedValue({
+      id: 'ph-1',
+      url: 'https://storage.example.com/photo.jpg',
+      mime_type: 'image/jpeg',
+    });
+    mockApiPatch.mockResolvedValue(undefined);
+
+    const { result } = renderHook(
+      () => useProfileForm({ uploadPath: 'platform/users', patchPath: 'platform/users' }),
+      { wrapper: getWrapper() },
+    );
+
+    const file = new File(['img'], 'photo.jpg', { type: 'image/jpeg' });
+    act(() =>
+      result.current.handlePhotoSelect({
+        target: { files: [file] },
+      } as unknown as React.ChangeEvent<HTMLInputElement>),
+    );
+
+    await act(async () => {
+      await result.current.handleSave({ first_name: 'Alice', last_name: 'Dupont' });
+    });
+
+    // avatar reste inchangé — sera mis à jour par le useEffect après refetch
+    expect(useAuthStore.getState().user?.avatar).toBeNull();
+  });
+
   it("définit uploadError et n'appelle pas apiPatch si l'upload échoue", async () => {
     useAuthStore.setState({ user: MOCK_USER, role: Role.TRAINEE });
     mockUpload.mockRejectedValue(new Error('Upload failed'));

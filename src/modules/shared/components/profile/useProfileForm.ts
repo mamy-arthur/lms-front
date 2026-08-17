@@ -34,6 +34,8 @@ export function useProfileForm({
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const pendingPhotoRef = useRef<File | null>(null);
+  // cleared only after the profile query re-confirms the new server URL
+  const photoJustUploadedRef = useRef(false);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
@@ -86,6 +88,12 @@ export function useProfileForm({
     if (storeUser && freshAvatar && freshAvatar !== storeUser.avatar) {
       useAuthStore.getState().setAuth({ ...storeUser, avatar: freshAvatar });
     }
+    // Clear the preview only once the server-confirmed URL is in the store,
+    // so the avatar never shows a transient storage URL that may be inaccessible.
+    if (photoJustUploadedRef.current) {
+      photoJustUploadedRef.current = false;
+      setPhotoPreview(null);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dataUpdatedAt, form]);
 
@@ -109,15 +117,13 @@ export function useProfileForm({
     if (!user) return;
     setUploadError(null);
 
-    let updatedUser = user;
-
     if (pendingPhotoRef.current) {
       try {
-        const media = await uploadUserProfilePhoto(user.id, pendingPhotoRef.current, uploadPath);
-        updatedUser = { ...user, avatar: media.url };
-        setAuth(updatedUser);
+        await uploadUserProfilePhoto(user.id, pendingPhotoRef.current, uploadPath);
         pendingPhotoRef.current = null;
-        setPhotoPreview(null);
+        // photoPreview is intentionally kept: it stays visible until the profile
+        // query refetches and the useEffect confirms the server-side URL in the store.
+        photoJustUploadedRef.current = true;
       } catch {
         setUploadError("Échec de l'upload de la photo.");
         toast.error("Échec de l'upload de la photo");
@@ -136,7 +142,7 @@ export function useProfileForm({
         timezone: values.timezone || null,
         preferred_language: values.preferred_language || null,
       });
-      setAuth({ ...updatedUser, name: `${values.first_name} ${values.last_name}`.trim() });
+      setAuth({ ...user, name: `${values.first_name} ${values.last_name}`.trim() });
       toast.success('Profil mis à jour');
       void queryClient.invalidateQueries({ queryKey: ['profile', patchPath, user.id] });
     } catch {

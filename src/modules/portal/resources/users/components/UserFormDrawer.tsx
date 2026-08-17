@@ -206,6 +206,7 @@ function UserFormDrawerBase({ open, onClose, onSuccess, user }: UserFormDrawerPr
         // L'endpoint profile-photo lie déjà la photo côté backend — best-effort
         try {
           await uploadUserProfilePhoto(user.id, pendingPhotoRef.current, 'users');
+          await queryClient.invalidateQueries({ queryKey: TENANT_USERS_QUERY_KEY });
         } catch {
           toast.warning("Données sauvegardées, mais l'upload photo a échoué.");
         }
