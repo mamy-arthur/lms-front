@@ -15,6 +15,7 @@ export function mapToPurchasedLearningPath(api: ApiPurchasedLearningPath): Purch
     id: api.id,
     learningPathId: api.learning_path.id,
     name: api.learning_path.name,
+    imageUrl: api.learning_path.image?.url ?? null,
     creditsTotal: api.purchased,
     creditsUsed: api.used,
     creditsAvailable: api.credits_available,
@@ -34,6 +35,8 @@ export function mapToAssignableUser(user: ApiAssignableTraineeUser): TenantAssig
   return {
     id: user.id,
     fullName,
+    email: user.email ?? null,
+    avatarUrl: user.profile_photo?.url ?? null,
   };
 }
 
@@ -56,6 +59,8 @@ export function mapEnrollmentToRow(
     id: enrollment.id,
     userId: enrollment.learner_id,
     fullName,
+    email: enrollment.learner?.email ?? null,
+    avatarUrl: enrollment.learner?.profile_photo?.url ?? null,
     enrolledAt: enrollment.enrolled_at,
     startedAt: enrollment.started_at,
     completedAt: enrollment.completed_at,

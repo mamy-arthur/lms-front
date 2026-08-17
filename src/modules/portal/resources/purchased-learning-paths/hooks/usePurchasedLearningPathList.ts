@@ -32,8 +32,8 @@ export function usePurchasedLearningPathList() {
     page: page + 1,
     perPage: pageSize,
   });
-  const { data: trainees = [] } = useAssignableTraineesQuery();
-  const { data: groups = [] } = useGroupsQuery();
+  const { data: trainees = [] } = useAssignableTraineesQuery(Boolean(assignmentTarget));
+  const { data: groups = [] } = useGroupsQuery(Boolean(assignmentTarget));
 
   const createGroupMutation = useCreateGroupWithMembers();
   const updateGroupMutation = useUpdateGroupWithMembers();

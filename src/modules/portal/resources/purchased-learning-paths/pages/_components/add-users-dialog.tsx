@@ -3,7 +3,7 @@
 import { Search, UserPlus } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -122,11 +122,17 @@ export function AddUsersDialog({
                       className="mt-0.5 data-[state=checked]:bg-(--color-primary) data-[state=checked]:border-(--color-primary)"
                     />
                     <Avatar className="size-7 shrink-0">
+                      <AvatarImage src={user.avatarUrl ?? undefined} alt={user.fullName} />
                       <AvatarFallback className="text-[10px] font-semibold">
                         {getInitials(user.fullName)}
                       </AvatarFallback>
                     </Avatar>
-                    <span className="min-w-0 flex-1 truncate text-sm">{user.fullName}</span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm">{user.fullName}</p>
+                      {user.email && (
+                        <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+                      )}
+                    </div>
                     {enrolledAtMap?.has(user.id) && (
                       <span className="shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
                         Inscrit le {formatDate(enrolledAtMap.get(user.id)!)}

@@ -340,6 +340,8 @@ export function PurchasedLearningPathEnrollmentDrawer({
                         <StagiaireChip
                           key={enrollment.userId}
                           name={enrollment.fullName}
+                          email={enrollment.email}
+                          avatarUrl={enrollment.avatarUrl}
                           status="already-enrolled"
                           enrolledAt={enrollment.enrolledAt}
                           onSelect={() =>
@@ -352,11 +354,20 @@ export function PurchasedLearningPathEnrollmentDrawer({
                         users.find((u) => u.id === userId)?.fullName ??
                         enrolledUsers.find((e) => e.userId === userId)?.fullName ??
                         userId;
+                      const avatarUrl =
+                        users.find((u) => u.id === userId)?.avatarUrl ??
+                        enrolledUsers.find((e) => e.userId === userId)?.avatarUrl ??
+                        null;
                       const isReEnrollment = enrolledAtMap.has(userId);
                       return (
                         <StagiaireChip
                           key={userId}
                           name={name}
+                          email={
+                            users.find((u) => u.id === userId)?.email ??
+                            enrolledUsers.find((e) => e.userId === userId)?.email
+                          }
+                          avatarUrl={avatarUrl}
                           status="will-enroll"
                           isReEnrollment={isReEnrollment}
                           onRemove={() =>

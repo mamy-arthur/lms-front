@@ -4,6 +4,8 @@ export interface PurchasedLearningPathEnrollment {
   id: string;
   userId: string;
   fullName: string;
+  email?: string | null;
+  avatarUrl?: string | null;
   enrolledAt: string;
   startedAt: string | null;
   completedAt: string | null;
@@ -13,6 +15,7 @@ export interface PurchasedLearningPath {
   id: string;
   learningPathId: string;
   name: string;
+  imageUrl?: string | null;
   creditsTotal: number;
   creditsUsed: number;
   creditsAvailable: number;
@@ -25,6 +28,8 @@ export interface PurchasedLearningPath {
 export interface TenantAssignableUser {
   id: string;
   fullName: string;
+  email?: string | null;
+  avatarUrl?: string | null;
 }
 
 export interface AssignableGroup {

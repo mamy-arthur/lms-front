@@ -161,7 +161,7 @@ export function ContentTypeForm({
           <SheetDescription>
             {isEdit
               ? 'Modifiez les informations et le schéma de champs.'
-              : 'Définissez le module, le titre et construisez le schéma de champs.'}
+              : 'Définissez le type, le titre et construisez le schéma de champs.'}
           </SheetDescription>
         </SheetHeader>
 
@@ -171,12 +171,7 @@ export function ContentTypeForm({
               <div className="px-6 py-5 space-y-8">
                 {/* ── General information ──────────────────────────────── */}
                 <section className="space-y-4">
-                  <div>
-                    <h2 className="text-sm font-semibold">Informations générales</h2>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Identité du content type.
-                    </p>
-                  </div>
+                  <h2 className="text-sm font-semibold">Informations sur le type de contenu</h2>
 
                   {/* Title */}
                   <div className="space-y-2">
@@ -198,7 +193,7 @@ export function ContentTypeForm({
                     <Label htmlFor="description">Description</Label>
                     <Textarea
                       id="description"
-                      placeholder="Description optionnelle du content type…"
+                      placeholder="Description optionnelle du type de contenu…"
                       className="resize-none"
                       rows={3}
                       {...form.register('description')}
@@ -212,7 +207,7 @@ export function ContentTypeForm({
 
                   {/* Module type – card grid */}
                   <div className="space-y-2">
-                    <Label>Module</Label>
+                    <Label>Type de contenu</Label>
                     <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
                       {MODULE_TYPES.map((m) => {
                         const config = MODULE_TYPE_CONFIG[m.value];

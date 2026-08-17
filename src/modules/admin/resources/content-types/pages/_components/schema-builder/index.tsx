@@ -120,7 +120,7 @@ export function SchemaBuilder({
           </div>
           <p className="text-sm font-medium">Aucun champ pour l&apos;instant</p>
           <p className="mt-1 text-xs text-muted-foreground max-w-xs">
-            Cliquez sur « Ajouter un champ » pour construire le schéma de ce content type.
+            Cliquez sur « Ajouter un champ » pour construire le schéma de ce type de contenu.
           </p>
           <Button
             type="button"

@@ -21,8 +21,8 @@ export function useAssignCertificate() {
     }: AssignCertificateVariables) =>
       learningPathsApi
         .assignCertificate(learningPathId, certificateId, {
-          location_x: locationX ?? null,
-          location_y: locationY ?? null,
+          location_x: locationX != null ? Math.round(locationX) : null,
+          location_y: locationY != null ? Math.round(locationY) : null,
         })
         .then((r) => r.data),
     onSuccess: (_, variables) => {
