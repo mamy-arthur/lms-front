@@ -11,7 +11,6 @@ export interface PurchasedLearningPathEnrollment {
 
 export interface PurchasedLearningPath {
   id: string;
-  tenantId: string;
   learningPathId: string;
   name: string;
   creditsTotal: number;
@@ -25,7 +24,6 @@ export interface PurchasedLearningPath {
 
 export interface TenantAssignableUser {
   id: string;
-  tenantId: string;
   fullName: string;
 }
 

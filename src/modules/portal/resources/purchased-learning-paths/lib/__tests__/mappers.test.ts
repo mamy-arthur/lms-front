@@ -31,7 +31,6 @@ describe('mapToPurchasedLearningPath', () => {
 
     expect(result).toEqual({
       id: MOCK_PURCHASED.id,
-      tenantId: MOCK_PURCHASED.tenant_id,
       learningPathId: MOCK_PURCHASED.learning_path.id,
       name: 'Devenir chef de projet digital',
       creditsTotal: 12,
