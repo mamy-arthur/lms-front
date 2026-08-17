@@ -59,6 +59,7 @@ export function PurchasedLearningPathEnrollmentDrawer({
 }: PurchasedLearningPathEnrollmentDrawerProps) {
   const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
   const [selectedGroupIds, setSelectedGroupIds] = useState<Set<string>>(new Set());
+  const [groupReEnrollMemberIds, setGroupReEnrollMemberIds] = useState<Map<string, Set<string>>>(new Map());
   const [editingGroup, setEditingGroup] = useState<AssignableGroup | null>(null);
   const [showAddUsers, setShowAddUsers] = useState(false);
   const [showCreateGroup, setShowCreateGroup] = useState(false);
@@ -75,13 +76,14 @@ export function PurchasedLearningPathEnrollmentDrawer({
     if (!plpId || !open) return;
     setSelectedUserIds(new Set());
     setSelectedGroupIds(new Set());
+    setGroupReEnrollMemberIds(new Map());
     setEditingGroup(null);
     setShowAddUsers(false);
     setShowCreateGroup(false);
   }, [plpId, open]);
 
-  const enrolledUserIds = useMemo(
-    () => new Set(enrolledUsers.map((e) => e.userId)),
+  const enrolledAtMap = useMemo(
+    () => new Map(enrolledUsers.map((e) => [e.userId, e.enrolledAt])),
     [enrolledUsers],
   );
 
@@ -89,25 +91,20 @@ export function PurchasedLearningPathEnrollmentDrawer({
     const ids = new Set<string>();
     for (const group of groups) {
       if (!selectedGroupIds.has(group.id)) continue;
+      const reEnrollMembers = groupReEnrollMemberIds.get(group.id) ?? new Set();
       for (const userId of group.userIds) {
-        if (!enrolledUserIds.has(userId)) ids.add(userId);
+        if (!enrolledAtMap.has(userId) || reEnrollMembers.has(userId)) ids.add(userId);
       }
     }
     return ids;
-  }, [groups, selectedGroupIds, enrolledUserIds]);
+  }, [groups, selectedGroupIds, groupReEnrollMemberIds, enrolledAtMap]);
 
-  const netAssignableUserIds = useMemo(() => {
-    const union = new Set<string>([...selectedUserIds, ...selectedGroupUserIds]);
-    for (const id of enrolledUserIds) union.delete(id);
-    return union;
-  }, [selectedUserIds, selectedGroupUserIds, enrolledUserIds]);
+  const netAssignableUserIds = useMemo(
+    () => new Set<string>([...selectedUserIds, ...selectedGroupUserIds]),
+    [selectedUserIds, selectedGroupUserIds],
+  );
 
   const netAssignableCount = netAssignableUserIds.size;
-
-  const availableToAdd = useMemo(
-    () => users.filter((u) => !enrolledUserIds.has(u.id) && !selectedUserIds.has(u.id)),
-    [users, enrolledUserIds, selectedUserIds],
-  );
 
   if (!purchasedLearningPath) return null;
 
@@ -119,14 +116,30 @@ export function PurchasedLearningPathEnrollmentDrawer({
   const toggleGroup = (groupId: string) => {
     setSelectedGroupIds((prev) => {
       const next = new Set(prev);
-      if (next.has(groupId)) next.delete(groupId);
-      else next.add(groupId);
+      if (next.has(groupId)) {
+        next.delete(groupId);
+        setGroupReEnrollMemberIds((m) => { const n = new Map(m); n.delete(groupId); return n; });
+      } else {
+        next.add(groupId);
+        setGroupReEnrollMemberIds((m) => new Map([...m, [groupId, new Set()]]));
+      }
+      return next;
+    });
+  };
+
+  const handleToggleReEnrollMember = (groupId: string, userId: string, value: boolean) => {
+    setGroupReEnrollMemberIds((prev) => {
+      const next = new Map(prev);
+      const members = new Set(next.get(groupId) ?? []);
+      if (value) members.add(userId);
+      else members.delete(userId);
+      next.set(groupId, members);
       return next;
     });
   };
 
   const handleAddUsersConfirm = (userIds: string[]) => {
-    setSelectedUserIds((prev) => new Set([...prev, ...userIds]));
+    setSelectedUserIds(new Set(userIds));
   };
 
   const handleCreateGroupConfirm = async (name: string, userIds: string[]) => {
@@ -167,18 +180,26 @@ export function PurchasedLearningPathEnrollmentDrawer({
 
   const handleAssign = async () => {
     if (hasInsufficientCredits) return;
-    const traineeIds = [...selectedUserIds];
-    const groupIds = [...selectedGroupIds];
 
-    if (traineeIds.length === 0 && groupIds.length === 0) {
+    const learnerIds = new Set<string>(selectedUserIds);
+    for (const groupId of selectedGroupIds) {
+      const group = groups.find((g) => g.id === groupId);
+      if (!group) continue;
+      const reEnrollMembers = groupReEnrollMemberIds.get(groupId) ?? new Set();
+      for (const uid of group.userIds) {
+        if (!enrolledAtMap.has(uid) || reEnrollMembers.has(uid)) learnerIds.add(uid);
+      }
+    }
+    const traineeIds = [...learnerIds];
+
+    if (traineeIds.length === 0) {
       toast.info('Aucune sélection à enregistrer.');
       return;
     }
 
     const payload: CreateEnrollmentPayload = {
       learning_path_id: purchasedLearningPath.learningPathId,
-      ...(traineeIds.length > 0 ? { learner_ids: traineeIds } : {}),
-      ...(groupIds.length > 0 ? { group_ids: groupIds } : {}),
+      learner_ids: traineeIds,
     };
 
     try {
@@ -204,7 +225,9 @@ export function PurchasedLearningPathEnrollmentDrawer({
       <AddUsersDialog
         open={showAddUsers}
         onOpenChange={setShowAddUsers}
-        availableUsers={availableToAdd}
+        allUsers={users}
+        initialSelectedIds={selectedUserIds}
+        enrolledAtMap={enrolledAtMap}
         onConfirm={handleAddUsersConfirm}
       />
       <CreateGroupDialog
@@ -286,7 +309,8 @@ export function PurchasedLearningPathEnrollmentDrawer({
                       variant="secondary"
                       className="ml-2 bg-(--color-primary)/20 text-(--color-primary)"
                     >
-                      {enrolledUsers.length + netAssignableUserIds.size}
+                      {enrolledUsers.filter((e) => !selectedUserIds.has(e.userId)).length +
+                        netAssignableUserIds.size}
                     </Badge>
                   </h3>
                   <Button
@@ -295,7 +319,7 @@ export function PurchasedLearningPathEnrollmentDrawer({
                     variant="outline"
                     className="gap-1.5"
                     onClick={() => setShowAddUsers(true)}
-                    disabled={availableToAdd.length === 0 || isBusy}
+                    disabled={users.length === 0 || isBusy}
                   >
                     <UserPlus className="size-3.5" />
                     Ajouter des stagiaires
@@ -304,21 +328,31 @@ export function PurchasedLearningPathEnrollmentDrawer({
 
                 {enrolledUsers.length > 0 || selectedUserIds.size > 0 ? (
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
-                    {enrolledUsers.map((enrollment) => (
-                      <StagiaireChip
-                        key={enrollment.userId}
-                        name={enrollment.fullName}
-                        status="already-enrolled"
-                      />
-                    ))}
+                    {enrolledUsers
+                      .filter((e) => !selectedUserIds.has(e.userId))
+                      .map((enrollment) => (
+                        <StagiaireChip
+                          key={enrollment.userId}
+                          name={enrollment.fullName}
+                          status="already-enrolled"
+                          enrolledAt={enrollment.enrolledAt}
+                          onSelect={() =>
+                            setSelectedUserIds((prev) => new Set([...prev, enrollment.userId]))
+                          }
+                        />
+                      ))}
                     {[...selectedUserIds].map((userId) => {
-                      const user = users.find((u) => u.id === userId);
-                      if (!user) return null;
+                      const name =
+                        users.find((u) => u.id === userId)?.fullName ??
+                        enrolledUsers.find((e) => e.userId === userId)?.fullName ??
+                        userId;
+                      const isReEnrollment = enrolledAtMap.has(userId);
                       return (
                         <StagiaireChip
                           key={userId}
-                          name={user.fullName}
+                          name={name}
                           status="will-enroll"
+                          isReEnrollment={isReEnrollment}
                           onRemove={() =>
                             setSelectedUserIds((prev) => {
                               const next = new Set(prev);
@@ -366,10 +400,10 @@ export function PurchasedLearningPathEnrollmentDrawer({
                     Aucun groupe disponible. Créez-en un ci-dessus.
                   </p>
                 ) : (
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 items-start">
                     {groups.map((group) => {
                       const gEnrolledCount = group.userIds.filter((id) =>
-                        enrolledUserIds.has(id),
+                        enrolledAtMap.has(id),
                       ).length;
                       const gAvailableCount = group.userIds.length - gEnrolledCount;
                       const gMembers = users.filter((u) => group.userIds.includes(u.id));
@@ -378,11 +412,13 @@ export function PurchasedLearningPathEnrollmentDrawer({
                           key={group.id}
                           group={group}
                           members={gMembers}
-                          enrolledUserIds={enrolledUserIds}
+                          enrolledAtMap={enrolledAtMap}
                           availableCount={gAvailableCount}
                           enrolledCount={gEnrolledCount}
                           selected={selectedGroupIds.has(group.id)}
+                          reEnrollMemberIds={groupReEnrollMemberIds.get(group.id)}
                           onClick={() => toggleGroup(group.id)}
+                          onToggleReEnrollMember={(uid, v) => handleToggleReEnrollMember(group.id, uid, v)}
                           onEdit={() => setEditingGroup(group)}
                           onDelete={() => void handleDeleteGroup(group.id)}
                         />
@@ -403,7 +439,7 @@ export function PurchasedLearningPathEnrollmentDrawer({
                     <p className="text-xs font-semibold text-foreground">
                       {netAssignableCount === 1
                         ? '1 stagiaire sera inscrit'
-                        : `${netAssignableCount} stagiaires seront inscrits`}
+                        : `${netAssignableCount} stagiaires seront inscrits au total`}
                     </p>
                     <p
                       className={cn(
