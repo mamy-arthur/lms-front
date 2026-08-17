@@ -6,7 +6,6 @@ import { mapToAssignableUser } from '../lib/mappers';
 import type { TenantAssignableUser } from '../types';
 
 export function useAssignableTraineesQuery(enabled = true) {
-
   return useQuery({
     queryKey: userKeys.list({
       role: 'TRAINEE',
