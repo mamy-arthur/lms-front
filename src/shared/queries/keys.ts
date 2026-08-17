@@ -104,13 +104,14 @@ export const learningPathCompetencyAssociationKeys = {
 
 export const portalLearningPathKeys = {
   all: ['portal', 'learning-paths'] as const,
-  summary: (id: string) => [...portalLearningPathKeys.all, 'summary', id] as const,
+  summary: (enrollmentId: string) =>
+    [...portalLearningPathKeys.all, 'summary', enrollmentId] as const,
 };
 
 export const portalContentEntryKeys = {
   all: ['portal', 'content-entries'] as const,
-  detail: (learningPathId: string, courseId: string, entryId: string) =>
-    [...portalContentEntryKeys.all, 'detail', learningPathId, courseId, entryId] as const,
+  detail: (enrollmentId: string, courseId: string, entryId: string) =>
+    [...portalContentEntryKeys.all, 'detail', enrollmentId, courseId, entryId] as const,
 };
 
 export const questionBankKeys = {

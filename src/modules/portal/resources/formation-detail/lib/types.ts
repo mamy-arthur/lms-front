@@ -31,6 +31,7 @@ export interface FormationResource {
 
 export interface FormationDetailData {
   slug: string;
+  enrollmentId: string;
   title: string;
   status: 'in_progress' | 'completed' | 'not_started';
   category: string;

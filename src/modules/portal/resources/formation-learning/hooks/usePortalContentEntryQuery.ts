@@ -4,17 +4,17 @@ import { portalContentEntryKeys } from '@/shared/queries/keys';
 import type { ApiPortalContentEntry } from '@/shared/types/portal.types';
 
 export function usePortalContentEntryQuery(
-  learningPathId: string | null,
+  enrollmentId: string | null,
   courseId: string | null,
   entryId: string | null,
 ) {
   return useQuery<ApiPortalContentEntry>({
-    queryKey: portalContentEntryKeys.detail(learningPathId ?? '', courseId ?? '', entryId ?? ''),
+    queryKey: portalContentEntryKeys.detail(enrollmentId ?? '', courseId ?? '', entryId ?? ''),
     queryFn: async () => {
-      const res = await portalContentEntriesApi.get(learningPathId!, courseId!, entryId!);
+      const res = await portalContentEntriesApi.get(enrollmentId!, courseId!, entryId!);
       return res.data;
     },
-    enabled: !!(learningPathId && courseId && entryId),
+    enabled: !!(enrollmentId && courseId && entryId),
     staleTime: 10 * 60 * 1000,
   });
 }

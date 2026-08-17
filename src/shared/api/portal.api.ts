@@ -7,14 +7,14 @@ import type { ApiMeEnrollmentsResponse } from '@/shared/types/enrollment.types';
 import type { ApiEvaluationAttempt } from '@/shared/types/evaluation-attempt.types';
 
 export const portalLearningPathsApi = {
-  summary: (id: string) =>
-    apiGet<{ data: ApiPortalLearningPathSummary }>(`learning-paths/${id}/summary`),
+  summary: (enrollmentId: string) =>
+    apiGet<{ data: ApiPortalLearningPathSummary }>(`enrollments/${enrollmentId}/summary`),
 };
 
 export const portalContentEntriesApi = {
-  get: (learningPathId: string, courseId: string, entryId: string) =>
+  get: (enrollmentId: string, courseId: string, entryId: string) =>
     apiGet<{ data: ApiPortalContentEntry }>(
-      `learning-paths/${learningPathId}/courses/${courseId}/entries/${entryId}`,
+      `enrollments/${enrollmentId}/courses/${courseId}/entries/${entryId}`,
     ),
 };
 

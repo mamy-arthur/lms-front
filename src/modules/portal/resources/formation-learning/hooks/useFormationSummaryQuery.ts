@@ -4,14 +4,14 @@ import { portalLearningPathKeys } from '@/shared/queries/keys';
 import { mapSummaryToFormation } from '../lib/summary-mapper';
 import type { Formation } from '../lib/types';
 
-export function useFormationSummaryQuery(learningPathId: string | undefined) {
+export function useFormationSummaryQuery(enrollmentId: string | undefined) {
   return useQuery<Formation>({
-    queryKey: portalLearningPathKeys.summary(learningPathId ?? ''),
+    queryKey: portalLearningPathKeys.summary(enrollmentId ?? ''),
     queryFn: async () => {
-      const res = await portalLearningPathsApi.summary(learningPathId!);
+      const res = await portalLearningPathsApi.summary(enrollmentId!);
       return mapSummaryToFormation(res.data);
     },
-    enabled: !!learningPathId,
+    enabled: !!enrollmentId,
     staleTime: 5 * 60 * 1000,
   });
 }

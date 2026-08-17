@@ -11,14 +11,14 @@ import FormationContentView from './components/FormationContentView';
 import FormationMobileSidebar from './components/FormationMobileSidebar';
 
 interface Props {
-  /** Learning path UUID (or slug during development). Falls back to mock data when absent. */
-  learningPathId?: string;
+  /** Enrollment UUID. Falls back to mock data when absent. */
+  enrollmentId?: string;
 }
 
-export default function FormationPlayer({ learningPathId }: Props) {
-  const summaryQuery = useFormationSummaryQuery(learningPathId);
+export default function FormationPlayer({ enrollmentId }: Props) {
+  const summaryQuery = useFormationSummaryQuery(enrollmentId);
 
-  const isRealMode = !!learningPathId;
+  const isRealMode = !!enrollmentId;
   const formation = isRealMode ? (summaryQuery.data ?? null) : MOCK_FORMATION;
 
   const [activeId, setActiveId] = useState<string>('');
@@ -35,7 +35,7 @@ export default function FormationPlayer({ learningPathId }: Props) {
   const activeEntryId = isRealMode && resolved?.kind === 'content' ? resolved.content.id : null;
 
   const entryQuery = usePortalContentEntryQuery(
-    isRealMode ? (learningPathId ?? null) : null,
+    isRealMode ? (enrollmentId ?? null) : null,
     activeCourseId,
     activeEntryId,
   );

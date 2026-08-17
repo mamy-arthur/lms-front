@@ -9,5 +9,5 @@ interface Props {
 
 export default function FormationPlayerPage({ params }: Props) {
   const { slug } = use(params);
-  return <FormationPlayer learningPathId={slug} />;
+  return <FormationPlayer enrollmentId={slug} />;
 }

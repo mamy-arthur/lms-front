@@ -30,6 +30,7 @@ export default function FormationDetailPage({ params }: Props) {
   const detail: FormationDetailData = {
     slug: trainee.slug,
     title: trainee.title,
+    enrollmentId: trainee.id, // the enrollmentId is used to access the learning path
     status: trainee.status,
     category: trainee.category,
     level: 'Tous niveaux',

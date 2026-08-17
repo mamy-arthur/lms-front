@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// Portal Summary — navigation skeleton returned by GET /learning-paths/{id}/summary
+// Portal Summary — navigation skeleton returned by GET /enrollments/{enrollmentId}/summary
 // ─────────────────────────────────────────────────────────────────────────────
 
 export interface ApiPortalEvalSummary {
