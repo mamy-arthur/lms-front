@@ -1,28 +1,29 @@
-export type PurchasedLearningPathStatKey = 'cumulative' | 'month' | 'inProgress' | 'notStarted';
+export type PurchasedLearningPathStatKey = 'cumulative' | 'inProgress' | 'notStarted';
 
 export interface PurchasedLearningPathEnrollment {
   id: string;
   userId: string;
   fullName: string;
   enrolledAt: string;
-  groupName: string | null;
   startedAt: string | null;
   completedAt: string | null;
-  plannedDurationDays: number;
-  actualDurationDays: number | null;
 }
 
 export interface PurchasedLearningPath {
   id: string;
-  tenantId: string;
+  learningPathId: string;
   name: string;
-  purchasedCredits: number;
-  enrollments: PurchasedLearningPathEnrollment[];
+  creditsTotal: number;
+  creditsUsed: number;
+  creditsAvailable: number;
+  enrollmentsNotStartedCount: number;
+  enrollmentsInProgressCount: number;
+  enrollmentsCompletedCount: number;
+  enrollmentsExpiredCount: number;
 }
 
 export interface TenantAssignableUser {
   id: string;
-  tenantId: string;
   fullName: string;
 }
 
@@ -35,7 +36,6 @@ export interface AssignableGroup {
 
 export interface PurchasedLearningPathStats {
   cumulative: number;
-  month: number;
   inProgress: number;
   notStarted: number;
   availableCredits: number;
@@ -58,23 +58,5 @@ export interface PurchasedLearningPathListMeta {
 
 export interface PurchasedLearningPathsQueryResult {
   purchasedLearningPaths: PurchasedLearningPath[];
-  users: TenantAssignableUser[];
-  groups: AssignableGroup[];
   meta: PurchasedLearningPathListMeta;
-}
-
-export interface AssignPurchasedLearningPathToUsersPayload {
-  purchasedLearningPathId: string;
-  userIds: string[];
-}
-
-export interface AssignPurchasedLearningPathToGroupPayload {
-  purchasedLearningPathId: string;
-  groupId: string;
-}
-
-export interface CreateAssignableGroupPayload {
-  tenantId: string;
-  name: string;
-  userIds: string[];
 }
