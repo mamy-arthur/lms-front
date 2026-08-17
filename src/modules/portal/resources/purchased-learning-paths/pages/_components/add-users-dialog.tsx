@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { formatDate } from '@/shared/lib/date';
 import { getInitials } from '@/shared/lib/string/getInitials';
 import type { TenantAssignableUser } from '../../types';
 
@@ -24,14 +25,18 @@ import type { TenantAssignableUser } from '../../types';
 interface AddUsersDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  availableUsers: TenantAssignableUser[];
+  allUsers: TenantAssignableUser[];
+  initialSelectedIds?: Set<string>;
+  enrolledAtMap?: Map<string, string>;
   onConfirm: (userIds: string[]) => void;
 }
 
 export function AddUsersDialog({
   open,
   onOpenChange,
-  availableUsers,
+  allUsers,
+  initialSelectedIds,
+  enrolledAtMap,
   onConfirm,
 }: AddUsersDialogProps) {
   const [search, setSearch] = useState('');
@@ -40,15 +45,16 @@ export function AddUsersDialog({
   useEffect(() => {
     if (open) {
       setSearch('');
-      setSelectedIds(new Set());
+      setSelectedIds(new Set(initialSelectedIds));
     }
+    // biome-ignore lint/correctness/useExhaustiveDependencies: snapshot on open only
   }, [open]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return availableUsers;
-    return availableUsers.filter((u) => u.fullName.toLowerCase().includes(q));
-  }, [availableUsers, search]);
+    if (!q) return allUsers;
+    return allUsers.filter((u) => u.fullName.toLowerCase().includes(q));
+  }, [allUsers, search]);
 
   const toggleUser = (id: string) => {
     setSelectedIds((prev) => {
@@ -97,9 +103,7 @@ export function AddUsersDialog({
         <ScrollArea className="max-h-72 px-5 pb-2 overflow-auto">
           {filtered.length === 0 ? (
             <p className="py-6 text-center text-xs italic text-muted-foreground">
-              {availableUsers.length === 0
-                ? 'Tous les utilisateurs sont déjà assignés.'
-                : 'Aucun résultat pour cette recherche.'}
+              Aucun résultat pour cette recherche.
             </p>
           ) : (
             <div className="space-y-1">
@@ -123,7 +127,17 @@ export function AddUsersDialog({
                         {getInitials(user.fullName)}
                       </AvatarFallback>
                     </Avatar>
-                    <span className="truncate text-sm">{user.fullName}</span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm">{user.fullName}</p>
+                      {user.email && (
+                        <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+                      )}
+                    </div>
+                    {enrolledAtMap?.has(user.id) && (
+                      <span className="shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                        Inscrit le {formatDate(enrolledAtMap.get(user.id)!)}
+                      </span>
+                    )}
                   </label>
                 );
               })}

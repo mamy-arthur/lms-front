@@ -6,11 +6,12 @@ import { ASSIGNABLE_LIST_PAGE_SIZE } from '../lib/constants';
 import { mapToAssignableUser } from '../lib/mappers';
 import type { TenantAssignableUser } from '../types';
 
-export function useAssignableTraineesQuery() {
-  const tenantId = useTenantStore((s) => s.tenant?.id ?? '');
+export function useAssignableTraineesQuery(enabled = true) {
+  const tenantId = useTenantStore((s) => s.tenant?.id);
 
   return useQuery({
     queryKey: userKeys.list({
+      tenantId,
       role: 'TRAINEE',
       page: 0,
       page_size: ASSIGNABLE_LIST_PAGE_SIZE,
@@ -21,8 +22,10 @@ export function useAssignableTraineesQuery() {
         page: 0,
         page_size: ASSIGNABLE_LIST_PAGE_SIZE,
       });
-      return response.data.map((user) => mapToAssignableUser(user, tenantId));
+      return response.data.map((user) => mapToAssignableUser(user));
     },
+    enabled,
+    staleTime: 5 * 60 * 1000,
     placeholderData: (prev) => prev,
   });
 }

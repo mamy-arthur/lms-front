@@ -3,26 +3,56 @@
 import { X } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
+import { formatDate } from '@/shared/lib/date';
 import { getInitials } from '@/shared/lib/string/getInitials';
 
 export type StagiaireChipStatus = 'already-enrolled' | 'will-enroll';
 
 interface StagiaireChipProps {
   name: string;
+  email?: string | null;
   avatarUrl?: string | null;
   status: StagiaireChipStatus;
+  enrolledAt?: string;
+  isReEnrollment?: boolean;
   onRemove?: () => void;
+  onSelect?: () => void;
 }
 
-export function StagiaireChip({ name, avatarUrl, status, onRemove }: StagiaireChipProps) {
+export function StagiaireChip({
+  name,
+  email,
+  avatarUrl,
+  status,
+  enrolledAt,
+  isReEnrollment = false,
+  onRemove,
+  onSelect,
+}: StagiaireChipProps) {
   const isWillEnroll = status === 'will-enroll';
+  const isSelectable = !isWillEnroll && Boolean(onSelect);
   return (
     <div
+      role={isSelectable ? 'button' : undefined}
+      tabIndex={isSelectable ? 0 : undefined}
+      onClick={isSelectable ? onSelect : undefined}
+      onKeyDown={
+        isSelectable
+          ? (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onSelect?.();
+              }
+            }
+          : undefined
+      }
       className={cn(
         'flex items-center gap-2.5 rounded-lg border bg-card p-3 text-left transition-all',
         isWillEnroll
           ? 'border-(--color-primary)/30 bg-(--color-primary)/5'
-          : 'border-border opacity-60',
+          : isSelectable
+            ? 'border-border opacity-60 cursor-pointer hover:opacity-100 hover:border-(--color-primary)/40'
+            : 'border-border opacity-60',
       )}
     >
       <Avatar className="size-7 shrink-0">
@@ -36,11 +66,18 @@ export function StagiaireChip({ name, avatarUrl, status, onRemove }: StagiaireCh
       </Avatar>
       <div className="min-w-0 flex-1">
         <p className="truncate text-xs font-semibold leading-tight">{name}</p>
-        <p className="flex items-center gap-1 text-xs text-muted-foreground">
+        {email && <p className="truncate text-[10px] text-muted-foreground">{email}</p>}
+        <p className="flex items-center gap-1 text-[10px] text-muted-foreground">
           {isWillEnroll && (
             <span className="inline-block size-[6px] shrink-0 rounded-full bg-(--color-primary)" />
           )}
-          {isWillEnroll ? 'à inscrire' : 'inscrit'}
+          {isWillEnroll
+            ? isReEnrollment
+              ? 'à réinscrire'
+              : 'à inscrire'
+            : enrolledAt
+              ? `Inscrit le ${formatDate(enrolledAt)}`
+              : 'inscrit'}
         </p>
       </div>
       {onRemove && (

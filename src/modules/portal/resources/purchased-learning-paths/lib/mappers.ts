@@ -13,7 +13,6 @@ import type {
 export function mapToPurchasedLearningPath(api: ApiPurchasedLearningPath): PurchasedLearningPath {
   return {
     id: api.id,
-    tenantId: api.tenant_id,
     learningPathId: api.learning_path.id,
     name: api.learning_path.name,
     imageUrl: api.learning_path.image?.url ?? null,
@@ -27,10 +26,7 @@ export function mapToPurchasedLearningPath(api: ApiPurchasedLearningPath): Purch
   };
 }
 
-export function mapToAssignableUser(
-  user: ApiAssignableTraineeUser,
-  tenantId: string,
-): TenantAssignableUser {
+export function mapToAssignableUser(user: ApiAssignableTraineeUser): TenantAssignableUser {
   const fullName =
     user.full_name?.trim() ||
     [user.first_name, user.last_name].filter(Boolean).join(' ').trim() ||
@@ -38,8 +34,8 @@ export function mapToAssignableUser(
 
   return {
     id: user.id,
-    tenantId,
     fullName,
+    email: user.email ?? null,
     avatarUrl: user.profile_photo?.url ?? null,
   };
 }
@@ -63,6 +59,7 @@ export function mapEnrollmentToRow(
     id: enrollment.id,
     userId: enrollment.learner_id,
     fullName,
+    email: enrollment.learner?.email ?? null,
     avatarUrl: enrollment.learner?.profile_photo?.url ?? null,
     enrolledAt: enrollment.enrolled_at,
     startedAt: enrollment.started_at,
