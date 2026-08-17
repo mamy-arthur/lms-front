@@ -171,7 +171,7 @@ export function ContentTypeForm({
               <div className="px-6 py-5 space-y-8">
                 {/* ── General information ──────────────────────────────── */}
                 <section className="space-y-4">
-                    <h2 className="text-sm font-semibold">Informations sur le type de contenu</h2>
+                  <h2 className="text-sm font-semibold">Informations sur le type de contenu</h2>
 
                   {/* Title */}
                   <div className="space-y-2">

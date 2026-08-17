@@ -20,7 +20,12 @@ export function CheckoutSuccessDialog({
   onNavigate,
 }: CheckoutSuccessDialogProps) {
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => { if (!isOpen) onNavigate(); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(isOpen) => {
+        if (!isOpen) onNavigate();
+      }}
+    >
       <DialogContent
         className="max-w-sm text-center"
         onInteractOutside={onNavigate}

@@ -36,10 +36,7 @@ export function usePurchasedLearningPathEnrollmentsQuery(
     placeholderData: (prev) => prev,
   });
 
-  const enrollments = useMemo(
-    () => query.data?.data ?? [],
-    [query.data],
-  );
+  const enrollments = useMemo(() => query.data?.data ?? [], [query.data]);
 
   return {
     enrollments,

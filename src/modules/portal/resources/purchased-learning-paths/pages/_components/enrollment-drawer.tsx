@@ -356,7 +356,8 @@ export function PurchasedLearningPathEnrollmentDrawer({
                         userId;
                       const avatarUrl =
                         users.find((u) => u.id === userId)?.avatarUrl ??
-                        enrolledUsers.find((e) => e.userId === userId)?.avatarUrl ?? null;
+                        enrolledUsers.find((e) => e.userId === userId)?.avatarUrl ??
+                        null;
                       const isReEnrollment = enrolledAtMap.has(userId);
                       return (
                         <StagiaireChip

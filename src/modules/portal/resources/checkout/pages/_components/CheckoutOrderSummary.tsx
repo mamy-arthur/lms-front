@@ -1,10 +1,7 @@
 import { Lock, ImageIcon } from 'lucide-react';
 
 import { Separator } from '@/components/ui/separator';
-import {
-  formatCartMoney,
-  getCartItemCoverImage,
-} from '@/modules/portal/resources/cart/cart-utils';
+import { formatCartMoney, getCartItemCoverImage } from '@/modules/portal/resources/cart/cart-utils';
 import type { ApiCartItem } from '@/shared/types/cart.types';
 
 interface CheckoutOrderSummaryProps {

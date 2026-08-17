@@ -57,9 +57,7 @@ export function CreateGroupDialog({
     const q = search.trim().toLowerCase();
     if (!q) return allUsers;
     return allUsers.filter(
-      (u) =>
-        u.fullName.toLowerCase().includes(q) ||
-        (u.email?.toLowerCase().includes(q) ?? false),
+      (u) => u.fullName.toLowerCase().includes(q) || (u.email?.toLowerCase().includes(q) ?? false),
     );
   }, [allUsers, search]);
 

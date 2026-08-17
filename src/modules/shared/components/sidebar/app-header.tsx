@@ -163,7 +163,9 @@ export function AppHeader({ onLogout }: AppHeaderProps) {
         </div>
       </header>
 
-      {user?.role === Role.CLIENT_MANAGER && <CartDrawer open={cartOpen} onOpenChange={setCartOpen} />}
+      {user?.role === Role.CLIENT_MANAGER && (
+        <CartDrawer open={cartOpen} onOpenChange={setCartOpen} />
+      )}
     </>
   );
 }
