@@ -1,37 +1,42 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
 import { Search, UserPlus } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { toast } from 'sonner';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { toast } from 'sonner';
-import type { TenantAssignableUser } from '../../types';
+import { formatDate } from '@/shared/lib/date';
 import { getInitials } from '@/shared/lib/string/getInitials';
+import type { TenantAssignableUser } from '../../types';
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
 interface AddUsersDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  availableUsers: TenantAssignableUser[];
+  allUsers: TenantAssignableUser[];
+  initialSelectedIds?: Set<string>;
+  enrolledAtMap?: Map<string, string>;
   onConfirm: (userIds: string[]) => void;
 }
 
 export function AddUsersDialog({
   open,
   onOpenChange,
-  availableUsers,
+  allUsers,
+  initialSelectedIds,
+  enrolledAtMap,
   onConfirm,
 }: AddUsersDialogProps) {
   const [search, setSearch] = useState('');
@@ -40,15 +45,16 @@ export function AddUsersDialog({
   useEffect(() => {
     if (open) {
       setSearch('');
-      setSelectedIds(new Set());
+      setSelectedIds(new Set(initialSelectedIds));
     }
+    // biome-ignore lint/correctness/useExhaustiveDependencies: snapshot on open only
   }, [open]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return availableUsers;
-    return availableUsers.filter((u) => u.fullName.toLowerCase().includes(q));
-  }, [availableUsers, search]);
+    if (!q) return allUsers;
+    return allUsers.filter((u) => u.fullName.toLowerCase().includes(q));
+  }, [allUsers, search]);
 
   const toggleUser = (id: string) => {
     setSelectedIds((prev) => {
@@ -97,9 +103,7 @@ export function AddUsersDialog({
         <ScrollArea className="max-h-72 px-5 pb-2 overflow-auto">
           {filtered.length === 0 ? (
             <p className="py-6 text-center text-xs italic text-muted-foreground">
-              {availableUsers.length === 0
-                ? 'Tous les utilisateurs sont déjà assignés.'
-                : 'Aucun résultat pour cette recherche.'}
+              Aucun résultat pour cette recherche.
             </p>
           ) : (
             <div className="space-y-1">
@@ -108,15 +112,26 @@ export function AddUsersDialog({
                 return (
                   <label
                     key={user.id}
+                    htmlFor={user.id}
                     className="flex cursor-pointer items-center gap-3 rounded-md px-2 py-2 hover:bg-muted/60"
                   >
-                    <Checkbox checked={checked} onCheckedChange={() => toggleUser(user.id)} />
+                    <Checkbox
+                      id={user.id}
+                      checked={checked}
+                      onCheckedChange={() => toggleUser(user.id)}
+                      className="mt-0.5 data-[state=checked]:bg-(--color-primary) data-[state=checked]:border-(--color-primary)"
+                    />
                     <Avatar className="size-7 shrink-0">
                       <AvatarFallback className="text-[10px] font-semibold">
                         {getInitials(user.fullName)}
                       </AvatarFallback>
                     </Avatar>
-                    <span className="truncate text-sm">{user.fullName}</span>
+                    <span className="min-w-0 flex-1 truncate text-sm">{user.fullName}</span>
+                    {enrolledAtMap?.has(user.id) && (
+                      <span className="shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                        Inscrit le {formatDate(enrolledAtMap.get(user.id)!)}
+                      </span>
+                    )}
                   </label>
                 );
               })}

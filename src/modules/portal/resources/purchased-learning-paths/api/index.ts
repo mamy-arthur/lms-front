@@ -1,5 +1,6 @@
 import { purchasedLearningPathsApi } from '@/shared/api/purchased-learning-paths.api';
-import { getAllTenantAssignableUsers, getAllTenantGroups } from '../data/assignable.mock';
+import type { ApiEnrollmentWithLearner } from '@/shared/types/enrollment.types';
+import type { PurchasedLearningPathEnrollmentsParams } from '@/shared/types/purchased-learning-path.types';
 import { mapToPurchasedLearningPath } from '../lib/mappers';
 import type { PurchasedLearningPathQueryParams, PurchasedLearningPathsQueryResult } from '../types';
 
@@ -12,19 +13,21 @@ export const purchasedLearningPathsManagementApi = {
       per_page: params.perPage,
     });
 
-    const purchasedLearningPaths = response.data.map(mapToPurchasedLearningPath);
-    const users = getAllTenantAssignableUsers().map((user) => ({ ...user }));
-    const groups = getAllTenantGroups().map((group) => ({ ...group, userIds: [...group.userIds] }));
-
     return {
-      purchasedLearningPaths,
-      users,
-      groups,
+      purchasedLearningPaths: response.data.map(mapToPurchasedLearningPath),
       meta: {
         total: response.meta.total,
         page: response.meta.page,
         perPage: response.meta.per_page,
       },
     };
+  },
+
+  async listEnrollments(
+    id: string,
+    params: PurchasedLearningPathEnrollmentsParams = {},
+  ): Promise<{ data: ApiEnrollmentWithLearner[]; total: number }> {
+    const response = await purchasedLearningPathsApi.listEnrollments(id, params);
+    return { data: response.data, total: response.meta.total };
   },
 } as const;
