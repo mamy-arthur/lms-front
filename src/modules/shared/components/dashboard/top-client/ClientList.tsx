@@ -9,7 +9,7 @@ type Props = {
 
 export function ClientList({ clients, onSelect }: Props) {
   return (
-    <CardContent className="space-y-1 pt-2">
+    <CardContent className="space-y-2 pt-2">
       {clients.map((client, index) => (
         <ClientRow key={client.id} client={client} index={index} onClick={() => onSelect(client)} />
       ))}
