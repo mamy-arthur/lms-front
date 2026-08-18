@@ -17,6 +17,8 @@ interface QuizProps {
   sessionId?: string;
   /** Called when the candidate clicks "Recommencer" — returns to the start screen if provided */
   onReset?: () => void;
+  /** Optional external handler called on exam submission before showing the summary */
+  onSubmit?: (attempt: QuizAttempt, answers: Record<string, TraineeAnswer>) => void;
 }
 
 type Phase = 'exam' | 'summary';
@@ -28,6 +30,7 @@ export function Quiz({
   candidateName,
   sessionId,
   onReset,
+  onSubmit,
 }: QuizProps) {
   const [phase, setPhase] = useState<Phase>('exam');
   const [attempt, setAttempt] = useState<QuizAttempt | null>(null);
@@ -69,6 +72,7 @@ export function Quiz({
         setAttempt(completedAttempt);
         setFinalAnswers(answers);
         setPhase('summary');
+        onSubmit?.(completedAttempt, answers);
       }}
     />
   );

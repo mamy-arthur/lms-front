@@ -93,13 +93,13 @@ export const PORTAL_NAV: PortalNavItem[] = [
     access: ACCESS.users,
     items: [],
   },
-  {
-    url: ROUTES.portal.traineeDashboard,
-    icon: LayoutDashboard,
-    title: 'Dashboard',
-    access: ACCESS.dashboardTrainee,
-    items: [],
-  },
+  // {
+  //   url: ROUTES.portal.traineeDashboard,
+  //   icon: LayoutDashboard,
+  //   title: 'Dashboard',
+  //   access: ACCESS.dashboardTrainee,
+  //   items: [],
+  // },
   {
     url: ROUTES.portal.traineeFormations,
     icon: GraduationCap,

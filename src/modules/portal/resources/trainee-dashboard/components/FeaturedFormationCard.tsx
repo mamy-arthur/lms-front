@@ -54,7 +54,7 @@ export function FeaturedFormationCard({ formation }: FeaturedFormationCardProps)
           <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={() => router.push(`/mes-formations/${formation.slug}`)}
+              onClick={() => router.push(`/my-learning-paths/${formation.slug}`)}
               className="flex items-center gap-2 rounded-xl border bg-[var(--color-primary)] px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90 active:scale-95 transition-all"
             >
               Continuer <Play className="h-3 w-3.5 fill-white" />

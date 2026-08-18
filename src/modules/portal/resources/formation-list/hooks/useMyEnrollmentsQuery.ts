@@ -1,0 +1,63 @@
+import { useQuery } from '@tanstack/react-query';
+import { meApi } from '@/shared/api/portal.api';
+import type { ApiMeEnrollment } from '@/shared/types/enrollment.types';
+import type {
+  TraineeFormation,
+  FormationStatus,
+} from '@/modules/portal/resources/_shared/trainee/types';
+
+export const MY_ENROLLMENTS_QUERY_KEY = ['portal', 'me', 'enrollments'] as const;
+
+function formatRelativeDate(isoDate: string): string {
+  const diffDays = Math.floor((Date.now() - new Date(isoDate).getTime()) / (1000 * 60 * 60 * 24));
+  if (diffDays === 0) return "Aujourd'hui";
+  if (diffDays === 1) return 'Hier';
+  if (diffDays < 7) return `il y a ${diffDays} jours`;
+  if (diffDays < 14) return 'il y a 1 semaine';
+  return new Date(isoDate).toLocaleDateString('fr-FR', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+}
+
+const STATUS_MAP: Record<string, FormationStatus> = {
+  not_started: 'not_started',
+  in_progress: 'in_progress',
+  completed: 'completed',
+  expired: 'not_started',
+};
+
+function normalizeEnrollment(api: ApiMeEnrollment): TraineeFormation {
+  return {
+    id: api.id,
+    slug: api.learning_path.id,
+    title: api.learning_path.name,
+    description: api.learning_path.description,
+    category: api.learning_path.category_learning_path?.name ?? '',
+    coverImage: api.learning_path.image?.url ?? '',
+    progress: 0,
+    completedModules: 0,
+    totalModules: api.learning_path.totalModules ?? 0,
+    status: STATUS_MAP[api.status] ?? 'not_started',
+    lastActivity: formatRelativeDate(api.created_at),
+    completedDate: api.completed_at
+      ? new Date(api.completed_at).toLocaleDateString('fr-FR', {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
+        })
+      : undefined,
+    hasAttestation: false,
+  };
+}
+
+export function useMyEnrollmentsQuery() {
+  return useQuery({
+    queryKey: MY_ENROLLMENTS_QUERY_KEY,
+    queryFn: async () => {
+      const response = await meApi.enrollments();
+      return response.data.map(normalizeEnrollment);
+    },
+  });
+}
