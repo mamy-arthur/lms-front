@@ -104,6 +104,8 @@ const schema = z
     show_in_shop: z.boolean().optional(),
     duration_value: z.number().min(0).nullable().optional(),
     duration_unit: durationUnitSchema.optional(),
+    validity_value: z.number().min(1).nullable().optional(),
+    validity_unit: durationUnitSchema.optional(),
   })
   .refine(
     (data) => {
@@ -487,6 +489,8 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
       show_in_shop: false,
       duration_value: null,
       duration_unit: 'hours',
+      validity_value: null,
+      validity_unit: 'days',
     },
   });
 
@@ -680,12 +684,61 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
   const watchedPublishedAt = watch('published_at');
   const watchedDurationValue = watch('duration_value');
   const watchedDurationUnit = watch('duration_unit');
+  const watchedValidityValue = watch('validity_value');
+  const watchedValidityUnit = watch('validity_unit');
 
   // Sync form state when drawer opens — only once per open, not on every refetch
   useEffect(() => {
     if (!open) {
       formInitializedRef.current = false;
       return;
+    }
+    if (open) {
+      if (learningPath) {
+        const durationParts =
+          learningPath.duration !== null && learningPath.duration !== undefined
+            ? minutesToDuration(learningPath.duration)
+            : { value: null as number | null, unit: 'hours' as DurationUnit };
+        reset({
+          name: learningPath.name,
+          description: learningPath.description,
+          category_id: learningPath.categoryId,
+          price: learningPath.price ?? 0,
+          currency: learningPath.currency ?? 'EUR',
+          published_at: learningPath.publishedAt,
+          show_in_shop: learningPath.showInShop,
+          duration_value: durationParts.value,
+          duration_unit: durationParts.unit,
+          validity_value:
+            learningPath.validity !== null && learningPath.validity !== undefined
+              ? minutesToDuration(learningPath.validity).value
+              : null,
+          validity_unit:
+            learningPath.validity !== null && learningPath.validity !== undefined
+              ? minutesToDuration(learningPath.validity).unit
+              : 'days',
+        });
+        setImageId(learningPath.image?.id ?? null);
+        setImagePreview(learningPath.image?.url ?? null);
+      } else {
+        reset({
+          name: '',
+          description: null,
+          category_id: null,
+          price: 0,
+          currency: 'EUR',
+          published_at: null,
+          show_in_shop: false,
+          duration_value: null,
+          duration_unit: 'hours',
+          validity_value: null,
+          validity_unit: 'days',
+        });
+        setImageId(null);
+        setImagePreview(null);
+        setLazyLpId(null);
+      }
+      setPendingImageFile(null);
     }
     if (formInitializedRef.current) return;
     if (isEdit && !learningPath) return; // wait for data to load
@@ -774,6 +827,7 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
         published_at: values.published_at ?? null,
         show_in_shop: values.show_in_shop ?? false,
         duration: toApiDuration(values.duration_value, values.duration_unit),
+        validity: toApiDuration(values.validity_value, values.validity_unit),
       };
 
       if (currentLpId) {
@@ -1105,6 +1159,46 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
                   </div>
                   {errors.duration_value && (
                     <p className="text-xs text-destructive">{errors.duration_value.message}</p>
+                  )}
+                </div>
+                {/* Durée de validité */}
+                <div className="space-y-1.5">
+                  <Label>Durée de validité</Label>
+                  <p className="text-[11px] text-muted-foreground -mt-1">
+                    Temps accordé à l'apprenant pour terminer la formation après enrollment.
+                  </p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Input
+                      id="lp-validity"
+                      type="number"
+                      min={1}
+                      step={1}
+                      placeholder="Ex: 3"
+                      className="h-8 text-sm"
+                      value={watchedValidityValue ?? ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setValue('validity_value', val === '' ? null : parseInt(val, 10));
+                      }}
+                    />
+                    <Select
+                      value={watchedValidityUnit ?? 'days'}
+                      onValueChange={(v) => setValue('validity_unit', v as DurationUnit)}
+                    >
+                      <SelectTrigger className="h-8 text-xs w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {DURATION_UNITS.map((u) => (
+                          <SelectItem key={u.value} value={u.value}>
+                            {u.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {errors.validity_value && (
+                    <p className="text-xs text-destructive">{errors.validity_value.message}</p>
                   )}
                 </div>
                 {/* Date de publication */}{' '}

@@ -92,6 +92,8 @@ export interface LearningPath {
   isSellable: boolean;
   /** Durée estimée du parcours en minutes */
   duration: number | null;
+  /** Durée de validité après enrollment, en minutes */
+  validity: number | null;
   competencies: LearningPathCompetency[];
   evaluations: LearningPathEvaluation[];
   /** Mail template attached as the first node — id + name only, null if none attached yet. */
@@ -140,6 +142,7 @@ export function normalizeLearningPath(api: ApiLearningPath): LearningPath {
     isPublished: api.is_published,
     isSellable: api.is_sellable,
     duration: api.duration ?? null,
+    validity: api.validity ?? null,
     competencies: api.competencies.map((c) => ({
       competencyId: c.competency_id,
       position: c.position,

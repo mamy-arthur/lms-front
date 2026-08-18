@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import { CartQuantityControls } from '@/modules/shared/components/store/CartQuantityControls';
 import {
   BookOpen,
-  Building2,
+  Users,
   CalendarDays,
   ClipboardList,
   ImageIcon,
@@ -24,6 +24,7 @@ export interface FormationCardProps {
   enrolledCompanies: number;
   moduleCount: number;
   evaluationCount: number;
+  hasCertificate?: boolean;
   className?: string;
   onAddToCart?: (id: string) => void;
   onOpenDetails?: (id: string) => void;
@@ -114,14 +115,18 @@ export function FormationCard({
         )}
 
         <div className="absolute bottom-2 left-2">
-          <Badge variant="secondary" className="rounded-sm bg-background/90 text-xs">
-            {category}
-          </Badge>
+          {category && (
+            <Badge variant="secondary" className="rounded-sm bg-background/90 text-xs">
+              {category}
+            </Badge>
+          )}
         </div>
       </div>
 
       <CardHeader>
-        <CardTitle className="line-clamp-2 text-sm leading-snug">{title}</CardTitle>
+        <CardTitle className="flex gap-2 text-sm leading-snug">
+          <span className="line-clamp-2">{title}</span>
+        </CardTitle>
         {description && (
           <p className="line-clamp-2 text-[12px] text-muted-foreground">{description}</p>
         )}
@@ -148,7 +153,7 @@ export function FormationCard({
         </div>
 
         <div className="flex items-center gap-1.5">
-          <Building2 className="size-3.5 shrink-0" />
+          <Users className="size-3.5 shrink-0" />
           <span>
             {enrolledCompanies} membre{enrolledCompanies !== 1 ? 's' : ''} inscrit
             {enrolledCompanies !== 1 ? 's' : ''}
@@ -158,7 +163,7 @@ export function FormationCard({
         <div className="mt-auto grid grid-cols-3 items-center gap-2 pt-3">
           <div className="col-span-1">
             {isFree ? (
-              <span className="font-semibold text-green-500">Gratuit</span>
+              <span className="font-semibold text-foreground">Gratuit</span>
             ) : (
               <span className="bg-background/90 text-lg font-medium text-foreground">
                 {formatPrice(price)}

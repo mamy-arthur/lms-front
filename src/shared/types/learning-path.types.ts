@@ -8,6 +8,7 @@ export interface ApiLearningPathImage {
 export interface ApiLearningPathEvaluation {
   id: string;
   title: string;
+  type: 'PARTIAL' | 'FINAL';
   position: number;
   location_x: number | null;
   location_y: number | null;
@@ -38,9 +39,19 @@ export interface ApiShopCompetency {
   courses: ApiShopCourse[];
 }
 
-/** Learning path returned by shop endpoints — competencies are fully embedded */
+/** Learning path returned by shop detail endpoint — full competencies + evaluations embedded */
 export type ApiShopLearningPath = Omit<ApiLearningPath, 'competencies'> & {
   competencies: ApiShopCompetency[];
+  has_certificate: boolean;
+  enrollments_count: number;
+};
+
+/** Learning path returned by shop list endpoint — scalar counts instead of full arrays */
+export type ApiShopLearningPathSummary = Omit<ApiLearningPath, 'competencies' | 'evaluations'> & {
+  competencies_count: number;
+  evaluations_count: number;
+  has_certificate: boolean;
+  enrollments_count: number;
 };
 
 export interface ApiLearningPath {
@@ -54,6 +65,8 @@ export interface ApiLearningPath {
   currency: string | null;
   image: ApiLearningPathImage | null;
   published_at: string | null;
+  /** Number of minutes the learner has to complete the formation after enrollment. */
+  validity: number | null;
   author_id: string | null;
   show_in_shop: boolean;
   is_published: boolean;
@@ -129,6 +142,8 @@ export interface CreateLearningPathPayload {
   show_in_shop?: boolean;
   /** Durée estimée en minutes */
   duration?: number | null;
+  /** Durée de validité après enrollment, en minutes */
+  validity?: number | null;
   competency_ids?: string[];
 }
 
@@ -144,6 +159,8 @@ export interface UpdateLearningPathPayload {
   show_in_shop?: boolean;
   /** Durée estimée en minutes */
   duration?: number | null;
+  /** Durée de validité après enrollment, en minutes */
+  validity?: number | null;
   competency_ids?: string[];
 }
 
@@ -161,7 +178,7 @@ export interface ShopLearningPathParams {
 }
 
 export interface ApiShopLearningPathsResponse {
-  data: ApiShopLearningPath[];
+  data: ApiShopLearningPathSummary[];
   meta: {
     total: number;
     page: number;

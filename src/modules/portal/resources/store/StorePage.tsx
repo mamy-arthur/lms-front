@@ -233,9 +233,10 @@ export function StorePage() {
                   coverImage={lp.image?.url}
                   price={lp.price ?? 0}
                   updatedAt={lp.updated_at}
-                  enrolledCompanies={0}
-                  moduleCount={lp.competencies.length}
-                  evaluationCount={0}
+                  enrolledCompanies={lp.enrollments_count}
+                  moduleCount={lp.competencies_count}
+                  evaluationCount={lp.evaluations_count ?? 0}
+                  hasCertificate={lp.has_certificate}
                   onAddToCart={handleAddToCart}
                   onOpenDetails={handleOpenDetails}
                   cartQuantity={cartItem?.quantity}
