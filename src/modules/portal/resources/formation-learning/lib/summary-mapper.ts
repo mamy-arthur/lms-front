@@ -3,6 +3,7 @@ import type {
   Formation,
   FormationModule,
   FormationEvaluation,
+  CourseSummary,
   CourseSection,
   CourseContent,
 } from './types';
@@ -12,26 +13,34 @@ import type {
  *
  * Mapping:
  *  ApiPortalSummaryModule  → FormationModule  (node)
- *  ApiPortalSummaryCourse  → CourseSection    (section inside module)
+ *  ApiPortalSummaryCourse  → CourseSummary    (accordion item inside module)
+ *  ApiPortalSummarySection → CourseSection    (section inside course)
  *  ApiPortalSummaryEntry   → CourseContent    (content stub — data loaded lazily)
  *  module.evaluation       → FormationEvaluation (intermediate, inserted after its module)
  *  final_evaluation        → FormationEvaluation (final, appended at the end)
+ *
+ * NOTE: CourseContent.sectionId stores the courseId (not the section id) because
+ * the portal entry endpoint is scoped to /courses/{courseId}/entries/{entryId}.
  */
 export function mapSummaryToFormation(summary: ApiPortalLearningPathSummary): Formation {
   const nodes: (FormationModule | FormationEvaluation)[] = [];
   let order = 1;
 
   for (const mod of summary.modules) {
-    const sections: CourseSection[] = mod.courses.map((course) => ({
+    const courses: CourseSummary[] = mod.courses.map((course) => ({
       id: course.id,
-      moduleId: mod.id,
       title: course.name,
-      contents: course.content_entries.map((entry): CourseContent => ({
-        id: entry.id,
-        sectionId: course.id, // sectionId === courseId — used to call portal entry endpoint
-        type: 'page', // placeholder; real type resolved when entry is fetched
-        title: entry.title ?? '',
-        status: 'available',
+      sections: course.sections.map((section): CourseSection => ({
+        id: section.id,
+        moduleId: mod.id,
+        title: section.name,
+        contents: section.content_entries.map((entry): CourseContent => ({
+          id: entry.id,
+          sectionId: course.id, // sectionId === courseId — used to call portal entry endpoint
+          type: 'page', // placeholder; real type resolved when entry is fetched
+          title: entry.title ?? '',
+          status: 'available',
+        })),
       })),
     }));
 
@@ -43,7 +52,7 @@ export function mapSummaryToFormation(summary: ApiPortalLearningPathSummary): Fo
       status: 'available',
       progress: 0,
       order: order++,
-      sections,
+      courses,
     } satisfies FormationModule);
 
     if (mod.evaluation) {

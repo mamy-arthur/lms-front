@@ -18,7 +18,7 @@ export default function EvaluationNode({ node, active, onSelect }: Props) {
       onClick={isLocked ? undefined : onSelect}
       disabled={isLocked}
       className={cn(
-        'flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-xs transition-colors',
+        'flex w-full items-center gap-2 rounded-sm px-3 py-1.5 text-xs transition-colors',
         active ? 'font-semibold' : '',
         isLocked
           ? 'cursor-not-allowed opacity-40 text-slate-400'
@@ -33,9 +33,9 @@ export default function EvaluationNode({ node, active, onSelect }: Props) {
           : undefined
       }
     >
-      <FileQuestion className="h-3.5 w-3.5 shrink-0" />
-      <span className="flex-1 truncate">{node.title}</span>
-      <span className="text-[10px] text-slate-400">{typeLabel}</span>
+      <FileQuestion className="h-3.5 w-3.5" />
+      <span>{node.title}</span>
+      <span className="text-[10px] text-slate-400">({typeLabel})</span>
       {node.status === 'completed' && !active && <Check className="h-3.5 w-3.5 text-emerald-500" />}
       {isLocked && <Lock className="h-3.5 w-3.5 text-slate-300" />}
       {node.attempt && (

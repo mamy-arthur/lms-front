@@ -8,8 +8,10 @@ export function flattenContents(formation: Formation): CourseContent[] {
   const items: CourseContent[] = [];
   for (const node of formation.nodes) {
     if (node.type === 'module') {
-      for (const section of node.sections) {
-        items.push(...section.contents);
+      for (const course of node.courses) {
+        for (const section of course.sections) {
+          items.push(...section.contents);
+        }
       }
     }
   }
@@ -23,9 +25,11 @@ export function flattenContents(formation: Formation): CourseContent[] {
 export function getDefaultActiveId(formation: Formation): string {
   for (const node of formation.nodes) {
     if (node.type === 'module') {
-      for (const section of node.sections) {
-        for (const content of section.contents) {
-          if (content.status === 'in_progress') return content.id;
+      for (const course of node.courses) {
+        for (const section of course.sections) {
+          for (const content of section.contents) {
+            if (content.status === 'in_progress') return content.id;
+          }
         }
       }
     }
@@ -33,9 +37,11 @@ export function getDefaultActiveId(formation: Formation): string {
   // fallback: first non-locked content
   for (const node of formation.nodes) {
     if (node.type === 'module') {
-      for (const section of node.sections) {
-        const first = section.contents.find((c) => c.status !== 'locked');
-        if (first) return first.id;
+      for (const course of node.courses) {
+        for (const section of course.sections) {
+          const first = section.contents.find((c) => c.status !== 'locked');
+          if (first) return first.id;
+        }
       }
     }
   }
@@ -74,16 +80,18 @@ export function resolveActive(formation: Formation, activeId: string): Resolved 
     const content = allContents[contentIndex];
     for (const node of formation.nodes) {
       if (node.type !== 'module') continue;
-      for (const section of node.sections) {
-        if (section.contents.some((c) => c.id === activeId)) {
-          return {
-            kind: 'content',
-            node,
-            sectionTitle: section.title,
-            content,
-            prev: allContents[contentIndex - 1]?.id ?? null,
-            next: allContents[contentIndex + 1]?.id ?? null,
-          };
+      for (const course of node.courses) {
+        for (const section of course.sections) {
+          if (section.contents.some((c) => c.id === activeId)) {
+            return {
+              kind: 'content',
+              node,
+              sectionTitle: section.title,
+              content,
+              prev: allContents[contentIndex - 1]?.id ?? null,
+              next: allContents[contentIndex + 1]?.id ?? null,
+            };
+          }
         }
       }
     }

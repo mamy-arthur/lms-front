@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Check, ChevronRight, FolderOpen, Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { FormationModule } from '../../lib/types';
-import SectionBlock from './SectionBlock';
+import CourseBlock from './CourseBlock';
 
 interface Props {
   node: FormationModule;
@@ -14,7 +14,7 @@ export default function ModuleNode({ node, activeId, onSelect }: Props) {
   const defaultOpen =
     node.status === 'in_progress' ||
     node.status === 'completed' ||
-    node.sections.some((s) => s.contents.some((c) => c.id === activeId));
+    node.courses.some((c) => c.sections.some((s) => s.contents.some((ct) => ct.id === activeId)));
 
   const [open, setOpen] = useState(defaultOpen);
   const isLocked = node.status === 'locked';
@@ -58,8 +58,8 @@ export default function ModuleNode({ node, activeId, onSelect }: Props) {
 
       {open && !isLocked && (
         <div className="ml-4 space-y-0.5 border-l border-slate-100 pl-2">
-          {node.sections.map((s) => (
-            <SectionBlock key={s.id} section={s} activeId={activeId} onSelect={onSelect} />
+          {node.courses.map((course) => (
+            <CourseBlock key={course.id} course={course} activeId={activeId} onSelect={onSelect} />
           ))}
         </div>
       )}

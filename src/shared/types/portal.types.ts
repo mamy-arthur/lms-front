@@ -12,10 +12,16 @@ export interface ApiPortalSummaryEntry {
   title: string | null;
 }
 
-export interface ApiPortalSummaryCourse {
+export interface ApiPortalSummarySection {
   id: string;
   name: string;
   content_entries: ApiPortalSummaryEntry[];
+}
+
+export interface ApiPortalSummaryCourse {
+  id: string;
+  name: string;
+  sections: ApiPortalSummarySection[];
 }
 
 export interface ApiPortalSummaryModule {
