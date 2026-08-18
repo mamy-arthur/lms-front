@@ -1,3 +1,5 @@
+import type { EnrollmentStatus } from '@/shared/types/enrollment.types';
+
 export type PurchasedLearningPathStatKey = 'cumulative' | 'inProgress' | 'notStarted';
 
 export interface PurchasedLearningPathEnrollment {
@@ -25,12 +27,22 @@ export interface PurchasedLearningPath {
   enrollmentsExpiredCount: number;
 }
 
-export interface TenantAssignableUser {
+export interface PurchasedLearningPathLearner {
   id: string;
   fullName: string;
-  email?: string | null;
-  avatarUrl?: string | null;
+  email: string | null;
+  avatarUrl: string | null;
+  enrollment: {
+    id: string;
+    status: EnrollmentStatus;
+    enrolledAt: string;
+  } | null;
 }
+
+/** Apprenant dont l'enrollment est garanti non-null. */
+export type EnrolledLearner = PurchasedLearningPathLearner & {
+  enrollment: NonNullable<PurchasedLearningPathLearner['enrollment']>;
+};
 
 export interface AssignableGroup {
   id: string;

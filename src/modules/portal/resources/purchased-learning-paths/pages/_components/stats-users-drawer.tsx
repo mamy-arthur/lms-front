@@ -19,7 +19,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { formatDate } from '@/shared/lib/date';
-import { usePurchasedLearningPathEnrollmentsQuery } from '../../hooks/usePurchasedLearningPathEnrollmentsQuery';
+import { usePurchasedLearningPathEnrollmentsHistoryQuery } from '../../hooks/usePurchasedLearningPathEnrollmentsHistoryQuery';
 import type { PurchasedLearningPathStatKey } from '../../types';
 
 const STAT_LABELS: Record<PurchasedLearningPathStatKey, string> = {
@@ -43,10 +43,8 @@ export function PurchasedLearningPathStatsUsersDrawer({
   purchasedLearningPathName,
   stat,
 }: PurchasedLearningPathStatsUsersDrawerProps) {
-  const { enrollments, isLoading, isFetching, total } = usePurchasedLearningPathEnrollmentsQuery(
-    open ? purchasedLearningPathId : null,
-    stat,
-  );
+  const { enrollments, isLoading, isFetching, total } =
+    usePurchasedLearningPathEnrollmentsHistoryQuery(open ? purchasedLearningPathId : null, stat);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>

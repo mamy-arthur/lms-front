@@ -4,7 +4,7 @@ import { purchasedLearningPathKeys } from '@/shared/queries/keys';
 import type { EnrollmentStatus } from '@/shared/types/enrollment.types';
 import { purchasedLearningPathsManagementApi } from '../api';
 import { ASSIGNABLE_LIST_PAGE_SIZE } from '../lib/constants';
-import type { PurchasedLearningPathEnrollment, PurchasedLearningPathStatKey } from '../types';
+import type { PurchasedLearningPathStatKey } from '../types';
 
 const STAT_TO_STATUS: Record<PurchasedLearningPathStatKey, EnrollmentStatus | undefined> = {
   cumulative: undefined,
@@ -12,22 +12,17 @@ const STAT_TO_STATUS: Record<PurchasedLearningPathStatKey, EnrollmentStatus | un
   notStarted: 'not_started',
 };
 
-/**
- * Récupère les enrollments d'un purchased-learning-path spécifique,
- * filtrés par statut selon la stat sélectionnée.
- * Activé uniquement quand `plpId` est fourni.
- */
-export function usePurchasedLearningPathEnrollmentsQuery(
+export function usePurchasedLearningPathEnrollmentsHistoryQuery(
   plpId: string | null | undefined,
   stat: PurchasedLearningPathStatKey = 'cumulative',
 ) {
   const status = STAT_TO_STATUS[stat];
 
-  const query = useQuery<{ data: PurchasedLearningPathEnrollment[]; total: number }>({
-    queryKey: purchasedLearningPathKeys.enrollments(plpId ?? '', { status }),
+  const query = useQuery({
+    queryKey: purchasedLearningPathKeys.enrollmentsHistory(plpId ?? '', { status }),
     queryFn: () => {
       if (!plpId) return Promise.resolve({ data: [], total: 0 });
-      return purchasedLearningPathsManagementApi.listEnrollments(plpId, {
+      return purchasedLearningPathsManagementApi.listEnrollmentsHistory(plpId, {
         ...(status ? { status } : {}),
         per_page: ASSIGNABLE_LIST_PAGE_SIZE,
       });

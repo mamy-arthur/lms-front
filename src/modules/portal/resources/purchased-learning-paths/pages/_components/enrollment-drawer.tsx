@@ -20,8 +20,12 @@ import type {
   CreateEnrollmentPayload,
   CreateEnrollmentResponse,
 } from '@/shared/types/enrollment.types';
-import { usePurchasedLearningPathEnrollmentsQuery } from '../../hooks/usePurchasedLearningPathEnrollmentsQuery';
-import type { AssignableGroup, PurchasedLearningPathRow, TenantAssignableUser } from '../../types';
+import { usePurchasedLearningPathLearnersQuery } from '../../hooks/usePurchasedLearningPathLearnersQuery';
+import type {
+  AssignableGroup,
+  EnrolledLearner,
+  PurchasedLearningPathRow,
+} from '../../types';
 import { AddUsersDialog } from './add-users-dialog';
 import { GroupCard, StagiaireChip } from './cards';
 import { CreateGroupDialog } from './create-group-dialog';
@@ -30,7 +34,6 @@ interface PurchasedLearningPathEnrollmentDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   purchasedLearningPath: PurchasedLearningPathRow | null;
-  users: TenantAssignableUser[];
   groups: AssignableGroup[];
   onCreateGroup: (name: string, traineeIds: string[]) => Promise<AssignableGroup>;
   onEditGroup: (group: AssignableGroup, name: string, traineeIds: string[]) => Promise<void>;
@@ -46,7 +49,6 @@ export function PurchasedLearningPathEnrollmentDrawer({
   open,
   onOpenChange,
   purchasedLearningPath,
-  users = [],
   groups = [],
   onCreateGroup,
   onEditGroup,
@@ -70,8 +72,11 @@ export function PurchasedLearningPathEnrollmentDrawer({
 
   const plpId = purchasedLearningPath?.id;
 
-  const { enrollments: enrolledUsers } = usePurchasedLearningPathEnrollmentsQuery(
-    open ? plpId : null,
+  const { learners } = usePurchasedLearningPathLearnersQuery(open ? plpId : null);
+
+  const enrolledLearners = useMemo(
+    () => learners.filter((l): l is EnrolledLearner => l.enrollment !== null),
+    [learners],
   );
 
   useEffect(() => {
@@ -85,8 +90,8 @@ export function PurchasedLearningPathEnrollmentDrawer({
   }, [plpId, open]);
 
   const enrolledAtMap = useMemo(
-    () => new Map(enrolledUsers.map((e) => [e.userId, e.enrolledAt])),
-    [enrolledUsers],
+    () => new Map(enrolledLearners.map((l) => [l.id, l.enrollment.enrolledAt])),
+    [enrolledLearners],
   );
 
   const selectedGroupUserIds = useMemo(() => {
@@ -231,7 +236,7 @@ export function PurchasedLearningPathEnrollmentDrawer({
       <AddUsersDialog
         open={showAddUsers}
         onOpenChange={setShowAddUsers}
-        allUsers={users}
+        allUsers={learners}
         initialSelectedIds={selectedUserIds}
         enrolledAtMap={enrolledAtMap}
         onConfirm={handleAddUsersConfirm}
@@ -239,7 +244,7 @@ export function PurchasedLearningPathEnrollmentDrawer({
       <CreateGroupDialog
         open={showCreateGroup}
         onOpenChange={setShowCreateGroup}
-        allUsers={users}
+        allUsers={learners}
         onConfirm={handleCreateGroupConfirm}
         isSubmitting={isCreatingGroup}
       />
@@ -248,7 +253,7 @@ export function PurchasedLearningPathEnrollmentDrawer({
         onOpenChange={(next) => {
           if (!next) setEditingGroup(null);
         }}
-        allUsers={users}
+        allUsers={learners}
         initialName={editingGroup?.name}
         initialUserIds={editingGroup?.userIds}
         onConfirm={handleEditGroupConfirm}
@@ -311,8 +316,11 @@ export function PurchasedLearningPathEnrollmentDrawer({
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-semibold">
                     Stagiaires
-                    <Badge variant="secondary" className="ml-2 bg-primary/20 text-primary">
-                      {enrolledUsers.filter((e) => !selectedUserIds.has(e.userId)).length +
+                    <Badge
+                      variant="secondary"
+                      className="ml-2 bg-(--color-primary)/20 text-(--color-primary)"
+                    >
+                      {enrolledLearners.filter((l) => !selectedUserIds.has(l.id)).length +
                         netAssignableUserIds.size}
                     </Badge>
                   </h3>
@@ -322,49 +330,39 @@ export function PurchasedLearningPathEnrollmentDrawer({
                     variant="outline"
                     className="gap-1.5"
                     onClick={() => setShowAddUsers(true)}
-                    disabled={users.length === 0 || isBusy}
+                    disabled={learners.length === 0 || isBusy}
                   >
                     <UserPlus className="size-3.5" />
                     Ajouter des stagiaires
                   </Button>
                 </div>
 
-                {enrolledUsers.length > 0 || selectedUserIds.size > 0 ? (
+                {enrolledLearners.length > 0 || selectedUserIds.size > 0 ? (
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
-                    {enrolledUsers
-                      .filter((e) => !selectedUserIds.has(e.userId))
-                      .map((enrollment) => (
+                    {enrolledLearners
+                      .filter((l) => !selectedUserIds.has(l.id))
+                      .map((learner) => (
                         <StagiaireChip
-                          key={enrollment.userId}
-                          name={enrollment.fullName}
-                          email={enrollment.email}
-                          avatarUrl={enrollment.avatarUrl}
+                          key={learner.id}
+                          name={learner.fullName}
+                          email={learner.email}
+                          avatarUrl={learner.avatarUrl}
                           status="already-enrolled"
-                          enrolledAt={enrollment.enrolledAt}
+                          enrolledAt={learner.enrollment.enrolledAt}
                           onSelect={() =>
-                            setSelectedUserIds((prev) => new Set([...prev, enrollment.userId]))
+                            setSelectedUserIds((prev) => new Set([...prev, learner.id]))
                           }
                         />
                       ))}
                     {[...selectedUserIds].map((userId) => {
-                      const name =
-                        users.find((u) => u.id === userId)?.fullName ??
-                        enrolledUsers.find((e) => e.userId === userId)?.fullName ??
-                        userId;
-                      const avatarUrl =
-                        users.find((u) => u.id === userId)?.avatarUrl ??
-                        enrolledUsers.find((e) => e.userId === userId)?.avatarUrl ??
-                        null;
+                      const learner = learners.find((l) => l.id === userId);
                       const isReEnrollment = enrolledAtMap.has(userId);
                       return (
                         <StagiaireChip
                           key={userId}
-                          name={name}
-                          email={
-                            users.find((u) => u.id === userId)?.email ??
-                            enrolledUsers.find((e) => e.userId === userId)?.email
-                          }
-                          avatarUrl={avatarUrl}
+                          name={learner?.fullName ?? userId}
+                          email={learner?.email}
+                          avatarUrl={learner?.avatarUrl ?? null}
                           status="will-enroll"
                           isReEnrollment={isReEnrollment}
                           onRemove={() =>
@@ -420,7 +418,7 @@ export function PurchasedLearningPathEnrollmentDrawer({
                         enrolledAtMap.has(id),
                       ).length;
                       const gAvailableCount = group.userIds.length - gEnrolledCount;
-                      const gMembers = users.filter((u) => group.userIds.includes(u.id));
+                      const gMembers = learners.filter((l) => group.userIds.includes(l.id));
                       return (
                         <GroupCard
                           key={group.id}

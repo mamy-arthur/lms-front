@@ -18,14 +18,14 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { formatDate } from '@/shared/lib/date';
 import { getInitials } from '@/shared/lib/string/getInitials';
-import type { TenantAssignableUser } from '../../types';
+import type { PurchasedLearningPathLearner } from '../../types';
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
 interface AddUsersDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  allUsers: TenantAssignableUser[];
+  allUsers: PurchasedLearningPathLearner[];
   initialSelectedIds?: Set<string>;
   enrolledAtMap?: Map<string, string>;
   onConfirm: (userIds: string[]) => void;

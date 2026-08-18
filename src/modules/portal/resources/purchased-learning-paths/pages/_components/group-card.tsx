@@ -13,11 +13,11 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { cn } from '@/lib/utils';
 import { getInitials } from '@/shared/lib/string/getInitials';
 import { formatDate } from '@/shared/lib/date';
-import type { AssignableGroup, TenantAssignableUser } from '../../types';
+import type { AssignableGroup, PurchasedLearningPathLearner } from '../../types';
 
 interface GroupCardProps {
   group: AssignableGroup;
-  members?: TenantAssignableUser[];
+  members?: PurchasedLearningPathLearner[];
   enrolledAtMap?: Map<string, string>;
   availableCount: number;
   enrolledCount: number;
