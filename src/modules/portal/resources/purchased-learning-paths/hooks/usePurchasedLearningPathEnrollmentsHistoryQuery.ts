@@ -31,11 +31,11 @@ export function usePurchasedLearningPathEnrollmentsHistoryQuery(
     placeholderData: (prev) => prev,
   });
 
-  const enrollments = useMemo(() => query.data?.data ?? [], [query.data]);
+  const enrollments = useMemo(() => (plpId ? (query.data?.data ?? []) : []), [plpId, query.data]);
 
   return {
     enrollments,
-    total: query.data?.total ?? 0,
+    total: plpId ? (query.data?.total ?? 0) : 0,
     isLoading: query.isLoading,
     isFetching: query.isFetching,
   };

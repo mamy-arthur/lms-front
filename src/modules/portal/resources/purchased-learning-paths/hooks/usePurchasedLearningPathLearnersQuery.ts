@@ -18,11 +18,11 @@ export function usePurchasedLearningPathLearnersQuery(plpId: string | null | und
     placeholderData: (prev) => prev,
   });
 
-  const learners = useMemo(() => query.data?.data ?? [], [query.data]);
+  const learners = useMemo(() => (plpId ? (query.data?.data ?? []) : []), [plpId, query.data]);
 
   return {
     learners,
-    total: query.data?.total ?? 0,
+    total: plpId ? (query.data?.total ?? 0) : 0,
     isLoading: query.isLoading,
     isFetching: query.isFetching,
   };
