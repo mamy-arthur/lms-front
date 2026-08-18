@@ -153,7 +153,7 @@ export function ContinueLearningList({ formations }: ContinueLearningListProps) 
               onSelect={(f) =>
                 f.status === 'completed'
                   ? router.push(`/certificates?formation=${f.slug}`)
-                  : router.push(`/mes-formations/${f.slug}/learn`)
+                  : router.push(`/my-learning-paths/${f.slug}/learn`)
               }
             />
           ))

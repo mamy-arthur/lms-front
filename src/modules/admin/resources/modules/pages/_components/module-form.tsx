@@ -1,16 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
-import {
-  Check,
-  ChevronDown,
-  ChevronsUpDown,
-  GripVertical,
-  ImagePlus,
-  Loader2,
-  Save,
-} from 'lucide-react';
-import { useCallback, useMemo, useState } from 'react';
+import { Check, ChevronDown, ChevronsUpDown, GripVertical, Loader2, Save } from 'lucide-react';
+import { useCallback, useMemo } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import {
   closestCenter,
@@ -40,18 +32,12 @@ import {
   FieldRoot,
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { RichTextEditor, ALIGN_STYLES } from '@modules/shared/components/tiptap/RichTextEditor';
-import {
-  ImageInsertDialog,
-  type ImageConfirmAttrs,
-} from '@modules/shared/components/tiptap/ImageInsertDialog';
-import { adminModulesApi } from '../../api';
 import { cn } from '@/lib/utils';
 import type { MutationLike } from '@/shared/types/mutation';
 import { extractApiError } from '@/shared/utils/api-error';
 import type { genIdentifier } from './module-form-utils';
-import { CompetencyCategoryModal } from '../../components/categories/CompetencyCategoryModal';
 import { CompetencyCategorySelect } from '../../components/categories/CompetencyCategorySelect';
 
 interface Course {
@@ -129,71 +115,6 @@ function SortableCourseItem({
   );
 }
 
-/**
- * Image upload button injected into the description RichTextEditor toolbar.
- * Supports both TipTap mode (ctx undefined) and HTML-source mode (ctx.insertHtml)
- * to match the behaviour of the certificate RichTextEditor.
- */
-function ModuleDescriptionImageButton({
-  editor,
-  ctx,
-}: {
-  editor: import('@tiptap/react').Editor;
-  ctx?: { insertHtml: (html: string) => void; insertText: (text: string) => void };
-}) {
-  const [dialogOpen, setDialogOpen] = useState(false);
-
-  const uploadImage = async (file: File): Promise<{ mediaId: string; src: string }> => {
-    const res = await adminModulesApi.uploadMedia(file);
-    return { mediaId: res.id, src: res.url };
-  };
-
-  const handleConfirm = ({ src, alt, width, height, align, mediaId }: ImageConfirmAttrs) => {
-    if (ctx?.insertHtml) {
-      const alignStyle = ALIGN_STYLES[align] ?? ALIGN_STYLES.left;
-      const sizeStyle =
-        `${width ? `width: ${width}px; ` : ''}${height ? `height: ${height}px;` : ''}`.trim();
-      const style = sizeStyle ? `${alignStyle} ${sizeStyle}` : alignStyle;
-      const widthAttr = width ? ` width="${width}"` : '';
-      const heightAttr = height ? ` height="${height}"` : '';
-      const mediaAttr = mediaId ? ` data-media-id="${mediaId}"` : '';
-      ctx.insertHtml(
-        `<img src="${src}" alt="${alt}"${widthAttr}${heightAttr} style="${style}"${mediaAttr}>`,
-      );
-      return;
-    }
-    (
-      editor.chain().focus() as unknown as {
-        setImage: (attrs: Record<string, unknown>) => { run(): boolean };
-      }
-    )
-      .setImage({ src, alt, width, height, align, ...(mediaId ? { dataMediaId: mediaId } : {}) })
-      .run();
-  };
-
-  return (
-    <>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        aria-label="Insérer une image"
-        title="Insérer une image"
-        onClick={() => setDialogOpen(true)}
-        className="size-8"
-      >
-        <ImagePlus className="size-4" />
-      </Button>
-      <ImageInsertDialog
-        open={dialogOpen}
-        onClose={() => setDialogOpen(false)}
-        onConfirm={handleConfirm}
-        onFileUpload={uploadImage}
-      />
-    </>
-  );
-}
-
 export function ModuleForm({
   form,
   mutation,
@@ -210,8 +131,6 @@ export function ModuleForm({
   setCoursePopoverOpen,
   genIdentifierFn,
 }: ModuleFormProps) {
-  const [categoryModalOpen, setCategoryModalOpen] = useState(false);
-
   const courseMap = useMemo(() => {
     const map = new Map<string, { fullName: string; categoryName: string }>();
     for (const group of coursesByCategory) {
@@ -260,24 +179,6 @@ export function ModuleForm({
 
           <FieldRoot
             control={form.control}
-            name="category_id"
-            render={({ field }) => (
-              <FieldGroup>
-                <FieldLabel className="text-xs">Catégorie</FieldLabel>
-                <CompetencyCategorySelect
-                  value={field.value ?? ''}
-                  onChange={field.onChange}
-                  onCreate={() => {
-                    setCategoryModalOpen(true);
-                  }}
-                />
-                <FieldError />
-              </FieldGroup>
-            )}
-          />
-
-          <FieldRoot
-            control={form.control}
             name="shortname"
             render={({ field }) => (
               <FieldGroup>
@@ -321,19 +222,28 @@ export function ModuleForm({
 
           <FieldRoot
             control={form.control}
+            name="category_id"
+            render={({ field }) => (
+              <FieldGroup>
+                <FieldLabel className="text-xs">Catégorie</FieldLabel>
+                <CompetencyCategorySelect value={field.value ?? ''} onChange={field.onChange} />
+                <FieldError />
+              </FieldGroup>
+            )}
+          />
+
+          <FieldRoot
+            control={form.control}
             name="description"
             render={({ field }) => (
               <FieldGroup>
                 <FieldLabel className="text-xs">Description</FieldLabel>
                 <FieldContent>
-                  <RichTextEditor
-                    value={field.value ?? ''}
-                    onChange={field.onChange}
+                  <Textarea
+                    className="min-h-24 resize-none text-xs"
                     placeholder="Décrivez le module…"
-                    outputFormat="html"
-                    toolbarExtras={(editor, ctx) => (
-                      <ModuleDescriptionImageButton editor={editor} ctx={ctx} />
-                    )}
+                    value={field.value ?? ''}
+                    onChange={(e) => field.onChange(e.target.value)}
                   />
                 </FieldContent>
                 <FieldError />
@@ -355,7 +265,7 @@ export function ModuleForm({
                         variant="outline"
                         role="combobox"
                         aria-label="Cours liés"
-                        className="h-9 w-full justify-between font-normal text-xs"
+                        className="w-full justify-between font-normal text-xs"
                       >
                         {selectedCourseIds.length > 0
                           ? `${selectedCourseIds.length} cours sélectionné${
@@ -367,11 +277,7 @@ export function ModuleForm({
                       </Button>
                     </FieldContent>
                   </PopoverTrigger>
-                  <PopoverContent
-                    align="start"
-                    sideOffset={4}
-                    className="w-[--radix-popover-trigger-width] p-0"
-                  >
+                  <PopoverContent align="start" sideOffset={4} className="w-125 p-0">
                     <Command className="overflow-hidden">
                       <CommandInput placeholder="Rechercher un cours..." />
 
@@ -485,14 +391,6 @@ export function ModuleForm({
           </Button>
         </div>
       </form>
-
-      <CompetencyCategoryModal
-        open={categoryModalOpen}
-        onOpenChange={setCategoryModalOpen}
-        onCreated={(created) => {
-          form.setValue('category_id', created.id, { shouldValidate: true });
-        }}
-      />
     </Field>
   );
 }

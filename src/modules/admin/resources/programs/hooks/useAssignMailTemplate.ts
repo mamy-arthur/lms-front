@@ -21,8 +21,8 @@ export function useAssignMailTemplate() {
     }: AssignMailTemplateVariables) =>
       learningPathsApi
         .assignMailTemplate(learningPathId, mailTemplateId, {
-          location_x: locationX ?? null,
-          location_y: locationY ?? null,
+          location_x: locationX != null ? Math.round(locationX) : null,
+          location_y: locationY != null ? Math.round(locationY) : null,
         })
         .then((r) => r.data),
     onSuccess: (_, variables) => {

@@ -29,6 +29,7 @@ export interface CreateEvaluationPayload {
   max_attempts?: number | null;
   location_x?: number | null;
   location_y?: number | null;
+  is_published?: boolean;
 }
 
 export type UpdateEvaluationPayload = Partial<Omit<CreateEvaluationPayload, 'type'>> & {

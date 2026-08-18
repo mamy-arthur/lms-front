@@ -3,6 +3,7 @@ import type { FormationDetailData } from './types';
 export const FORMATION_DETAILS: Record<string, FormationDetailData> = {
   'photographie-debutants': {
     slug: 'photographie-debutants',
+    enrollmentId: 'mock-enrollment-id',
     title: 'Photographie pour débutants',
     status: 'in_progress',
     category: 'Art & Créativité',

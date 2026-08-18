@@ -29,12 +29,7 @@ export function ProgressRing({ progress, size = 120 }: ProgressRingProps) {
         />
       </svg>
       <div className="absolute flex flex-col items-center">
-        <span className="text-sm font-bold text-slate-800">{progress}%</span>
-        <span className="text-[10px] text-slate-400 text-center leading-tight">
-          Progression
-          <br />
-          globale
-        </span>
+        <span className="text-sm font-bold text-slate-800">{progress}%</span>{' '}
       </div>
     </div>
   );

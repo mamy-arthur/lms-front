@@ -2,15 +2,34 @@
 
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { AlertCircle, BookOpen, CalendarIcon, Image, Loader2, Save, X } from 'lucide-react';
+import {
+  AlertCircle,
+  BookOpen,
+  CalendarIcon,
+  Check,
+  ChevronsUpDown,
+  Image,
+  Loader2,
+  Plus,
+  Save,
+  X,
+} from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandSeparator,
+} from '@/components/ui/command';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -35,6 +54,7 @@ import { getApiErrorMessage, getFormValidationMessage } from '@/shared/lib/error
 import { useCreateLearningPath } from '../../hooks/useCreateLearningPath';
 import { useUpdateLearningPath } from '../../hooks/useUpdateLearningPath';
 import { useUploadLearningPathMedia } from '../../hooks/useUploadLearningPathMedia';
+import { useCreateLearningPathCategory } from '../../hooks/useCreateLearningPathCategory';
 import { useLinkCompetencyToLearningPath } from '../../hooks/useLinkCompetencyToLearningPath';
 import { useUnlinkCompetencyFromLearningPath } from '../../hooks/useUnlinkCompetencyFromLearningPath';
 import { useUpdateCompetencyLocation } from '../../hooks/useUpdateCompetencyLocation';
@@ -202,6 +222,7 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
   const createMutation = useCreateLearningPath();
   const updateMutation = useUpdateLearningPath();
   const uploadMedia = useUploadLearningPathMedia();
+  const createCategory = useCreateLearningPathCategory();
   const linkCompetency = useLinkCompetencyToLearningPath();
   const unlinkCompetency = useUnlinkCompetencyFromLearningPath();
   const createEvaluation = useCreateEvaluation();
@@ -438,6 +459,8 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [pendingImageFile, setPendingImageFile] = useState<File | null>(null);
   const [imageId, setImageId] = useState<string | null>(null);
+  const [catOpen, setCatOpen] = useState(false);
+  const [catSearch, setCatSearch] = useState('');
 
   // Lazy LP ID: set when a new LP is auto-created on the first flow action
   const [lazyLpId, setLazyLpId] = useState<string | null>(null);
@@ -457,7 +480,7 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
       name: '',
       description: null,
       category_id: null,
-      price: null,
+      price: 0,
       currency: 'EUR',
       published_at: null,
       show_in_shop: false,
@@ -669,7 +692,7 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
           name: learningPath.name,
           description: learningPath.description,
           category_id: learningPath.categoryId,
-          price: learningPath.price,
+          price: learningPath.price ?? 0,
           currency: learningPath.currency ?? 'EUR',
           published_at: learningPath.publishedAt,
           show_in_shop: learningPath.showInShop,
@@ -683,7 +706,7 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
           name: '',
           description: null,
           category_id: null,
-          price: null,
+          price: 0,
           currency: 'EUR',
           published_at: null,
           show_in_shop: false,
@@ -945,28 +968,101 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
                 {/* Catégorie */}
                 <div className="space-y-1.5">
                   <Label>Catégorie</Label>
-                  <div className="flex flex-wrap gap-1.5 mt-2">
-                    {categories.map((cat) => {
-                      const isSelected = watch('category_id') === cat.id;
-                      return (
-                        <button
-                          key={cat.id}
-                          type="button"
-                          onClick={() => setValue('category_id', isSelected ? null : cat.id)}
-                        >
-                          <Badge
-                            variant={isSelected ? 'default' : 'outline'}
-                            className={`cursor-pointer text-xs px-2.5 py-1 h-auto rounded-lg transition-colors ${isSelected ? 'bg-(--color-primary) text-primary-foreground' : 'bg-muted/10 text-muted-foreground'}`}
-                          >
-                            {cat.name}
-                          </Badge>
-                        </button>
-                      );
-                    })}
-                    {categories.length === 0 && (
-                      <p className="text-xs text-muted-foreground">Aucune catégorie disponible</p>
-                    )}
-                  </div>
+                  <Popover open={catOpen} onOpenChange={setCatOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        role="combobox"
+                        className="h-8 w-full justify-between text-xs font-normal"
+                      >
+                        <span className={watch('category_id') ? '' : 'text-muted-foreground'}>
+                          {categories.find((c) => c.id === watch('category_id'))?.name ??
+                            'Sélectionner une catégorie'}
+                        </span>
+                        <ChevronsUpDown className="size-3.5 shrink-0 text-muted-foreground" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent
+                      align="start"
+                      sideOffset={4}
+                      className="w-[--radix-popover-trigger-width] p-0"
+                    >
+                      <Command>
+                        <CommandInput
+                          placeholder="Rechercher ou créer…"
+                          value={catSearch}
+                          onValueChange={setCatSearch}
+                        />
+                        <CommandEmpty>Aucune catégorie trouvée.</CommandEmpty>
+                        <CommandList>
+                          <CommandGroup>
+                            {watch('category_id') && (
+                              <CommandItem
+                                value="__clear__"
+                                onSelect={() => {
+                                  setValue('category_id', null);
+                                  setCatOpen(false);
+                                }}
+                              >
+                                <span className="text-muted-foreground">Aucune catégorie</span>
+                              </CommandItem>
+                            )}
+                            {categories.map((cat) => (
+                              <CommandItem
+                                key={cat.id}
+                                value={cat.name}
+                                onSelect={() => {
+                                  setValue(
+                                    'category_id',
+                                    watch('category_id') === cat.id ? null : cat.id,
+                                  );
+                                  setCatSearch('');
+                                  setCatOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    'mr-2 size-3.5',
+                                    watch('category_id') === cat.id ? 'opacity-100' : 'opacity-0',
+                                  )}
+                                />
+                                {cat.name}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                          {catSearch.trim() &&
+                            !categories.some(
+                              (c) => c.name.toLowerCase() === catSearch.trim().toLowerCase(),
+                            ) && (
+                              <>
+                                <CommandSeparator />
+                                <CommandGroup>
+                                  <CommandItem
+                                    onSelect={async () => {
+                                      try {
+                                        const res = await createCategory.mutateAsync({
+                                          name: catSearch.trim(),
+                                        });
+                                        setValue('category_id', res.data.id);
+                                        setCatSearch('');
+                                        setCatOpen(false);
+                                        toast.success('Catégorie créée');
+                                      } catch {
+                                        toast.error('Erreur lors de la création de la catégorie');
+                                      }
+                                    }}
+                                  >
+                                    <Plus className="mr-2 size-3.5" />
+                                    Créer « {catSearch.trim()} »
+                                  </CommandItem>
+                                </CommandGroup>
+                              </>
+                            )}
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 </div>
                 {/* Prix & Devise */}
                 <div className="grid grid-cols-2 gap-3">

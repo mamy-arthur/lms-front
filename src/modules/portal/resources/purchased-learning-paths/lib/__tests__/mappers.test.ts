@@ -33,6 +33,7 @@ describe('mapToPurchasedLearningPath', () => {
       id: MOCK_PURCHASED.id,
       learningPathId: MOCK_PURCHASED.learning_path.id,
       name: 'Devenir chef de projet digital',
+      imageUrl: 'https://cdn.example.com/media/cover.jpg',
       creditsTotal: 12,
       creditsUsed: 5,
       creditsAvailable: 7,

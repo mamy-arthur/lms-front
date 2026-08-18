@@ -1,61 +1,184 @@
 'use client';
 
 import { useMemo, useRef, useState } from 'react';
+import { Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Quiz } from '@/modules/quizzes';
 import { normalizeQuestion } from '@/modules/shared/lib/normalizers';
+import { evaluationAttemptsApi } from '@/shared/api/portal.api';
+import type { ApiEvaluationAttempt } from '@/shared/types/evaluation-attempt.types';
+import type { TraineeAnswer } from '@/modules/quizzes/types';
+import type { Question } from '@/modules/shared/lib/normalizers';
 import EvaluationSplash from './EvaluationSplash';
+import EvaluationResult from './EvaluationResult';
 import type { FormationEvaluation } from '../lib/types';
+import { makeSessionId, normalizeAttemptQuiz, toApiPayload } from '../lib/evaluation-attempt-utils';
+import {
+  usePortalLearnerEvaluationQuery,
+  useInvalidateLearnerEvaluation,
+} from '../hooks/usePortalLearnerEvaluationQuery';
 
-function makeSessionId() {
-  return 'EV-' + Math.random().toString(16).slice(2, 6).toUpperCase() + '-2026';
-}
+// ─── Component ────────────────────────────────────────────────────────────────
 
 interface Props {
   evaluation: FormationEvaluation;
   onComplete: (score: number, passed: boolean) => void;
 }
 
-export default function EvaluationRunner({ evaluation }: Props) {
-  const [started, setStarted] = useState(false);
+export default function EvaluationRunner({ evaluation, onComplete }: Props) {
+  const isRealMode = evaluation.questions.length === 0;
+  const typLabel = evaluation.evaluationType === 'intermediate' ? 'Intermédiaire' : 'Finale';
+  const evalDescription = `Évaluation ${typLabel} · Score requis : ${evaluation.passingScore}%`;
+
+  const { data: evalInfo } = usePortalLearnerEvaluationQuery(
+    isRealMode ? evaluation.formationId : undefined,
+    evaluation.id,
+  );
+  const invalidateLearnerEvaluation = useInvalidateLearnerEvaluation();
+
+  // ── Mock mode state ──────────────────────────────────────────────────────
+  const [mockStarted, setMockStarted] = useState(false);
   const sessionIdRef = useRef(makeSessionId());
 
-  const questions = useMemo(
+  const mockQuestions = useMemo(
     () => evaluation.questions.map(normalizeQuestion),
     [evaluation.questions],
   );
-
-  const stats = useMemo(() => {
-    const types = questions.reduce<Record<string, number>>((acc, q) => {
+  const mockStats = useMemo(() => {
+    const types = mockQuestions.reduce<Record<string, number>>((acc, q) => {
       acc[q.type] = (acc[q.type] ?? 0) + 1;
       return acc;
     }, {});
-    const hasDuration = questions.filter((q) => q.duration !== null).length;
-    return { types, hasDuration };
-  }, [questions]);
+    return { types, hasDuration: mockQuestions.filter((q) => q.duration !== null).length };
+  }, [mockQuestions]);
 
-  if (started) {
-    const typLabel = evaluation.evaluationType === 'intermediate' ? 'Intermédiaire' : 'Finale';
+  // ── Real mode state ──────────────────────────────────────────────────────
+  const [attempt, setAttempt] = useState<ApiEvaluationAttempt | null>(null);
+  const [phase, setPhase] = useState<'splash' | 'quiz' | 'result'>('splash');
+  const [isStarting, setIsStarting] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [finalScore, setFinalScore] = useState<number | null>(null);
+
+  const apiQuestions = useMemo<Question[]>(
+    () => (attempt ? attempt.quizzes.map(normalizeAttemptQuiz) : []),
+    [attempt],
+  );
+
+  async function handleRealStart() {
+    setIsStarting(true);
+    try {
+      // evaluation.formationId is set to the learning path id in summary-mapper
+      const res = await evaluationAttemptsApi.start(evaluation.formationId, evaluation.id);
+      setAttempt(res.data);
+      setPhase('quiz');
+    } catch {
+      toast.error("Impossible de démarrer l'évaluation. Réessayez.");
+    } finally {
+      setIsStarting(false);
+    }
+  }
+
+  async function handleRealSubmit(_: unknown, answers: Record<string, TraineeAnswer>) {
+    if (!attempt) return;
+    setIsSubmitting(true);
+    try {
+      // Send each answer individually
+      for (const [attemptQuizId, answer] of Object.entries(answers)) {
+        const quiz = attempt.quizzes.find((q) => q.id === attemptQuizId);
+        if (!quiz || answer === null || answer === undefined) continue;
+        await evaluationAttemptsApi.answer(attempt.id, attemptQuizId, toApiPayload(quiz, answer));
+      }
+      // Finalize
+      const res = await evaluationAttemptsApi.submit(attempt.id);
+      const score = res.data.score ?? 0;
+      setFinalScore(score);
+      setPhase('result');
+      onComplete(score, score >= evaluation.passingScore);
+      invalidateLearnerEvaluation(evaluation.formationId);
+    } catch {
+      toast.error('Erreur lors de la soumission. Vos réponses ont été sauvegardées.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  // ── Mock mode render ─────────────────────────────────────────────────────
+
+  if (!isRealMode) {
+    if (mockStarted) {
+      return (
+        <Quiz
+          key="quiz-session"
+          questions={mockQuestions}
+          title={evaluation.title}
+          description={evalDescription}
+          sessionId={sessionIdRef.current}
+          onReset={() => setMockStarted(false)}
+        />
+      );
+    }
     return (
-      <Quiz
-        key="quiz-session"
-        questions={questions}
+      <EvaluationSplash
         title={evaluation.title}
-        description={`Évaluation ${typLabel} · Score requis : ${evaluation.passingScore}%`}
-        sessionId={sessionIdRef.current}
-        onReset={() => setStarted(false)}
+        evaluationType={evaluation.evaluationType}
+        passingScore={evaluation.passingScore}
+        questionCount={mockQuestions.length}
+        withTimerCount={mockStats.hasDuration}
+        typeCount={Object.keys(mockStats.types).length}
+        onStart={() => setMockStarted(true)}
       />
     );
   }
 
+  // ── Real mode render ─────────────────────────────────────────────────────
+
+  if (phase === 'result') {
+    return (
+      <EvaluationResult
+        score={finalScore ?? 0}
+        passingScore={evaluation.passingScore}
+        maxAttempts={evalInfo?.max_attempts}
+        attemptsUsed={evalInfo?.attempts_used}
+        attemptsRemaining={evalInfo?.attempts_remaining}
+      />
+    );
+  }
+
+  if (phase === 'quiz' && attempt) {
+    if (isSubmitting) {
+      return (
+        <div className="flex flex-col items-center gap-3 py-16">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">Envoi de vos réponses…</p>
+        </div>
+      );
+    }
+    return (
+      <Quiz
+        key={attempt.id}
+        questions={apiQuestions}
+        title={evaluation.title}
+        description={evalDescription}
+        sessionId={attempt.id}
+        onSubmit={handleRealSubmit}
+      />
+    );
+  }
+
+  // splash
   return (
     <EvaluationSplash
       title={evaluation.title}
       evaluationType={evaluation.evaluationType}
       passingScore={evaluation.passingScore}
-      questionCount={questions.length}
-      withTimerCount={stats.hasDuration}
-      typeCount={Object.keys(stats.types).length}
-      onStart={() => setStarted(true)}
+      questionCount={attempt?.quizzes.length ?? evaluation.questions.length}
+      withTimerCount={0}
+      typeCount={0}
+      onStart={handleRealStart}
+      isLoading={isStarting}
+      maxAttempts={evalInfo?.max_attempts}
+      attemptsUsed={evalInfo?.attempts_used}
+      attemptsRemaining={evalInfo?.attempts_remaining}
     />
   );
 }

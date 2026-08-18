@@ -1,7 +1,7 @@
 'use client';
 
 import { X } from 'lucide-react';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { formatDate } from '@/shared/lib/date';
 import { getInitials } from '@/shared/lib/string/getInitials';
@@ -10,6 +10,8 @@ export type StagiaireChipStatus = 'already-enrolled' | 'will-enroll';
 
 interface StagiaireChipProps {
   name: string;
+  email?: string | null;
+  avatarUrl?: string | null;
   status: StagiaireChipStatus;
   enrolledAt?: string;
   isReEnrollment?: boolean;
@@ -19,6 +21,8 @@ interface StagiaireChipProps {
 
 export function StagiaireChip({
   name,
+  email,
+  avatarUrl,
   status,
   enrolledAt,
   isReEnrollment = false,
@@ -51,7 +55,8 @@ export function StagiaireChip({
             : 'border-border opacity-60',
       )}
     >
-      <Avatar className="size-5 shrink-0">
+      <Avatar className="size-7 shrink-0">
+        <AvatarImage src={avatarUrl ?? undefined} alt={name} />
         <AvatarFallback
           className="text-[9px] font-bold"
           style={{ fontFamily: '"Space Grotesk", sans-serif' }}
@@ -61,7 +66,8 @@ export function StagiaireChip({
       </Avatar>
       <div className="min-w-0 flex-1">
         <p className="truncate text-xs font-semibold leading-tight">{name}</p>
-        <p className="flex items-center gap-1 text-xs text-muted-foreground">
+        {email && <p className="truncate text-[10px] text-muted-foreground">{email}</p>}
+        <p className="flex items-center gap-1 text-[10px] text-muted-foreground">
           {isWillEnroll && (
             <span className="inline-block size-[6px] shrink-0 rounded-full bg-(--color-primary)" />
           )}

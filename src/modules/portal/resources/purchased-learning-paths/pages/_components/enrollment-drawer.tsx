@@ -311,10 +311,7 @@ export function PurchasedLearningPathEnrollmentDrawer({
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-semibold">
                     Stagiaires
-                    <Badge
-                      variant="secondary"
-                      className="ml-2 bg-(--color-primary)/20 text-(--color-primary)"
-                    >
+                    <Badge variant="secondary" className="ml-2 bg-primary/20 text-primary">
                       {enrolledUsers.filter((e) => !selectedUserIds.has(e.userId)).length +
                         netAssignableUserIds.size}
                     </Badge>
@@ -340,6 +337,8 @@ export function PurchasedLearningPathEnrollmentDrawer({
                         <StagiaireChip
                           key={enrollment.userId}
                           name={enrollment.fullName}
+                          email={enrollment.email}
+                          avatarUrl={enrollment.avatarUrl}
                           status="already-enrolled"
                           enrolledAt={enrollment.enrolledAt}
                           onSelect={() =>
@@ -352,11 +351,20 @@ export function PurchasedLearningPathEnrollmentDrawer({
                         users.find((u) => u.id === userId)?.fullName ??
                         enrolledUsers.find((e) => e.userId === userId)?.fullName ??
                         userId;
+                      const avatarUrl =
+                        users.find((u) => u.id === userId)?.avatarUrl ??
+                        enrolledUsers.find((e) => e.userId === userId)?.avatarUrl ??
+                        null;
                       const isReEnrollment = enrolledAtMap.has(userId);
                       return (
                         <StagiaireChip
                           key={userId}
                           name={name}
+                          email={
+                            users.find((u) => u.id === userId)?.email ??
+                            enrolledUsers.find((e) => e.userId === userId)?.email
+                          }
+                          avatarUrl={avatarUrl}
                           status="will-enroll"
                           isReEnrollment={isReEnrollment}
                           onRemove={() =>
@@ -472,7 +480,7 @@ export function PurchasedLearningPathEnrollmentDrawer({
                   Annuler
                 </Button>
                 <Button
-                  className="gap-2 bg-(--color-primary) text-white hover:bg-(--color-primary)/80"
+                  className="gap-2 bg-primary text-white hover:bg-primary/80"
                   onClick={() => void handleAssign()}
                   disabled={isBusy || hasInsufficientCredits || netAssignableCount === 0}
                 >

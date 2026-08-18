@@ -27,6 +27,12 @@ export interface CourseSection {
   contents: CourseContent[];
 }
 
+export interface CourseSummary {
+  id: string;
+  title: string;
+  sections: CourseSection[];
+}
+
 export interface FormationModule {
   id: string;
   formationId: string;
@@ -35,7 +41,7 @@ export interface FormationModule {
   status: ProgressStatus;
   progress: number;
   order: number;
-  sections: CourseSection[];
+  courses: CourseSummary[];
 }
 
 // ─────────────────────────────────────────────────────────

@@ -3,7 +3,7 @@
 import { Check, Loader2, Save, Search } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -56,7 +56,9 @@ export function CreateGroupDialog({
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return allUsers;
-    return allUsers.filter((u) => u.fullName.toLowerCase().includes(q));
+    return allUsers.filter(
+      (u) => u.fullName.toLowerCase().includes(q) || (u.email?.toLowerCase().includes(q) ?? false),
+    );
   }, [allUsers, search]);
 
   const toggleUser = (id: string) => {
@@ -153,11 +155,17 @@ export function CreateGroupDialog({
                       className="mt-0.5 data-[state=checked]:bg-(--color-primary) data-[state=checked]:border-(--color-primary)"
                     />
                     <Avatar className="size-7 shrink-0">
+                      <AvatarImage src={user.avatarUrl ?? undefined} alt={user.fullName} />
                       <AvatarFallback className="text-[10px] font-semibold">
                         {getInitials(user.fullName)}
                       </AvatarFallback>
                     </Avatar>
-                    <span className="truncate text-sm">{user.fullName}</span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-xs">{user.fullName}</p>
+                      {user.email && (
+                        <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+                      )}
+                    </div>
                     {checked && <Check className="ml-auto size-3.5 shrink-0 text-primary" />}
                   </label>
                 );

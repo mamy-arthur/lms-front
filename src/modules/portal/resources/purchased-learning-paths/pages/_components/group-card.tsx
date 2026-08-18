@@ -1,7 +1,7 @@
 'use client';
 
 import { Check, MoreVertical, Pencil, Trash2, Users } from 'lucide-react';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   DropdownMenu,
@@ -71,79 +71,92 @@ export function GroupCard({
       )}
     >
       <div className="flex items-start gap-2">
-        <div className="flex size-6 shrink-0 items-center justify-center rounded-lg bg-muted">
-          <Users className="size-3 text-muted-foreground" />
-        </div>
+        {members.length > 0 ? (
+          <Popover>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                onClick={(e) => e.stopPropagation()}
+                className="flex shrink-0 -space-x-1.5 cursor-pointer"
+                aria-label={`Voir les membres de ${group.name}`}
+              >
+                {members.slice(0, 3).map((m) => (
+                  <Avatar key={m.id} className="size-6 ring-2 ring-background">
+                    <AvatarImage src={m.avatarUrl ?? undefined} alt={m.fullName} />
+                    <AvatarFallback className="text-[9px] font-bold">
+                      {getInitials(m.fullName)}
+                    </AvatarFallback>
+                  </Avatar>
+                ))}
+                {members.length > 3 && (
+                  <div className="flex size-6 items-center justify-center rounded-full bg-muted ring-2 ring-background text-[9px] font-semibold text-muted-foreground">
+                    +{members.length - 3}
+                  </div>
+                )}
+              </button>
+            </PopoverTrigger>
+            <PopoverContent align="start" className="w-70 gap-0 p-0">
+              <p className="border-b px-3 py-2 text-xs font-semibold text-muted-foreground">
+                {members.length} membre{members.length !== 1 ? 's' : ''}
+              </p>
+              <ul className="max-h-48 overflow-auto py-1">
+                {members.map((m) => (
+                  <li key={m.id} className="flex items-center gap-2 px-3 py-1.5">
+                    <Avatar data-size="sm" className="size-6 shrink-0">
+                      <AvatarImage src={m.avatarUrl ?? undefined} alt={m.fullName} />
+                      <AvatarFallback className="text-[9px] font-bold">
+                        {getInitials(m.fullName)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-xs">{m.fullName}</p>
+                      {m.email && (
+                        <p className="truncate text-[10px] text-muted-foreground">{m.email}</p>
+                      )}
+                    </div>
+                    {selected && enrolledAtMap?.has(m.id) ? (
+                      <label
+                        htmlFor={`re-enroll-${group.id}-${m.id}`}
+                        className="flex shrink-0 cursor-pointer items-center gap-1.5"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Checkbox
+                          id={`re-enroll-${group.id}-${m.id}`}
+                          checked={reEnrollMemberIds?.has(m.id) ?? false}
+                          onCheckedChange={(checked) =>
+                            onToggleReEnrollMember?.(m.id, Boolean(checked))
+                          }
+                          className="size-3.5 data-[state=checked]:bg-(--color-primary) data-[state=checked]:border-(--color-primary)"
+                        />
+                        <span className="text-[10px] text-muted-foreground">Réinscrire</span>
+                      </label>
+                    ) : enrolledAtMap?.has(m.id) ? (
+                      <span className="shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                        Inscrit le {formatDate(enrolledAtMap.get(m.id)!)}
+                      </span>
+                    ) : selected ? (
+                      <span className="shrink-0 rounded-full bg-(--color-primary)/10 px-1.5 py-0.5 text-[10px] text-(--color-primary)">
+                        À inscrire
+                      </span>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            </PopoverContent>
+          </Popover>
+        ) : (
+          <div className="flex size-6 shrink-0 items-center justify-center rounded-lg bg-muted">
+            <Users className="size-3 text-muted-foreground" />
+          </div>
+        )}
         <div className="min-w-0 flex-1">
           <p className="truncate text-xs font-semibold leading-tight">{group.name}</p>
           <p className="text-xs text-muted-foreground">
-            {members.length > 0 ? (
-              <Popover>
-                <PopoverTrigger asChild>
-                  <button
-                    type="button"
-                    onClick={(e) => e.stopPropagation()}
-                    className="text-xs text-muted-foreground underline-offset-2 hover:underline"
-                    aria-label={`Voir les membres de ${group.name}`}
-                  >
-                    {totalCount} membre{totalCount !== 1 ? 's' : ''}
-                    {selected && enrolledCount > 0
-                      ? ` · ${reEnrollMemberIds?.size ?? 0} à réinscrire`
-                      : enrolledCount > 0
-                        ? ` · ${enrolledCount} déjà inscrit${enrolledCount !== 1 ? 's' : ''}`
-                        : null}
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent align="start" className="w-70 gap-0 p-0">
-                  <p className="border-b px-3 py-2 text-xs font-semibold text-muted-foreground">
-                    {members.length} membre{members.length !== 1 ? 's' : ''}
-                  </p>
-                  <ul className="max-h-48 overflow-auto py-1">
-                    {members.map((m) => (
-                      <li key={m.id} className="flex items-center gap-2 px-3 py-1.5">
-                        <Avatar data-size="sm" className="size-6 shrink-0">
-                          <AvatarFallback className="text-[9px] font-bold">
-                            {getInitials(m.fullName)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span className="min-w-0 flex-1 truncate text-xs">{m.fullName}</span>
-                        {selected && enrolledAtMap?.has(m.id) ? (
-                          <label
-                            htmlFor={`re-enroll-${group.id}-${m.id}`}
-                            className="flex shrink-0 cursor-pointer items-center gap-1.5"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <Checkbox
-                              id={`re-enroll-${group.id}-${m.id}`}
-                              checked={reEnrollMemberIds?.has(m.id) ?? false}
-                              onCheckedChange={(checked) =>
-                                onToggleReEnrollMember?.(m.id, Boolean(checked))
-                              }
-                              className="size-3.5 data-[state=checked]:bg-(--color-primary) data-[state=checked]:border-(--color-primary)"
-                            />
-                            <span className="text-[10px] text-muted-foreground">Réinscrire</span>
-                          </label>
-                        ) : enrolledAtMap?.has(m.id) ? (
-                          <span className="shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
-                            Inscrit le {formatDate(enrolledAtMap.get(m.id)!)}
-                          </span>
-                        ) : selected ? (
-                          <span className="shrink-0 rounded-full bg-(--color-primary)/10 px-1.5 py-0.5 text-[10px] text-(--color-primary)">
-                            À inscrire
-                          </span>
-                        ) : null}
-                      </li>
-                    ))}
-                  </ul>
-                </PopoverContent>
-              </Popover>
-            ) : (
-              <>
-                {totalCount} membre{totalCount !== 1 ? 's' : ''}
-                {enrolledCount > 0 &&
-                  ` · ${enrolledCount} déjà inscrit${enrolledCount !== 1 ? 's' : ''}`}
-              </>
-            )}
+            {selected && enrolledCount > 0
+              ? ` ${reEnrollMemberIds?.size ?? 0} à réinscrire`
+              : enrolledCount > 0
+                ? ` ${enrolledCount} déjà inscrit${enrolledCount !== 1 ? 's' : ''}`
+                : null}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-1">
@@ -187,7 +200,11 @@ export function GroupCard({
       </div>
 
       {selected && (
-        <span className="inline-flex w-fit items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium bg-(--color-primary)/70 text-primary-foreground">
+        // biome-ignore lint/a11y/useKeyWithClickEvents: stop propagation only
+        <span
+          className="inline-flex w-fit items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium bg-(--color-primary)/70 text-primary-foreground"
+          onClick={(e) => e.stopPropagation()}
+        >
           {(() => {
             const count = availableCount + (reEnrollMemberIds?.size ?? 0);
             return count === 1 ? '+ 1 membre sera inscrit' : `+ ${count} membres seront inscrits`;

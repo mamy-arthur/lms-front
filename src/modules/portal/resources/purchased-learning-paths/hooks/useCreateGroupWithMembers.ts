@@ -33,7 +33,7 @@ export function useCreateGroupWithMembers() {
         userIds: traineeIds,
       };
     },
-    onSuccess: () => {
+    onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: groupKeys.all });
     },
   });

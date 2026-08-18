@@ -25,6 +25,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { useAuthStore } from '@/shared/stores/auth.store';
 import { getInitials } from '@/shared/lib/string/getInitials';
 import { ROUTES } from '@/shared/constants/routes';
+import { Role } from '@/shared/constants/roles';
 
 interface AppHeaderProps {
   onLogout?: () => void;
@@ -48,7 +49,7 @@ export function AppHeader({ onLogout }: AppHeaderProps) {
 
   return (
     <>
-      <header className="flex h-15 shrink-0 items-center justify-between gap-2 px-4 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 border-b border-border/60 bg-background/80 backdrop-blur-md">
+      <header className="sticky top-0 z-40 flex h-15 shrink-0 items-center justify-between gap-2 px-4 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 border-b border-border/60 bg-background/80 backdrop-blur-md">
         {/* LEFT */}
         <div className="flex items-center gap-2">
           <SidebarTrigger className="-ml-1" />
@@ -61,7 +62,7 @@ export function AppHeader({ onLogout }: AppHeaderProps) {
             <PopoverTrigger asChild>
               <Button
                 size="icon"
-                className="relative h-9 w-9 hover:bg-accent bg-gray-200/50 text-black"
+                className="relative h-9 w-9 hover:bg-accent bg-transparent text-black"
                 aria-label="Notifications"
               >
                 <Bell className="h-5 w-5" />
@@ -93,11 +94,11 @@ export function AppHeader({ onLogout }: AppHeaderProps) {
             </PopoverContent>
           </Popover>
 
-          {/* CART — client uniquement */}
-          {!isAdmin && (
+          {/* CART — ClientManager uniquement */}
+          {user?.role === Role.CLIENT_MANAGER && (
             <Button
               size="icon"
-              className="relative h-9 w-9 hover:bg-accent bg-gray-200/50 text-black"
+              className="relative h-9 w-9 hover:bg-accent bg-transparent text-black"
               aria-label="Panier"
               onClick={() => setCartOpen(true)}
             >
@@ -162,7 +163,9 @@ export function AppHeader({ onLogout }: AppHeaderProps) {
         </div>
       </header>
 
-      {!isAdmin && <CartDrawer open={cartOpen} onOpenChange={setCartOpen} />}
+      {user?.role === Role.CLIENT_MANAGER && (
+        <CartDrawer open={cartOpen} onOpenChange={setCartOpen} />
+      )}
     </>
   );
 }

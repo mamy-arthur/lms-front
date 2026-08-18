@@ -40,6 +40,7 @@ export const ACCESS = {
   formationsManagement: { anyRoles: [Role.CLIENT_MANAGER] },
   wallet: { anyRoles: [Role.CLIENT_MANAGER, Role.EDITOR] },
   notes: { anyRoles: [Role.CLIENT_MANAGER, Role.EDITOR] },
+  cart: { anyRoles: [Role.CLIENT_MANAGER] },
   dashboardTrainee: { anyRoles: [Role.TRAINEE] },
   formationTrainee: { anyRoles: [Role.TRAINEE] },
 } as const satisfies Record<string, AccessRule>;

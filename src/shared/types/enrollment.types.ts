@@ -41,6 +41,7 @@ export interface ApiEnrollmentWithLearner {
     first_name: string;
     last_name: string;
     email: string;
+    profile_photo: { url: string } | null;
   } | null;
 }
 
@@ -70,4 +71,39 @@ export interface CreateEnrollmentResponse {
   message: string;
   data: ApiEnrollment[];
   meta: CreateEnrollmentMeta;
+}
+
+// Shape retourné par GET /me/enrollments (learning_path embarqué)
+export interface ApiMeEnrollmentLearningPath {
+  id: string;
+  name: string;
+  description: string | null;
+  image: {
+    id: string;
+    url: string;
+    mime_type: string;
+  } | null;
+  duration: number | null;
+  category_learning_path: { id: string; name: string } | null;
+  totalModules: number | null;
+}
+
+export interface ApiMeEnrollment {
+  id: string;
+  status: EnrollmentStatus;
+  enrolled_at: string;
+  started_at: string | null;
+  completed_at: string | null;
+  created_at: string;
+  updated_at: string;
+  learning_path: ApiMeEnrollmentLearningPath;
+}
+
+export interface ApiMeEnrollmentsResponse {
+  data: ApiMeEnrollment[];
+  meta: {
+    total: number;
+    page: number;
+    per_page: number;
+  };
 }
