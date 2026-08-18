@@ -39,6 +39,23 @@ export interface ApiPortalLearningPathSummary {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Learner evaluation — returned by GET /learning-paths/{id}/evaluations (portal)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface ApiLearnerEvaluation {
+  id: string;
+  title: string;
+  type: string;
+  question_count: number;
+  allow_review: boolean;
+  max_attempts: number | null;
+  attempts_used: number;
+  /** null = unlimited */
+  attempts_remaining: number | null;
+  last_attempt_status: 'in_progress' | 'completed' | null;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Portal Content Entry — full entry returned by GET /courses/{courseId}/entries/{entryId}
 // ─────────────────────────────────────────────────────────────────────────────
 

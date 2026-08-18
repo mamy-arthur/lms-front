@@ -2,6 +2,7 @@ import { apiGet, apiPost } from '@/shared/lib/apiClient';
 import type {
   ApiPortalLearningPathSummary,
   ApiPortalContentEntry,
+  ApiLearnerEvaluation,
 } from '@/shared/types/portal.types';
 import type { ApiMeEnrollmentsResponse } from '@/shared/types/enrollment.types';
 import type { ApiEvaluationAttempt } from '@/shared/types/evaluation-attempt.types';
@@ -9,6 +10,9 @@ import type { ApiEvaluationAttempt } from '@/shared/types/evaluation-attempt.typ
 export const portalLearningPathsApi = {
   summary: (enrollmentId: string) =>
     apiGet<{ data: ApiPortalLearningPathSummary }>(`enrollments/${enrollmentId}/summary`),
+
+  learnerEvaluations: (learningPathId: string) =>
+    apiGet<{ data: ApiLearnerEvaluation[] }>(`learning-paths/${learningPathId}/evaluations`),
 };
 
 export const portalContentEntriesApi = {

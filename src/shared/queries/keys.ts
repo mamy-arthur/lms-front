@@ -114,6 +114,11 @@ export const portalContentEntryKeys = {
     [...portalContentEntryKeys.all, 'detail', enrollmentId, courseId, entryId] as const,
 };
 
+export const portalLearnerEvaluationKeys = {
+  all: ['portal', 'learner-evaluations'] as const,
+  list: (learningPathId: string) => [...portalLearnerEvaluationKeys.all, learningPathId] as const,
+};
+
 export const questionBankKeys = {
   all: ['question-banks'] as const,
   lists: () => [...questionBankKeys.all, 'list'] as const,

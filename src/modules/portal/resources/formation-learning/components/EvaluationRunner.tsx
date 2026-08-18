@@ -12,6 +12,10 @@ import type { Question } from '@/modules/shared/lib/normalizers';
 import EvaluationSplash from './EvaluationSplash';
 import type { FormationEvaluation } from '../lib/types';
 import { cn } from '@/lib/utils';
+import {
+  usePortalLearnerEvaluationQuery,
+  useInvalidateLearnerEvaluation,
+} from '../hooks/usePortalLearnerEvaluationQuery';
 
 function makeSessionId() {
   return 'EV-' + Math.random().toString(16).slice(2, 6).toUpperCase() + '-2026';
@@ -96,6 +100,12 @@ export default function EvaluationRunner({ evaluation, onComplete }: Props) {
   // Real mode: evaluation loaded from summary (no pre-fetched questions).
   const isRealMode = evaluation.questions.length === 0;
 
+  const { data: evalInfo } = usePortalLearnerEvaluationQuery(
+    isRealMode ? evaluation.formationId : undefined,
+    evaluation.id,
+  );
+  const invalidateLearnerEvaluation = useInvalidateLearnerEvaluation();
+
   // ── Mock mode state ──────────────────────────────────────────────────────
   const [mockStarted, setMockStarted] = useState(false);
   const sessionIdRef = useRef(makeSessionId());
@@ -154,6 +164,7 @@ export default function EvaluationRunner({ evaluation, onComplete }: Props) {
       setFinalScore(score);
       setPhase('result');
       onComplete(score, score >= evaluation.passingScore);
+      invalidateLearnerEvaluation(evaluation.formationId);
     } catch {
       toast.error('Erreur lors de la soumission. Vos réponses ont été sauvegardées.');
     } finally {
@@ -311,6 +322,19 @@ export default function EvaluationRunner({ evaluation, onComplete }: Props) {
                   ? `Votre score de ${score}% est supérieur au minimum requis de ${evaluation.passingScore}%.`
                   : `Un score de ${evaluation.passingScore}% était nécessaire pour réussir.`}
               </p>
+
+              {evalInfo?.max_attempts != null && (
+                <p
+                  className={cn(
+                    'mt-1.5 text-xs',
+                    passed ? 'text-emerald-700/70' : 'text-red-700/70',
+                  )}
+                >
+                  {evalInfo.attempts_remaining === 0
+                    ? 'Aucune tentative restante.'
+                    : `${evalInfo.attempts_used} / ${evalInfo.max_attempts} tentative${evalInfo.max_attempts > 1 ? 's' : ''} utilisée${evalInfo.max_attempts > 1 ? 's' : ''} — ${evalInfo.attempts_remaining} restante${(evalInfo.attempts_remaining ?? 0) > 1 ? 's' : ''}.`}
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -351,6 +375,9 @@ export default function EvaluationRunner({ evaluation, onComplete }: Props) {
       typeCount={0}
       onStart={handleRealStart}
       isLoading={isStarting}
+      maxAttempts={evalInfo?.max_attempts}
+      attemptsUsed={evalInfo?.attempts_used}
+      attemptsRemaining={evalInfo?.attempts_remaining}
     />
   );
 }
