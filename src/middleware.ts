@@ -8,7 +8,7 @@ const PUBLIC_PATHS = [
   '/tenant-not-found',
   '/tenant-inactive',
 ];
-const STATIC_PATHS = ['/_next', '/favicon.ico', '/public'];
+const STATIC_PATHS = ['/_next', '/favicon.ico', '/public', '/logo.png'];
 
 // e.g. "learneo.local" in dev, "learneo.dev-test2.nacre-solutions.com" in staging
 const BASE_DOMAIN = (process.env.NEXT_PUBLIC_BASE_DOMAIN ?? 'localhost').split(':')[0];

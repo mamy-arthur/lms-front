@@ -45,7 +45,7 @@ export function CompetencyCategorySelect({
             role="combobox"
             aria-label="Catégorie"
             disabled={disabled}
-            className="h-9 w-full justify-between font-normal text-xs"
+            className="w-full justify-between font-normal text-xs"
           >
             {value ? categories.find((c) => c.id === value)?.name : 'Sélectionner une catégorie'}
             <ChevronsUpDown className="ml-2 size-4 shrink-0 text-muted-foreground" />

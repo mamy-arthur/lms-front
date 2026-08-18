@@ -88,10 +88,16 @@ function CourseDataTableBase({
   const columns: DataTableColumn<Course>[] = useMemo(
     () => [
       {
+        key: 'identifier',
+        label: 'Identifiant',
+        sortable: false,
+        render: (row) => <span className="text-xs font-medium">{row.identifier}</span>,
+      },
+      {
         key: 'fullName',
         label: 'Nom',
         sortable: false,
-        render: (row) => <span className="text-xs font-medium">{row.fullName}</span>,
+        render: (row) => <span className="text-xs">{row.fullName}</span>,
       },
       {
         key: 'shortName',
@@ -109,14 +115,6 @@ function CourseDataTableBase({
           <span className="text-xs text-muted-foreground">
             {getCategoryPath(categories, row.categoryId) || '—'}
           </span>
-        ),
-      },
-      {
-        key: 'identifier',
-        label: 'Identifiant',
-        sortable: false,
-        render: (row) => (
-          <code className="rounded bg-muted px-1.5 py-0.5 text-xs">{row.identifier}</code>
         ),
       },
       {
