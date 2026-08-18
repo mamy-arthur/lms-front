@@ -19,7 +19,7 @@ function SidebarLogo() {
   const collapsed = state === 'collapsed';
 
   return (
-    <div className="flex items-center px-2 py-3">
+    <div className="flex items-center px-2 py-3 mb-2">
       <img
         src="/logo.png"
         alt="Logo"
