@@ -21,11 +21,7 @@ import type {
   CreateEnrollmentResponse,
 } from '@/shared/types/enrollment.types';
 import { usePurchasedLearningPathLearnersQuery } from '../../hooks/usePurchasedLearningPathLearnersQuery';
-import type {
-  AssignableGroup,
-  EnrolledLearner,
-  PurchasedLearningPathRow,
-} from '../../types';
+import type { AssignableGroup, EnrolledLearner, PurchasedLearningPathRow } from '../../types';
 import { AddUsersDialog } from './add-users-dialog';
 import { GroupCard, StagiaireChip } from './cards';
 import { CreateGroupDialog } from './create-group-dialog';
