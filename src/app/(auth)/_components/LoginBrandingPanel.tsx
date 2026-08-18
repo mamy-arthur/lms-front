@@ -1,7 +1,7 @@
 'use client';
 
 import { useTenant } from '@/shared/hooks/useTenant';
-import { BookOpen, GraduationCap, Sparkles, Users } from 'lucide-react';
+import { BookOpen, Sparkles, Users } from 'lucide-react';
 
 export function LoginBrandingPanel() {
   const { tenantName } = useTenant();
@@ -21,19 +21,16 @@ export function LoginBrandingPanel() {
   ];
 
   return (
-    <aside className="relative hidden lg:flex flex-col justify-between overflow-hidden bg-gray-200/50 p-10 text-black">
+    <aside className="relative hidden lg:flex flex-col justify-between overflow-hidden bg-gray-100/50 p-10 text-black">
       <div className="absolute -left-20 -top-20 h-72 w-72 rounded-full bg-white/10 blur-3xl" />
       <div className="absolute -bottom-20 -right-20 h-72 w-72 rounded-full bg-white/10 blur-3xl" />
 
-      <div className="relative z-10 flex items-center gap-3">
-        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-(--color-primary) text-white backdrop-blur">
-          <GraduationCap className="h-6 w-6" />
-        </div>
-
-        <div>
-          <h2 className="text-xl font-bold">{tenantName ?? 'LearneO'}</h2>
-          <p className="text-sm text-gray/70">Smart Learning Platform</p>
-        </div>
+      <div className="relative z-10">
+        <img
+          src="/logo.png"
+          alt={tenantName ?? 'LearneO'}
+          className="h-17.5 w-auto object-contain"
+        />
       </div>
 
       <div className="relative z-10 flex flex-col gap-8">

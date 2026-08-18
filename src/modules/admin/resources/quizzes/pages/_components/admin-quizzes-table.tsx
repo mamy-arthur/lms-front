@@ -144,16 +144,16 @@ function AdminQuizzesTableBase({
             </Badge>
           ),
       },
-      {
-        key: 'learningPathIds',
-        label: 'Parcours liés',
-        sortable: false,
-        render: (quiz) => (
-          <span className="text-xs text-muted-foreground tabular-nums">
-            {quiz.learningPathIds.length}
-          </span>
-        ),
-      },
+      // {
+      //   key: 'learningPathIds',
+      //   label: 'Parcours liés',
+      //   sortable: false,
+      //   render: (quiz) => (
+      //     <span className="text-xs text-muted-foreground tabular-nums">
+      //       {quiz.learningPathIds.length}
+      //     </span>
+      //   ),
+      // },
       {
         key: 'updatedAt',
         label: 'Dernière modification',

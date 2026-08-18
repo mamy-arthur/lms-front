@@ -1,45 +1,39 @@
 'use client';
 import * as React from 'react';
-import { AudioWaveform, Command, GalleryVerticalEnd } from 'lucide-react';
 import { NavMain } from './nav-main';
-import { TeamSwitcher } from './team-switcher';
-import { Sidebar, SidebarContent, SidebarHeader, SidebarRail } from '@/components/ui/sidebar';
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarHeader,
+  SidebarRail,
+  useSidebar,
+} from '@/components/ui/sidebar';
 import { AdminNavItem } from '@/modules/admin/config/navigation';
-
-const data = {
-  user: {
-    name: 'shadcn',
-    email: 'm@example.com',
-    avatar: '/avatars/shadcn.jpg',
-  },
-  teams: [
-    {
-      name: 'Acme Inc',
-      logo: GalleryVerticalEnd,
-      plan: 'Enterprise',
-    },
-    {
-      name: 'Acme Corp.',
-      logo: AudioWaveform,
-      plan: 'Startup',
-    },
-    {
-      name: 'Evil Corp.',
-      logo: Command,
-      plan: 'Free',
-    },
-  ],
-};
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
   navItems?: AdminNavItem[];
+}
+
+function SidebarLogo() {
+  const { state } = useSidebar();
+  const collapsed = state === 'collapsed';
+
+  return (
+    <div className="flex items-center px-2 py-3 mb-2">
+      <img
+        src="/logo.png"
+        alt="Logo"
+        className={collapsed ? 'h-7 w-7 object-contain' : 'h-12.5 w-full object-contain'}
+      />
+    </div>
+  );
 }
 
 export function AppSidebar({ navItems, ...props }: AppSidebarProps) {
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-        <TeamSwitcher teams={data.teams} />
+        <SidebarLogo />
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={navItems ?? []} />

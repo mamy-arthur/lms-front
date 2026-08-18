@@ -62,7 +62,7 @@ export function AppHeader({ onLogout }: AppHeaderProps) {
             <PopoverTrigger asChild>
               <Button
                 size="icon"
-                className="relative h-9 w-9 hover:bg-accent bg-gray-200/50 text-black"
+                className="relative h-9 w-9 hover:bg-accent bg-transparent text-black"
                 aria-label="Notifications"
               >
                 <Bell className="h-5 w-5" />
@@ -98,7 +98,7 @@ export function AppHeader({ onLogout }: AppHeaderProps) {
           {user?.role === Role.CLIENT_MANAGER && (
             <Button
               size="icon"
-              className="relative h-9 w-9 hover:bg-accent bg-gray-200/50 text-black"
+              className="relative h-9 w-9 hover:bg-accent bg-transparent text-black"
               aria-label="Panier"
               onClick={() => setCartOpen(true)}
             >
