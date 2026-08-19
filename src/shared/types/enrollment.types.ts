@@ -36,6 +36,7 @@ export interface ApiEnrollmentHistoryWithLearner {
   enrolled_at: string;
   started_at: string | null;
   completed_at: string | null;
+  expires_at: string | null;
   learner: {
     first_name: string;
     last_name: string;

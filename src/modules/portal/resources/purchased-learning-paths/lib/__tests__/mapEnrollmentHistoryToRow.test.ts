@@ -8,6 +8,7 @@ const MOCK_ENROLLMENT_HISTORY: ApiEnrollmentHistoryWithLearner = {
   enrolled_at: '2026-06-01T00:00:00+00:00',
   started_at: '2026-06-05T00:00:00+00:00',
   completed_at: '2026-07-10T00:00:00+00:00',
+  expires_at: '2026-09-01T08:00:00+00:00',
   learner: {
     first_name: 'Marie',
     last_name: 'Martin',
@@ -29,6 +30,7 @@ describe('mapEnrollmentHistoryToRow', () => {
       enrolledAt: '2026-06-01T00:00:00+00:00',
       startedAt: '2026-06-05T00:00:00+00:00',
       completedAt: '2026-07-10T00:00:00+00:00',
+      expiresAt: '2026-09-01T08:00:00+00:00',
     });
   });
 

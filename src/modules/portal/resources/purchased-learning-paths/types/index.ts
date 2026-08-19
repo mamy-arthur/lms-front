@@ -11,6 +11,7 @@ export interface PurchasedLearningPathEnrollment {
   enrolledAt: string;
   startedAt: string | null;
   completedAt: string | null;
+  expiresAt: string | null;
 }
 
 export interface PurchasedLearningPath {

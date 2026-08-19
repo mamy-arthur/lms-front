@@ -70,5 +70,6 @@ export function mapEnrollmentHistoryToRow(
     enrolledAt: enrollment.enrolled_at,
     startedAt: enrollment.started_at,
     completedAt: enrollment.completed_at,
+    expiresAt: enrollment.expires_at,
   };
 }
