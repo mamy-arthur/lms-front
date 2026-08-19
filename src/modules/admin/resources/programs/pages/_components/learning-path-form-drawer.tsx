@@ -928,50 +928,6 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
                     rows={3}
                   />
                 </div>
-                {/* Image */}
-                <div className="space-y-1.5">
-                  <Label>Image de couverture</Label>
-                  <input
-                    ref={imageInputRef}
-                    type="file"
-                    accept="image/jpeg,image/png,image/gif,image/webp"
-                    className="hidden"
-                    onChange={handleImageChange}
-                  />
-                  {imagePreview ? (
-                    <div className="group relative overflow-hidden rounded-lg border">
-                      <img src={imagePreview} alt="Aperçu" className="h-28 w-full object-cover" />
-                      <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => imageInputRef.current?.click()}
-                        >
-                          Changer
-                        </Button>
-                        <Button
-                          type="button"
-                          size="icon"
-                          variant="destructive"
-                          className="size-7"
-                          onClick={clearImage}
-                        >
-                          <X className="size-3.5" />
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => imageInputRef.current?.click()}
-                      className="flex h-20 w-full items-center justify-center gap-2 rounded-lg border border-dashed border-muted-foreground/25 text-xs text-muted-foreground transition-colors hover:border-muted-foreground/40 hover:bg-muted/50"
-                    >
-                      <Image className="size-4" />
-                      Cliquer pour ajouter une image
-                    </button>
-                  )}
-                </div>
                 {/* Catégorie */}
                 <div className="space-y-1.5">
                   <Label>Catégorie</Label>
@@ -981,7 +937,7 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
                         type="button"
                         variant="outline"
                         role="combobox"
-                        className="h-8 w-full justify-between text-xs font-normal"
+                        className="w-full justify-between text-xs font-normal"
                       >
                         <span className={watch('category_id') ? '' : 'text-muted-foreground'}>
                           {categories.find((c) => c.id === watch('category_id'))?.name ??
@@ -1081,7 +1037,7 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
                       min={0}
                       step={0.01}
                       placeholder="0.00"
-                      className="h-8 text-sm"
+                      className="text-sm"
                       value={watchedPrice ?? ''}
                       onChange={(e) => {
                         const val = e.target.value;
@@ -1124,7 +1080,7 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
                       min={0}
                       step={1}
                       placeholder="Ex: 2"
-                      className="h-8 text-sm"
+                      className="text-sm"
                       value={watchedDurationValue ?? ''}
                       onChange={(e) => {
                         const val = e.target.value;
@@ -1159,6 +1115,50 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
                     onChange={(iso) => setValue('published_at', iso)}
                     placeholder="Non définie"
                   />
+                </div>
+                {/* Image */}
+                <div className="space-y-1.5">
+                  <Label>Image de couverture</Label>
+                  <input
+                    ref={imageInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/gif,image/webp"
+                    className="hidden"
+                    onChange={handleImageChange}
+                  />
+                  {imagePreview ? (
+                    <div className="group relative overflow-hidden rounded-lg border">
+                      <img src={imagePreview} alt="Aperçu" className="h-62.5 w-full object-cover" />
+                      <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => imageInputRef.current?.click()}
+                        >
+                          Changer
+                        </Button>
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="destructive"
+                          className="size-7"
+                          onClick={clearImage}
+                        >
+                          <X className="size-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => imageInputRef.current?.click()}
+                      className="flex h-62.5 w-full items-center justify-center gap-2 rounded-lg border border-dashed border-muted-foreground/25 text-xs text-muted-foreground transition-colors hover:border-muted-foreground/40 hover:bg-muted/50"
+                    >
+                      <Image className="size-4" />
+                      Cliquer pour ajouter une image
+                    </button>
+                  )}
                 </div>
                 {/* Visible en boutique */}
                 <div className="space-y-2">

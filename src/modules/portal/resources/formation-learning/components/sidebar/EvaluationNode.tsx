@@ -18,11 +18,11 @@ export default function EvaluationNode({ node, active, onSelect }: Props) {
       onClick={isLocked ? undefined : onSelect}
       disabled={isLocked}
       className={cn(
-        'flex w-full items-center gap-2 rounded-sm px-3 py-1.5 text-xs transition-colors',
+        'flex w-full items-center gap-2 rounded-sm px-3 py-1.5 text-sm transition-colors',
         active ? 'font-semibold' : '',
         isLocked
           ? 'cursor-not-allowed opacity-40 text-slate-400'
-          : 'text-gray-500 hover:bg-gray-50 cursor-pointer',
+          : 'hover:bg-gray-50 cursor-pointer',
       )}
       style={
         active
@@ -35,9 +35,7 @@ export default function EvaluationNode({ node, active, onSelect }: Props) {
     >
       <FileQuestion className="h-3.5 w-3.5" />
       <span>{node.title}</span>
-      <span
-        className={`text-[10px]  ${typeLabel === 'Finale' ? 'text-red-500' : 'text-slate-400'}`}
-      >
+      <span className={`text-xs  ${typeLabel === 'Finale' ? 'text-red-500' : 'text-slate-400'}`}>
         ({typeLabel})
       </span>
       {node.status === 'completed' && !active && <Check className="h-3.5 w-3.5 text-emerald-500" />}

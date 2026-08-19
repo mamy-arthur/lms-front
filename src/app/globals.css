@@ -138,18 +138,18 @@
     margin-top: 0;
   }
   p {
-    font-size: 0.8rem;
+    font-size: 0.9rem;
   }
   /* List styles */
   ul,
   ol {
     padding: 0 1rem;
     margin: 0.5rem 1rem 1.25rem 0.4rem;
-    font-size: 0.8rem;
+    font-size: 0.9rem;
     li p {
       margin-top: 0.25em;
       margin-bottom: 0.25em;
-      font-size: 0.8rem;
+      font-size: 0.9rem;
     }
   }
   ul {
