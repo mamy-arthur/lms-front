@@ -22,7 +22,7 @@ export default function EvaluationNode({ node, active, onSelect }: Props) {
         active ? 'font-semibold' : '',
         isLocked
           ? 'cursor-not-allowed opacity-40 text-slate-400'
-          : 'text-amber-600 hover:bg-amber-50 cursor-pointer',
+          : 'text-gray-500 hover:bg-gray-50 cursor-pointer',
       )}
       style={
         active
@@ -35,7 +35,11 @@ export default function EvaluationNode({ node, active, onSelect }: Props) {
     >
       <FileQuestion className="h-3.5 w-3.5" />
       <span>{node.title}</span>
-      <span className="text-[10px] text-slate-400">({typeLabel})</span>
+      <span
+        className={`text-[10px]  ${typeLabel === 'Finale' ? 'text-red-500' : 'text-slate-400'}`}
+      >
+        ({typeLabel})
+      </span>
       {node.status === 'completed' && !active && <Check className="h-3.5 w-3.5 text-emerald-500" />}
       {isLocked && <Lock className="h-3.5 w-3.5 text-slate-300" />}
       {node.attempt && (
