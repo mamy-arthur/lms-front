@@ -63,6 +63,24 @@ export function useModuleListController<TModule>(opts?: UseModuleListControllerO
     }));
   }, []);
 
+  const handleCategoryChange = useCallback((value: string) => {
+    if (value === 'all') {
+      setDraftCategory(['all']);
+      setParams((prev) => ({ ...prev, category: undefined, page: 0 }));
+      return;
+    }
+    setDraftCategory((prev) => {
+      const without = prev.filter((c) => c !== 'all');
+      const next = without.includes(value) ? without.filter((c) => c !== value) : [...without, value];
+      return next.length === 0 ? ['all'] : next;
+    });
+    setParams((prev) => {
+      const current = prev.category ? prev.category.split(',') : [];
+      const next = current.includes(value) ? current.filter((c) => c !== value) : [...current, value];
+      return { ...prev, category: next.length > 0 ? next.join(',') : undefined, page: 0 };
+    });
+  }, []);
+
   const handleOpenCreate = useCallback(() => {
     setEditingModule(undefined);
     setIsDrawerOpen(true);
@@ -111,6 +129,7 @@ export function useModuleListController<TModule>(opts?: UseModuleListControllerO
     setDraftSearch,
     draftCategory,
     setDraftCategory,
+    handleCategoryChange,
     draftTenant,
     setDraftTenant,
     params,

@@ -5,6 +5,8 @@ export interface Module {
   description: string;
   /** Competency category id (backend field `category_id`). */
   category_id: string | null;
+  /** Resolved category name from the list endpoint JOIN. */
+  category_name: string | null;
   tenantId: string;
   courseIds: string[];
   createdAt: string;

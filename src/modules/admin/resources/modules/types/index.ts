@@ -43,6 +43,8 @@ export interface CompetencyApiResponse {
   description?: string | null;
   tenant_id?: string | null;
   category_id?: string | null;
+  category_name?: string | null;
+  courses_count?: number;
   /** Course objects on detail/duplicate endpoints */
   courses?: Array<{ id: string }>;
   /** Course UUID array on list/create/update endpoints */
@@ -110,6 +112,7 @@ export function normalizeModule(raw: CompetencyApiResponse): Module {
     idnumber: raw.idnumber ?? '',
     description: raw.description ?? '',
     category_id: raw.category_id ?? null,
+    category_name: raw.category_name ?? null,
     tenantId: raw.tenant_id ?? '',
     courseIds,
     createdAt: raw.created_at ?? '',

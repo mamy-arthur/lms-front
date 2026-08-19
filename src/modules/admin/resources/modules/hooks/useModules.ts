@@ -14,6 +14,7 @@ export function useModules(params?: ModuleSearchParams) {
           page: (params?.page ?? 0) + 1,
           per_page: params?.page_size ?? 25,
           q: params?.q,
+          category_ids: params?.category || undefined,
           sort_by: params?.sort_by,
           sort_order: params?.sort_dir,
         });
