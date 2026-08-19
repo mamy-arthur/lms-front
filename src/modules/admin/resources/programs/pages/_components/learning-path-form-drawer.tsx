@@ -456,6 +456,7 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
   }, [learningPath, moduleNameMap, evaluationsData, progressionRules]);
 
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const formInitializedRef = useRef(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [pendingImageFile, setPendingImageFile] = useState<File | null>(null);
   const [imageId, setImageId] = useState<string | null>(null);
@@ -680,46 +681,52 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
   const watchedDurationValue = watch('duration_value');
   const watchedDurationUnit = watch('duration_unit');
 
-  // Sync form state when drawer opens
+  // Sync form state when drawer opens — only once per open, not on every refetch
   useEffect(() => {
-    if (open) {
-      if (learningPath) {
-        const durationParts =
-          learningPath.duration !== null && learningPath.duration !== undefined
-            ? minutesToDuration(learningPath.duration)
-            : { value: null as number | null, unit: 'hours' as DurationUnit };
-        reset({
-          name: learningPath.name,
-          description: learningPath.description,
-          category_id: learningPath.categoryId,
-          price: learningPath.price ?? 0,
-          currency: learningPath.currency ?? 'EUR',
-          published_at: learningPath.publishedAt,
-          show_in_shop: learningPath.showInShop,
-          duration_value: durationParts.value,
-          duration_unit: durationParts.unit,
-        });
-        setImageId(learningPath.image?.id ?? null);
-        setImagePreview(learningPath.image?.url ?? null);
-      } else {
-        reset({
-          name: '',
-          description: null,
-          category_id: null,
-          price: 0,
-          currency: 'EUR',
-          published_at: null,
-          show_in_shop: false,
-          duration_value: null,
-          duration_unit: 'hours',
-        });
-        setImageId(null);
-        setImagePreview(null);
-        setLazyLpId(null);
-      }
-      setPendingImageFile(null);
+    if (!open) {
+      formInitializedRef.current = false;
+      return;
     }
-  }, [open, learningPath, reset]);
+    if (formInitializedRef.current) return;
+    if (isEdit && !learningPath) return; // wait for data to load
+
+    if (learningPath) {
+      const durationParts =
+        learningPath.duration !== null && learningPath.duration !== undefined
+          ? minutesToDuration(learningPath.duration)
+          : { value: null as number | null, unit: 'hours' as DurationUnit };
+      reset({
+        name: learningPath.name,
+        description: learningPath.description,
+        category_id: learningPath.categoryId,
+        price: learningPath.price ?? 0,
+        currency: learningPath.currency ?? 'EUR',
+        published_at: learningPath.publishedAt,
+        show_in_shop: learningPath.showInShop,
+        duration_value: durationParts.value,
+        duration_unit: durationParts.unit,
+      });
+      setImageId(learningPath.image?.id ?? null);
+      setImagePreview(learningPath.image?.url ?? null);
+    } else {
+      reset({
+        name: '',
+        description: null,
+        category_id: null,
+        price: 0,
+        currency: 'EUR',
+        published_at: null,
+        show_in_shop: false,
+        duration_value: null,
+        duration_unit: 'hours',
+      });
+      setImageId(null);
+      setImagePreview(null);
+      setLazyLpId(null);
+    }
+    setPendingImageFile(null);
+    formInitializedRef.current = true;
+  }, [open, isEdit, learningPath, reset]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null;
