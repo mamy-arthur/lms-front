@@ -2,12 +2,11 @@ import { useInfiniteQuery } from '@tanstack/react-query';
 import { adminModulesApi } from '../api';
 import { normalizeModule } from '../types';
 
-const PAGE_SIZE = 100;
+const PAGE_SIZE = 5;
 
 interface Params {
   q?: string;
   category_ids?: string | null;
-
 }
 
 export const ADMIN_MODULES_INFINITE_QUERY_KEY = ['admin', 'modules', 'infinite'] as const;

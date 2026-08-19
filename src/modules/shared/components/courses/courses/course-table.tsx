@@ -1,16 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
 
-import { Search, BookOpen, Plus, LayoutGrid, List, Settings2 } from 'lucide-react';
+import { BookOpen, ChevronDown, Plus, LayoutGrid, List, Settings2 } from 'lucide-react';
 import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,6 +23,9 @@ import { CourseCard } from '@/modules/shared/components/courses/components/Cours
 import { CourseDrawer } from './course-drawer';
 import { CourseDataTable } from './CourseDataTable';
 import { CategoryDrawer } from '../categories/category-drawer';
+import { ModuleSearch } from '@modules/shared/components/modules';
+import { usePaginatedCourses } from '../hooks/usePaginatedCourses';
+import type { CourseListParams } from '@/shared/api/courses.api';
 
 type View = 'card' | 'table';
 
@@ -37,9 +34,65 @@ type Props = {
 };
 
 export function CourseTable({ basePath }: Props) {
-  const { courses, categories, loading, deleteCourse, toggleCourseVisibility } = useCoursesStore();
-  const [query, setQuery] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const { categories, loading: categoriesLoading, upsertCourse, deleteCourse, toggleCourseVisibility } = useCoursesStore();
+
+  const [params, setParams] = useState<CourseListParams>({
+    page: 1,
+    per_page: 25,
+    sort_by: 'full_name',
+    sort_order: 'asc',
+  });
+  const [draftSearch, setDraftSearch] = useState('');
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+
+  const { data: paginatedData, isLoading: coursesLoading } = usePaginatedCourses(params);
+  const courses = paginatedData?.data ?? [];
+  const total = paginatedData?.total ?? 0;
+  const isLoading = coursesLoading || categoriesLoading;
+
+  const page = (params.page ?? 1) - 1; // DataTable uses 0-based
+  const pageSize = params.per_page ?? 25;
+  const sort = { column: params.sort_by ?? 'full_name', direction: (params.sort_order ?? 'asc') as 'asc' | 'desc' };
+  const hasQuery = !!(params.q || params.category_ids);
+
+  const handleSearch = useCallback(() => {
+    setParams((prev) => ({
+      ...prev,
+      q: draftSearch || undefined,
+      page: 1,
+    }));
+  }, [draftSearch]);
+
+  const handleCategoryChange = useCallback((value: string) => {
+    if (value === 'all') {
+      setSelectedCategories([]);
+      setParams((prev) => ({ ...prev, category_ids: undefined, page: 1 }));
+      return;
+    }
+    setSelectedCategories((prev) => {
+      const next = prev.includes(value) ? prev.filter((c) => c !== value) : [...prev, value];
+      setParams((p) => ({ ...p, category_ids: next.length > 0 ? next.join(',') : undefined, page: 1 }));
+      return next;
+    });
+  }, []);
+
+  const handleSort = useCallback((column: string) => {
+    setParams((prev) => ({
+      ...prev,
+      sort_by: column,
+      sort_order: prev.sort_by === column && prev.sort_order === 'asc' ? 'desc' : 'asc',
+      page: 1,
+    }));
+  }, []);
+
+  const handlePageChange = useCallback((newPage: number) => {
+    setParams((prev) => ({ ...prev, page: newPage + 1 })); // DataTable is 0-based
+  }, []);
+
+  const handlePageSizeChange = useCallback((newSize: number) => {
+    setParams((prev) => ({ ...prev, per_page: newSize, page: 1 }));
+  }, []);
+
   const [confirmDelete, setConfirmDelete] = useState<Course | null>(null);
   const [view, setView] = useState<View>('table');
   const [courseDrawer, setCourseDrawer] = useState<{
@@ -51,31 +104,10 @@ export function CourseTable({ basePath }: Props) {
   });
   const [categoryDrawerOpen, setCategoryDrawerOpen] = useState(false);
 
-  const filtered = useMemo(() => {
-    return courses.filter((c) => {
-      if (categoryFilter !== 'all' && c.categoryId !== categoryFilter) return false;
-      if (!query.trim()) return true;
-      const q = query.toLowerCase();
-      return (
-        c.fullName.toLowerCase().includes(q) ||
-        c.shortName.toLowerCase().includes(q) ||
-        (c.identifier ?? '').toLowerCase().includes(q)
-      );
-    });
-  }, [courses, query, categoryFilter]);
-
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative w-full sm:max-w-sm">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Rechercher un cours…"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className="pl-9"
-          />
-        </div>
+        <ModuleSearch value={draftSearch} onChange={setDraftSearch} onSearch={handleSearch} />
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center rounded-md border bg-muted/40 p-0.5">
             <Button
@@ -97,19 +129,37 @@ export function CourseTable({ basePath }: Props) {
               <List className="size-3" />
             </Button>
           </div>
-          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger className="w-full sm:w-60">
-              <SelectValue placeholder="Toutes les catégories" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Toutes les catégories</SelectItem>
-              {categories.map((c) => (
-                <SelectItem key={c.id} value={c.id}>
-                  {getCategoryPath(categories, c.id)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="w-full sm:w-56 h-9 justify-between text-xs font-normal">
+                {selectedCategories.length === 0
+                  ? 'Toutes les catégories'
+                  : `${selectedCategories.length} catégorie${selectedCategories.length > 1 ? 's' : ''}`}
+                <ChevronDown className="ml-1 size-3.5 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-72 p-2" align="end">
+              <div className="space-y-0.5">
+                {categories.map((c) => (
+                  <label key={c.id} className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 hover:bg-muted text-xs">
+                    <Checkbox
+                      checked={selectedCategories.includes(c.id)}
+                      onCheckedChange={() => handleCategoryChange(c.id)}
+                    />
+                    {getCategoryPath(categories, c.id)}
+                  </label>
+                ))}
+              </div>
+              {selectedCategories.length > 0 && (
+                <button
+                  className="mt-1.5 w-full rounded px-2 py-1 text-center text-xs text-muted-foreground hover:bg-muted"
+                  onClick={() => handleCategoryChange('all')}
+                >
+                  Effacer le filtre
+                </button>
+              )}
+            </PopoverContent>
+          </Popover>
           <Button variant="outline" onClick={() => setCategoryDrawerOpen(true)}>
             <Settings2 className="mr-1 size-4" />
             Gérer les catégories
@@ -126,11 +176,18 @@ export function CourseTable({ basePath }: Props) {
 
       {view === 'table' ? (
         <CourseDataTable
-          courses={filtered}
+          courses={courses}
           categories={categories}
-          isLoading={loading}
-          hasQuery={!!query.trim() || categoryFilter !== 'all'}
+          isLoading={isLoading}
+          hasQuery={hasQuery}
           basePath={basePath}
+          page={page}
+          pageSize={pageSize}
+          total={total}
+          sort={sort}
+          onSort={handleSort}
+          onPageChange={handlePageChange}
+          onPageSizeChange={handlePageSizeChange}
           onEdit={(course) => setCourseDrawer({ open: true, course })}
           onDelete={setConfirmDelete}
           onToggleVisibility={(course) => {
@@ -138,7 +195,7 @@ export function CourseTable({ basePath }: Props) {
             toast.success(course.visible ? 'Cours masqué' : 'Cours rendu visible');
           }}
         />
-      ) : loading ? (
+      ) : isLoading ? (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => (
             <Card key={i}>
@@ -156,7 +213,7 @@ export function CourseTable({ basePath }: Props) {
             </Card>
           ))}
         </div>
-      ) : filtered.length === 0 ? (
+      ) : courses.length === 0 ? (
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center gap-3 py-16 text-center">
             <div className="flex size-12 items-center justify-center rounded-full bg-muted">
@@ -172,7 +229,7 @@ export function CourseTable({ basePath }: Props) {
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {filtered.map((course) => (
+          {courses.map((course) => (
             <CourseCard
               key={course.id}
               course={course}
