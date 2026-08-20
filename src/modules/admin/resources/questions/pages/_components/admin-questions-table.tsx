@@ -102,7 +102,7 @@ function AdminQuestionsTableBase({
   const columns: DataTableColumn<Question>[] = useMemo(
     () => [
       {
-        key: 'referenceNumber',
+        key: 'idnumber',
         label: 'Référence',
         sortable: true,
         render: (q) => (
@@ -133,7 +133,7 @@ function AdminQuestionsTableBase({
         ),
       },
       {
-        key: 'updatedAt',
+        key: 'updated_at',
         label: 'Dernière modification',
         sortable: true,
         render: (q) => (

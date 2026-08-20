@@ -1,7 +1,7 @@
 'use client';
 
 import { Plus } from 'lucide-react';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -24,24 +24,11 @@ export function QuestionList({ quizId }: { quizId: string }) {
   const ctrl = useQuestionListController<Question>({
     defaultPageSize: 25,
   });
-  const [typeFilter, setTypeFilter] = useState<string>('');
-  const { data, isLoading } = useQuestionsQuery(quizId);
+  const { data, isLoading } = useQuestionsQuery(quizId, ctrl.params);
   const deleteMutation = useDeleteQuestion(quizId);
   const [deleteConfirm, setDeleteConfirm] = useState<Question | undefined>();
 
-  const questions = useMemo(() => {
-    let result = data?.data ?? [];
-    if (typeFilter) {
-      result = result.filter((q) => q.type === typeFilter);
-    }
-    if (ctrl.draftSearch) {
-      const search = ctrl.draftSearch.toLowerCase();
-      result = result.filter(
-        (q) => q.name?.toLowerCase().includes(search) || q.text?.toLowerCase().includes(search),
-      );
-    }
-    return result;
-  }, [data, typeFilter, ctrl.draftSearch]);
+  const questions = data?.data ?? [];
 
   const handleDeleteConfirm = useCallback((question: Question) => setDeleteConfirm(question), []);
 
@@ -64,7 +51,10 @@ export function QuestionList({ quizId }: { quizId: string }) {
             onSearch={ctrl.handleSearch}
           />
           <div className="flex items-center gap-2 sm:ml-auto">
-            <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v === 'all' ? '' : v)}>
+            <Select
+              value={ctrl.params.type ?? 'all'}
+              onValueChange={(v) => ctrl.handleTypeChange(v === 'all' ? '' : v)}
+            >
               <SelectTrigger className="h-9 w-44">
                 <SelectValue placeholder="Tous les types" />
               </SelectTrigger>
@@ -93,7 +83,7 @@ export function QuestionList({ quizId }: { quizId: string }) {
           hasQuery={ctrl.hasQuery}
           page={ctrl.page}
           pageSize={ctrl.pageSize}
-          total={questions.length}
+          total={data?.total ?? 0}
           sort={ctrl.sort}
           onSort={ctrl.handleSort}
           onPageChange={ctrl.handlePageChange}

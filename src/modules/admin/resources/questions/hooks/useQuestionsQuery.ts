@@ -10,12 +10,19 @@ export function useQuestionsQuery(questionBankId: string, params?: QuestionSearc
   return useQuery({
     queryKey: quizItemKeys.listByBank(questionBankId, params),
     queryFn: async () => {
-      const res = await questionBanksApi.listQuizzes(
-        questionBankId,
-        params?.type ? { type: params.type } : undefined,
-      );
+      const res = await questionBanksApi.listQuizzes(questionBankId, {
+        type: params?.type || undefined,
+        q: params?.q,
+        sort_by: params?.sort_by,
+        sort_order: params?.sort_dir,
+        page: params?.page !== undefined ? (params.page ?? 0) + 1 : undefined,
+        per_page: params?.page_size,
+      });
       const data = res.data.map(normalizeQuestion);
-      return { data, total: data.length };
+      return {
+        data,
+        total: res.meta?.total ?? data.length,
+      };
     },
     enabled: !!questionBankId,
     placeholderData: (prev) => prev,

@@ -1,7 +1,7 @@
 'use client';
 
 import { Plus } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/shared/components/confirm-dialog/ConfirmDialog';
 import { QuizSearch } from '@modules/shared/components/quizzes';
@@ -15,21 +15,14 @@ import { AdminQuizzesTable } from './_components/admin-quizzes-table';
 export function QuizList() {
   const ctrl = useQuizListController<Quiz>({
     defaultPageSize: 25,
+    defaultSortBy: 'title',
   });
-  const { data, isLoading } = useQuizzesQuery();
+  const { data, isLoading } = useQuizzesQuery(ctrl.params);
   const deleteMutation = useDeleteQuiz();
   const [duplicateFrom, setDuplicateFrom] = useState<Quiz | undefined>();
   const [deleteConfirm, setDeleteConfirm] = useState<Quiz | undefined>();
 
-  const quizzes = useMemo(() => {
-    const result = data?.data ?? [];
-    if (!ctrl.draftSearch) return result;
-    const search = ctrl.draftSearch.toLowerCase();
-    return result.filter(
-      (q) =>
-        q.title?.toLowerCase().includes(search) || q.description?.toLowerCase().includes(search),
-    );
-  }, [data, ctrl.draftSearch]);
+  const quizzes = data?.data ?? [];
 
   return (
     <div className="bg-background">
@@ -66,7 +59,7 @@ export function QuizList() {
           hasQuery={ctrl.hasQuery}
           page={ctrl.page}
           pageSize={ctrl.pageSize}
-          total={quizzes.length}
+          total={data?.total ?? 0}
           sort={ctrl.sort}
           onSort={ctrl.handleSort}
           onPageChange={ctrl.handlePageChange}

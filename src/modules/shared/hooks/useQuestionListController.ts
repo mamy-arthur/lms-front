@@ -4,6 +4,7 @@ import { useCallback, useState } from 'react';
 
 export interface QuestionSearchParams {
   q?: string;
+  type?: string;
   quiz_id?: string;
   sort_by?: string;
   sort_dir?: 'asc' | 'desc';
@@ -18,7 +19,7 @@ export type UseQuestionListControllerOptions = {
 };
 
 export function useQuestionListController<TQuestion>(opts?: UseQuestionListControllerOptions) {
-  const { defaultSortBy = 'name', defaultSortDir = 'asc', defaultPageSize = 25 } = opts ?? {};
+  const { defaultSortBy = 'updated_at', defaultSortDir = 'desc', defaultPageSize = 25 } = opts ?? {};
 
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<TQuestion | undefined>();
@@ -39,6 +40,14 @@ export function useQuestionListController<TQuestion>(opts?: UseQuestionListContr
       page: 0,
     }));
   }, [draftSearch]);
+
+  const handleTypeChange = useCallback((value: string) => {
+    setParams((prev) => ({
+      ...prev,
+      type: value || undefined,
+      page: 0,
+    }));
+  }, []);
 
   const handleSort = useCallback((column: string) => {
     setParams((prev) => ({
@@ -84,7 +93,7 @@ export function useQuestionListController<TQuestion>(opts?: UseQuestionListContr
     column: params.sort_by ?? defaultSortBy,
     direction: (params.sort_dir as 'asc' | 'desc') ?? defaultSortDir,
   };
-  const hasQuery = !!draftSearch;
+  const hasQuery = !!(draftSearch || params.type);
 
   return {
     isDrawerOpen,
@@ -94,6 +103,7 @@ export function useQuestionListController<TQuestion>(opts?: UseQuestionListContr
     params,
     handleSearch,
     handleSort,
+    handleTypeChange,
     handleOpenCreate,
     handleCloseDrawer,
     handleSuccess,
