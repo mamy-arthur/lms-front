@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
-import { Check, ChevronDown, ChevronsUpDown, GripVertical, Loader2, Save } from 'lucide-react';
-import { useCallback, useMemo } from 'react';
+import { GripVertical, Loader2, Plus, Save, X } from 'lucide-react';
+import { useCallback, useMemo, useState } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import {
   closestCenter,
@@ -22,7 +22,6 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Button } from '@/components/ui/button';
-import { Command, CommandEmpty, CommandInput, CommandItem } from '@/components/ui/command';
 import {
   Field,
   FieldContent,
@@ -33,24 +32,13 @@ import {
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import type { MutationLike } from '@/shared/types/mutation';
 import { extractApiError } from '@/shared/utils/api-error';
 import type { genIdentifier } from './module-form-utils';
 import { CompetencyCategorySelect } from '../../components/categories/CompetencyCategorySelect';
-
-interface Course {
-  id: string;
-  fullName: string;
-  categoryId: string;
-}
-
-interface CourseCategory {
-  key: string;
-  name: string;
-  courses: Course[];
-}
+import { SelectCoursesDialog } from './SelectCoursesDialog';
+import type { AvailableCourse } from '../../types';
 
 export interface ModuleFormProps {
   form: UseFormReturn<any>;
@@ -60,12 +48,10 @@ export interface ModuleFormProps {
   onSubmit: (values: any) => void;
   selectedCourseIds: string[];
   toggleCourse: (courseId: string) => void;
-  coursesByCategory: CourseCategory[];
-  openCategories: Set<string>;
-  toggleCategory: (name: string) => void;
+  addCourseIds: (newIds: string[]) => void;
+  availableCourses: AvailableCourse[];
+  isLoadingCourses: boolean;
   shortname: string;
-  coursePopoverOpen: boolean;
-  setCoursePopoverOpen: (open: boolean) => void;
   genIdentifierFn: typeof genIdentifier;
 }
 
@@ -74,11 +60,13 @@ function SortableCourseItem({
   fullName,
   categoryName,
   index,
+  onRemove,
 }: {
   courseId: string;
   fullName: string;
   categoryName?: string;
   index: number;
+  onRemove: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: courseId,
@@ -111,6 +99,14 @@ function SortableCourseItem({
       </span>
       <span className="flex-1 truncate">{fullName}</span>
       {categoryName && <span className="shrink-0 text-muted-foreground">{categoryName}</span>}
+      <button
+        type="button"
+        onClick={onRemove}
+        className="ml-1 inline-flex items-center justify-center rounded p-0.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+        aria-label={`Retirer ${fullName}`}
+      >
+        <X className="size-3" />
+      </button>
     </div>
   );
 }
@@ -123,23 +119,21 @@ export function ModuleForm({
   onSubmit,
   selectedCourseIds,
   toggleCourse,
-  coursesByCategory,
-  openCategories,
-  toggleCategory,
+  addCourseIds,
+  availableCourses,
+  isLoadingCourses,
   shortname,
-  coursePopoverOpen,
-  setCoursePopoverOpen,
   genIdentifierFn,
 }: ModuleFormProps) {
+  const [coursesDialogOpen, setCoursesDialogOpen] = useState(false);
+
   const courseMap = useMemo(() => {
     const map = new Map<string, { fullName: string; categoryName: string }>();
-    for (const group of coursesByCategory) {
-      for (const course of group.courses) {
-        map.set(course.id, { fullName: course.fullName, categoryName: group.name });
-      }
+    for (const course of availableCourses) {
+      map.set(course.id, { fullName: course.fullName, categoryName: course.categoryName });
     }
     return map;
-  }, [coursesByCategory]);
+  }, [availableCourses]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -256,82 +250,28 @@ export function ModuleForm({
             name="courseIds"
             render={() => (
               <FieldGroup>
-                <FieldLabel className="text-xs">Cours liés</FieldLabel>
-                <Popover open={coursePopoverOpen} onOpenChange={setCoursePopoverOpen}>
-                  <PopoverTrigger asChild>
-                    <FieldContent>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        role="combobox"
-                        aria-label="Cours liés"
-                        className="w-full justify-between font-normal text-xs"
-                      >
-                        {selectedCourseIds.length > 0
-                          ? `${selectedCourseIds.length} cours sélectionné${
-                              selectedCourseIds.length > 1 ? 's' : ''
-                            }`
-                          : 'Sélectionner des cours…'}
+                <div className="flex items-center justify-between">
+                  <FieldLabel className="text-xs">
+                    Cours dans ce module
+                    {selectedCourseIds.length > 0 && (
+                      <span className="ml-1.5 text-muted-foreground">
+                        ({selectedCourseIds.length})
+                      </span>
+                    )}
+                  </FieldLabel>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="xs"
+                    className="h-6 gap-1 text-xs"
+                    onClick={() => setCoursesDialogOpen(true)}
+                  >
+                    <Plus className="size-3" />
+                    Ajouter un cours
+                  </Button>
+                </div>
 
-                        <ChevronsUpDown className="ml-2 size-4 shrink-0 text-muted-foreground" />
-                      </Button>
-                    </FieldContent>
-                  </PopoverTrigger>
-                  <PopoverContent align="start" sideOffset={4} className="w-125 p-0">
-                    <Command className="overflow-hidden">
-                      <CommandInput placeholder="Rechercher un cours..." />
-
-                      {coursesByCategory.length === 0 && (
-                        <CommandEmpty>Aucun cours trouvé.</CommandEmpty>
-                      )}
-
-                      <div className="max-h-100 overflow-y-auto overscroll-contain">
-                        {coursesByCategory.map(({ key, name, courses }) => {
-                          const isOpen = openCategories.has(key);
-
-                          return (
-                            <div key={key}>
-                              <button
-                                type="button"
-                                onClick={() => toggleCategory(key)}
-                                className="flex w-full items-center gap-2 px-2 py-2 text-xs font-medium text-muted-foreground hover:text-foreground"
-                              >
-                                <ChevronDown
-                                  className={cn(
-                                    'size-3 transition-transform',
-                                    !isOpen && '-rotate-90',
-                                  )}
-                                />
-                                {name}
-                              </button>
-
-                              {isOpen &&
-                                courses.map((course) => (
-                                  <CommandItem
-                                    key={course.id}
-                                    value={course.fullName}
-                                    onSelect={() => toggleCourse(course.id)}
-                                  >
-                                    <Check
-                                      className={cn(
-                                        'mr-2 size-4',
-                                        selectedCourseIds.includes(course.id)
-                                          ? 'opacity-100'
-                                          : 'opacity-0',
-                                      )}
-                                    />
-                                    {course.fullName}
-                                  </CommandItem>
-                                ))}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-
-                {selectedCourseIds.length > 0 && (
+                {selectedCourseIds.length > 0 ? (
                   <DndContext
                     sensors={sensors}
                     collisionDetection={closestCenter}
@@ -341,7 +281,7 @@ export function ModuleForm({
                       items={selectedCourseIds}
                       strategy={verticalListSortingStrategy}
                     >
-                      <div className="mt-2 space-y-1">
+                      <div className="mt-1 space-y-1">
                         {selectedCourseIds.map((courseId, index) => {
                           const info = courseMap.get(courseId);
                           return (
@@ -351,12 +291,15 @@ export function ModuleForm({
                               fullName={info?.fullName ?? courseId}
                               categoryName={info?.categoryName}
                               index={index}
+                              onRemove={() => toggleCourse(courseId)}
                             />
                           );
                         })}
                       </div>
                     </SortableContext>
                   </DndContext>
+                ) : (
+                  <p className="text-xs text-muted-foreground">Aucun cours lié.</p>
                 )}
 
                 <FieldError />
@@ -364,6 +307,15 @@ export function ModuleForm({
             )}
           />
         </div>
+
+        <SelectCoursesDialog
+          open={coursesDialogOpen}
+          onOpenChange={setCoursesDialogOpen}
+          availableCourses={availableCourses}
+          isLoading={isLoadingCourses}
+          selectedCourseIds={selectedCourseIds}
+          onConfirm={addCourseIds}
+        />
 
         <div className="flex shrink-0 flex-col-reverse items-stretch gap-2 border-t bg-background px-4 py-4 sm:flex-row sm:items-center sm:justify-end sm:gap-3 sm:px-6">
           <Button

@@ -24,12 +24,15 @@ export interface ModuleSearchParams {
   page_size?: number;
 }
 
+export type AvailableCourseStatus = 'AVAILABLE' | 'ALREADY_LINKED';
+
 /** Course item returned by GET /platform/competencies/available-courses */
 export interface AvailableCourse {
   id: string;
   fullName: string;
   categoryId: string;
   categoryName: string;
+  status: AvailableCourseStatus;
 }
 
 /** Raw object returned by the backend /platform/competencies endpoints */
