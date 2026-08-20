@@ -83,7 +83,7 @@ export default function FormationDetail({ formation }: FormationDetailProps) {
                           <Timer className="h-4 w-4" />
                           <span className="text-xs font-medium">Durée totale</span>
                         </div>
-                        <p className="text-lg font-semibold">8h</p>
+                        <p className="text-lg font-semibold">{formation.totalDurationMin} min</p>
                         <p className="text-xs">de contenu</p>
                       </div>
                       <div className="rounded-sm bg-muted/40 p-4">
@@ -129,6 +129,11 @@ export default function FormationDetail({ formation }: FormationDetailProps) {
                 </div>
               ) : (
                 <div className="space-y-2">
+                  {summaryQuery.isError && (
+                    <p className="text-xs text-red-500">
+                      Impossible de charger le contenu de la formation.
+                    </p>
+                  )}
                   {(summaryQuery.data?.nodes ?? []).map((node) => {
                     if (node.type === 'module') {
                       const mod = node as FormationModule;
