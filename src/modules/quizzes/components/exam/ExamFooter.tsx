@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowRight, Flag } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Question } from '../../types';
 import type { TraineeAnswer } from '../../types';
+import { Button } from '@/components/ui/button';
 
 interface ExamFooterProps {
   isFirst: boolean;
@@ -24,6 +25,25 @@ function isAnswered(a: TraineeAnswer): boolean {
   return true;
 }
 
+/** Checks completeness rules per question type (matching requires all pairs). */
+function isCurrentQuestionAnswered(question: Question, answer: TraineeAnswer): boolean {
+  switch (question.type) {
+    case 'true_false':
+      return answer !== null && answer !== undefined;
+    case 'single_choice':
+      return !!answer;
+    case 'multiple_choice':
+      return answer instanceof Set && answer.size > 0;
+    case 'matching': {
+      if (!answer || typeof answer !== 'object' || answer instanceof Set) return false;
+      const matched = Object.values(answer as Record<string, string>).filter(Boolean).length;
+      return matched === question.pairs.length;
+    }
+    default:
+      return true;
+  }
+}
+
 export function ExamFooter({
   isFirst,
   isLast,
@@ -35,6 +55,11 @@ export function ExamFooter({
   currentIndex,
   className,
 }: ExamFooterProps) {
+  const currentQuestion = questions[currentIndex];
+  const canAdvance = currentQuestion
+    ? isCurrentQuestionAnswered(currentQuestion, answers[currentQuestion.id])
+    : true;
+
   return (
     <footer
       className={cn(
@@ -57,7 +82,7 @@ export function ExamFooter({
                   isCurrent
                     ? 'scale-150 bg-(--color-primary)'
                     : answered
-                      ? 'bg-(--color-primary)/40'
+                      ? 'bg-primary/40'
                       : 'bg-border',
                 )}
               />
@@ -69,49 +94,30 @@ export function ExamFooter({
       {/* Navigation */}
       <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-4">
         {/* Previous */}
-        <button
-          type="button"
-          onClick={onPrev}
-          disabled={isFirst}
-          className={cn(
-            'flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-            isFirst
-              ? 'cursor-not-allowed text-muted-foreground/40'
-              : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-          )}
-        >
+        <Button onClick={onPrev} disabled={isFirst} variant={'ghost'}>
           <ArrowLeft className="size-4" />
           Précédent
-        </button>
+        </Button>
 
         {/* Next / Finish */}
         {isLast ? (
-          <button
-            type="button"
+          <Button
             onClick={onRequestFinish}
-            className={cn(
-              'flex items-center gap-2 rounded-lg bg-(--color-primary) px-6 py-2 text-sm font-semibold text-primary-foreground',
-              'transition-colors hover:bg-(--color-primary)/85',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-            )}
+            disabled={!canAdvance}
+            className="bg-(--color-primary) hover:bg-(--color-primary)/80"
           >
             <Flag className="size-4" />
             Terminer le quiz
-          </button>
+          </Button>
         ) : (
-          <button
-            type="button"
+          <Button
             onClick={onNext}
-            className={cn(
-              'flex items-center gap-2 rounded-lg bg-(--color-primary) px-6 py-2 text-sm font-semibold text-primary-foreground',
-              'transition-colors hover:bg-(--color-primary)/85',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-            )}
+            disabled={!canAdvance}
+            className="bg-(--color-primary) hover:bg-(--color-primary)/80"
           >
             Suivant
             <ArrowRight className="size-4" />
-          </button>
+          </Button>
         )}
       </div>
     </footer>
