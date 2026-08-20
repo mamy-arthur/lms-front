@@ -34,7 +34,12 @@ type Props = {
 };
 
 export function CourseTable({ basePath }: Props) {
-  const { categories, loading: categoriesLoading, upsertCourse, deleteCourse, toggleCourseVisibility } = useCoursesStore();
+  const {
+    categories,
+    loading: categoriesLoading,
+    deleteCourse,
+    toggleCourseVisibility,
+  } = useCoursesStore();
 
   const [params, setParams] = useState<CourseListParams>({
     page: 1,
@@ -52,7 +57,10 @@ export function CourseTable({ basePath }: Props) {
 
   const page = (params.page ?? 1) - 1; // DataTable uses 0-based
   const pageSize = params.per_page ?? 25;
-  const sort = { column: params.sort_by ?? 'full_name', direction: (params.sort_order ?? 'asc') as 'asc' | 'desc' };
+  const sort = {
+    column: params.sort_by ?? 'full_name',
+    direction: (params.sort_order ?? 'asc') as 'asc' | 'desc',
+  };
   const hasQuery = !!(params.q || params.category_ids);
 
   const handleSearch = useCallback(() => {
@@ -71,7 +79,11 @@ export function CourseTable({ basePath }: Props) {
     }
     setSelectedCategories((prev) => {
       const next = prev.includes(value) ? prev.filter((c) => c !== value) : [...prev, value];
-      setParams((p) => ({ ...p, category_ids: next.length > 0 ? next.join(',') : undefined, page: 1 }));
+      setParams((p) => ({
+        ...p,
+        category_ids: next.length > 0 ? next.join(',') : undefined,
+        page: 1,
+      }));
       return next;
     });
   }, []);
@@ -131,7 +143,10 @@ export function CourseTable({ basePath }: Props) {
           </div>
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" className="w-full sm:w-56 h-9 justify-between text-xs font-normal">
+              <Button
+                variant="outline"
+                className="w-full sm:w-56 h-9 justify-between text-xs font-normal"
+              >
                 {selectedCategories.length === 0
                   ? 'Toutes les catégories'
                   : `${selectedCategories.length} catégorie${selectedCategories.length > 1 ? 's' : ''}`}
@@ -141,7 +156,10 @@ export function CourseTable({ basePath }: Props) {
             <PopoverContent className="w-72 p-2" align="end">
               <div className="space-y-0.5">
                 {categories.map((c) => (
-                  <label key={c.id} className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 hover:bg-muted text-xs">
+                  <label
+                    key={c.id}
+                    className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 hover:bg-muted text-xs"
+                  >
                     <Checkbox
                       checked={selectedCategories.includes(c.id)}
                       onCheckedChange={() => handleCategoryChange(c.id)}

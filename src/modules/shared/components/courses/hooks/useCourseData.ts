@@ -14,8 +14,7 @@ export function useCourseData() {
     },
   });
 
-  const invalidateCourses = () =>
-    queryClient.invalidateQueries({ queryKey: courseKeys.lists() });
+  const invalidateCourses = () => queryClient.invalidateQueries({ queryKey: courseKeys.lists() });
 
   const createMutation = useMutation({
     mutationFn: (payload: Parameters<typeof coursesApi.create>[0]) => coursesApi.create(payload),

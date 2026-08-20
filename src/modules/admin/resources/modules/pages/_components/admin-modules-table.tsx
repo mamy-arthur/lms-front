@@ -68,9 +68,7 @@ export function AdminModulesTable({
       label: 'Catégorie',
       sortable: true,
       render: (mod) => (
-        <span className="text-xs text-muted-foreground">
-          {mod.category_name ?? '—'}
-        </span>
+        <span className="text-xs text-muted-foreground">{mod.category_name ?? '—'}</span>
       ),
     },
     {

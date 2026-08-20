@@ -51,10 +51,7 @@ export function SelectModuleDialog({ open, onOpenChange, usedModuleIds, onSelect
     hasNextPage,
     fetchNextPage,
     isFetchingNextPage,
-  } = useModulesInfinite(
-    { q: debouncedSearch || undefined, category_id: activeCategoryId },
-    open,
-  );
+  } = useModulesInfinite({ q: debouncedSearch || undefined, category_ids: activeCategoryId }, open);
 
   const catalog = useMemo(() => {
     const seen = new Set<string>();

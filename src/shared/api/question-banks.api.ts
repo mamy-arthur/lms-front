@@ -38,10 +38,10 @@ export const questionBanksApi = {
     if (params?.sort_by) p.sort_by = params.sort_by;
     if (params?.sort_order) p.sort_order = params.sort_order;
     const hasParams = Object.keys(p).length > 0;
-    return apiGet<{ data: ApiQuestionBank[]; meta?: { total?: number; current_page?: number; per_page?: number } }>(
-      'platform/question-banks',
-      hasParams ? p : undefined,
-    );
+    return apiGet<{
+      data: ApiQuestionBank[];
+      meta?: { total?: number; current_page?: number; per_page?: number };
+    }>('platform/question-banks', hasParams ? p : undefined);
   },
 
   getById: (id: string) => apiGet<ApiQuestionBank>(`platform/question-banks/${id}`),
@@ -62,7 +62,10 @@ export const questionBanksApi = {
     if (params?.sort_order) p.sort_order = params.sort_order;
     if (params?.page !== undefined) p.page = params.page;
     if (params?.per_page !== undefined) p.per_page = params.per_page;
-    return apiGet<{ data: ApiQuizItem[]; meta?: { total?: number; current_page?: number; per_page?: number } }>(
+    return apiGet<{
+      data: ApiQuizItem[];
+      meta?: { total?: number; current_page?: number; per_page?: number };
+    }>(
       `platform/question-banks/${questionBankId}/quizzes`,
       Object.keys(p).length > 0 ? p : undefined,
     );

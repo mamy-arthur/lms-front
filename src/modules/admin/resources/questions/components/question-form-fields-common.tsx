@@ -25,8 +25,13 @@ export function QuestionFormFieldsCommon({ form }: CommonFieldsProps) {
   const debouncedSearch = useDebounce(search, 350);
   const listRef = useRef<HTMLDivElement>(null);
 
-  const { data: pages, isLoading, hasNextPage, fetchNextPage, isFetchingNextPage } =
-    useModulesInfinite({ q: debouncedSearch || undefined }, pickerOpen);
+  const {
+    data: pages,
+    isLoading,
+    hasNextPage,
+    fetchNextPage,
+    isFetchingNextPage,
+  } = useModulesInfinite({ q: debouncedSearch || undefined }, pickerOpen);
 
   const modules = useMemo(() => {
     const seen = new Set<string>();
@@ -65,7 +70,8 @@ export function QuestionFormFieldsCommon({ form }: CommonFieldsProps) {
     staleTime: 5 * 60 * 1000,
   });
   useEffect(() => {
-    if (fetchedModule) setLabelCache((prev) => ({ ...prev, [fetchedModule.id]: fetchedModule.shortname }));
+    if (fetchedModule)
+      setLabelCache((prev) => ({ ...prev, [fetchedModule.id]: fetchedModule.shortname }));
   }, [fetchedModule]);
 
   const selectedLabel = selectedId ? labelCache[selectedId] : undefined;
@@ -112,11 +118,7 @@ export function QuestionFormFieldsCommon({ form }: CommonFieldsProps) {
                         autoFocus
                       />
                     </div>
-                    <div
-                      ref={listRef}
-                      onScroll={handleScroll}
-                      className="max-h-60 overflow-y-auto"
-                    >
+                    <div ref={listRef} onScroll={handleScroll} className="max-h-60 overflow-y-auto">
                       {isLoading ? (
                         <div className="flex items-center justify-center py-6">
                           <Loader2 className="size-4 animate-spin text-muted-foreground" />
@@ -130,7 +132,11 @@ export function QuestionFormFieldsCommon({ form }: CommonFieldsProps) {
                           <button
                             key={m.id}
                             type="button"
-                            onClick={() => { field.onChange(m.id); setLabelCache((prev) => ({ ...prev, [m.id]: m.shortname })); setPickerOpen(false); }}
+                            onClick={() => {
+                              field.onChange(m.id);
+                              setLabelCache((prev) => ({ ...prev, [m.id]: m.shortname }));
+                              setPickerOpen(false);
+                            }}
                             className={cn(
                               'flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left hover:bg-muted',
                               field.value === m.id && 'bg-muted',
@@ -138,7 +144,9 @@ export function QuestionFormFieldsCommon({ form }: CommonFieldsProps) {
                           >
                             <span className="text-xs font-medium">{m.shortname}</span>
                             {m.category_name && (
-                              <span className="text-xs text-muted-foreground">{m.category_name}</span>
+                              <span className="text-xs text-muted-foreground">
+                                {m.category_name}
+                              </span>
                             )}
                           </button>
                         ))

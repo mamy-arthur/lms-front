@@ -34,7 +34,10 @@ export function ModuleListToolbar({
       <div className="flex w-full flex-col gap-2 sm:ml-auto sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="outline" className="w-full sm:w-48 h-9 justify-between text-xs font-normal">
+            <Button
+              variant="outline"
+              className="w-full sm:w-48 h-9 justify-between text-xs font-normal"
+            >
               {selectedCategories.length === 0
                 ? 'Toutes les catégories'
                 : `${selectedCategories.length} catégorie${selectedCategories.length > 1 ? 's' : ''}`}

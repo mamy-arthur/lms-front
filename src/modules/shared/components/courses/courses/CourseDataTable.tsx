@@ -10,7 +10,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { DataTable, type DataTableColumn, type DataTableSort } from '@/shared/components/ui/DataTable';
+import {
+  DataTable,
+  type DataTableColumn,
+  type DataTableSort,
+} from '@/shared/components/ui/DataTable';
 import type { Category, Course } from '../types/index';
 
 interface CourseDataTableProps {
@@ -119,9 +123,7 @@ function CourseDataTableBase({
         label: 'Catégorie',
         sortable: true,
         render: (row) => (
-          <span className="text-xs text-muted-foreground">
-            {row.categoryName ?? '—'}
-          </span>
+          <span className="text-xs text-muted-foreground">{row.categoryName ?? '—'}</span>
         ),
       },
       {

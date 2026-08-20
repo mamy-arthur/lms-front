@@ -71,12 +71,16 @@ export function useModuleListController<TModule>(opts?: UseModuleListControllerO
     }
     setDraftCategory((prev) => {
       const without = prev.filter((c) => c !== 'all');
-      const next = without.includes(value) ? without.filter((c) => c !== value) : [...without, value];
+      const next = without.includes(value)
+        ? without.filter((c) => c !== value)
+        : [...without, value];
       return next.length === 0 ? ['all'] : next;
     });
     setParams((prev) => {
       const current = prev.category ? prev.category.split(',') : [];
-      const next = current.includes(value) ? current.filter((c) => c !== value) : [...current, value];
+      const next = current.includes(value)
+        ? current.filter((c) => c !== value)
+        : [...current, value];
       return { ...prev, category: next.length > 0 ? next.join(',') : undefined, page: 0 };
     });
   }, []);

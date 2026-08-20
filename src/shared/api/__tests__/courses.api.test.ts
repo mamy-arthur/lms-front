@@ -28,7 +28,7 @@ describe('coursesApi family', () => {
     await coursesApi.update('course-1', { title: 'Course B' } as never);
     await coursesApi.remove('course-1');
 
-    expect(mockApiGet).toHaveBeenNthCalledWith(1, 'platform/courses');
+    expect(mockApiGet).toHaveBeenNthCalledWith(1, 'platform/courses?page=1&per_page=25');
     expect(mockApiGet).toHaveBeenNthCalledWith(2, 'platform/courses/course-1');
     expect(mockApiPost).toHaveBeenCalledWith('platform/courses', { title: 'Course A' });
     expect(mockApiPatch).toHaveBeenCalledWith('platform/courses/course-1', { title: 'Course B' });

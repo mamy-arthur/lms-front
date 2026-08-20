@@ -27,9 +27,10 @@ export const coursesApi = {
     if (params.category_ids) query.set('category_ids', params.category_ids);
     if (params.sort_by) query.set('sort_by', params.sort_by);
     if (params.sort_order) query.set('sort_order', params.sort_order);
-    return apiGet<{ data: ApiCourse[]; meta?: { total?: number; current_page?: number; per_page?: number } }>(
-      `platform/courses?${query.toString()}`,
-    );
+    return apiGet<{
+      data: ApiCourse[];
+      meta?: { total?: number; current_page?: number; per_page?: number };
+    }>(`platform/courses?${query.toString()}`);
   },
 
   get: (id: string) => apiGet<{ data: ApiCourse }>(`platform/courses/${id}`),
