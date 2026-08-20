@@ -31,7 +31,7 @@ export function SingleChoiceQuestion({
             role="radio"
             aria-checked={selected}
             className={cn(
-              'group flex items-center gap-4 rounded-2xl border-2 px-5 py-4 text-left transition-all duration-200',
+              'group flex items-center gap-4 rounded-sm border px-5 py-4 text-left transition-all duration-200',
               'hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
               selected
                 ? 'border-(--color-primary) bg-(--color-primary)/8 shadow-sm'
@@ -42,7 +42,7 @@ export function SingleChoiceQuestion({
             {/* Letter badge */}
             <span
               className={cn(
-                'flex size-8 shrink-0 items-center justify-center rounded-full border-2 text-sm font-bold transition-colors',
+                'flex size-8 shrink-0 items-center justify-center rounded-full border text-sm font-semibold transition-colors',
                 selected
                   ? 'border-(--color-primary) bg-(--color-primary) text-white'
                   : 'border-muted-foreground/30 bg-muted text-muted-foreground group-hover:border-(--color-primary)/50',

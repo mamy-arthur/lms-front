@@ -19,17 +19,11 @@ export function ExamAnswerPanel({
   onAnswer,
   onToggleMultiple,
   onMatchPair,
-  saved = false,
   className,
 }: ExamAnswerPanelProps) {
   return (
     <section aria-label="Vos réponses" className={className}>
       {/* Autosave indicator */}
-      <div className="mb-3 flex h-4 justify-end">
-        {saved && (
-          <span className="animate-in fade-in text-xs text-muted-foreground">✓ Enregistré</span>
-        )}
-      </div>
       <div className="flex items-center justify-center">
         <div className="w-full">
           <QuestionRenderer
