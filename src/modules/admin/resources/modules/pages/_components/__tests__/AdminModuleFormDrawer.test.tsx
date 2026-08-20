@@ -156,9 +156,27 @@ const MOCK_MODULE: Module = {
 };
 
 const MOCK_AVAILABLE_COURSES = [
-  { id: 'course-1', fullName: 'Développement React', categoryId: 'cat-1', categoryName: 'Dev', status: 'AVAILABLE' as const },
-  { id: 'course-2', fullName: 'Node.js Avancé', categoryId: 'cat-1', categoryName: 'Dev', status: 'AVAILABLE' as const },
-  { id: 'course-3', fullName: 'DevOps CI/CD', categoryId: 'cat-2', categoryName: 'Ops', status: 'ALREADY_LINKED' as const },
+  {
+    id: 'course-1',
+    fullName: 'Développement React',
+    categoryId: 'cat-1',
+    categoryName: 'Dev',
+    status: 'AVAILABLE' as const,
+  },
+  {
+    id: 'course-2',
+    fullName: 'Node.js Avancé',
+    categoryId: 'cat-1',
+    categoryName: 'Dev',
+    status: 'AVAILABLE' as const,
+  },
+  {
+    id: 'course-3',
+    fullName: 'DevOps CI/CD',
+    categoryId: 'cat-2',
+    categoryName: 'Ops',
+    status: 'ALREADY_LINKED' as const,
+  },
 ];
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
@@ -420,7 +438,9 @@ describe('AdminModuleFormDrawer', () => {
       await user.click(within(dialog).getByRole('button', { name: /ajouter 1 cours/i }));
 
       await waitFor(() => {
-        expect(screen.queryByRole('dialog', { name: /ajouter des cours/i })).not.toBeInTheDocument();
+        expect(
+          screen.queryByRole('dialog', { name: /ajouter des cours/i }),
+        ).not.toBeInTheDocument();
         expect(screen.getByText('Développement React')).toBeInTheDocument();
       });
     });
@@ -454,7 +474,9 @@ describe('AdminModuleFormDrawer', () => {
       await user.click(within(dialog).getByRole('button', { name: /annuler/i }));
 
       await waitFor(() => {
-        expect(screen.queryByRole('dialog', { name: /ajouter des cours/i })).not.toBeInTheDocument();
+        expect(
+          screen.queryByRole('dialog', { name: /ajouter des cours/i }),
+        ).not.toBeInTheDocument();
       });
       expect(screen.queryByText('Développement React')).not.toBeInTheDocument();
     });
@@ -468,7 +490,9 @@ describe('AdminModuleFormDrawer', () => {
       await user.click(within(dialog).getByRole('button', { name: /développement react/i }));
       await user.click(within(dialog).getByRole('button', { name: /annuler/i }));
       await waitFor(() =>
-        expect(screen.queryByRole('dialog', { name: /ajouter des cours/i })).not.toBeInTheDocument(),
+        expect(
+          screen.queryByRole('dialog', { name: /ajouter des cours/i }),
+        ).not.toBeInTheDocument(),
       );
 
       // Second open: pending selection must be gone — confirm button still disabled
