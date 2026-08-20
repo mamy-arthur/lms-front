@@ -290,16 +290,48 @@ describe('adminModulesApi', () => {
     it('normalise la réponse en AvailableCourse[]', async () => {
       mockApiGet.mockResolvedValue({
         data: [
-          { id: 'c-1', full_name: 'Cours A', category_id: 'cat-1', category_name: 'Dev' },
-          { id: 'c-2', full_name: 'Cours B', category_id: null, category_name: null },
+          {
+            id: 'c-1',
+            full_name: 'Cours A',
+            category_id: 'cat-1',
+            category_name: 'Dev',
+            status: 'AVAILABLE',
+          },
+          {
+            id: 'c-2',
+            full_name: 'Cours B',
+            category_id: null,
+            category_name: null,
+            status: 'ALREADY_LINKED',
+          },
+          { id: 'c-3', full_name: 'Cours C', category_id: 'cat-1', category_name: 'Dev' },
         ],
       });
 
       const result = await adminModulesApi.availableCourses();
 
       expect(result).toEqual([
-        { id: 'c-1', fullName: 'Cours A', categoryId: 'cat-1', categoryName: 'Dev' },
-        { id: 'c-2', fullName: 'Cours B', categoryId: '', categoryName: '' },
+        {
+          id: 'c-1',
+          fullName: 'Cours A',
+          categoryId: 'cat-1',
+          categoryName: 'Dev',
+          status: 'AVAILABLE',
+        },
+        {
+          id: 'c-2',
+          fullName: 'Cours B',
+          categoryId: '',
+          categoryName: '',
+          status: 'ALREADY_LINKED',
+        },
+        {
+          id: 'c-3',
+          fullName: 'Cours C',
+          categoryId: 'cat-1',
+          categoryName: 'Dev',
+          status: 'AVAILABLE',
+        },
       ]);
     });
 

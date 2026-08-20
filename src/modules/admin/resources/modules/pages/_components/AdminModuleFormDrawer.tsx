@@ -111,12 +111,10 @@ function AdminModuleFormDrawerBase({
           onSubmit={formState.onSubmit}
           selectedCourseIds={formState.selectedCourseIds}
           toggleCourse={formState.toggleCourse}
-          coursesByCategory={formState.coursesByCategory}
-          openCategories={formState.openCategories}
-          toggleCategory={formState.toggleCategory}
+          addCourseIds={formState.addCourseIds}
+          availableCourses={formState.availableCourses}
+          isLoadingCourses={formState.isLoadingCourses}
           shortname={formState.shortname}
-          coursePopoverOpen={formState.coursePopoverOpen}
-          setCoursePopoverOpen={formState.setCoursePopoverOpen}
           genIdentifierFn={genIdentifier}
         />
       </SheetContent>
