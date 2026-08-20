@@ -17,8 +17,8 @@ export default function ContentRow({ content, active, onSelect }: Props) {
       onClick={isLocked ? undefined : onSelect}
       disabled={isLocked}
       className={cn(
-        'flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs transition-colors',
-        active ? 'font-semibold' : 'text-gray-500 hover:text-slate-800 hover:bg-slate-50',
+        'flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[13px] transition-colors',
+        active ? '' : ' hover:text-slate-800 hover:bg-slate-50',
         isLocked && 'cursor-not-allowed opacity-40',
       )}
       style={

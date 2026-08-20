@@ -137,15 +137,19 @@
   :first-child {
     margin-top: 0;
   }
+  p {
+    font-size: 0.9rem;
+  }
   /* List styles */
   ul,
   ol {
     padding: 0 1rem;
-    margin: 1.25rem 1rem 1.25rem 0.4rem;
-
+    margin: 0.5rem 1rem 1.25rem 0.4rem;
+    font-size: 0.9rem;
     li p {
       margin-top: 0.25em;
       margin-bottom: 0.25em;
+      font-size: 0.9rem;
     }
   }
   ul {
@@ -168,14 +172,14 @@
   h5,
   h6 {
     line-height: 1.1;
-    margin-top: 2.5rem;
-    text-wrap: pretty;
+    margin-top: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 0.1rem;
   }
 
   h1,
   h2 {
-    margin-top: 3.5rem;
-    margin-bottom: 1.5rem;
+    margin-top: 0.8rem;
   }
 
   h1 {
@@ -187,12 +191,6 @@
   }
 
   h3 {
-    font-size: 1.1rem;
-  }
-
-  h4,
-  h5,
-  h6 {
     font-size: 1rem;
   }
 

@@ -39,7 +39,11 @@ export default function FormationContentView({
   if (resolved.kind === 'evaluation') {
     return (
       <div className="px-6 py-6">
-        <EvaluationRunner evaluation={resolved.node} onComplete={onEvaluationComplete} />
+        <EvaluationRunner
+          key={resolved.node.id}
+          evaluation={resolved.node}
+          onComplete={onEvaluationComplete}
+        />
       </div>
     );
   }

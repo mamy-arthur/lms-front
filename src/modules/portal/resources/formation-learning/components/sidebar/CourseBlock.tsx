@@ -11,23 +11,19 @@ interface Props {
 }
 
 export default function CourseBlock({ course, activeId, onSelect }: Props) {
-  const defaultOpen = course.sections.some((s) => s.contents.some((c) => c.id === activeId));
-  const [open, setOpen] = useState(defaultOpen);
+  const [open, setOpen] = useState(true);
 
   return (
     <div>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
+        className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-slate-50 transition-colors"
       >
         <ChevronRight
-          className={cn(
-            'h-3 w-3 shrink-0 text-slate-400 transition-transform',
-            open && 'rotate-90',
-          )}
+          className={cn('h-3 w-3 shrink-0  transition-transform', open && 'rotate-90')}
         />
-        <BookOpen className="h-3 w-3 shrink-0 text-slate-400" />
+        <BookOpen className="h-3 w-3 shrink-0 " />
         <span className="flex-1 truncate">{course.title}</span>
       </button>
 
