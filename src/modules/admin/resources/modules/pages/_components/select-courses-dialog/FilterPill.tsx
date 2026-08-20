@@ -1,6 +1,7 @@
 'use client';
 
 import { cn } from '@/lib/utils';
+import { ReactNode } from 'react';
 
 export function FilterPill({
   active,
@@ -9,7 +10,7 @@ export function FilterPill({
 }: {
   active: boolean;
   onClick: () => void;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <button

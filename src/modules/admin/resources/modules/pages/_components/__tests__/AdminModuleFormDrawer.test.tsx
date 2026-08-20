@@ -100,8 +100,14 @@ jest.mock('@/modules/admin/resources/modules/hooks/useUpdateModule', () => ({
 jest.mock('@/modules/admin/resources/modules/hooks/useModule', () => ({
   useModule: () => ({ data: undefined }),
 }));
+
+const mockUseAvailableCoursesQuery = jest.fn();
 jest.mock('@/modules/admin/resources/modules/hooks/useAvailableCoursesQuery', () => ({
-  useAvailableCoursesQuery: () => ({ data: [] }),
+  useAvailableCoursesQuery: (...args: unknown[]) => mockUseAvailableCoursesQuery(...args),
+}));
+
+jest.mock('@/modules/shared/components/courses/hooks/useCategoryData', () => ({
+  useCategoryData: () => ({ categoriesQuery: { data: [] } }),
 }));
 jest.mock(
   '@/modules/admin/resources/modules/components/categories/CompetencyCategoryModal',
@@ -130,7 +136,7 @@ jest.mock(
 
 // ─── Imports ──────────────────────────────────────────────────────────────────
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AdminModuleFormDrawer } from '../AdminModuleFormDrawer';
@@ -148,6 +154,12 @@ const MOCK_MODULE: Module = {
   createdAt: '2025-01-01T00:00:00Z',
   updatedAt: '2025-01-01T00:00:00Z',
 };
+
+const MOCK_AVAILABLE_COURSES = [
+  { id: 'course-1', fullName: 'Développement React', categoryId: 'cat-1', categoryName: 'Dev', status: 'AVAILABLE' as const },
+  { id: 'course-2', fullName: 'Node.js Avancé', categoryId: 'cat-1', categoryName: 'Dev', status: 'AVAILABLE' as const },
+  { id: 'course-3', fullName: 'DevOps CI/CD', categoryId: 'cat-2', categoryName: 'Ops', status: 'ALREADY_LINKED' as const },
+];
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
 interface RenderOptions {
@@ -167,7 +179,10 @@ function renderDrawer({ module, onClose = jest.fn(), onSuccess = jest.fn() }: Re
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
 describe('AdminModuleFormDrawer', () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockUseAvailableCoursesQuery.mockReturnValue({ data: [], isLoading: false });
+  });
 
   // ── Validation ─────────────────────────────────────────────────────────────
 
@@ -358,6 +373,107 @@ describe('AdminModuleFormDrawer', () => {
         const idInput = screen.getByRole('textbox', { name: /identifiant/i }) as HTMLInputElement;
         expect(idInput.value).toMatch(/^DEV-WEB-\d{3}$/);
       });
+    });
+  });
+
+  // ── Sélection de cours via la modale ───────────────────────────────────────
+
+  describe('sélection de cours via la modale', () => {
+    beforeEach(() => {
+      mockUseAvailableCoursesQuery.mockReturnValue({
+        data: MOCK_AVAILABLE_COURSES,
+        isLoading: false,
+      });
+    });
+
+    /** Opens the SelectCoursesDialog and returns it (scoped away from the Sheet). */
+    async function openCourseDialog(user: ReturnType<typeof userEvent.setup>) {
+      await user.click(screen.getByRole('button', { name: /ajouter un cours/i }));
+      return screen.findByRole('dialog', { name: /ajouter des cours/i });
+    }
+
+    it('ouvre le dialog au clic sur "Ajouter un cours"', async () => {
+      const user = userEvent.setup();
+      renderDrawer();
+
+      await openCourseDialog(user);
+
+      expect(screen.getByRole('dialog', { name: /ajouter des cours/i })).toBeInTheDocument();
+    });
+
+    it('affiche tous les cours disponibles dans le dialog', async () => {
+      const user = userEvent.setup();
+      renderDrawer();
+
+      const dialog = await openCourseDialog(user);
+      expect(within(dialog).getByText('Développement React')).toBeInTheDocument();
+      expect(within(dialog).getByText('Node.js Avancé')).toBeInTheDocument();
+      expect(within(dialog).getByText('DevOps CI/CD')).toBeInTheDocument();
+    });
+
+    it('sélectionne un cours et met à jour courseIds à la confirmation', async () => {
+      const user = userEvent.setup();
+      renderDrawer();
+
+      const dialog = await openCourseDialog(user);
+      await user.click(within(dialog).getByRole('button', { name: /développement react/i }));
+      await user.click(within(dialog).getByRole('button', { name: /ajouter 1 cours/i }));
+
+      await waitFor(() => {
+        expect(screen.queryByRole('dialog', { name: /ajouter des cours/i })).not.toBeInTheDocument();
+        expect(screen.getByText('Développement React')).toBeInTheDocument();
+      });
+    });
+
+    it('les cours ALREADY_LINKED sont affichés mais désactivés', async () => {
+      const user = userEvent.setup();
+      renderDrawer();
+
+      const dialog = await openCourseDialog(user);
+      const linkedBtn = within(dialog).getByRole('button', { name: /devops ci\/cd/i });
+      expect(linkedBtn).toBeDisabled();
+      expect(within(dialog).getByText('Déjà lié')).toBeInTheDocument();
+    });
+
+    it('les cours déjà liés au module sont affichés mais désactivés', async () => {
+      const user = userEvent.setup();
+      renderDrawer({ module: { ...MOCK_MODULE, courseIds: ['course-1'] } });
+
+      const dialog = await openCourseDialog(user);
+      const alreadyAddedBtn = within(dialog).getByRole('button', { name: /développement react/i });
+      expect(alreadyAddedBtn).toBeDisabled();
+      expect(within(dialog).getByText('Déjà ajouté')).toBeInTheDocument();
+    });
+
+    it('ferme le dialog sans mettre à jour courseIds au clic sur Annuler', async () => {
+      const user = userEvent.setup();
+      renderDrawer();
+
+      const dialog = await openCourseDialog(user);
+      await user.click(within(dialog).getByRole('button', { name: /développement react/i }));
+      await user.click(within(dialog).getByRole('button', { name: /annuler/i }));
+
+      await waitFor(() => {
+        expect(screen.queryByRole('dialog', { name: /ajouter des cours/i })).not.toBeInTheDocument();
+      });
+      expect(screen.queryByText('Développement React')).not.toBeInTheDocument();
+    });
+
+    it('réinitialise la sélection à la réouverture après annulation', async () => {
+      const user = userEvent.setup();
+      renderDrawer();
+
+      // First open: select a course then cancel
+      let dialog = await openCourseDialog(user);
+      await user.click(within(dialog).getByRole('button', { name: /développement react/i }));
+      await user.click(within(dialog).getByRole('button', { name: /annuler/i }));
+      await waitFor(() =>
+        expect(screen.queryByRole('dialog', { name: /ajouter des cours/i })).not.toBeInTheDocument(),
+      );
+
+      // Second open: pending selection must be gone — confirm button still disabled
+      dialog = await openCourseDialog(user);
+      expect(within(dialog).getByRole('button', { name: /ajouter des cours/i })).toBeDisabled();
     });
   });
 });
