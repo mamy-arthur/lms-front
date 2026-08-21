@@ -230,7 +230,6 @@ export function CheckoutPaymentMethod({ value, onChange, disabled }: CheckoutPay
                 className="h-8 text-xs"
               />
             </div>
-
           )}
 
           <div className="flex items-start gap-2">
