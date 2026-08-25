@@ -163,6 +163,8 @@ export function CourseTable({ basePath }: Props) {
                     <Checkbox
                       checked={selectedCategories.includes(c.id)}
                       onCheckedChange={() => handleCategoryChange(c.id)}
+                      className="mt-0.5 data-[state=checked]:bg-(--color-primary) data-[state=checked]:border-(--color-primary)"
+
                     />
                     {getCategoryPath(categories, c.id)}
                   </label>

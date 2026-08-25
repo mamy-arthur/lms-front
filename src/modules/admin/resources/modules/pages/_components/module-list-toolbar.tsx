@@ -54,6 +54,8 @@ export function ModuleListToolbar({
                   <Checkbox
                     checked={selectedCategories.includes(cat.id)}
                     onCheckedChange={() => onCategoryFilterChange(cat.id)}
+                    className="mt-0.5 data-[state=checked]:bg-(--color-primary) data-[state=checked]:border-(--color-primary)"
+
                   />
                   {cat.name}
                 </label>

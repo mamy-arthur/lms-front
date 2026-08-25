@@ -102,7 +102,7 @@ export function CompetencyCategoriesManageDrawer({ open, onOpenChange }: Props) 
                     className="flex items-start justify-between gap-2 rounded-lg border bg-card p-3"
                   >
                     <div className="min-w-0 space-y-1">
-                      <p className="truncate text-sm font-medium">{category.name}</p>
+                      <p className="truncate text-xs font-medium">{category.name}</p>
                       {category.description ? (
                         <p className="line-clamp-2 text-xs text-muted-foreground">
                           {category.description}
