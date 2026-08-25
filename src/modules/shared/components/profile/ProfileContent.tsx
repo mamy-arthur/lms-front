@@ -35,6 +35,7 @@ export default function ProfileContent({
 
   const {
     form,
+    isLoading,
     fileInputRef,
     photoPreview,
     uploadError,
@@ -155,6 +156,11 @@ export default function ProfileContent({
 
                 <Field {...form}>
                   <form onSubmit={form.handleSubmit(handleSave)} className="space-y-5" noValidate>
+                    {isLoading && (
+                      <p className="text-xs text-muted-foreground animate-pulse">
+                        Chargement du profil…
+                      </p>
+                    )}
                     {/* Identity */}
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                       <FieldRoot

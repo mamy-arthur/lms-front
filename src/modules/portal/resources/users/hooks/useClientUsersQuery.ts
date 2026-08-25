@@ -11,7 +11,7 @@ export function useClientUsersQuery(params?: ClientUserSearchParams) {
     queryFn: async () => {
       const res = await clientUsersApi.list(params);
       return {
-        data: res.data.map((u) => normalizeClientUser(u as unknown as Record<string, unknown>)),
+        data: res.data.map((u) => normalizeClientUser(u)),
         total: res.total,
       };
     },

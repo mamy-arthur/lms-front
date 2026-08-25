@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from 'react';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { UserSearch, UsersFilter } from '@modules/shared/components/users';
@@ -12,6 +13,7 @@ import { Role } from '@/shared/constants/roles';
 import { useToggleUserActive } from '../hooks/useToggleUserActive';
 import { useDeleteUser } from '../hooks/useDeleteUser';
 import { useDeleteConfirm } from '@/modules/shared/hooks/useDeleteConfirm';
+import { useTenantStore } from '@/shared/stores/tenant.store';
 
 const ROLE_OPTIONS = [
   { value: Role.SUPER_ADMIN, label: 'Super admin' },
@@ -33,6 +35,7 @@ export function UsersList() {
     params,
     sort,
     handleSearch,
+    handleSearchOnly,
     handleSort,
     handleOpenCreate,
     handleCloseDrawer,
@@ -45,7 +48,13 @@ export function UsersList() {
     hasQuery,
   } = useUsersListController<User, UserSearchParams>({ defaultPageSize: 25 });
 
-  const { data, isLoading } = useUsersQuery(params);
+  const activeTenant = useTenantStore((s) => s.tenant);
+  const scopedParams = useMemo(
+    () => ({ ...params, ...(activeTenant ? { tenant_id: activeTenant.id } : {}) }),
+    [params, activeTenant],
+  );
+
+  const { data, isLoading } = useUsersQuery(scopedParams);
   const toggleActive = useToggleUserActive();
   const deleteUser = useDeleteUser();
   const { openConfirm: confirmDelete, dialog: deleteDialog } = useDeleteConfirm((id) =>
@@ -65,7 +74,7 @@ export function UsersList() {
 
       <div className="space-y-4">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <UserSearch value={draftSearch} onChange={setDraftSearch} onSearch={handleSearch} />
+          <UserSearch value={draftSearch} onChange={setDraftSearch} onSearch={handleSearchOnly} />
           <div className="flex items-center gap-2 sm:ml-auto">
             <UsersFilter
               roleFilter={draftRole}

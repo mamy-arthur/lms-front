@@ -11,7 +11,7 @@ export function useUsersQuery(params?: UserSearchParams) {
     queryFn: async () => {
       const res = await adminUsersApi.list(params);
       return {
-        data: res.data.map((u) => normalizeUser(u as unknown as Record<string, unknown>)),
+        data: res.data.map((u) => normalizeUser(u)),
         total: res.total,
       };
     },

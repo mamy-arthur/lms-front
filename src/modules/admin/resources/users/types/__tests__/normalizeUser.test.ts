@@ -5,7 +5,6 @@
  * Cas couverts :
  *  - champs canoniques snake_case
  *  - full_name calculé depuis first_name + last_name si absent
- *  - is_active fallback (isActive)
  *  - profile_photo null si absent
  *  - updated_at null si absent
  *  - champs manquants → valeurs par défaut
@@ -102,11 +101,7 @@ describe('normalizeUser — fallbacks', () => {
     expect(user.full_name).toBe('Bob');
   });
 
-  it('is_active accepte isActive (camelCase)', () => {
-    expect(normalizeUser({ isActive: false }).is_active).toBe(false);
-  });
-
-  it('is_active vaut true si ni is_active ni isActive présents', () => {
+  it('is_active vaut true si absent', () => {
     expect(normalizeUser({}).is_active).toBe(true);
   });
 });
