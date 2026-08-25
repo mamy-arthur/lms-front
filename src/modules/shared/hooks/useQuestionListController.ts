@@ -4,7 +4,8 @@ import { useCallback, useState } from 'react';
 
 export interface QuestionSearchParams {
   q?: string;
-  type?: string;
+  types?: string;
+  competency_ids?: string;
   quiz_id?: string;
   sort_by?: string;
   sort_dir?: 'asc' | 'desc';
@@ -45,12 +46,20 @@ export function useQuestionListController<TQuestion>(opts?: UseQuestionListContr
     }));
   }, [draftSearch]);
 
-  const handleTypeChange = useCallback((value: string) => {
-    setParams((prev) => ({
-      ...prev,
-      type: value || undefined,
-      page: 0,
-    }));
+  const handleTypeToggle = useCallback((value: string) => {
+    setParams((prev) => {
+      const current = prev.types ? prev.types.split(',') : [];
+      const next = current.includes(value) ? current.filter((t) => t !== value) : [...current, value];
+      return { ...prev, types: next.length > 0 ? next.join(',') : undefined, page: 0 };
+    });
+  }, []);
+
+  const handleCompetencyToggle = useCallback((value: string) => {
+    setParams((prev) => {
+      const current = prev.competency_ids ? prev.competency_ids.split(',') : [];
+      const next = current.includes(value) ? current.filter((c) => c !== value) : [...current, value];
+      return { ...prev, competency_ids: next.length > 0 ? next.join(',') : undefined, page: 0 };
+    });
   }, []);
 
   const handleSort = useCallback((column: string) => {
@@ -97,7 +106,7 @@ export function useQuestionListController<TQuestion>(opts?: UseQuestionListContr
     column: params.sort_by ?? defaultSortBy,
     direction: (params.sort_dir as 'asc' | 'desc') ?? defaultSortDir,
   };
-  const hasQuery = !!(draftSearch || params.type);
+  const hasQuery = !!(draftSearch || params.types || params.competency_ids);
 
   return {
     isDrawerOpen,
@@ -107,7 +116,8 @@ export function useQuestionListController<TQuestion>(opts?: UseQuestionListContr
     params,
     handleSearch,
     handleSort,
-    handleTypeChange,
+    handleTypeToggle,
+    handleCompetencyToggle,
     handleOpenCreate,
     handleCloseDrawer,
     handleSuccess,

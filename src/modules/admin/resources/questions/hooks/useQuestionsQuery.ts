@@ -11,7 +11,8 @@ export function useQuestionsQuery(questionBankId: string, params?: QuestionSearc
     queryKey: quizItemKeys.listByBank(questionBankId, params),
     queryFn: async () => {
       const res = await questionBanksApi.listQuizzes(questionBankId, {
-        type: params?.type || undefined,
+        types: params?.types || undefined,
+        competency_ids: params?.competency_ids || undefined,
         q: params?.q,
         sort_by: params?.sort_by,
         sort_order: params?.sort_dir,
@@ -22,6 +23,7 @@ export function useQuestionsQuery(questionBankId: string, params?: QuestionSearc
       return {
         data,
         total: res.meta?.total ?? data.length,
+        bankCompetencyIds: res.meta?.competency_ids ?? [],
       };
     },
     enabled: !!questionBankId,

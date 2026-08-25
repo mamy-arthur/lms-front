@@ -19,7 +19,8 @@ export interface QuestionBankListParams {
 }
 
 export interface QuizListParams {
-  type?: string;
+  types?: string;
+  competency_ids?: string;
   q?: string;
   sort_by?: string;
   sort_order?: 'asc' | 'desc';
@@ -56,7 +57,8 @@ export const questionBanksApi = {
 
   listQuizzes: (questionBankId: string, params?: QuizListParams) => {
     const p: Record<string, unknown> = {};
-    if (params?.type) p.type = params.type;
+    if (params?.types) p.types = params.types;
+    if (params?.competency_ids) p.competency_ids = params.competency_ids;
     if (params?.q) p.q = params.q;
     if (params?.sort_by) p.sort_by = params.sort_by;
     if (params?.sort_order) p.sort_order = params.sort_order;
