@@ -58,6 +58,7 @@ export const learningPathCategoryKeys = {
 export const learningPathKeys = {
   all: ['learning-paths'] as const,
   lists: () => [...learningPathKeys.all, 'list'] as const,
+  list: (filters: object) => [...learningPathKeys.lists(), filters] as const,
   detail: (id: string) => [...learningPathKeys.all, 'detail', id] as const,
 };
 

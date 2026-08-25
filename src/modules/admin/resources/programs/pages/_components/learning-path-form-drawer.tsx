@@ -85,6 +85,7 @@ import type {
 } from '@/shared/types/progression-rule.types';
 import {
   DURATION_UNITS,
+  VALIDITY_UNITS,
   durationToMinutes,
   minutesToDuration,
   type DurationUnit,
@@ -1191,7 +1192,7 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {DURATION_UNITS.map((u) => (
+                        {VALIDITY_UNITS.map((u) => (
                           <SelectItem key={u.value} value={u.value}>
                             {u.label}
                           </SelectItem>

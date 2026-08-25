@@ -31,6 +31,8 @@ export interface LearningPath {
   description: string | null;
   idnumber: string | null;
   categoryId: string | null;
+  /** Resolved from JOIN on list endpoint — null on non-paginated responses. */
+  categoryName?: string | null;
   price: number | null;
   currency: string | null;
   image: LearningPathImage | null;
@@ -66,6 +68,7 @@ export function normalizeLearningPath(api: ApiLearningPath): LearningPath {
     description: api.description,
     idnumber: api.idnumber,
     categoryId: api.category_id,
+    categoryName: api.category_name ?? null,
     price: api.price,
     currency: api.currency,
     image: api.image

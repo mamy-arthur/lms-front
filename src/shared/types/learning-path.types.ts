@@ -61,6 +61,7 @@ export interface ApiLearningPath {
   description: string | null;
   idnumber: string | null;
   category_id: string | null;
+  category_name?: string | null;
   price: number | null;
   currency: string | null;
   image: ApiLearningPathImage | null;

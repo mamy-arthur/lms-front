@@ -9,6 +9,15 @@ export const DURATION_UNITS: { value: DurationUnit; label: string }[] = [
   { value: 'years', label: 'Années' },
 ];
 
+/** Unités proposées pour la validité d'accès. */
+export const VALIDITY_UNITS: { value: DurationUnit; label: string }[] = [
+  { value: 'minutes', label: 'Minutes' },
+  { value: 'hours', label: 'Heures' },
+  { value: 'days', label: 'Jours' },
+  { value: 'months', label: 'Mois' },
+  { value: 'years', label: 'Années' },
+];
+
 const UNIT_TO_MINUTES: Record<DurationUnit, number> = {
   minutes: 1,
   hours: 60,
