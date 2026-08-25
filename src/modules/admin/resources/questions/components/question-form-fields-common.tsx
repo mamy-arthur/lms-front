@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+'use client';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { UseFormReturn } from 'react-hook-form';
 import { FieldContent, FieldError, FieldGroup, FieldLabel, FieldRoot } from '@/components/ui/field';
@@ -10,7 +11,7 @@ import { useModulesInfinite } from '@/modules/admin/resources/modules/hooks/useM
 import { useDebounce } from '@/shared/hooks/useDebounce';
 import { adminModulesApi } from '@/modules/admin/resources/modules/api';
 import { normalizeModule } from '@/modules/admin/resources/modules/types';
-import type { FormValues } from './question-form-data';
+import type { FormValues } from '../validation';
 import { ChevronDown, Loader2, MessageSquarePlus, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -76,12 +77,11 @@ export function QuestionFormFieldsCommon({ form }: CommonFieldsProps) {
 
   const selectedLabel = selectedId ? labelCache[selectedId] : undefined;
 
-  // infinite scroll inside the popover list
-  const handleScroll = () => {
+  const handleScroll = useCallback(() => {
     const el = listRef.current;
     if (!el || isFetchingNextPage || !hasNextPage) return;
     if (el.scrollHeight - el.scrollTop - el.clientHeight < 60) fetchNextPage();
-  };
+  }, [isFetchingNextPage, hasNextPage, fetchNextPage]);
 
   return (
     <div className="flex h-full min-h-0 flex-col">

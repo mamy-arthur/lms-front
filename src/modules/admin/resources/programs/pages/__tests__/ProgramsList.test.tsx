@@ -268,7 +268,7 @@ function mockDefaults({
   detachCertificateMutateAsync?: jest.Mock;
 } = {}) {
   mockUseLearningPathsQuery.mockReturnValue({
-    data: paths,
+    data: { data: paths, total: paths.length },
     isLoading,
   } as unknown as ReturnType<typeof useLearningPathsQuery>);
 

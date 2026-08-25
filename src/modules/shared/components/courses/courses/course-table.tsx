@@ -1,6 +1,16 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
-import { BookOpen, ChevronDown, Plus, LayoutGrid, List, Settings2, X } from 'lucide-react';
+import {
+  BookOpen,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  LayoutGrid,
+  List,
+  Settings2,
+  X,
+} from 'lucide-react';
 import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -49,15 +59,17 @@ export function CourseTable({ basePath }: Props) {
     sort_order: 'asc',
   });
   const [draftSearch, setDraftSearch] = useState('');
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
 
   const { data: paginatedData, isLoading: coursesLoading } = usePaginatedCourses(params);
   const courses = paginatedData?.data ?? [];
   const total = paginatedData?.total ?? 0;
   const isLoading = coursesLoading || categoriesLoading;
 
+  const selectedCategories = params.category_ids ? params.category_ids.split(',') : [];
+
   const page = (params.page ?? 1) - 1; // DataTable uses 0-based
   const pageSize = params.per_page ?? 25;
+  const pageCount = useMemo(() => Math.max(1, Math.ceil(total / pageSize)), [total, pageSize]);
   const sort = {
     column: params.sort_by ?? 'full_name',
     direction: (params.sort_order ?? 'asc') as 'asc' | 'desc',
@@ -74,18 +86,15 @@ export function CourseTable({ basePath }: Props) {
 
   const handleCategoryChange = useCallback((value: string) => {
     if (value === 'all') {
-      setSelectedCategories([]);
       setParams((prev) => ({ ...prev, category_ids: undefined, page: 1 }));
       return;
     }
-    setSelectedCategories((prev) => {
-      const next = prev.includes(value) ? prev.filter((c) => c !== value) : [...prev, value];
-      setParams((p) => ({
-        ...p,
-        category_ids: next.length > 0 ? next.join(',') : undefined,
-        page: 1,
-      }));
-      return next;
+    setParams((prev) => {
+      const current = prev.category_ids ? prev.category_ids.split(',') : [];
+      const next = current.includes(value)
+        ? current.filter((c) => c !== value)
+        : [...current, value];
+      return { ...prev, category_ids: next.length > 0 ? next.join(',') : undefined, page: 1 };
     });
   }, []);
 
@@ -165,7 +174,6 @@ export function CourseTable({ basePath }: Props) {
                       checked={selectedCategories.includes(c.id)}
                       onCheckedChange={() => handleCategoryChange(c.id)}
                       className="mt-0.5 data-[state=checked]:bg-(--color-primary) data-[state=checked]:border-(--color-primary)"
-
                     />
                     {getCategoryPath(categories, c.id)}
                   </label>
@@ -270,23 +278,54 @@ export function CourseTable({ basePath }: Props) {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {courses.map((course) => (
-            <CourseCard
-              key={course.id}
-              course={course}
-              categories={categories}
-              getCategoryPath={getCategoryPath}
-              onEdit={(course) => setCourseDrawer({ open: true, course })}
-              onDelete={setConfirmDelete}
-              onToggleVisibility={(course) => {
-                toggleCourseVisibility(course.id);
-                toast.success(course.visible ? 'Cours masqué' : 'Cours rendu visible');
-              }}
-              href={() => `${basePath}/${course.id}`}
-            />
-          ))}
-        </div>
+        <>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {courses.map((course) => (
+              <CourseCard
+                key={course.id}
+                course={course}
+                categories={categories}
+                getCategoryPath={getCategoryPath}
+                onEdit={(course) => setCourseDrawer({ open: true, course })}
+                onDelete={setConfirmDelete}
+                onToggleVisibility={(course) => {
+                  toggleCourseVisibility(course.id);
+                  toast.success(course.visible ? 'Cours masqué' : 'Cours rendu visible');
+                }}
+                href={() => `${basePath}/${course.id}`}
+              />
+            ))}
+          </div>
+          {pageCount > 1 && (
+            <div className="flex items-center justify-between pt-2">
+              <span className="text-xs text-muted-foreground">
+                Page {page + 1} sur {pageCount}
+              </span>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="size-8"
+                  onClick={() => handlePageChange(page - 1)}
+                  disabled={page === 0}
+                  aria-label="Page précédente"
+                >
+                  <ChevronLeft className="size-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="size-8"
+                  onClick={() => handlePageChange(page + 1)}
+                  disabled={page >= pageCount - 1}
+                  aria-label="Page suivante"
+                >
+                  <ChevronRight className="size-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       <AlertDialog open={!!confirmDelete} onOpenChange={(o) => !o && setConfirmDelete(null)}>

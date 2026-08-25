@@ -9,8 +9,8 @@ import { FieldContent, FieldError, FieldGroup, FieldLabel, FieldRoot } from '@/c
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import type { QuestionType } from '../types';
-import type { FormValues } from './question-form-data';
-import { largestRemainder } from './question-form-data';
+import type { FormValues } from '../validation';
+import { largestRemainder } from '../validation';
 
 interface ChoicesFieldsProps {
   form: UseFormReturn<FormValues>;

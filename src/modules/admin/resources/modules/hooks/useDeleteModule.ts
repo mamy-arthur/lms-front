@@ -1,6 +1,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
+import { competencyKeys } from '@/shared/queries/keys';
 import { adminModulesApi } from '../api';
-import { ADMIN_MODULES_QUERY_KEY } from './useModules';
+import { getApiErrorMessage } from '@/shared/lib/errors';
 import { moduleQueryKey } from './useModule';
 
 export function useDeleteModule() {
@@ -9,8 +11,12 @@ export function useDeleteModule() {
   return useMutation({
     mutationFn: ({ id }: { id: string; idnumber: string }) => adminModulesApi.remove(id),
     onSuccess: (_data, { idnumber }) => {
-      queryClient.invalidateQueries({ queryKey: ADMIN_MODULES_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: competencyKeys.lists() });
       queryClient.removeQueries({ queryKey: moduleQueryKey(idnumber) });
+      toast.success('Module supprimé.');
+    },
+    onError: (err: unknown) => {
+      toast.error(getApiErrorMessage(err, 'Erreur lors de la suppression.'));
     },
   });
 }

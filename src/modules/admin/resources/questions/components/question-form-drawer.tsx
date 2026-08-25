@@ -31,12 +31,7 @@ import { QuestionFormFieldsChoices } from './question-form-fields-choices';
 import { QuestionFormFieldsCommon } from './question-form-fields-common';
 import { QuestionFormFieldsMatching } from './question-form-fields-matching';
 import { QuestionFormFieldsTrueFalse } from './question-form-fields-true-false';
-import {
-  buildQuestionPayload,
-  formSchema,
-  FormValues,
-  getCreateDefaults,
-} from './question-form-data';
+import { buildQuestionPayload, formSchema, FormValues, getCreateDefaults } from '../validation';
 import { TYPE_ICONS } from './question-form-constants';
 import { QuestionFormTypeSelect } from './question-form-type-select';
 import { Separator } from '@/components/ui/separator';

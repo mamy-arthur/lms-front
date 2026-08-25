@@ -66,7 +66,12 @@ export const questionBanksApi = {
     if (params?.per_page !== undefined) p.per_page = params.per_page;
     return apiGet<{
       data: ApiQuizItem[];
-      meta?: { total?: number; current_page?: number; per_page?: number };
+      meta?: {
+        total?: number;
+        current_page?: number;
+        per_page?: number;
+        competency_ids?: string[];
+      };
     }>(
       `platform/question-banks/${questionBankId}/quizzes`,
       Object.keys(p).length > 0 ? p : undefined,

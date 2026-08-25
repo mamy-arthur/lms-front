@@ -20,10 +20,11 @@ export function useQuestionsQuery(questionBankId: string, params?: QuestionSearc
         per_page: params?.page_size,
       });
       const data = res.data.map(normalizeQuestion);
+      const meta = res.meta;
       return {
         data,
-        total: res.meta?.total ?? data.length,
-        bankCompetencyIds: res.meta?.competency_ids ?? [],
+        total: meta?.total ?? data.length,
+        bankCompetencyIds: meta?.competency_ids ?? [],
       };
     },
     enabled: !!questionBankId,

@@ -13,7 +13,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Skeleton } from '@/components/ui/skeleton';
-import { DataTable, type DataTableColumn, type DataTableSort } from '@/shared/components/ui/DataTable';
+import {
+  DataTable,
+  type DataTableColumn,
+  type DataTableSort,
+} from '@/shared/components/ui/DataTable';
 import { ModuleSearch } from '@modules/shared/components/modules';
 import { formatDate } from '@/shared/lib/date';
 import { formatDuration } from '../../lib/duration';
@@ -130,7 +134,11 @@ function LearningPathsTableBase({
         render: (row) => (
           <div className="flex items-center gap-3">
             {row.image ? (
-              <img src={row.image.url} alt={row.name} className="size-8 shrink-0 rounded object-cover" />
+              <img
+                src={row.image.url}
+                alt={row.name}
+                className="size-8 shrink-0 rounded object-cover"
+              />
             ) : (
               <div className="size-8 shrink-0 rounded bg-muted" />
             )}
@@ -149,9 +157,7 @@ function LearningPathsTableBase({
         label: 'Catégorie',
         sortable: true,
         render: (row) => (
-          <span className="text-xs text-muted-foreground">
-            {row.categoryName ?? '—'}
-          </span>
+          <span className="text-xs text-muted-foreground">{row.categoryName ?? '—'}</span>
         ),
         skeleton: <Skeleton className="h-4 w-24" />,
       },
@@ -219,7 +225,7 @@ function LearningPathsTableBase({
         <div className="flex gap-2 flex-wrap items-center">
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" className="h-9 w-auto justify-between text-xs font-normal">
+              <Button variant="outline" className="w-auto justify-between text-xs font-normal">
                 {selectedCategories.length === 0
                   ? 'Toutes les catégories'
                   : `${selectedCategories.length} catégorie${selectedCategories.length > 1 ? 's' : ''}`}
@@ -229,7 +235,10 @@ function LearningPathsTableBase({
             <PopoverContent className="w-60 p-2" align="end">
               <div className="space-y-0.5">
                 {categories.map((cat) => (
-                  <label key={cat.id} className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 hover:bg-muted text-xs">
+                  <label
+                    key={cat.id}
+                    className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 hover:bg-muted text-xs"
+                  >
                     <Checkbox
                       checked={selectedCategories.includes(cat.id)}
                       onCheckedChange={() => onCategoryChange(cat.id)}
@@ -253,7 +262,10 @@ function LearningPathsTableBase({
             <Settings2 />
             Gérer les catégories
           </Button>
-          <Button onClick={onNew} className="gap-1.5 bg-(--color-primary) hover:bg-(--color-primary)/80">
+          <Button
+            onClick={onNew}
+            className="gap-1.5 bg-(--color-primary) hover:bg-(--color-primary)/80"
+          >
             <Plus className="size-3.5" />
             Nouveau parcours
           </Button>
@@ -265,7 +277,11 @@ function LearningPathsTableBase({
           {selectedCategories.map((id) => {
             const cat = categories.find((c) => c.id === id);
             return (
-              <Badge key={id} variant="outline" className="h-6 gap-1 px-2 text-xs font-normal bg-(--color-primary) text-white">
+              <Badge
+                key={id}
+                variant="outline"
+                className="h-6 gap-1 px-2 text-xs font-normal bg-(--color-primary) text-white"
+              >
                 {cat?.name ?? id}
                 <button
                   onClick={() => onCategoryChange(id)}

@@ -34,16 +34,15 @@ interface AvailableCourseRaw {
 }
 
 export const adminModulesApi = {
-  list: (params: ListParams) => {
-    const query = new URLSearchParams();
-    query.set('page', String(params.page ?? 1));
-    query.set('per_page', String(params.per_page ?? 25));
-    if (params.q) query.set('q', params.q);
-    if (params.category_ids) query.set('category_ids', params.category_ids);
-    if (params.sort_by) query.set('sort_by', params.sort_by);
-    if (params.sort_order) query.set('sort_order', params.sort_order);
-    return apiGet<CompetencyListApiResponse>(`${BASE}?${query.toString()}`);
-  },
+  list: (params: ListParams) =>
+    apiGet<CompetencyListApiResponse>(BASE, {
+      page: params.page ?? 1,
+      per_page: params.per_page ?? 25,
+      q: params.q,
+      category_ids: params.category_ids,
+      sort_by: params.sort_by,
+      sort_order: params.sort_order,
+    }),
 
   getById: (id: string) => apiGet<{ data: CompetencyApiResponse }>(`${BASE}/${id}`),
 
@@ -82,10 +81,10 @@ export const adminModulesApi = {
   },
 
   availableCourses: async (competencyId?: string): Promise<AvailableCourse[]> => {
-    const url = competencyId
-      ? `${BASE}/available-courses?competency_id=${encodeURIComponent(competencyId)}`
-      : `${BASE}/available-courses`;
-    const res = await apiGet<{ data: AvailableCourseRaw[] }>(url);
+    const res = await apiGet<{ data: AvailableCourseRaw[] }>(
+      `${BASE}/available-courses`,
+      competencyId ? { competency_id: competencyId } : undefined,
+    );
     return (res.data ?? []).map(
       (c) =>
         ({

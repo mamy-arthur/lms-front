@@ -252,10 +252,10 @@ describe('questionBanksApi', () => {
     it('transmet le filtre type si fourni', async () => {
       mockApiGet.mockResolvedValue({ data: [] });
 
-      await questionBanksApi.listQuizzes('bank-1', { type: 'multiple_choice' });
+      await questionBanksApi.listQuizzes('bank-1', { types: 'multiple_choice' });
 
       expect(mockApiGet).toHaveBeenCalledWith('platform/question-banks/bank-1/quizzes', {
-        type: 'multiple_choice',
+        types: 'multiple_choice',
       });
     });
 

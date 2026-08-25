@@ -1,11 +1,11 @@
 import { apiGet, apiPost } from '@/shared/lib/apiClient';
-import type {
-  ApiPortalLearningPathSummary,
-  ApiPortalContentEntry,
-  ApiLearnerEvaluation,
-} from '@/shared/types/portal.types';
 import type { ApiMeEnrollmentsResponse } from '@/shared/types/enrollment.types';
 import type { ApiEvaluationAttempt } from '@/shared/types/evaluation-attempt.types';
+import type {
+  ApiLearnerEvaluation,
+  ApiPortalContentEntry,
+  ApiPortalLearningPathSummary,
+} from '@/shared/types/portal.types';
 
 export const portalLearningPathsApi = {
   summary: (enrollmentId: string) =>

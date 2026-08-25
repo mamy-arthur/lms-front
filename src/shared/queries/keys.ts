@@ -149,3 +149,10 @@ export const progressionRuleKeys = {
   listByLearningPath: (learningPathId: string) =>
     [...progressionRuleKeys.all, 'list', learningPathId] as const,
 };
+
+export const competencyKeys = {
+  all: ['admin', 'modules'] as const,
+  lists: () => [...competencyKeys.all, 'list'] as const,
+  list: (filters: object) => [...competencyKeys.lists(), filters] as const,
+  detail: (id: string) => [...competencyKeys.all, 'detail', id] as const,
+};

@@ -1,5 +1,5 @@
 /**
- * Tests unitaires — question-form-data
+ * Tests unitaires — questions/validation
  *
  * Couvre :
  *  - largestRemainder  : algorithme de normalisation (méthode du plus grand reste)
@@ -8,13 +8,8 @@
  *  - getCreateDefaults : valeurs initiales du formulaire
  */
 
-import {
-  largestRemainder,
-  formSchema,
-  buildQuestionPayload,
-  getCreateDefaults,
-} from '../question-form-data';
-import type { FormValues } from '../question-form-data';
+import { largestRemainder, formSchema, buildQuestionPayload, getCreateDefaults } from '..';
+import type { FormValues } from '..';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -393,7 +388,7 @@ describe('buildQuestionPayload()', () => {
       const payload = buildQuestionPayload(values, BANK_ID);
       const correctWeights = payload.options
         .filter((o) => o.isCorrect)
-        .map((o) => o.weight_percentage!);
+        .map((o) => o.weightPercentage!);
 
       expect(correctWeights.reduce((s, v) => s + v, 0)).toBe(100);
     });
@@ -408,7 +403,7 @@ describe('buildQuestionPayload()', () => {
       });
 
       const payload = buildQuestionPayload(values, BANK_ID);
-      const [a, b] = payload.options.map((o) => o.weight_percentage!);
+      const [a, b] = payload.options.map((o) => o.weightPercentage!);
 
       expect(a).toBe(88);
       expect(b).toBe(12);
@@ -426,7 +421,7 @@ describe('buildQuestionPayload()', () => {
       const payload = buildQuestionPayload(values, BANK_ID);
       const correctOption = payload.options.find((o) => o.isCorrect)!;
 
-      expect(correctOption.weight_percentage).toBe(100);
+      expect(correctOption.weightPercentage).toBe(100);
     });
 
     it('50/50 reste 50/50', () => {
@@ -439,7 +434,7 @@ describe('buildQuestionPayload()', () => {
       });
 
       const payload = buildQuestionPayload(values, BANK_ID);
-      const [a, b] = payload.options.map((o) => o.weight_percentage!);
+      const [a, b] = payload.options.map((o) => o.weightPercentage!);
 
       expect(a).toBe(50);
       expect(b).toBe(50);
@@ -458,8 +453,8 @@ describe('buildQuestionPayload()', () => {
       const payload = buildQuestionPayload(values, BANK_ID);
       const incorrects = payload.options.filter((o) => !o.isCorrect);
 
-      expect(incorrects[0].weight_percentage).toBe(-40);
-      expect(incorrects[1].weight_percentage).toBe(-20);
+      expect(incorrects[0].weightPercentage).toBe(-40);
+      expect(incorrects[1].weightPercentage).toBe(-20);
     });
 
     it('distribue équitablement si tous les poids corrects sont 0', () => {
@@ -474,13 +469,13 @@ describe('buildQuestionPayload()', () => {
       const payload = buildQuestionPayload(values, BANK_ID);
       const correctWeights = payload.options
         .filter((o) => o.isCorrect)
-        .map((o) => o.weight_percentage!);
+        .map((o) => o.weightPercentage!);
 
       expect(correctWeights).toEqual([50, 50]);
       expect(correctWeights.reduce((s, v) => s + v, 0)).toBe(100);
     });
 
-    it('inclut weight_percentage dans le payload options', () => {
+    it('inclut weightPercentage dans le payload options', () => {
       const values = baseValues({
         type: 'multiple_choice',
         options: [
@@ -492,7 +487,7 @@ describe('buildQuestionPayload()', () => {
       const payload = buildQuestionPayload(values, BANK_ID);
 
       payload.options.forEach((o) => {
-        expect(o).toHaveProperty('weight_percentage');
+        expect(o).toHaveProperty('weightPercentage');
       });
     });
   });
@@ -500,7 +495,7 @@ describe('buildQuestionPayload()', () => {
   // ── single_choice ──────────────────────────────────────────────────────────
 
   describe('single_choice', () => {
-    it("n'inclut pas weight_percentage dans le payload options", () => {
+    it("n'inclut pas weightPercentage dans le payload options", () => {
       const values = baseValues({
         type: 'single_choice',
         options: [
@@ -512,7 +507,7 @@ describe('buildQuestionPayload()', () => {
       const payload = buildQuestionPayload(values, BANK_ID);
 
       payload.options.forEach((o) => {
-        expect(o).not.toHaveProperty('weight_percentage');
+        expect(o).not.toHaveProperty('weightPercentage');
       });
     });
 
@@ -547,7 +542,7 @@ describe('buildQuestionPayload()', () => {
   // ── matching ───────────────────────────────────────────────────────────────
 
   describe('matching', () => {
-    it('répartit automatiquement weight_percentage entre les paires', () => {
+    it('répartit automatiquement weightPercentage entre les paires', () => {
       const values = baseValues({
         type: 'matching',
         pairs: [
@@ -561,7 +556,7 @@ describe('buildQuestionPayload()', () => {
       const payload = buildQuestionPayload(values, BANK_ID);
 
       payload.pairs.forEach((p) => {
-        expect(p.weight_percentage).toBe(25); // 100 / 4
+        expect(p.weightPercentage).toBe(25); // 100 / 4
       });
     });
 
@@ -573,7 +568,7 @@ describe('buildQuestionPayload()', () => {
 
       const payload = buildQuestionPayload(values, BANK_ID);
 
-      expect(payload.pairs[0].weight_percentage).toBe(100);
+      expect(payload.pairs[0].weightPercentage).toBe(100);
     });
   });
 

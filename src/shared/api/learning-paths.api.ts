@@ -39,18 +39,18 @@ export interface LearningPathListParams {
 }
 
 export const learningPathsApi = {
-  list: (params: LearningPathListParams = {}) => {
-    const query = new URLSearchParams();
-    query.set('page', String(params.page ?? 1));
-    query.set('per_page', String(params.per_page ?? 25));
-    if (params.q) query.set('q', params.q);
-    if (params.category_ids) query.set('category_ids', params.category_ids);
-    if (params.sort_by) query.set('sort_by', params.sort_by);
-    if (params.sort_order) query.set('sort_order', params.sort_order);
-    return apiGet<{ data: ApiLearningPath[]; meta?: { total?: number; current_page?: number; per_page?: number } }>(
-      `platform/learning-paths?${query.toString()}`,
-    );
-  },
+  list: (params: LearningPathListParams = {}) =>
+    apiGet<{
+      data: ApiLearningPath[];
+      meta?: { total?: number; current_page?: number; per_page?: number };
+    }>('platform/learning-paths', {
+      page: params.page ?? 1,
+      per_page: params.per_page ?? 25,
+      q: params.q,
+      category_ids: params.category_ids,
+      sort_by: params.sort_by,
+      sort_order: params.sort_order,
+    }),
 
   get: (id: string) => apiGet<{ data: ApiLearningPath }>(`platform/learning-paths/${id}`),
 

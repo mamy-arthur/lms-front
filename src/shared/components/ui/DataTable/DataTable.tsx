@@ -1,7 +1,7 @@
 'use client';
 
 import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react';
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   Pagination,
   PaginationContent,
@@ -120,12 +120,16 @@ export function DataTable<T extends { id: string | number }>({
 }: DataTableProps<T>) {
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
 
+  // Always hold the latest onPageChange without adding it to the effect's deps.
+  const onPageChangeRef = useRef(onPageChange);
+  onPageChangeRef.current = onPageChange;
+
   // Revient à la page 0 si le serveur renvoie une page vide alors qu'il reste des données.
   useEffect(() => {
     if (!isLoading && data.length === 0 && total > 0 && page > 0) {
-      onPageChange(0);
+      onPageChangeRef.current(0);
     }
-  }, [isLoading, data.length, total, page, onPageChange]);
+  }, [isLoading, data.length, total, page]);
 
   const sortedData = useMemo(() => {
     // Si onSort est défini, le tri est géré côté serveur — ne pas retrier côté client.

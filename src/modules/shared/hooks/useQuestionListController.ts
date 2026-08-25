@@ -49,17 +49,29 @@ export function useQuestionListController<TQuestion>(opts?: UseQuestionListContr
   const handleTypeToggle = useCallback((value: string) => {
     setParams((prev) => {
       const current = prev.types ? prev.types.split(',') : [];
-      const next = current.includes(value) ? current.filter((t) => t !== value) : [...current, value];
+      const next = current.includes(value)
+        ? current.filter((t) => t !== value)
+        : [...current, value];
       return { ...prev, types: next.length > 0 ? next.join(',') : undefined, page: 0 };
     });
+  }, []);
+
+  const handleClearTypes = useCallback(() => {
+    setParams((prev) => ({ ...prev, types: undefined, page: 0 }));
   }, []);
 
   const handleCompetencyToggle = useCallback((value: string) => {
     setParams((prev) => {
       const current = prev.competency_ids ? prev.competency_ids.split(',') : [];
-      const next = current.includes(value) ? current.filter((c) => c !== value) : [...current, value];
+      const next = current.includes(value)
+        ? current.filter((c) => c !== value)
+        : [...current, value];
       return { ...prev, competency_ids: next.length > 0 ? next.join(',') : undefined, page: 0 };
     });
+  }, []);
+
+  const handleClearCompetencies = useCallback(() => {
+    setParams((prev) => ({ ...prev, competency_ids: undefined, page: 0 }));
   }, []);
 
   const handleSort = useCallback((column: string) => {
@@ -117,7 +129,9 @@ export function useQuestionListController<TQuestion>(opts?: UseQuestionListContr
     handleSearch,
     handleSort,
     handleTypeToggle,
+    handleClearTypes,
     handleCompetencyToggle,
+    handleClearCompetencies,
     handleOpenCreate,
     handleCloseDrawer,
     handleSuccess,

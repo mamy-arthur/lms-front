@@ -1,5 +1,17 @@
-import type { Module } from '@/modules/shared/lib/normalizers';
-export type { Module };
+export interface Module {
+  id: string;
+  shortname: string;
+  idnumber: string;
+  description: string;
+  /** Competency category id (backend field `category_id`). */
+  category_id: string | null;
+  /** Resolved category name from the list endpoint JOIN. */
+  category_name: string | null;
+  tenantId: string;
+  courseIds: string[];
+  createdAt: string;
+  updatedAt: string;
+}
 
 export interface ModulePayload {
   shortname: string;

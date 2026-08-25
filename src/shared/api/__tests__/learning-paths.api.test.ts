@@ -61,7 +61,11 @@ describe('learning paths APIs', () => {
       await learningPathsApi.update('lp-1', { name: 'LP 1 updated' } as never);
       await learningPathsApi.remove('lp-1');
 
-      expect(mockApiGet).toHaveBeenNthCalledWith(1, 'platform/learning-paths');
+      expect(mockApiGet).toHaveBeenNthCalledWith(
+        1,
+        'platform/learning-paths',
+        expect.objectContaining({ page: 1, per_page: 25 }),
+      );
       expect(mockApiGet).toHaveBeenNthCalledWith(2, 'platform/learning-paths/lp-1');
       expect(mockApiPost).toHaveBeenCalledWith('platform/learning-paths', { name: 'LP 1' });
       expect(mockApiPatch).toHaveBeenCalledWith('platform/learning-paths/lp-1', {

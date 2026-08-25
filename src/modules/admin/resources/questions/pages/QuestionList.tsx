@@ -32,10 +32,7 @@ export function QuestionList({ quizId }: { quizId: string }) {
     return (modulesData?.data ?? []).filter((m) => ids.has(m.id));
   }, [modulesData?.data, data?.bankCompetencyIds]);
 
-  const moduleNameById = useMemo(
-    () => new Map(modules.map((m) => [m.id, m.shortname])),
-    [modules],
-  );
+  const moduleNameById = useMemo(() => new Map(modules.map((m) => [m.id, m.shortname])), [modules]);
 
   const selectedTypes = useMemo(
     () => (ctrl.params.types ? ctrl.params.types.split(',') : []),
@@ -81,12 +78,14 @@ export function QuestionList({ quizId }: { quizId: string }) {
               <PopoverContent className="w-52 p-2" align="end">
                 <div className="space-y-0.5">
                   {QUESTION_TYPE_OPTIONS.map((opt) => (
-                    <label key={opt.value} className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 hover:bg-muted text-xs">
+                    <label
+                      key={opt.value}
+                      className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 hover:bg-muted text-xs"
+                    >
                       <Checkbox
                         checked={selectedTypes.includes(opt.value)}
                         onCheckedChange={() => ctrl.handleTypeToggle(opt.value)}
                         className="data-[state=checked]:bg-(--color-primary) data-[state=checked]:border-(--color-primary)"
-
                       />
                       {opt.label}
                     </label>
@@ -95,7 +94,7 @@ export function QuestionList({ quizId }: { quizId: string }) {
                 {selectedTypes.length > 0 && (
                   <button
                     className="mt-1.5 w-full rounded px-2 py-1 text-center text-xs text-muted-foreground hover:bg-muted"
-                    onClick={() => selectedTypes.forEach((t) => ctrl.handleTypeToggle(t))}
+                    onClick={ctrl.handleClearTypes}
                   >
                     Effacer
                   </button>
@@ -116,24 +115,28 @@ export function QuestionList({ quizId }: { quizId: string }) {
               <PopoverContent className="w-64 p-2" align="end">
                 <div className="max-h-56 overflow-y-auto space-y-0.5">
                   {modules.map((m) => (
-                    <label key={m.id} className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 hover:bg-muted text-xs">
+                    <label
+                      key={m.id}
+                      className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 hover:bg-muted text-xs"
+                    >
                       <Checkbox
                         checked={selectedCompetencyIds.includes(m.id)}
                         onCheckedChange={() => ctrl.handleCompetencyToggle(m.id)}
                         className="data-[state=checked]:bg-(--color-primary) data-[state=checked]:border-(--color-primary)"
-
                       />
                       {m.shortname}
                     </label>
                   ))}
                   {modules.length === 0 && (
-                    <p className="px-2 py-3 text-center text-xs text-muted-foreground">Aucun module</p>
+                    <p className="px-2 py-3 text-center text-xs text-muted-foreground">
+                      Aucun module
+                    </p>
                   )}
                 </div>
                 {selectedCompetencyIds.length > 0 && (
                   <button
                     className="mt-1.5 w-full rounded px-2 py-1 text-center text-xs text-muted-foreground hover:bg-muted"
-                    onClick={() => selectedCompetencyIds.forEach((id) => ctrl.handleCompetencyToggle(id))}
+                    onClick={ctrl.handleClearCompetencies}
                   >
                     Effacer
                   </button>
@@ -154,7 +157,11 @@ export function QuestionList({ quizId }: { quizId: string }) {
         {selectedCompetencyIds.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
             {selectedCompetencyIds.map((id) => (
-              <Badge key={id} variant="outline" className="h-6 gap-1 px-2 text-xs font-normal bg-(--color-primary) text-white">
+              <Badge
+                key={id}
+                variant="outline"
+                className="h-6 gap-1 px-2 text-xs font-normal bg-(--color-primary) text-white"
+              >
                 {moduleNameById.get(id) ?? id}
                 <button
                   onClick={() => ctrl.handleCompetencyToggle(id)}

@@ -1,7 +1,7 @@
 'use client';
 
 import { MOCK_QUESTIONS } from '@modules/shared/components/questions/mocks/questions.mock';
-import { normalizeQuestion } from '@/modules/shared/lib/normalizers';
+import { normalizeQuestion } from '@/modules/shared/lib/question-types';
 import { Quiz } from '../components/Quiz';
 
 /**

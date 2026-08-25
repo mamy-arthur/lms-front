@@ -64,7 +64,10 @@ describe('adminModulesApi', () => {
       await adminModulesApi.list({ page: 1, per_page: 25 });
 
       expect(mockApiGet).toHaveBeenCalledTimes(1);
-      expect(mockApiGet).toHaveBeenCalledWith(expect.stringMatching(/^platform\/competencies\?/));
+      expect(mockApiGet).toHaveBeenCalledWith(
+        'platform/competencies',
+        expect.objectContaining({ page: 1, per_page: 25 }),
+      );
     });
 
     it('inclut le paramètre de recherche quand q est fourni', async () => {
@@ -72,7 +75,10 @@ describe('adminModulesApi', () => {
 
       await adminModulesApi.list({ q: 'web' });
 
-      expect(mockApiGet).toHaveBeenCalledWith(expect.stringContaining('q=web'));
+      expect(mockApiGet).toHaveBeenCalledWith(
+        'platform/competencies',
+        expect.objectContaining({ q: 'web' }),
+      );
     });
 
     it('inclut le tri quand sort_by est fourni', async () => {
@@ -80,9 +86,10 @@ describe('adminModulesApi', () => {
 
       await adminModulesApi.list({ sort_by: 'shortname', sort_order: 'asc' });
 
-      const url = mockApiGet.mock.calls[0][0] as string;
-      expect(url).toContain('sort_by=shortname');
-      expect(url).toContain('sort_order=asc');
+      expect(mockApiGet).toHaveBeenCalledWith(
+        'platform/competencies',
+        expect.objectContaining({ sort_by: 'shortname', sort_order: 'asc' }),
+      );
     });
 
     it('propage les erreurs réseau', async () => {
@@ -274,7 +281,7 @@ describe('adminModulesApi', () => {
 
       await adminModulesApi.availableCourses();
 
-      expect(mockApiGet).toHaveBeenCalledWith('platform/competencies/available-courses');
+      expect(mockApiGet).toHaveBeenCalledWith('platform/competencies/available-courses', undefined);
     });
 
     it('ajoute le paramètre competency_id en mode édition', async () => {
@@ -282,9 +289,9 @@ describe('adminModulesApi', () => {
 
       await adminModulesApi.availableCourses('mod-uuid-001');
 
-      expect(mockApiGet).toHaveBeenCalledWith(
-        'platform/competencies/available-courses?competency_id=mod-uuid-001',
-      );
+      expect(mockApiGet).toHaveBeenCalledWith('platform/competencies/available-courses', {
+        competency_id: 'mod-uuid-001',
+      });
     });
 
     it('normalise la réponse en AvailableCourse[]', async () => {
