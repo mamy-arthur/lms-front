@@ -1,9 +1,11 @@
 'use client';
 import * as React from 'react';
 import { NavMain } from './nav-main';
+import { DevBanner } from './dev-banner';
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarHeader,
   SidebarRail,
   useSidebar,
@@ -38,6 +40,9 @@ export function AppSidebar({ navItems, ...props }: AppSidebarProps) {
       <SidebarContent>
         <NavMain items={navItems ?? []} />
       </SidebarContent>
+      <SidebarFooter>
+        <DevBanner />
+      </SidebarFooter>
       <SidebarRail />
     </Sidebar>
   );
