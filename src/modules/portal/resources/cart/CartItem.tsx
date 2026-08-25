@@ -16,9 +16,9 @@ export function CartItem({ item }: CartItemProps) {
   const coverImage = getCartItemCoverImage(item);
 
   return (
-    <div className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-4 rounded-lg bg-gray-50 p-4">
+    <div className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-4 bg-gray-50/50 p-4">
       <div className="flex gap-3">
-        <div className="h-18 w-24 shrink-0 overflow-hidden rounded-md bg-muted">
+        <div className="h-18 w-24 shrink-0 overflow-hidden rounded-sm bg-muted">
           {coverImage ? (
             <img src={coverImage} alt={item.name} className="h-full w-full object-cover" />
           ) : (

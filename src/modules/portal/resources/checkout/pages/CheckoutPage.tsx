@@ -1,10 +1,8 @@
 'use client';
 
-import { ShoppingCart, Lock, Loader2 } from 'lucide-react';
-
+import { ShoppingCart, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { formatCartMoney } from '@/modules/portal/resources/cart/cart-utils';
 import { useCheckoutController } from '../hooks/useCheckoutController';
 import { CheckoutSuccessDialog } from './_components/CheckoutSuccessDialog';
 import { CheckoutUserInfo } from './_components/CheckoutUserInfo';
@@ -89,17 +87,24 @@ export function CheckoutPage() {
         </p>
       </div>
 
-      <div className="grid gap-8 lg:grid-cols-[60%_1fr]">
+      <div className="grid gap-4 lg:grid-cols-[60%_1fr]">
+        <CheckoutOrderSummary
+          cartItems={cartItems}
+          cartCount={cartCount}
+          subtotal={subtotal}
+          total={total}
+          currency={currency}
+          discount={discount}
+        />
         <div className="space-y-4">
-          <CheckoutUserInfo name={user?.name ?? ''} email={user?.email ?? ''} />
-
-          <CheckoutPaymentMethod
-            value={paymentMethod}
-            onChange={setPaymentMethod}
-            disabled={isSubmitting}
-          />
-
-          <section className="rounded-xl border border-border bg-card p-6">
+          <section className="rounded-sm border border-border bg-card p-6 flex flex-col space-y-5">
+            <h2 className="mb-4 text-xs font-semibold">Mode de paiement</h2>
+            <CheckoutUserInfo name={user?.name ?? ''} email={user?.email ?? ''} />
+            <CheckoutPaymentMethod
+              value={paymentMethod}
+              onChange={setPaymentMethod}
+              disabled={isSubmitting}
+            />
             <Button
               type="button"
               className="h-9 w-full bg-(--color-primary) text-xs font-semibold hover:bg-(--color-primary)/80 disabled:opacity-60"
@@ -112,24 +117,11 @@ export function CheckoutPage() {
                   Traitement du paiement...
                 </>
               ) : (
-                <>Payer maintenant — {formatCartMoney(total, currency)}</>
+                <>Payer maintenant</>
               )}
             </Button>
-            <div className="mt-4 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
-              <Lock className="size-3 shrink-0" />
-              <span>Paiement sécurisé — Vos informations de paiement sont protégées.</span>
-            </div>
           </section>
         </div>
-
-        <CheckoutOrderSummary
-          cartItems={cartItems}
-          cartCount={cartCount}
-          subtotal={subtotal}
-          total={total}
-          currency={currency}
-          discount={discount}
-        />
       </div>
     </div>
   );
