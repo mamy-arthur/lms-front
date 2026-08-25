@@ -1,8 +1,9 @@
 'use client';
 
-import { MoreHorizontal, Pencil, Plus, Settings2, MapIcon, ChevronDown } from 'lucide-react';
+import { MoreHorizontal, Pencil, Plus, Settings2, MapIcon, ChevronDown, X } from 'lucide-react';
 import { memo, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
@@ -258,6 +259,27 @@ function LearningPathsTableBase({
           </Button>
         </div>
       </div>
+
+      {selectedCategories.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {selectedCategories.map((id) => {
+            const cat = categories.find((c) => c.id === id);
+            return (
+              <Badge key={id} variant="outline" className="h-6 gap-1 px-2 text-xs font-normal bg-(--color-primary) text-white">
+                {cat?.name ?? id}
+                <button
+                  onClick={() => onCategoryChange(id)}
+                  className="ml-0.5 rounded-sm opacity-60 hover:opacity-100"
+                  aria-label="Retirer ce filtre"
+                >
+                  <X className="size-3" />
+                </button>
+              </Badge>
+            );
+          })}
+        </div>
+      )}
+
       <DataTable
         data={learningPaths}
         columns={columns}

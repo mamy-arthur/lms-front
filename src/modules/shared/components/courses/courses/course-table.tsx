@@ -1,7 +1,8 @@
 import { useCallback, useState } from 'react';
 
-import { BookOpen, ChevronDown, Plus, LayoutGrid, List, Settings2 } from 'lucide-react';
+import { BookOpen, ChevronDown, Plus, LayoutGrid, List, Settings2, X } from 'lucide-react';
 import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -145,7 +146,7 @@ export function CourseTable({ basePath }: Props) {
             <PopoverTrigger asChild>
               <Button
                 variant="outline"
-                className="w-full sm:w-56 h-9 justify-between text-xs font-normal"
+                className="w-full sm:w-56 justify-between text-xs font-normal"
               >
                 {selectedCategories.length === 0
                   ? 'Toutes les catégories'
@@ -193,6 +194,27 @@ export function CourseTable({ basePath }: Props) {
           </Button>
         </div>
       </div>
+
+      {selectedCategories.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {selectedCategories.map((id) => (
+            <Badge
+              key={id}
+              variant="outline"
+              className="h-6 gap-1 px-2 text-xs font-normal  bg-(--color-primary) text-white"
+            >
+              {getCategoryPath(categories, id)}
+              <button
+                onClick={() => handleCategoryChange(id)}
+                className="ml-0.5 rounded-sm opacity-60 hover:opacity-100"
+                aria-label="Retirer ce filtre"
+              >
+                <X className="size-3" />
+              </button>
+            </Badge>
+          ))}
+        </div>
+      )}
 
       {view === 'table' ? (
         <CourseDataTable

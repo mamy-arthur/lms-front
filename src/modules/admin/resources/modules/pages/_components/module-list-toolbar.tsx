@@ -1,6 +1,7 @@
 'use client';
 
-import { ChevronDown, Plus, Settings2 } from 'lucide-react';
+import { ChevronDown, Plus, Settings2, X } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -29,6 +30,7 @@ export function ModuleListToolbar({
   onCreateModule,
 }: ModuleListToolbarProps) {
   return (
+    <div className="space-y-3">
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <ModuleSearch value={draftSearch} onChange={onDraftSearchChange} onSearch={onSearch} />
       <div className="flex w-full flex-col gap-2 sm:ml-auto sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
@@ -90,6 +92,27 @@ export function ModuleListToolbar({
           </Button>
         </div>
       </div>
+    </div>
+
+    {selectedCategories.length > 0 && (
+      <div className="flex flex-wrap gap-1.5">
+        {selectedCategories.map((id) => {
+          const cat = filterCategories.find((c) => c.id === id);
+          return (
+            <Badge key={id} variant="outline" className="h-6 gap-1 px-2 text-xs font-normal bg-(--color-primary) text-white">
+              {cat?.name ?? id}
+              <button
+                onClick={() => onCategoryFilterChange(id)}
+                className="ml-0.5 rounded-sm opacity-60 hover:opacity-100"
+                aria-label="Retirer ce filtre"
+              >
+                <X className="size-3" />
+              </button>
+            </Badge>
+          );
+        })}
+      </div>
+    )}
     </div>
   );
 }
