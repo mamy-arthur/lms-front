@@ -1,14 +1,15 @@
 /**
- * Tests unitaires — resolveRedirectPath()
+ * Tests unitaires — resolveRedirectPath() + clearSessionCache()
  *
- * Fonction pure : aucun effet de bord, aucun mock nécessaire.
- * On vérifie la table de décision décrite dans le JSDoc de loginUtils.ts.
+ * resolveRedirectPath est une fonction pure : aucun mock nécessaire.
+ * clearSessionCache délègue à queryClient : on mocke le module pour
+ * vérifier l'appel et le prédicat sans dépendance réseau.
  *
  * Note : on mock `@/shared/api/auth.api` pour éviter de charger
  * transitivamente `react-admin` (apiClient.ts → react-admin), qui n'est
  * pas utile pour tester une fonction pure.
  */
-import { resolveRedirectPath } from '../loginUtils';
+import { resolveRedirectPath, clearSessionCache } from '../loginUtils';
 import { Role } from '@/shared/constants/roles';
 import { ROUTES } from '@/shared/constants/routes';
 import type { AuthUser } from '@/shared/types/auth.types';
@@ -21,6 +22,11 @@ jest.mock('@/shared/api/auth.api', () => ({
     forgotPassword: jest.fn(),
     resetPassword: jest.fn(),
   },
+}));
+
+const mockRemoveQueries = jest.fn();
+jest.mock('@/shared/lib/query-client', () => ({
+  queryClient: { removeQueries: (...args: unknown[]) => mockRemoveQueries(...args) },
 }));
 
 /** Fabrique un AuthUser minimal pour les besoins du test. */
@@ -69,5 +75,36 @@ describe('resolveRedirectPath', () => {
     it('redirige vers /tenant-not-found sans tenant', () => {
       expect(resolveRedirectPath(makeUser(Role.TRAINEE), false)).toBe(ROUTES.tenantNotFound);
     });
+  });
+});
+
+describe('clearSessionCache', () => {
+  beforeEach(() => mockRemoveQueries.mockClear());
+
+  it('appelle queryClient.removeQueries une seule fois', () => {
+    clearSessionCache();
+    expect(mockRemoveQueries).toHaveBeenCalledTimes(1);
+  });
+
+  it('passe un prédicat qui exclut les requêtes tenant', () => {
+    clearSessionCache();
+    const [{ predicate }] = mockRemoveQueries.mock.calls[0] as [
+      { predicate: (q: { queryKey: unknown[] }) => boolean },
+    ];
+
+    expect(predicate({ queryKey: ['tenant'] })).toBe(false);
+    expect(predicate({ queryKey: ['tenant', 'current'] })).toBe(false);
+  });
+
+  it('passe un prédicat qui inclut toutes les autres requêtes', () => {
+    clearSessionCache();
+    const [{ predicate }] = mockRemoveQueries.mock.calls[0] as [
+      { predicate: (q: { queryKey: unknown[] }) => boolean },
+    ];
+
+    expect(predicate({ queryKey: ['users'] })).toBe(true);
+    expect(predicate({ queryKey: ['carts', 'active'] })).toBe(true);
+    expect(predicate({ queryKey: ['courses'] })).toBe(true);
+    expect(predicate({ queryKey: ['portal', 'learning-paths'] })).toBe(true);
   });
 });
