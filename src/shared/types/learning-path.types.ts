@@ -174,11 +174,16 @@ export interface LinkCompetencyPayload {
   location_y?: number | null;
   // ── Shop (boutique) ───────────────────────────────────────────────────────────
 }
+export type ShopLearningPathSort = 'newest' | 'oldest' | 'name_asc' | 'name_desc';
+
 export interface ShopLearningPathParams {
   page?: number;
   per_page?: number;
   q?: string;
   category_id?: string;
+  sort?: ShopLearningPathSort;
+  price_min?: number;
+  price_max?: number;
 }
 
 export interface ApiShopLearningPathsResponse {

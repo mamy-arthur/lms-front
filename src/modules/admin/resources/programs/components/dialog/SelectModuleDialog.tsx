@@ -129,7 +129,8 @@ export function SelectModuleDialog({ open, onOpenChange, usedModuleIds, onSelect
           )}
 
           {/* Module grid */}
-          <div className="flex flex-col gap-2 flex-1 min-h-0 overflow-y-auto pr-1">
+          <div className="flex-1 min-h-0 overflow-y-auto pr-1">
+            <div className="flex flex-col gap-2">
             {isLoadingCompetencies && (
               <div className="col-span-2 flex items-center justify-center py-12">
                 <Loader2 className="size-5 animate-spin text-muted-foreground" />
@@ -181,6 +182,7 @@ export function SelectModuleDialog({ open, onOpenChange, usedModuleIds, onSelect
                 {isFetchingNextPage ? <Loader2 className="size-3 animate-spin" /> : 'Voir plus'}
               </Button>
             )}
+            </div>
           </div>
         </div>
 
