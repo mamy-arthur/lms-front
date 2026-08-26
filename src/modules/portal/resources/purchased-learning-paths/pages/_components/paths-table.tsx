@@ -3,7 +3,7 @@
 import { ChevronRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { DataTable, type DataTableColumn } from '@/shared/components/ui/DataTable';
+import { DataTable, type DataTableColumn, type DataTableSort } from '@/shared/components/ui/DataTable';
 import type { PurchasedLearningPathRow, PurchasedLearningPathStatKey } from '../../types';
 import { PurchasedLearningPathStatTrigger } from './stat-trigger';
 
@@ -14,6 +14,8 @@ interface PurchasedLearningPathsTableProps {
   total: number;
   hasQuery?: boolean;
   isLoading?: boolean;
+  sort?: DataTableSort;
+  onSort?: (column: string) => void;
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
   onStatClick: (
@@ -30,6 +32,8 @@ export function PurchasedLearningPathsTable({
   total,
   hasQuery = false,
   isLoading = false,
+  sort,
+  onSort,
   onPageChange,
   onPageSizeChange,
   onStatClick,
@@ -39,6 +43,7 @@ export function PurchasedLearningPathsTable({
     {
       key: 'name',
       label: 'Parcours de formation',
+      sortable: true,
       render: (row) => (
         <div className="flex items-center gap-3">
           {row.imageUrl ? (
@@ -56,8 +61,22 @@ export function PurchasedLearningPathsTable({
       ),
     },
     {
+      key: 'category',
+      label: 'Catégorie',
+      sortable: true,
+      render: (row) =>
+        row.categoryName ? (
+          <Badge variant="outline" className="rounded-full px-2 py-0.5 text-xs font-normal">
+            {row.categoryName}
+          </Badge>
+        ) : (
+          <span className="text-xs text-muted-foreground">—</span>
+        ),
+    },
+    {
       key: 'cumulative',
       label: 'Inscrits cumulés',
+      sortable: true,
       render: (row) => (
         <PurchasedLearningPathStatTrigger
           label="Cumulés"
@@ -69,6 +88,7 @@ export function PurchasedLearningPathsTable({
     {
       key: 'inProgress',
       label: 'Inscrits en cours',
+      sortable: true,
       render: (row) => (
         <PurchasedLearningPathStatTrigger
           label="En cours"
@@ -80,6 +100,7 @@ export function PurchasedLearningPathsTable({
     {
       key: 'notStarted',
       label: 'Non commencés',
+      sortable: true,
       render: (row) => (
         <PurchasedLearningPathStatTrigger
           label="Non commencés"
@@ -91,6 +112,7 @@ export function PurchasedLearningPathsTable({
     {
       key: 'availableCredits',
       label: 'Crédits disponibles',
+      sortable: true,
       render: (row) => (
         <Badge variant="outline" className="rounded-full px-2 py-0.5 text-xs">
           {row.stats.availableCredits}
@@ -123,6 +145,8 @@ export function PurchasedLearningPathsTable({
       total={total}
       isLoading={isLoading}
       hasQuery={hasQuery}
+      sort={sort}
+      onSort={onSort}
       onPageChange={onPageChange}
       onPageSizeChange={onPageSizeChange}
       onRowClick={onAssign}
