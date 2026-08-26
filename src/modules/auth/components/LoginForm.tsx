@@ -11,7 +11,11 @@ import { ArrowRight, Eye, EyeOff, GraduationCap, Loader2 } from 'lucide-react';
 import { loginSchema, type LoginSchema } from '@/shared/schemas/auth.schema';
 import { useAuthStore } from '@/shared/stores/auth.store';
 import { useTenantStore } from '@/shared/stores/tenant.store';
-import { resolveLogin, resolveRedirectPath } from '@/modules/auth/utils/loginUtils';
+import {
+  resolveLogin,
+  resolveRedirectPath,
+  clearSessionCache,
+} from '@/modules/auth/utils/loginUtils';
 
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -45,6 +49,7 @@ export function LoginForm() {
 
       const { user } = await resolveLogin(data.email, data.password);
 
+      clearSessionCache();
       setAuth(user);
 
       router.replace(resolveRedirectPath(user, hasTenant));

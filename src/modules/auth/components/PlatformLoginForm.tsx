@@ -9,7 +9,7 @@ import { loginSchema, type LoginSchema } from '@/shared/schemas/auth.schema';
 import { authApi } from '@/shared/api/auth.api';
 import { useAuthStore } from '@/shared/stores/auth.store';
 import { useTenantStore } from '@/shared/stores/tenant.store';
-import { resolveRedirectPath } from '@/modules/auth/utils/loginUtils';
+import { resolveRedirectPath, clearSessionCache } from '@/modules/auth/utils/loginUtils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -37,6 +37,7 @@ export function PlatformLoginForm() {
 
       const { user } = await authApi.platformLogin(data.email, data.password);
 
+      clearSessionCache();
       setAuth(user);
 
       router.replace(resolveRedirectPath(user, hasTenant));
