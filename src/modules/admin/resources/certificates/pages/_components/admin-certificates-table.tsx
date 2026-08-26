@@ -99,16 +99,6 @@ export function AdminCertificatesTable({
         ),
     },
     {
-      key: 'tenantId',
-      label: 'Tenant',
-      sortable: true,
-      render: (cert) => (
-        <span className="text-xs text-muted-foreground">
-          {tenantNames[cert.tenantId] || cert.tenantId || '—'}
-        </span>
-      ),
-    },
-    {
       key: 'updatedAt',
       label: 'Mis à jour',
       sortable: true,

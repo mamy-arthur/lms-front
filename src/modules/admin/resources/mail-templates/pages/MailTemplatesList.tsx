@@ -1,43 +1,85 @@
 'use client';
 
-import { Plus } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
+import { ChevronDown, Plus, X } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   MailTemplateSearch,
   MailTemplatePreviewDialog,
 } from '@modules/shared/components/mail-templates';
 import { useAllTenantsQuery } from '@/modules/shared/hooks/useAllTenantsQuery';
-import { useModuleListController } from '@/modules/shared/hooks/useModuleListController';
 import { useMailTemplatesQuery } from '../hooks/useMailTemplatesQuery';
 import { useDeleteMailTemplate } from '../hooks/useDeleteMailTemplate';
-import type { MailTemplate } from '../types';
+import type { MailTemplate, MailTemplateSearchParams } from '../types';
 import { AdminMailTemplateFormDrawer } from './_components/admin-mail-template-form-drawer';
-import { AdminMailTemplatesFilter } from './_components/admin-mail-templates-filter';
 import { AdminMailTemplatesTable } from './_components/admin-mail-templates-table';
 import { ConfirmDialog } from '@/shared/components/confirm-dialog/ConfirmDialog';
 
+const STATUS_OPTIONS = [
+  { value: 'active', label: 'Actif' },
+  { value: 'inactive', label: 'Inactif' },
+] as const;
+
 export function MailTemplatesList() {
-  const ctrl = useModuleListController<MailTemplate>({
-    includeTenantFilter: true,
-    defaultPageSize: 25,
+  const [params, setParams] = useState<MailTemplateSearchParams>({
+    page: 0,
+    page_size: 25,
+    sort_by: 'name',
+    sort_dir: 'asc',
   });
-
-  const { data: tenantsData } = useAllTenantsQuery();
-  const tenants = tenantsData?.data ?? [];
-
-  const { data, isLoading } = useMailTemplatesQuery(ctrl.params);
-  const { mutate: deleteTemplate } = useDeleteMailTemplate();
+  const [selectedStatus, setSelectedStatus] = useState<string | undefined>();
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<MailTemplate | undefined>();
   const [previewTemplate, setPreviewTemplate] = useState<MailTemplate | null>(null);
   const [deletingItem, setDeletingItem] = useState<MailTemplate | null>(null);
 
+  const { data: tenantsData } = useAllTenantsQuery();
+  const tenants = tenantsData?.data ?? [];
+  const { data, isLoading } = useMailTemplatesQuery(params);
+  const { mutate: deleteTemplate } = useDeleteMailTemplate();
+
   const tenantNames = useMemo(() => {
     const map: Record<string, string> = {};
-    for (const t of tenants) {
-      map[String(t.id)] = t.name;
-    }
+    for (const t of tenants) map[String(t.id)] = t.name;
     return map;
   }, [tenants]);
+
+  const handleSearch = useCallback(() => {
+    setParams((prev) => ({ ...prev, q: params.q, page: 0 }));
+  }, [params.q]);
+
+  const handleStatusChange = useCallback((value: string) => {
+    const next = selectedStatus === value ? undefined : value;
+    setSelectedStatus(next);
+    setParams((prev) => ({ ...prev, category: next, page: 0 }));
+  }, [selectedStatus]);
+
+  const handleSort = useCallback((column: string) => {
+    setParams((prev) => ({
+      ...prev,
+      sort_by: column,
+      sort_dir: prev.sort_by === column && prev.sort_dir === 'asc' ? 'desc' : 'asc',
+      page: 0,
+    }));
+  }, []);
+
+  const handlePageChange = useCallback((page: number) => {
+    setParams((prev) => ({ ...prev, page }));
+  }, []);
+
+  const handlePageSizeChange = useCallback((size: number) => {
+    setParams((prev) => ({ ...prev, page_size: size, page: 0 }));
+  }, []);
+
+  const page = params.page ?? 0;
+  const sort = { column: params.sort_by ?? 'name', direction: (params.sort_dir ?? 'asc') as 'asc' | 'desc' };
+  const hasQuery = !!(params.q || params.category);
+  const statusLabel = selectedStatus
+    ? (STATUS_OPTIONS.find((o) => o.value === selectedStatus)?.label ?? selectedStatus)
+    : 'Tous les statuts';
 
   return (
     <div className="bg-background">
@@ -50,23 +92,51 @@ export function MailTemplatesList() {
         </div>
       </header>
 
-      <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center gap-2">
+      <div className="mb-2 flex flex-col sm:flex-row items-start sm:items-center gap-2">
         <MailTemplateSearch
-          value={ctrl.draftSearch}
-          onChange={ctrl.setDraftSearch}
-          onSearch={ctrl.handleSearch}
+          value={params.q ?? ''}
+          onChange={(v) => setParams((prev) => ({ ...prev, q: v || undefined, page: 0 }))}
+          onSearch={handleSearch}
         />
         <div className="flex items-center gap-2 sm:ml-auto">
-          <AdminMailTemplatesFilter
-            statusFilter={ctrl.draftCategory[0] ?? 'all'}
-            tenantFilter={ctrl.draftTenant}
-            onStatusFilterChange={(value) => ctrl.setDraftCategory([value])}
-            onTenantFilterChange={ctrl.setDraftTenant}
-            onSearch={ctrl.handleSearch}
-            tenants={tenants}
-          />
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className="w-full sm:w-48 justify-between text-xs font-normal"
+              >
+                {statusLabel}
+                <ChevronDown className="ml-1 size-3.5 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-48 p-2" align="end">
+              <div className="space-y-0.5">
+                {STATUS_OPTIONS.map((opt) => (
+                  <label
+                    key={opt.value}
+                    className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 hover:bg-muted text-xs"
+                  >
+                    <Checkbox
+                      checked={selectedStatus === opt.value}
+                      onCheckedChange={() => handleStatusChange(opt.value)}
+                      className="mt-0.5 data-[state=checked]:bg-(--color-primary) data-[state=checked]:border-(--color-primary)"
+                    />
+                    {opt.label}
+                  </label>
+                ))}
+              </div>
+              {selectedStatus && (
+                <button
+                  className="mt-1.5 w-full rounded px-2 py-1 text-center text-xs text-muted-foreground hover:bg-muted"
+                  onClick={() => handleStatusChange(selectedStatus)}
+                >
+                  Effacer le filtre
+                </button>
+              )}
+            </PopoverContent>
+          </Popover>
           <Button
-            onClick={ctrl.handleOpenCreate}
+            onClick={() => { setEditingTemplate(undefined); setDrawerOpen(true); }}
             className="bg-(--color-primary) hover:bg-(--color-primary)/80 text-primary-foreground shrink-0"
           >
             <Plus className="size-4" />
@@ -75,28 +145,46 @@ export function MailTemplatesList() {
         </div>
       </div>
 
+      {selectedStatus && (
+        <div className="mb-4 flex flex-wrap gap-1.5">
+          <Badge
+            variant="outline"
+            className="h-6 gap-1 px-2 text-xs font-normal bg-(--color-primary) text-white"
+          >
+            {STATUS_OPTIONS.find((o) => o.value === selectedStatus)?.label ?? selectedStatus}
+            <button
+              onClick={() => handleStatusChange(selectedStatus)}
+              className="ml-0.5 rounded-sm opacity-60 hover:opacity-100"
+              aria-label="Retirer ce filtre"
+            >
+              <X className="size-3" />
+            </button>
+          </Badge>
+        </div>
+      )}
+
       <AdminMailTemplatesTable
         templates={data?.data ?? []}
         isLoading={isLoading}
-        hasQuery={ctrl.hasQuery}
-        page={ctrl.page}
-        pageSize={ctrl.pageSize}
+        hasQuery={hasQuery}
+        page={page}
+        pageSize={params.page_size ?? 25}
         total={data?.total ?? 0}
-        sort={ctrl.sort}
-        onSort={ctrl.handleSort}
-        onPageChange={ctrl.handlePageChange}
-        onPageSizeChange={ctrl.handlePageSizeChange}
-        onEdit={ctrl.handleEdit}
+        sort={sort}
+        onSort={handleSort}
+        onPageChange={handlePageChange}
+        onPageSizeChange={handlePageSizeChange}
+        onEdit={(tpl) => { setEditingTemplate(tpl); setDrawerOpen(true); }}
         onDelete={(tpl) => setDeletingItem(tpl)}
         onPreview={setPreviewTemplate}
         tenantNames={tenantNames}
       />
 
       <AdminMailTemplateFormDrawer
-        open={ctrl.isDrawerOpen}
-        onClose={ctrl.handleCloseDrawer}
-        onSuccess={ctrl.handleSuccess}
-        template={ctrl.editingModule as MailTemplate | undefined}
+        open={drawerOpen}
+        onClose={() => { setDrawerOpen(false); setEditingTemplate(undefined); }}
+        onSuccess={() => { setDrawerOpen(false); setEditingTemplate(undefined); }}
+        template={editingTemplate}
       />
 
       {previewTemplate && (
@@ -114,7 +202,7 @@ export function MailTemplatesList() {
         title="Supprimer le template"
         description={
           deletingItem
-            ? `Êtes-vous sûr de vouloir supprimer «${deletingItem.name}» ? Cette action est irréversible.`
+            ? `Êtes-vous sûr de vouloir supprimer «${deletingItem.name}» ? Cette action est irréversible.`
             : undefined
         }
         confirmLabel="Supprimer"

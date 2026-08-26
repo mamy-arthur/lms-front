@@ -1,43 +1,85 @@
 'use client';
 
-import { Plus } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
+import { ChevronDown, Plus, X } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   CertificateSearch,
-  CertificatesFilter,
   CertificatePreviewDialog,
 } from '@modules/shared/components/certificates';
 import { useAllTenantsQuery } from '@/modules/shared/hooks/useAllTenantsQuery';
-import { useModuleListController } from '@/modules/shared/hooks/useModuleListController';
 import { useCertificatesQuery } from '../hooks/useCertificatesQuery';
 import { useDeleteCertificate } from '../hooks/useDeleteCertificate';
-import type { Certificate } from '../types';
+import type { Certificate, CertificateSearchParams } from '../types';
 import { AdminCertificateFormDrawer } from './_components/admin-certificate-form-drawer';
 import { AdminCertificatesTable } from './_components/admin-certificates-table';
 import { ConfirmDialog } from '@/shared/components/confirm-dialog/ConfirmDialog';
 
+const STATUS_OPTIONS = [
+  { value: 'active', label: 'Actif' },
+  { value: 'inactive', label: 'Inactif' },
+] as const;
+
 export function CertificatesList() {
-  const ctrl = useModuleListController<Certificate>({
-    includeTenantFilter: true,
-    defaultPageSize: 25,
+  const [params, setParams] = useState<CertificateSearchParams>({
+    page: 0,
+    page_size: 25,
+    sort_by: 'name',
+    sort_dir: 'asc',
   });
-
-  const { data: tenantsData } = useAllTenantsQuery();
-  const tenants = tenantsData?.data ?? [];
-
-  const { data, isLoading } = useCertificatesQuery(ctrl.params);
-  const deleteMutation = useDeleteCertificate();
+  const [selectedStatus, setSelectedStatus] = useState<string | undefined>();
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [editingCert, setEditingCert] = useState<Certificate | undefined>();
   const [previewCert, setPreviewCert] = useState<Certificate | null>(null);
   const [deletingItem, setDeletingItem] = useState<Certificate | null>(null);
 
+  const { data: tenantsData } = useAllTenantsQuery();
+  const tenants = tenantsData?.data ?? [];
+  const { data, isLoading } = useCertificatesQuery(params);
+  const deleteMutation = useDeleteCertificate();
+
   const tenantNames = useMemo(() => {
     const map: Record<string, string> = {};
-    for (const t of tenants) {
-      map[String(t.id)] = t.name;
-    }
+    for (const t of tenants) map[String(t.id)] = t.name;
     return map;
   }, [tenants]);
+
+  const handleSearch = useCallback(() => {
+    setParams((prev) => ({ ...prev, q: params.q, page: 0 }));
+  }, [params.q]);
+
+  const handleStatusChange = useCallback((value: string) => {
+    const next = selectedStatus === value ? undefined : value;
+    setSelectedStatus(next);
+    setParams((prev) => ({ ...prev, category: next, page: 0 }));
+  }, [selectedStatus]);
+
+  const handleSort = useCallback((column: string) => {
+    setParams((prev) => ({
+      ...prev,
+      sort_by: column,
+      sort_dir: prev.sort_by === column && prev.sort_dir === 'asc' ? 'desc' : 'asc',
+      page: 0,
+    }));
+  }, []);
+
+  const handlePageChange = useCallback((page: number) => {
+    setParams((prev) => ({ ...prev, page }));
+  }, []);
+
+  const handlePageSizeChange = useCallback((size: number) => {
+    setParams((prev) => ({ ...prev, page_size: size, page: 0 }));
+  }, []);
+
+  const page = params.page ?? 0;
+  const sort = { column: params.sort_by ?? 'name', direction: (params.sort_dir ?? 'asc') as 'asc' | 'desc' };
+  const hasQuery = !!(params.q || params.category);
+  const statusLabel = selectedStatus
+    ? (STATUS_OPTIONS.find((o) => o.value === selectedStatus)?.label ?? selectedStatus)
+    : 'Tous les statuts';
 
   return (
     <div className="bg-background">
@@ -50,23 +92,51 @@ export function CertificatesList() {
         </div>
       </header>
 
-      <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center gap-2">
+      <div className="mb-2 flex flex-col sm:flex-row items-start sm:items-center gap-2">
         <CertificateSearch
-          value={ctrl.draftSearch}
-          onChange={ctrl.setDraftSearch}
-          onSearch={ctrl.handleSearch}
+          value={params.q ?? ''}
+          onChange={(v) => setParams((prev) => ({ ...prev, q: v || undefined, page: 0 }))}
+          onSearch={handleSearch}
         />
         <div className="flex items-center gap-2 sm:ml-auto">
-          <CertificatesFilter
-            statusFilter={ctrl.draftCategory[0] ?? 'all'}
-            tenantFilter={ctrl.draftTenant}
-            onStatusFilterChange={(v) => ctrl.setDraftCategory([v])}
-            onTenantFilterChange={ctrl.setDraftTenant}
-            onSearch={ctrl.handleSearch}
-            tenants={tenants}
-          />
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className="w-full sm:w-48 justify-between text-xs font-normal"
+              >
+                {statusLabel}
+                <ChevronDown className="ml-1 size-3.5 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-48 p-2" align="end">
+              <div className="space-y-0.5">
+                {STATUS_OPTIONS.map((opt) => (
+                  <label
+                    key={opt.value}
+                    className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 hover:bg-muted text-xs"
+                  >
+                    <Checkbox
+                      checked={selectedStatus === opt.value}
+                      onCheckedChange={() => handleStatusChange(opt.value)}
+                      className="mt-0.5 data-[state=checked]:bg-(--color-primary) data-[state=checked]:border-(--color-primary)"
+                    />
+                    {opt.label}
+                  </label>
+                ))}
+              </div>
+              {selectedStatus && (
+                <button
+                  className="mt-1.5 w-full rounded px-2 py-1 text-center text-xs text-muted-foreground hover:bg-muted"
+                  onClick={() => handleStatusChange(selectedStatus)}
+                >
+                  Effacer le filtre
+                </button>
+              )}
+            </PopoverContent>
+          </Popover>
           <Button
-            onClick={ctrl.handleOpenCreate}
+            onClick={() => { setEditingCert(undefined); setDrawerOpen(true); }}
             className="bg-(--color-primary) hover:bg-(--color-primary)/80 text-primary-foreground shrink-0"
           >
             <Plus className="size-4" />
@@ -75,28 +145,46 @@ export function CertificatesList() {
         </div>
       </div>
 
+      {selectedStatus && (
+        <div className="mb-4 flex flex-wrap gap-1.5">
+          <Badge
+            variant="outline"
+            className="h-6 gap-1 px-2 text-xs font-normal bg-(--color-primary) text-white"
+          >
+            {STATUS_OPTIONS.find((o) => o.value === selectedStatus)?.label ?? selectedStatus}
+            <button
+              onClick={() => handleStatusChange(selectedStatus)}
+              className="ml-0.5 rounded-sm opacity-60 hover:opacity-100"
+              aria-label="Retirer ce filtre"
+            >
+              <X className="size-3" />
+            </button>
+          </Badge>
+        </div>
+      )}
+
       <AdminCertificatesTable
         certificates={data?.data ?? []}
         isLoading={isLoading}
-        hasQuery={ctrl.hasQuery}
-        page={ctrl.page}
-        pageSize={ctrl.pageSize}
+        hasQuery={hasQuery}
+        page={page}
+        pageSize={params.page_size ?? 25}
         total={data?.total ?? 0}
-        sort={ctrl.sort}
-        onSort={ctrl.handleSort}
-        onPageChange={ctrl.handlePageChange}
-        onPageSizeChange={ctrl.handlePageSizeChange}
-        onEdit={ctrl.handleEdit}
+        sort={sort}
+        onSort={handleSort}
+        onPageChange={handlePageChange}
+        onPageSizeChange={handlePageSizeChange}
+        onEdit={(cert) => { setEditingCert(cert); setDrawerOpen(true); }}
         onDelete={(cert) => setDeletingItem(cert)}
         onPreview={setPreviewCert}
         tenantNames={tenantNames}
       />
 
       <AdminCertificateFormDrawer
-        open={ctrl.isDrawerOpen}
-        onClose={ctrl.handleCloseDrawer}
-        onSuccess={ctrl.handleSuccess}
-        certificate={ctrl.editingModule as Certificate | undefined}
+        open={drawerOpen}
+        onClose={() => { setDrawerOpen(false); setEditingCert(undefined); }}
+        onSuccess={() => { setDrawerOpen(false); setEditingCert(undefined); }}
+        certificate={editingCert}
       />
 
       {previewCert && (
@@ -114,7 +202,7 @@ export function CertificatesList() {
         title="Supprimer l'attestation"
         description={
           deletingItem
-            ? `Êtes-vous sûr de vouloir supprimer «${deletingItem.name}» ? Cette action est irréversible.`
+            ? `Êtes-vous sûr de vouloir supprimer «${deletingItem.name}» ? Cette action est irréversible.`
             : undefined
         }
         confirmLabel="Supprimer"
