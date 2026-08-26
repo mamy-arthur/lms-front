@@ -41,9 +41,11 @@ export function FormationCard({ formation }: FormationCardProps) {
           </div>
         )}
         <div className="absolute bottom-2 left-2 flex items-center gap-1.5">
-          <Badge variant="secondary" className="rounded-sm bg-background/90 text-xs">
-            {formation.category}
-          </Badge>
+          {formation.category && (
+            <Badge variant="secondary" className="rounded-sm bg-background/90 text-xs">
+              {formation.category}
+            </Badge>
+          )}
         </div>
       </div>
 

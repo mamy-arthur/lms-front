@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronDown, LayoutGrid, List, Search } from 'lucide-react';
+import { ChevronDown, Search } from 'lucide-react';
 import { FormationCard } from '@/modules/shared/components/store/FormationCard';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useShopLearningPathsQuery } from './hooks/useShopLearningPathsQuery';
 import { useLearningPathCategoriesQuery } from '../programs/hooks/useLearningPathCategoriesQuery';
+import { Input } from '@/components/ui/input';
 
 const PAGE_SIZE = 25;
 
@@ -33,7 +34,6 @@ export function StorePage() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [perPage, setPerPage] = useState(PAGE_SIZE);
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search.trim()), 300);
@@ -67,6 +67,8 @@ export function StorePage() {
   const categoryName = (id: string | null) =>
     categoriesQuery.data?.find((c) => c.id === id)?.name ?? id ?? '';
 
+  const viewMode = 'grid'; // TODO: add view mode toggle
+
   return (
     <div className="mx-auto w-full">
       <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -90,10 +92,10 @@ export function StorePage() {
                 setPerPage(PAGE_SIZE);
               }}
               className={cn(
-                'flex items-center rounded-full px-4 py-1.5 text-xs font-medium transition-all',
+                'flex items-center rounded-full px-4 py-1.5 text-xs font-medium',
                 selectedCategoryId === null
-                  ? 'bg-(--color-primary) text-white shadow-sm'
-                  : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50',
+                  ? 'bg-(--color-primary) text-white'
+                  : 'bg-white border border-slate-200  hover:bg-slate-50',
               )}
             >
               Toutes
@@ -109,10 +111,10 @@ export function StorePage() {
                     setPerPage(PAGE_SIZE);
                   }}
                   className={cn(
-                    'flex items-center rounded-full px-4 py-1.5 text-xs font-medium transition-all',
+                    'flex items-center rounded-full px-4 py-1.5 text-xs font-medium',
                     active
-                      ? 'bg-(--color-primary) text-white shadow-sm'
-                      : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50',
+                      ? 'bg-(--color-primary) text-white'
+                      : 'bg-white border border-slate-200  hover:bg-slate-50',
                   )}
                 >
                   {cat.name}
@@ -124,7 +126,7 @@ export function StorePage() {
           <div className="flex items-center gap-2 shrink-0">
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400 pointer-events-none" />
-              <input
+              <Input
                 type="search"
                 placeholder="Rechercher..."
                 value={search}
@@ -132,7 +134,7 @@ export function StorePage() {
                   setSearch(e.target.value);
                   setPerPage(PAGE_SIZE);
                 }}
-                className="h-8 w-44 rounded-lg border border-slate-200 bg-white pl-8 pr-3 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-(--color-primary)"
+                className="h-8 w-44 rounded-lg border  pl-8 pr-3 text-xs  placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-(--color-primary)"
               />
             </div>
             <button
@@ -141,34 +143,6 @@ export function StorePage() {
             >
               Trier par : Plus récent <ChevronDown className="h-4 w-4 text-slate-400" />
             </button>
-            <div className="flex rounded-lg border border-slate-200 bg-white overflow-hidden">
-              <button
-                type="button"
-                onClick={() => setViewMode('grid')}
-                className={cn(
-                  'p-2 transition-colors',
-                  viewMode === 'grid'
-                    ? 'bg-slate-100 text-slate-800'
-                    : 'text-slate-400 hover:text-slate-600',
-                )}
-                aria-label="Vue grille"
-              >
-                <LayoutGrid className="h-4 w-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode('list')}
-                className={cn(
-                  'p-2 transition-colors',
-                  viewMode === 'list'
-                    ? 'bg-slate-100 text-slate-800'
-                    : 'text-slate-400 hover:text-slate-600',
-                )}
-                aria-label="Vue liste"
-              >
-                <List className="h-4 w-4" />
-              </button>
-            </div>
           </div>
         </div>
       </div>
