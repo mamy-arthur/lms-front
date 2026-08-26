@@ -56,7 +56,7 @@ export interface UpdateUserPayload {
 
 export interface UserSearchParams {
   q?: string;
-  role?: string;
+  roles?: Role[];
   is_active?: boolean;
   tenant_id?: string;
   sort_by?: string;

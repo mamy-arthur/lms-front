@@ -23,7 +23,6 @@ export function useUsersListController<TUser, TParams = Record<string, unknown>>
   const [editingUser, setEditingUser] = useState<TUser | undefined>(undefined);
 
   const [draftSearch, setDraftSearch] = useState('');
-  const [draftRole, setDraftRole] = useState('all');
   const [draftStatus, setDraftStatus] = useState('all');
   const [draftTenant, setDraftTenant] = useState('all');
 
@@ -39,19 +38,26 @@ export function useUsersListController<TUser, TParams = Record<string, unknown>>
 
   // Application explicite uniquement (bouton Appliquer ou touche Entrée)
   const handleSearch = useCallback(() => {
-    const isActive =
-      draftStatus === 'active' ? true : draftStatus === 'inactive' ? false : undefined;
     setParams((prev) => ({
       ...prev,
       q: draftSearch || undefined,
-      role: draftRole !== 'all' ? draftRole : undefined,
-      is_active: isActive,
-      ...(includeTenantFilter
-        ? { tenant_id: draftTenant !== 'all' ? draftTenant : undefined }
-        : {}),
       page: 0,
     }));
-  }, [draftSearch, draftRole, draftStatus, draftTenant, includeTenantFilter]);
+  }, [draftSearch]);
+
+  const handleRoleToggle = useCallback((role: string) => {
+    setParams((prev) => {
+      const current = prev.roles ? (prev.roles as string).split(',') : [];
+      const next = current.includes(role) ? current.filter((r) => r !== role) : [...current, role];
+      return { ...prev, roles: next.length > 0 ? next.join(',') : undefined, page: 0 };
+    });
+  }, []);
+
+  const handleStatusFilter = useCallback((status: string) => {
+    setDraftStatus(status);
+    const isActive = status === 'active' ? true : status === 'inactive' ? false : undefined;
+    setParams((prev) => ({ ...prev, is_active: isActive, page: 0 }));
+  }, []);
 
   // Utilisé par le debounce de la barre de recherche — n'applique que le filtre `q` sans toucher aux autres filtres
   const handleSearchOnly = useCallback(() => {
@@ -102,9 +108,14 @@ export function useUsersListController<TUser, TParams = Record<string, unknown>>
     [params.sort_by, params.sort_dir, defaultSortBy, defaultSortDir],
   );
 
+  const selectedRoles = useMemo(
+    () => (params.roles ? (params.roles as string).split(',') : []),
+    [params.roles],
+  );
+
   const hasQuery = !!(
     draftSearch ||
-    draftRole !== 'all' ||
+    selectedRoles.length > 0 ||
     draftStatus !== 'all' ||
     (includeTenantFilter && draftTenant !== 'all')
   );
@@ -114,8 +125,7 @@ export function useUsersListController<TUser, TParams = Record<string, unknown>>
     editingUser,
     draftSearch,
     setDraftSearch,
-    draftRole,
-    setDraftRole,
+    selectedRoles,
     draftStatus,
     setDraftStatus,
     draftTenant,
@@ -126,6 +136,8 @@ export function useUsersListController<TUser, TParams = Record<string, unknown>>
     handleSearch,
     handleSearchOnly,
     handleSort,
+    handleRoleToggle,
+    handleStatusFilter,
     handleOpenCreate,
     handleCloseDrawer,
     handleSuccess,
