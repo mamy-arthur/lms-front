@@ -30,12 +30,12 @@ const SORT_OPTIONS: { value: ShopLearningPathSort; label: string }[] = [
 type PriceRangeKey = 'all' | 'free' | 'lt50' | '50_100' | '100_200' | 'gt200';
 
 const PRICE_RANGE_OPTIONS: { value: PriceRangeKey; label: string; min?: number; max?: number }[] = [
-  { value: 'all',     label: 'Tous les prix' },
-  { value: 'free',   label: 'Gratuit',       max: 0 },
-  { value: 'lt50',   label: 'Moins de 50 €', max: 50 },
-  { value: '50_100', label: '50 – 100 €',    min: 50,  max: 100 },
-  { value: '100_200',label: '100 – 200 €',   min: 100, max: 200 },
-  { value: 'gt200',  label: 'Plus de 200 €', min: 200 },
+  { value: 'all', label: 'Tous les prix' },
+  { value: 'free', label: 'Gratuit', max: 0 },
+  { value: 'lt50', label: 'Moins de 50 €', max: 50 },
+  { value: '50_100', label: '50 – 100 €', min: 50, max: 100 },
+  { value: '100_200', label: '100 – 200 €', min: 100, max: 200 },
+  { value: 'gt200', label: 'Plus de 200 €', min: 200 },
 ];
 
 function FormationCardSkeleton() {
@@ -100,7 +100,8 @@ export function StorePage() {
     categoriesQuery.data?.find((c) => c.id === id)?.name ?? id ?? '';
 
   const currentSortLabel = SORT_OPTIONS.find((o) => o.value === sort)?.label ?? 'Plus récent';
-  const currentPriceLabel = PRICE_RANGE_OPTIONS.find((o) => o.value === priceRange)?.label ?? 'Tous les prix';
+  const currentPriceLabel =
+    PRICE_RANGE_OPTIONS.find((o) => o.value === priceRange)?.label ?? 'Tous les prix';
 
   return (
     <div className="mx-auto w-full">
@@ -222,7 +223,6 @@ export function StorePage() {
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
-
           </div>
         </div>
       </div>

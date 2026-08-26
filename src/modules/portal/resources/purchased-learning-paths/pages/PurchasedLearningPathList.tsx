@@ -85,11 +85,7 @@ export function PurchasedLearningPathList() {
         ) : (
           <div className="space-y-4">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <UserSearch
-                value={search}
-                onChange={handleSearchChange}
-                onSearch={() => {}}
-              />
+              <UserSearch value={search} onChange={handleSearchChange} onSearch={() => {}} />
               <div className="flex items-center gap-2 sm:ml-auto flex-wrap">
                 {availableCategories.length > 0 && (
                   <Popover>
@@ -205,4 +201,3 @@ export function PurchasedLearningPathList() {
     </RoleGuard>
   );
 }
-

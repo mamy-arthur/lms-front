@@ -51,11 +51,14 @@ export function CertificatesList() {
     setParams((prev) => ({ ...prev, q: params.q, page: 0 }));
   }, [params.q]);
 
-  const handleStatusChange = useCallback((value: string) => {
-    const next = selectedStatus === value ? undefined : value;
-    setSelectedStatus(next);
-    setParams((prev) => ({ ...prev, category: next, page: 0 }));
-  }, [selectedStatus]);
+  const handleStatusChange = useCallback(
+    (value: string) => {
+      const next = selectedStatus === value ? undefined : value;
+      setSelectedStatus(next);
+      setParams((prev) => ({ ...prev, category: next, page: 0 }));
+    },
+    [selectedStatus],
+  );
 
   const handleSort = useCallback((column: string) => {
     setParams((prev) => ({
@@ -75,7 +78,10 @@ export function CertificatesList() {
   }, []);
 
   const page = params.page ?? 0;
-  const sort = { column: params.sort_by ?? 'name', direction: (params.sort_dir ?? 'asc') as 'asc' | 'desc' };
+  const sort = {
+    column: params.sort_by ?? 'name',
+    direction: (params.sort_dir ?? 'asc') as 'asc' | 'desc',
+  };
   const hasQuery = !!(params.q || params.category);
   const statusLabel = selectedStatus
     ? (STATUS_OPTIONS.find((o) => o.value === selectedStatus)?.label ?? selectedStatus)
@@ -136,7 +142,10 @@ export function CertificatesList() {
             </PopoverContent>
           </Popover>
           <Button
-            onClick={() => { setEditingCert(undefined); setDrawerOpen(true); }}
+            onClick={() => {
+              setEditingCert(undefined);
+              setDrawerOpen(true);
+            }}
             className="bg-(--color-primary) hover:bg-(--color-primary)/80 text-primary-foreground shrink-0"
           >
             <Plus className="size-4" />
@@ -174,7 +183,10 @@ export function CertificatesList() {
         onSort={handleSort}
         onPageChange={handlePageChange}
         onPageSizeChange={handlePageSizeChange}
-        onEdit={(cert) => { setEditingCert(cert); setDrawerOpen(true); }}
+        onEdit={(cert) => {
+          setEditingCert(cert);
+          setDrawerOpen(true);
+        }}
         onDelete={(cert) => setDeletingItem(cert)}
         onPreview={setPreviewCert}
         tenantNames={tenantNames}
@@ -182,8 +194,14 @@ export function CertificatesList() {
 
       <AdminCertificateFormDrawer
         open={drawerOpen}
-        onClose={() => { setDrawerOpen(false); setEditingCert(undefined); }}
-        onSuccess={() => { setDrawerOpen(false); setEditingCert(undefined); }}
+        onClose={() => {
+          setDrawerOpen(false);
+          setEditingCert(undefined);
+        }}
+        onSuccess={() => {
+          setDrawerOpen(false);
+          setEditingCert(undefined);
+        }}
         certificate={editingCert}
       />
 

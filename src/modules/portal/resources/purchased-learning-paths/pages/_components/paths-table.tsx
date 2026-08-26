@@ -3,7 +3,11 @@
 import { ChevronRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { DataTable, type DataTableColumn, type DataTableSort } from '@/shared/components/ui/DataTable';
+import {
+  DataTable,
+  type DataTableColumn,
+  type DataTableSort,
+} from '@/shared/components/ui/DataTable';
 import type { PurchasedLearningPathRow, PurchasedLearningPathStatKey } from '../../types';
 import { PurchasedLearningPathStatTrigger } from './stat-trigger';
 
