@@ -47,6 +47,5 @@ export const meApi = {
     sort_by?: string;
     sort_dir?: 'asc' | 'desc';
     category_id?: string;
-  }) =>
-    apiGet<ApiMeEnrollmentsResponse>('me/enrollments', params as Record<string, unknown>),
+  }) => apiGet<ApiMeEnrollmentsResponse>('me/enrollments', params as Record<string, unknown>),
 };

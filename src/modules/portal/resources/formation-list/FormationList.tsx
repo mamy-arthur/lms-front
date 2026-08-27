@@ -24,12 +24,13 @@ const FILTER_TABS: { label: string; value: FilterTab }[] = [
   { label: 'À commencer', value: 'not_started' },
 ];
 
-const SORT_OPTIONS: { label: string; value: SortKey; sort_by: string; sort_dir: 'asc' | 'desc' }[] = [
-  { label: 'Plus récent',  value: 'recent',     sort_by: 'enrolled_at', sort_dir: 'desc' },
-  { label: 'Plus ancien',  value: 'oldest',     sort_by: 'enrolled_at', sort_dir: 'asc'  },
-  { label: 'A \u2192 Z',   value: 'alpha_asc',  sort_by: 'title',       sort_dir: 'asc'  },
-  { label: 'Z \u2192 A',   value: 'alpha_desc', sort_by: 'title',       sort_dir: 'desc' },
-];
+const SORT_OPTIONS: { label: string; value: SortKey; sort_by: string; sort_dir: 'asc' | 'desc' }[] =
+  [
+    { label: 'Plus récent', value: 'recent', sort_by: 'enrolled_at', sort_dir: 'desc' },
+    { label: 'Plus ancien', value: 'oldest', sort_by: 'enrolled_at', sort_dir: 'asc' },
+    { label: 'A \u2192 Z', value: 'alpha_asc', sort_by: 'title', sort_dir: 'asc' },
+    { label: 'Z \u2192 A', value: 'alpha_desc', sort_by: 'title', sort_dir: 'desc' },
+  ];
 
 export default function FormationListPage() {
   const [statusFilter, setStatusFilter] = useState<FilterTab>('all');
@@ -79,7 +80,10 @@ export default function FormationListPage() {
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
-                onClick={() => { setCategoryId(null); resetPerPage(); }}
+                onClick={() => {
+                  setCategoryId(null);
+                  resetPerPage();
+                }}
                 className={cn(
                   'flex items-center rounded-full px-4 py-1.5 text-xs font-medium transition-all',
                   categoryId === null
@@ -95,7 +99,10 @@ export default function FormationListPage() {
                   <button
                     key={cat.id}
                     type="button"
-                    onClick={() => { setCategoryId(active ? null : cat.id); resetPerPage(); }}
+                    onClick={() => {
+                      setCategoryId(active ? null : cat.id);
+                      resetPerPage();
+                    }}
                     className={cn(
                       'flex items-center rounded-full px-4 py-1.5 text-xs font-medium transition-all',
                       active
@@ -116,7 +123,10 @@ export default function FormationListPage() {
                   type="search"
                   placeholder="Rechercher..."
                   value={search}
-                  onChange={(e) => { setSearch(e.target.value); resetPerPage(); }}
+                  onChange={(e) => {
+                    setSearch(e.target.value);
+                    resetPerPage();
+                  }}
                   className="h-8 w-44 rounded-lg border border-slate-200 bg-white pl-8 pr-3 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-(--color-primary)"
                 />
               </div>
@@ -140,7 +150,10 @@ export default function FormationListPage() {
                           'w-full rounded px-2 py-1.5 text-left text-xs hover:bg-muted flex items-center justify-between',
                           sortKey === opt.value && 'font-medium text-(--color-primary)',
                         )}
-                        onClick={() => { setSortKey(opt.value); resetPerPage(); }}
+                        onClick={() => {
+                          setSortKey(opt.value);
+                          resetPerPage();
+                        }}
                       >
                         {opt.label}
                         {sortKey === opt.value && <Check className="h-3.5 w-3.5" />}
@@ -169,7 +182,10 @@ export default function FormationListPage() {
                           'w-full rounded px-2 py-1.5 text-left text-xs hover:bg-muted flex items-center justify-between',
                           statusFilter === tab.value && 'font-medium text-(--color-primary)',
                         )}
-                        onClick={() => { setStatusFilter(tab.value); resetPerPage(); }}
+                        onClick={() => {
+                          setStatusFilter(tab.value);
+                          resetPerPage();
+                        }}
                       >
                         {tab.label}
                         {statusFilter === tab.value && <Check className="h-3.5 w-3.5" />}
@@ -180,7 +196,6 @@ export default function FormationListPage() {
               </Popover>
             </div>
           </div>
-
         </div>
 
         {isLoading ? (
@@ -194,7 +209,16 @@ export default function FormationListPage() {
             <BookOpen className="h-10 w-10 text-slate-300" />
             <p className="text-sm font-medium text-slate-400">Aucune formation trouvée</p>
             {hasFilters && (
-              <Button variant="link" size="sm" onClick={() => { setStatusFilter('all'); setCategoryId(null); setSearch(''); resetPerPage(); }}>
+              <Button
+                variant="link"
+                size="sm"
+                onClick={() => {
+                  setStatusFilter('all');
+                  setCategoryId(null);
+                  setSearch('');
+                  resetPerPage();
+                }}
+              >
                 Voir toutes les formations
               </Button>
             )}
@@ -228,5 +252,3 @@ export default function FormationListPage() {
     </div>
   );
 }
-
-

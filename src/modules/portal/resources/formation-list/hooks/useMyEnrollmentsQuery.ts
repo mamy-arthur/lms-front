@@ -78,4 +78,3 @@ export function useMyEnrollmentsQuery(params: MyEnrollmentsQueryParams = {}) {
     placeholderData: (prev) => prev,
   });
 }
-

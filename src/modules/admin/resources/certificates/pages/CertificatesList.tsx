@@ -1,22 +1,22 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import {
+  CertificatePreviewDialog,
+  CertificateSearch,
+} from '@modules/shared/components/certificates';
 import { ChevronDown, Plus, X } from 'lucide-react';
+import { useCallback, useMemo, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import {
-  CertificateSearch,
-  CertificatePreviewDialog,
-} from '@modules/shared/components/certificates';
 import { useAllTenantsQuery } from '@/modules/shared/hooks/useAllTenantsQuery';
+import { ConfirmDialog } from '@/shared/components/confirm-dialog/ConfirmDialog';
 import { useCertificatesQuery } from '../hooks/useCertificatesQuery';
 import { useDeleteCertificate } from '../hooks/useDeleteCertificate';
 import type { Certificate, CertificateSearchParams } from '../types';
 import { AdminCertificateFormDrawer } from './_components/admin-certificate-form-drawer';
 import { AdminCertificatesTable } from './_components/admin-certificates-table';
-import { ConfirmDialog } from '@/shared/components/confirm-dialog/ConfirmDialog';
 
 const STATUS_OPTIONS = [
   { value: 'active', label: 'Actif' },
@@ -120,9 +120,11 @@ export function CertificatesList() {
                 {STATUS_OPTIONS.map((opt) => (
                   <label
                     key={opt.value}
+                    htmlFor={`status-${opt.value}`}
                     className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 hover:bg-muted text-xs"
                   >
                     <Checkbox
+                      id={`status-${opt.value}`}
                       checked={selectedStatus === opt.value}
                       onCheckedChange={() => handleStatusChange(opt.value)}
                       className="mt-0.5 data-[state=checked]:bg-(--color-primary) data-[state=checked]:border-(--color-primary)"
@@ -133,6 +135,7 @@ export function CertificatesList() {
               </div>
               {selectedStatus && (
                 <button
+                  type="button"
                   className="mt-1.5 w-full rounded px-2 py-1 text-center text-xs text-muted-foreground hover:bg-muted"
                   onClick={() => handleStatusChange(selectedStatus)}
                 >
@@ -162,6 +165,7 @@ export function CertificatesList() {
           >
             {STATUS_OPTIONS.find((o) => o.value === selectedStatus)?.label ?? selectedStatus}
             <button
+              type="button"
               onClick={() => handleStatusChange(selectedStatus)}
               className="ml-0.5 rounded-sm opacity-60 hover:opacity-100"
               aria-label="Retirer ce filtre"

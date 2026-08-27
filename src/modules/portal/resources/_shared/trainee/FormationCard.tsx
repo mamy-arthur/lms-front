@@ -49,8 +49,6 @@ export function FormationCard({ formation }: FormationCardProps) {
         )}
       </div>
 
-       
-
       <CardHeader>
         <CardTitle className="line-clamp-2 text-sm leading-snug">{formation.title}</CardTitle>
         {formation.description && (
