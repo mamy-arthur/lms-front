@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Save } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { MainBlock } from './SharedBlocks';
@@ -81,7 +81,11 @@ export function DynamicContentForm({
           disabled={isSubmitting}
           className="bg-(--color-primary) hover:bg-(--color-primary)/80"
         >
-          {isSubmitting && <Loader2 className="mr-2 size-4 animate-spin" />}
+          {isSubmitting ? (
+            <Loader2 className="mr-2 size-4 animate-spin" />
+          ) : (
+            <Save className="size-3" />
+          )}
           Enregistrer
         </Button>
       </div>
