@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Loader2 } from 'lucide-react';
 import { useUpdateEntry } from '../hooks/useCourseContentApi';
 import type { ApiContentEntry } from '../hooks/useCourseContentApi';
 import type { ContentTypeResource } from '@/shared/types/content-type.types';
@@ -22,6 +23,7 @@ export function SectionContent({
 }) {
   const updateEntry = useUpdateEntry();
   const [isPublished, setIsPublished] = useState(entry.is_published);
+  const [isTogglingPublish, setIsTogglingPublish] = useState(false);
 
   const handleSave = async (data: Record<string, unknown>) => {
     try {
@@ -34,12 +36,15 @@ export function SectionContent({
 
   const handleTogglePublish = async (published: boolean) => {
     setIsPublished(published);
+    setIsTogglingPublish(true);
     try {
       await updateEntry.mutateAsync({ entryId: entry.id, sectionId, isPublished: published });
       toast.success(published ? 'Contenu publié' : 'Contenu dépublié');
     } catch {
       setIsPublished(!published);
       toast.error('Erreur lors de la mise à jour');
+    } finally {
+      setIsTogglingPublish(false);
     }
   };
 
@@ -53,13 +58,17 @@ export function SectionContent({
         <div className="flex items-center gap-2">
           <Badge className="bg-blue-400">{contentType.title}</Badge>
           <div className="flex items-center gap-1.5 ml-2">
-            <Switch
-              id={`publish-${entry.id}`}
-              checked={isPublished}
-              onCheckedChange={handleTogglePublish}
-              disabled={updateEntry.isPending}
-              className="data-[state=checked]:bg-(--color-primary)"
-            />
+            {isTogglingPublish ? (
+              <Loader2 className="size-4 animate-spin text-muted-foreground" />
+            ) : (
+              <Switch
+                id={`publish-${entry.id}`}
+                checked={isPublished}
+                onCheckedChange={handleTogglePublish}
+                disabled={isTogglingPublish}
+                className="data-[state=checked]:bg-(--color-primary)"
+              />
+            )}
             <Label
               htmlFor={`publish-${entry.id}`}
               className="text-xs text-muted-foreground cursor-pointer"
@@ -76,6 +85,7 @@ export function SectionContent({
           initialData={entry.data}
           onCancel={onDeselect}
           onSubmit={handleSave}
+          isSubmitting={updateEntry.isPending}
         />
       </main>
     </div>

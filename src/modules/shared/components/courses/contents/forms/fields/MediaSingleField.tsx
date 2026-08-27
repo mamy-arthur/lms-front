@@ -21,9 +21,16 @@ interface MediaSingleFieldProps {
   value: unknown;
   onChange: (val: unknown) => void;
   contentTypeId: string;
+  onPendingDelete?: (id: string) => void;
 }
 
-export function MediaSingleField({ field, value, onChange, contentTypeId }: MediaSingleFieldProps) {
+export function MediaSingleField({
+  field,
+  value,
+  onChange,
+  contentTypeId,
+  onPendingDelete,
+}: MediaSingleFieldProps) {
   const [mediaInfo, setMediaInfo] = useState<ApiMedia | null>(null);
   const [isLoadingMedia, setIsLoadingMedia] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
@@ -73,7 +80,7 @@ export function MediaSingleField({ field, value, onChange, contentTypeId }: Medi
   };
 
   const handleRemove = () => {
-    if (mediaInfo) mediaApi.delete(mediaInfo.id).catch(() => {});
+    if (mediaInfo) onPendingDelete?.(mediaInfo.id);
     setMediaInfo(null);
     onChange(null);
   };

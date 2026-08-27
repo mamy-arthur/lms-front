@@ -11,9 +11,16 @@ interface DynamicFieldProps {
   value: unknown;
   onChange: (val: unknown) => void;
   contentTypeId: string;
+  onPendingDelete?: (id: string) => void;
 }
 
-export function DynamicField({ field, value, onChange, contentTypeId }: DynamicFieldProps) {
+export function DynamicField({
+  field,
+  value,
+  onChange,
+  contentTypeId,
+  onPendingDelete,
+}: DynamicFieldProps) {
   switch (field.type) {
     case 'text':
       return (
@@ -88,6 +95,7 @@ export function DynamicField({ field, value, onChange, contentTypeId }: DynamicF
           value={value}
           onChange={onChange}
           contentTypeId={contentTypeId}
+          onPendingDelete={onPendingDelete}
         />
       ) : (
         <MediaSingleField
@@ -95,6 +103,7 @@ export function DynamicField({ field, value, onChange, contentTypeId }: DynamicF
           value={value}
           onChange={onChange}
           contentTypeId={contentTypeId}
+          onPendingDelete={onPendingDelete}
         />
       );
 

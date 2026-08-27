@@ -21,9 +21,16 @@ interface MediaMultiFieldProps {
   value: unknown;
   onChange: (val: unknown) => void;
   contentTypeId: string;
+  onPendingDelete?: (id: string) => void;
 }
 
-export function MediaMultiField({ field, value, onChange, contentTypeId }: MediaMultiFieldProps) {
+export function MediaMultiField({
+  field,
+  value,
+  onChange,
+  contentTypeId,
+  onPendingDelete,
+}: MediaMultiFieldProps) {
   const [mediaList, setMediaList] = useState<ApiMedia[]>([]);
   const [isLoadingMedia, setIsLoadingMedia] = useState(false);
   const [uploadProgresses, setUploadProgresses] = useState<{ name: string; pct: number }[]>([]);
@@ -75,7 +82,7 @@ export function MediaMultiField({ field, value, onChange, contentTypeId }: Media
   };
 
   const removeFromList = (id: string) => {
-    mediaApi.delete(id).catch(() => {});
+    onPendingDelete?.(id);
     const updated = mediaList.filter((m) => m.id !== id);
     setMediaList(updated);
     onChange(updated.length ? updated.map((m) => m.id) : null);

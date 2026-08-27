@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Loader2, Save } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { MainBlock } from './SharedBlocks';
 import { DynamicField } from './DynamicField';
 import { extractMediaId } from './fields/media-utils';
+import { mediaApi } from '@/shared/api/media.api';
 import type { ContentTypeResource } from '@/shared/types/content-type.types';
 
 interface DynamicContentFormProps {
@@ -41,13 +42,19 @@ export function DynamicContentForm({
       activeFields.map((f) => [f.name, normaliseMediaValue(f, initialData?.[f.name])]),
     ),
   );
+  // IDs of removed media files — deleted server-side only on form submit
+  const pendingDeleteIds = useRef<string[]>([]);
 
   const handleFieldChange = (name: string, val: unknown) => {
     setFieldValues((prev) => ({ ...prev, [name]: val }));
   };
 
-  const handleFormSubmit = (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (pendingDeleteIds.current.length) {
+      await Promise.allSettled(pendingDeleteIds.current.map((id) => mediaApi.delete(id)));
+      pendingDeleteIds.current = [];
+    }
     onSubmit(fieldValues);
   };
 
@@ -67,6 +74,9 @@ export function DynamicContentForm({
               value={fieldValues[field.name]}
               onChange={(val) => handleFieldChange(field.name, val)}
               contentTypeId={contentType.id}
+              onPendingDelete={(id) => {
+                pendingDeleteIds.current.push(id);
+              }}
             />
           </div>
         ))}
