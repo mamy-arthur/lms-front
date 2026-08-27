@@ -165,6 +165,7 @@ function AdminQuestionsTableBase({
       onSort={onSort}
       onPageChange={onPageChange}
       onPageSizeChange={onPageSizeChange}
+      onRowClick={onEdit}
       rowTestId="admin-question-row"
       emptyState={{
         title: 'Aucune question',

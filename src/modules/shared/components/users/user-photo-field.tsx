@@ -4,7 +4,6 @@ import { useRef, useState } from 'react';
 import { Camera, X } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { getInitials } from '@/shared/lib/string/getInitials';
 
 export interface UserPhotoFieldProps {
   /** URL de la photo actuelle (depuis le backend) */
@@ -45,8 +44,8 @@ export function UserPhotoField({
       <div className="relative group">
         <Avatar className="h-16 w-16 rounded-full">
           <AvatarImage src={displayUrl ?? undefined} alt={fullName} />
-          <AvatarFallback className="bg-(--color-primary) text-white text-base">
-            {getInitials(fullName)}
+          <AvatarFallback className="bg-gray-50 text-white text-base">
+            <Camera className="h-5 w-5 text-black" />
           </AvatarFallback>
         </Avatar>
         <button

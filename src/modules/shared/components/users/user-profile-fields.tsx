@@ -10,7 +10,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
 import { COUNTRIES } from '@/shared/constants/countries';
 import { LANGUAGES } from '@/shared/constants/languages';
 import { TIMEZONES } from '@/shared/constants/timezones';
@@ -23,13 +22,6 @@ export function UserProfileFields<T extends FieldValues>({ form }: { form: UseFo
 
   return (
     <>
-      <Separator className="my-1" />
-
-      {/* ── Adresse ── */}
-      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-        Adresse
-      </p>
-
       {/* Pays — obligatoire en premier pour activer l'autocomplétion */}
       <FieldRoot
         control={f.control}
@@ -53,7 +45,7 @@ export function UserProfileFields<T extends FieldValues>({ form }: { form: UseFo
                 </SelectTrigger>
               </FieldContent>
               <SelectContent>
-                <SelectItem value="__none__">— Non renseigné</SelectItem>
+                <SelectItem value="__none__"> Aucun </SelectItem>
                 {COUNTRIES.map((c) => (
                   <SelectItem key={c.code} value={c.code}>
                     {c.name}
@@ -75,7 +67,7 @@ export function UserProfileFields<T extends FieldValues>({ form }: { form: UseFo
             <FieldLabel className="text-xs">
               Adresse
               {!country && (
-                <span className="ml-1 text-muted-foreground font-normal">
+                <span className="ml-1 text-muted-foreground text-[10px] font-normal">
                   (sélectionnez un pays d'abord)
                 </span>
               )}
@@ -99,7 +91,6 @@ export function UserProfileFields<T extends FieldValues>({ form }: { form: UseFo
         )}
       />
 
-      {/* Code postal + Ville */}
       <div className="flex gap-3">
         <FieldRoot
           control={f.control}
@@ -110,6 +101,7 @@ export function UserProfileFields<T extends FieldValues>({ form }: { form: UseFo
               <FieldContent>
                 <Input
                   aria-label="Code postal"
+                  placeholder="75001"
                   className="text-xs"
                   maxLength={20}
                   {...field}
@@ -129,6 +121,7 @@ export function UserProfileFields<T extends FieldValues>({ form }: { form: UseFo
               <FieldContent>
                 <Input
                   aria-label="Ville"
+                  placeholder="Paris"
                   className="text-xs"
                   maxLength={100}
                   {...field}
@@ -140,8 +133,6 @@ export function UserProfileFields<T extends FieldValues>({ form }: { form: UseFo
           )}
         />
       </div>
-
-      <Separator className="my-1" />
 
       {/* Fuseau horaire + Langue */}
       <div className="flex gap-3">
@@ -165,7 +156,7 @@ export function UserProfileFields<T extends FieldValues>({ form }: { form: UseFo
                   </SelectTrigger>
                 </FieldContent>
                 <SelectContent>
-                  <SelectItem value="__none__">— Non renseigné</SelectItem>
+                  <SelectItem value="__none__"> Aucun </SelectItem>
                   {TIMEZONES.map((tz) => (
                     <SelectItem key={tz.value} value={tz.value}>
                       {tz.label}
@@ -198,7 +189,7 @@ export function UserProfileFields<T extends FieldValues>({ form }: { form: UseFo
                   </SelectTrigger>
                 </FieldContent>
                 <SelectContent>
-                  <SelectItem value="__none__">— Non renseigné</SelectItem>
+                  <SelectItem value="__none__"> Aucun </SelectItem>
                   {LANGUAGES.map((l) => (
                     <SelectItem key={l.code} value={l.code}>
                       {l.label}
