@@ -26,7 +26,7 @@ interface MediaSingleFieldProps {
 export function MediaSingleField({ field, value, onChange, contentTypeId }: MediaSingleFieldProps) {
   const [mediaInfo, setMediaInfo] = useState<ApiMedia | null>(null);
   const [isLoadingMedia, setIsLoadingMedia] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [previewMedia, setPreviewMedia] = useState<ApiMedia | null>(null);
 
@@ -50,20 +50,25 @@ export function MediaSingleField({ field, value, onChange, contentTypeId }: Medi
   };
 
   const uploadSingle = async (file: File) => {
-    setIsUploading(true);
+    setUploadProgress(0);
     setUploadError(null);
     try {
       if (mediaInfo) {
         await mediaApi.delete(mediaInfo.id);
         setMediaInfo(null);
       }
-      const res = await mediaApi.upload(file, contentTypeId, field.field_id);
+      const res = await mediaApi.uploadWithProgress(
+        file,
+        contentTypeId,
+        field.field_id,
+        setUploadProgress,
+      );
       setMediaInfo(res.data);
       onChange(res.data.id);
     } catch (err) {
       setUploadError(extractErrorMessage(err));
     } finally {
-      setIsUploading(false);
+      setUploadProgress(null);
     }
   };
 
@@ -91,15 +96,16 @@ export function MediaSingleField({ field, value, onChange, contentTypeId }: Medi
         >
           <Button
             type="button"
-            variant="outline"
+            variant="ghost"
             size="icon"
-            className="z-50 absolute top-2 right-2 h-3 w-3 text-black p-1"
+            aria-label="Supprimer"
+            className="z-50 absolute top-1.5 right-1.5 size-5 rounded-full bg-black/50 text-white hover:bg-destructive hover:text-white transition-colors"
             onClick={(e) => {
               e.stopPropagation();
               handleRemove();
             }}
           >
-            <X className="h-2 w-2" />
+            <X className="size-2.5" />
           </Button>
 
           <MediaThumbnail media={mediaInfo} />
@@ -121,10 +127,22 @@ export function MediaSingleField({ field, value, onChange, contentTypeId }: Medi
         />
       )}
 
-      {isUploading && (
-        <p className="flex items-center gap-1 text-xs text-muted-foreground">
-          <Loader2 className="size-3 animate-spin" /> Upload en cours…
-        </p>
+      {uploadProgress !== null && (
+        <div className="space-y-1">
+          <div className="flex justify-between text-xs text-muted-foreground">
+            <span className="flex items-center gap-1">
+              <Loader2 className="size-3 animate-spin" />
+              Upload en cours…
+            </span>
+            <span className="font-semibold text-(--color-primary)">{uploadProgress}%</span>
+          </div>
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+            <div
+              className="h-full rounded-full bg-(--color-primary) transition-all duration-300"
+              style={{ width: `${uploadProgress}%` }}
+            />
+          </div>
+        </div>
       )}
       {uploadError && (
         <p className="flex items-center gap-1 text-xs text-destructive">

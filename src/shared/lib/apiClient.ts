@@ -145,3 +145,48 @@ export async function apiUpload<T>(path: string, body: FormData): Promise<T> {
   }
   return json as T;
 }
+
+/** Upload multipart/form-data avec suivi de progression via XHR. */
+export function apiUploadWithProgress<T>(
+  path: string,
+  body: FormData,
+  onProgress: (percent: number) => void,
+): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const url = `/api/v1/${path.replace(/^\/+/, '')}`;
+    const tenant = useTenantStore.getState().tenant;
+    const xhr = new XMLHttpRequest();
+
+    xhr.open('POST', url);
+    xhr.withCredentials = true;
+    xhr.setRequestHeader('Accept', 'application/json');
+    if (tenant) xhr.setRequestHeader('X-Tenant-ID', tenant.id);
+
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
+    };
+
+    xhr.onload = () => {
+      let json: unknown;
+      try {
+        json = JSON.parse(xhr.responseText);
+      } catch {
+        json = xhr.responseText;
+      }
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve(json as T);
+      } else {
+        if (xhr.status === 401) {
+          useAuthStore.getState().clearAuth();
+          if (typeof window !== 'undefined') {
+            window.location.replace(resolveLoginPath(window.location.pathname));
+          }
+        }
+        reject(Object.assign(new Error(xhr.statusText), { status: xhr.status, json }));
+      }
+    };
+
+    xhr.onerror = () => reject(new Error('Network error'));
+    xhr.send(body);
+  });
+}

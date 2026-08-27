@@ -56,7 +56,7 @@ export function MediaThumbnail({ media }: { media: ApiMedia }) {
           playsInline
           preload="metadata"
         />
-        <Play className="relative z-10 h-10 w-10 fill-white text-white drop-shadow" />
+        <Play className="relative z-10 h-8 w-8 fill-white text-white drop-shadow" />
       </div>
     );
   }
