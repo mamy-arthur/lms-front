@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Loader2, AlertCircle, X } from 'lucide-react';
+import { Loader2, AlertCircle, Trash } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { FileUploadField } from '@/modules/shared/components/input-upload/FileUploadField';
 import { mediaApi, type ApiMedia } from '@/shared/api/media.api';
@@ -99,7 +99,7 @@ export function MediaSingleField({
           tabIndex={0}
           onClick={() => handleCardClick(mediaInfo)}
           onKeyDown={(e) => e.key === 'Enter' && handleCardClick(mediaInfo)}
-          className="relative flex items-center gap-3 w-fit rounded-lg border border-border bg-card shadow-sm cursor-pointer hover:bg-accent/50 transition-colors p-2"
+          className="relative flex flex-col gap-3 w-75 rounded-sm  bg-card  cursor-pointer transition-colors"
         >
           <Button
             type="button"
@@ -112,7 +112,7 @@ export function MediaSingleField({
               handleRemove();
             }}
           >
-            <X className="size-2.5" />
+            <Trash className="size-2.5" />
           </Button>
 
           <MediaThumbnail media={mediaInfo} />
