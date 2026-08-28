@@ -20,7 +20,7 @@ const module1: FormationModule = {
           contents: [
             {
               id: 'c1',
-              sectionId: 'sec1',
+              courseId: 'sec1',
               type: 'text-media',
               title: 'TypeScript en 100 secondes',
               status: 'completed',
@@ -29,7 +29,7 @@ const module1: FormationModule = {
             },
             {
               id: 'c2',
-              sectionId: 'sec1',
+              courseId: 'sec1',
               type: 'url',
               title: 'Documentation officielle TypeScript',
               status: 'completed',
@@ -53,7 +53,7 @@ const module1: FormationModule = {
           contents: [
             {
               id: 'c3',
-              sectionId: 'sec2',
+              courseId: 'sec2',
               type: 'text-media',
               title: 'Node.js & TypeScript – Setup complet',
               status: 'completed',
@@ -62,7 +62,7 @@ const module1: FormationModule = {
             },
             {
               id: 'c4',
-              sectionId: 'sec2',
+              courseId: 'sec2',
               type: 'page',
               title: 'Configuration tsconfig.json',
               status: 'completed',
@@ -74,7 +74,7 @@ const module1: FormationModule = {
             },
             {
               id: 'c5',
-              sectionId: 'sec2',
+              courseId: 'sec2',
               type: 'file',
               title: 'TypeScript Handbook (PDF)',
               status: 'completed',
@@ -87,7 +87,7 @@ const module1: FormationModule = {
             },
             {
               id: 'c5b',
-              sectionId: 'sec2',
+              courseId: 'sec2',
               type: 'page',
               title: 'Pourquoi TypeScript ?',
               status: 'completed',
@@ -180,7 +180,7 @@ const module2: FormationModule = {
           contents: [
             {
               id: 'c6',
-              sectionId: 'sec3',
+              courseId: 'sec3',
               type: 'text-media',
               title: 'React & TypeScript – crash course',
               status: 'completed',
@@ -189,7 +189,7 @@ const module2: FormationModule = {
             },
             {
               id: 'c7',
-              sectionId: 'sec3',
+              courseId: 'sec3',
               type: 'page',
               title: 'Les bases des props typées',
               status: 'in_progress',
@@ -200,7 +200,7 @@ const module2: FormationModule = {
             },
             {
               id: 'c8',
-              sectionId: 'sec3',
+              courseId: 'sec3',
               type: 'text-media',
               title: 'Diagramme – flux de données React',
               status: 'available',
@@ -219,7 +219,7 @@ const module2: FormationModule = {
           contents: [
             {
               id: 'c9',
-              sectionId: 'sec4',
+              courseId: 'sec4',
               type: 'scorm',
               title: 'React Query Fundamentals – Module SCORM',
               status: 'available',
@@ -228,7 +228,7 @@ const module2: FormationModule = {
             },
             {
               id: 'c10',
-              sectionId: 'sec4',
+              courseId: 'sec4',
               type: 'survey',
               title: 'Sondage – Votre expérience avec les Hooks',
               status: 'available',

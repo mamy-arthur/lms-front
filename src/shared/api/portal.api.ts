@@ -1,4 +1,5 @@
 import { apiGet, apiPost } from '@/shared/lib/apiClient';
+import { httpClient } from '@/shared/lib/apiClient';
 import type {
   ApiPortalLearningPathSummary,
   ApiPortalContentEntry,
@@ -20,6 +21,12 @@ export const portalContentEntriesApi = {
     apiGet<{ data: ApiPortalContentEntry }>(
       `enrollments/${enrollmentId}/courses/${courseId}/entries/${entryId}`,
     ),
+
+  markComplete: (enrollmentId: string, courseId: string, entryId: string): Promise<void> =>
+    httpClient(
+      `/api/v1/enrollments/${enrollmentId}/courses/${courseId}/entries/${entryId}/complete`,
+      { method: 'POST' },
+    ).then(() => undefined),
 };
 
 export const evaluationAttemptsApi = {

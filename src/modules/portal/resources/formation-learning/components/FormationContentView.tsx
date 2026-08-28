@@ -8,7 +8,7 @@ import type { Formation } from '../lib/types';
 import type { Resolved } from '../lib/course-utils';
 import type { ApiPortalContentEntry } from '@/shared/types/portal.types';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CheckCircle2 } from 'lucide-react';
 
 interface Props {
   formation: Formation;
@@ -18,6 +18,8 @@ interface Props {
   /** When provided, uses the real API entry instead of mock content.data. */
   portalEntry?: ApiPortalContentEntry | null;
   portalEntryLoading?: boolean;
+  onMarkComplete?: () => void;
+  isCompleting?: boolean;
 }
 
 export default function FormationContentView({
@@ -27,6 +29,8 @@ export default function FormationContentView({
   onEvaluationComplete,
   portalEntry,
   portalEntryLoading,
+  onMarkComplete,
+  isCompleting,
 }: Props) {
   if (!resolved) {
     return (
@@ -90,14 +94,39 @@ export default function FormationContentView({
           {pos.index} / {pos.total}
         </span>
 
-        <Button
-          onClick={() => onNavigate(next)}
-          disabled={!next}
-          className="flex items-center rounded-sm disabled:opacity-40 disabled:cursor-not-allowed text-xs font-medium text-white transition-colors"
-          style={{ background: 'var(--color-primary)' }}
-        >
-          Suivant <ArrowRight />
-        </Button>
+        {onMarkComplete && !content.completed ? (
+          // Not yet done: one button that marks complete then moves on (or just marks if last).
+          <Button
+            onClick={() => {
+              onMarkComplete();
+              if (next) onNavigate(next);
+            }}
+            disabled={isCompleting}
+            className="flex items-center gap-2 rounded-sm disabled:opacity-60 disabled:cursor-not-allowed text-xs font-medium text-white transition-colors"
+            style={{ background: 'var(--color-primary)' }}
+          >
+            <CheckCircle2 className="h-4 w-4" />
+            {isCompleting ? 'Enregistrement…' : next ? 'Terminer et continuer' : 'Terminer'}
+          </Button>
+        ) : (
+          // Already completed: show badge + navigate-only button.
+          <div className="flex items-center gap-3">
+            {content.completed && (
+              <span className="flex items-center gap-1 text-xs font-medium text-green-600">
+                <CheckCircle2 className="h-3 w-3" />
+                Terminé
+              </span>
+            )}
+            <Button
+              onClick={() => onNavigate(next)}
+              disabled={!next}
+              className="flex items-center gap-2 rounded-sm disabled:opacity-40 disabled:cursor-not-allowed text-xs font-medium text-white transition-colors"
+              style={{ background: 'var(--color-primary)' }}
+            >
+              Suivant <ArrowRight />
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );

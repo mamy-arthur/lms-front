@@ -31,14 +31,15 @@ const STATUS_MAP: Record<string, FormationStatus> = {
 function normalizeEnrollment(api: ApiMeEnrollment): TraineeFormation {
   return {
     id: api.id,
-    slug: api.learning_path.id,
+    slug: api.id, // enrollment ID — unique even for re-enrollments to the same LP
     title: api.learning_path.name,
     description: api.learning_path.description,
     category: api.learning_path.category_learning_path?.name ?? '',
     coverImage: api.learning_path.image?.url ?? '',
-    progress: 0,
+    progress: api.progress_percent ?? 0,
     completedModules: 0,
     totalModules: api.learning_path.totalModules ?? 0,
+    totalDurationMin: api.learning_path.duration ?? 0,
     status: STATUS_MAP[api.status] ?? 'not_started',
     lastActivity: formatRelativeDate(api.created_at),
     completedDate: api.completed_at

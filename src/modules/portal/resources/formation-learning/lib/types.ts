@@ -8,10 +8,12 @@ export type ProgressStatus = 'completed' | 'in_progress' | 'available' | 'locked
 
 export interface CourseContent {
   id: string;
-  sectionId: string;
+  /** courseId — used to call the portal entry endpoint (/courses/{courseId}/entries/{entryId}). */
+  courseId: string;
   type: ContentType;
   title: string;
   status: ProgressStatus;
+  completed?: boolean;
   durationMin?: number;
   data?: Record<string, unknown>;
 }

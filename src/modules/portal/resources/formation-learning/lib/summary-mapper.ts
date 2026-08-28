@@ -19,7 +19,7 @@ import type {
  *  module.evaluation       → FormationEvaluation (intermediate, inserted after its module)
  *  final_evaluation        → FormationEvaluation (final, appended at the end)
  *
- * NOTE: CourseContent.sectionId stores the courseId (not the section id) because
+ * NOTE: CourseContent.courseId stores the course id (not the section id) because
  * the portal entry endpoint is scoped to /courses/{courseId}/entries/{entryId}.
  */
 export function mapSummaryToFormation(summary: ApiPortalLearningPathSummary): Formation {
@@ -36,10 +36,11 @@ export function mapSummaryToFormation(summary: ApiPortalLearningPathSummary): Fo
         title: section.name,
         contents: section.content_entries.map((entry): CourseContent => ({
           id: entry.id,
-          sectionId: course.id, // sectionId === courseId — used to call portal entry endpoint
+          courseId: course.id,
           type: 'page', // placeholder; real type resolved when entry is fetched
           title: entry.title ?? '',
-          status: 'available',
+          status: entry.completed ? 'completed' : 'available',
+          completed: entry.completed,
         })),
       })),
     }));
@@ -49,8 +50,8 @@ export function mapSummaryToFormation(summary: ApiPortalLearningPathSummary): Fo
       formationId: summary.id,
       type: 'module',
       title: mod.name,
-      status: 'available',
-      progress: 0,
+      status: mod.accessible ? 'available' : 'locked',
+      progress: Math.round(mod.progress.percent),
       order: order++,
       courses,
     } satisfies FormationModule);
@@ -62,7 +63,11 @@ export function mapSummaryToFormation(summary: ApiPortalLearningPathSummary): Fo
         type: 'evaluation',
         evaluationType: 'intermediate',
         title: mod.evaluation.title,
-        status: 'available',
+        status: mod.evaluation.accessible
+          ? mod.evaluation.completed
+            ? 'completed'
+            : 'available'
+          : 'locked',
         order: order++,
         passingScore: 70,
         questions: [],
@@ -77,7 +82,11 @@ export function mapSummaryToFormation(summary: ApiPortalLearningPathSummary): Fo
       type: 'evaluation',
       evaluationType: 'final',
       title: summary.final_evaluation.title,
-      status: 'available',
+      status: summary.final_evaluation.accessible
+        ? summary.final_evaluation.completed
+          ? 'completed'
+          : 'available'
+        : 'locked',
       order: order,
       passingScore: 70,
       questions: [],
@@ -88,7 +97,7 @@ export function mapSummaryToFormation(summary: ApiPortalLearningPathSummary): Fo
     id: summary.id,
     slug: summary.id,
     title: summary.name,
-    progress: 0,
+    progress: Math.round(summary.progress.percent),
     nodes,
   };
 }
