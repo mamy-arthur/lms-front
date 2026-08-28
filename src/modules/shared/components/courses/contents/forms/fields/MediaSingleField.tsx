@@ -63,6 +63,7 @@ export function MediaSingleField({
       if (mediaInfo) {
         await mediaApi.delete(mediaInfo.id);
         setMediaInfo(null);
+        onChange(null); // clear value immediately so a failed upload doesn't leave a stale UUID
       }
       const res = await mediaApi.uploadWithProgress(
         file,

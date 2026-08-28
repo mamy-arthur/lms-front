@@ -75,7 +75,7 @@ export function DynamicContentForm({
       await Promise.allSettled(pendingDeleteIds.current.map((id) => mediaApi.delete(id)));
       pendingDeleteIds.current = [];
     }
-    onSubmit(fieldValues);
+    onSubmit(result.data as Record<string, unknown>);
   };
 
   return (

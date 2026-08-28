@@ -45,7 +45,7 @@ export function UserProfileFields<T extends FieldValues>({ form }: { form: UseFo
                 </SelectTrigger>
               </FieldContent>
               <SelectContent>
-                <SelectItem value="__none__"> Aucun </SelectItem>
+                <SelectItem value="__none__">Aucun</SelectItem>
                 {COUNTRIES.map((c) => (
                   <SelectItem key={c.code} value={c.code}>
                     {c.name}
@@ -156,7 +156,7 @@ export function UserProfileFields<T extends FieldValues>({ form }: { form: UseFo
                   </SelectTrigger>
                 </FieldContent>
                 <SelectContent>
-                  <SelectItem value="__none__"> Aucun </SelectItem>
+                  <SelectItem value="__none__">Aucun</SelectItem>
                   {TIMEZONES.map((tz) => (
                     <SelectItem key={tz.value} value={tz.value}>
                       {tz.label}
@@ -189,7 +189,7 @@ export function UserProfileFields<T extends FieldValues>({ form }: { form: UseFo
                   </SelectTrigger>
                 </FieldContent>
                 <SelectContent>
-                  <SelectItem value="__none__"> Aucun </SelectItem>
+                  <SelectItem value="__none__">Aucun</SelectItem>
                   {LANGUAGES.map((l) => (
                     <SelectItem key={l.code} value={l.code}>
                       {l.label}
