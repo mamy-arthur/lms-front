@@ -282,12 +282,13 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
       name="is_active"
       render={({ field }) => (
         <FieldGroup>
-          <div className="flex items-center justify-between">
-            <FieldLabel className="text-xs">Compte actif</FieldLabel>
+          <div className="flex items-center justify-between border p-3 bg-gray-50/40 rounded-sm">
+            <FieldLabel className="text-xs">Autoriser l’accès au compte</FieldLabel>
             <Switch
               checked={field.value}
               onCheckedChange={field.onChange}
               aria-label="Compte actif"
+              className="data-checked:bg-(--color-primary)"
             />
           </div>
         </FieldGroup>
@@ -332,8 +333,6 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
       <SheetContent
         className="flex w-full flex-col gap-0 p-0 overflow-hidden sm:max-w-150! lg:max-w-200!"
         showCloseButton={true}
-        onInteractOutside={(e) => e.preventDefault()}
-        onEscapeKeyDown={(e) => e.preventDefault()}
       >
         <SheetHeader className="border-b px-4 py-4">
           <SheetTitle>{isEdit ? "Modifier l'utilisateur" : 'Créer un utilisateur'}</SheetTitle>
@@ -360,8 +359,8 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
           extraFields={
             <>
               {tenantField}
-              {activeField}
               <UserProfileFields form={formState.form} />
+              {activeField}
             </>
           }
         />

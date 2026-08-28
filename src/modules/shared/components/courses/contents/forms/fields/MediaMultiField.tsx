@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Loader2, AlertCircle, X } from 'lucide-react';
+import { Loader2, AlertCircle, Trash } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { MultiFileUploadField } from '@/modules/shared/components/input-upload/MultiFileUploadField';
 import { mediaApi, type ApiMedia } from '@/shared/api/media.api';
@@ -21,12 +21,19 @@ interface MediaMultiFieldProps {
   value: unknown;
   onChange: (val: unknown) => void;
   contentTypeId: string;
+  onPendingDelete?: (id: string) => void;
 }
 
-export function MediaMultiField({ field, value, onChange, contentTypeId }: MediaMultiFieldProps) {
+export function MediaMultiField({
+  field,
+  value,
+  onChange,
+  contentTypeId,
+  onPendingDelete,
+}: MediaMultiFieldProps) {
   const [mediaList, setMediaList] = useState<ApiMedia[]>([]);
   const [isLoadingMedia, setIsLoadingMedia] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgresses, setUploadProgresses] = useState<{ name: string; pct: number }[]>([]);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [previewMedia, setPreviewMedia] = useState<ApiMedia | null>(null);
 
@@ -52,11 +59,17 @@ export function MediaMultiField({ field, value, onChange, contentTypeId }: Media
 
   const uploadMultiple = async (newFiles: File[]) => {
     if (!newFiles.length) return;
-    setIsUploading(true);
     setUploadError(null);
+    setUploadProgresses(newFiles.map((f) => ({ name: f.name, pct: 0 })));
     try {
       const results = await Promise.all(
-        newFiles.map((f) => mediaApi.upload(f, contentTypeId, field.field_id)),
+        newFiles.map((f, i) =>
+          mediaApi.uploadWithProgress(f, contentTypeId, field.field_id, (pct) => {
+            setUploadProgresses((prev) =>
+              prev.map((item, j) => (j === i ? { ...item, pct } : item)),
+            );
+          }),
+        ),
       );
       const updated = [...mediaList, ...results.map((r) => r.data)];
       setMediaList(updated);
@@ -64,12 +77,12 @@ export function MediaMultiField({ field, value, onChange, contentTypeId }: Media
     } catch (err) {
       setUploadError(extractErrorMessage(err));
     } finally {
-      setIsUploading(false);
+      setUploadProgresses([]);
     }
   };
 
   const removeFromList = (id: string) => {
-    mediaApi.delete(id).catch(() => {});
+    onPendingDelete?.(id);
     const updated = mediaList.filter((m) => m.id !== id);
     setMediaList(updated);
     onChange(updated.length ? updated.map((m) => m.id) : null);
@@ -97,20 +110,20 @@ export function MediaMultiField({ field, value, onChange, contentTypeId }: Media
             tabIndex={0}
             onClick={() => handleItemClick(media)}
             onKeyDown={(e) => e.key === 'Enter' && handleItemClick(media)}
-            className="relative flex flex-col gap-3 w-full rounded-md  bg-gray-50 cursor-pointer hover:bg-muted/50 transition-colors"
+            className="relative flex flex-col gap-3 w-full rounded-sm cursor-pointer hover:bg-muted/50 transition-colors"
           >
             <Button
               type="button"
               variant="ghost"
               size="icon"
               aria-label="Supprimer"
-              className="z-50 absolute rounded-lg top-2 p-1 right-2 h-5 w-5 bg-red-300 text-white"
+              className="z-50 absolute top-1.5 right-1.5 size-5 rounded-full bg-black/50 text-white hover:bg-destructive hover:text-white transition-colors"
               onClick={(e) => {
                 e.stopPropagation();
                 removeFromList(media.id);
               }}
             >
-              <X className="h-3 w-3" />
+              <Trash className="size-2.5" />
             </Button>
 
             <MediaThumbnail media={media} />
@@ -125,11 +138,23 @@ export function MediaMultiField({ field, value, onChange, contentTypeId }: Media
         ))}
       </div>
 
-      {isUploading && (
-        <p className="flex items-center gap-1 text-xs text-muted-foreground">
-          <Loader2 className="size-3 animate-spin" /> Upload en cours…
-        </p>
-      )}
+      {uploadProgresses.map(({ name, pct }) => (
+        <div key={name} className="space-y-1">
+          <div className="flex justify-between text-xs text-muted-foreground">
+            <span className="flex items-center gap-1 truncate max-w-[70%]">
+              <Loader2 className="size-3 shrink-0 animate-spin" />
+              {name}
+            </span>
+            <span className="font-semibold text-(--color-primary)">{pct}%</span>
+          </div>
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+            <div
+              className="h-full rounded-full bg-(--color-primary) transition-all duration-300"
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+        </div>
+      ))}
       {uploadError && (
         <p className="flex items-center gap-1 text-xs text-destructive">
           <AlertCircle className="size-3" /> {uploadError}

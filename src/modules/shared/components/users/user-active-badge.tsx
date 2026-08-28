@@ -16,12 +16,6 @@ export function UserActiveBadge({ isActive }: UserActiveBadgeProps) {
           : 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-50',
       )}
     >
-      <span
-        className={cn(
-          'size-1.5 rounded-full shrink-0',
-          isActive ? 'bg-emerald-500' : 'bg-rose-500',
-        )}
-      />
       {isActive ? 'Actif' : 'Inactif'}
     </Badge>
   );

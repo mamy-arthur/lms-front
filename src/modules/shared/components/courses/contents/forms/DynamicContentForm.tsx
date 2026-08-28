@@ -1,12 +1,14 @@
 'use client';
 
-import { useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Loader2, Save } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { MainBlock } from './SharedBlocks';
 import { DynamicField } from './DynamicField';
 import { extractMediaId } from './fields/media-utils';
+import { mediaApi } from '@/shared/api/media.api';
+import { buildContentSchema } from './content-schema';
 import type { ContentTypeResource } from '@/shared/types/content-type.types';
 
 interface DynamicContentFormProps {
@@ -41,14 +43,39 @@ export function DynamicContentForm({
       activeFields.map((f) => [f.name, normaliseMediaValue(f, initialData?.[f.name])]),
     ),
   );
+  // IDs of removed media files — deleted server-side only on form submit
+  const pendingDeleteIds = useRef<string[]>([]);
+
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const handleFieldChange = (name: string, val: unknown) => {
     setFieldValues((prev) => ({ ...prev, [name]: val }));
+    if (fieldErrors[name])
+      setFieldErrors((prev) => {
+        const next = { ...prev };
+        delete next[name];
+        return next;
+      });
   };
 
-  const handleFormSubmit = (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(fieldValues);
+    const schema = buildContentSchema(activeFields);
+    const result = schema.safeParse(fieldValues);
+    if (!result.success) {
+      const errors: Record<string, string> = {};
+      for (const issue of result.error.issues) {
+        const key = issue.path[0] as string;
+        if (key && !errors[key]) errors[key] = issue.message;
+      }
+      setFieldErrors(errors);
+      return;
+    }
+    if (pendingDeleteIds.current.length) {
+      await Promise.allSettled(pendingDeleteIds.current.map((id) => mediaApi.delete(id)));
+      pendingDeleteIds.current = [];
+    }
+    onSubmit(result.data as Record<string, unknown>);
   };
 
   return (
@@ -67,7 +94,13 @@ export function DynamicContentForm({
               value={fieldValues[field.name]}
               onChange={(val) => handleFieldChange(field.name, val)}
               contentTypeId={contentType.id}
+              onPendingDelete={(id) => {
+                pendingDeleteIds.current.push(id);
+              }}
             />
+            {fieldErrors[field.name] && (
+              <p className="text-xs text-destructive">{fieldErrors[field.name]}</p>
+            )}
           </div>
         ))}
       </MainBlock>
@@ -81,7 +114,11 @@ export function DynamicContentForm({
           disabled={isSubmitting}
           className="bg-(--color-primary) hover:bg-(--color-primary)/80"
         >
-          {isSubmitting && <Loader2 className="mr-2 size-4 animate-spin" />}
+          {isSubmitting ? (
+            <Loader2 className="mr-2 size-4 animate-spin" />
+          ) : (
+            <Save className="size-3" />
+          )}
           Enregistrer
         </Button>
       </div>

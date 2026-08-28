@@ -9,19 +9,19 @@ interface UserRoleBadgeProps {
 const ROLE_CONFIG: Record<Role, { label: string; className: string }> = {
   [Role.SUPER_ADMIN]: {
     label: 'Super admin',
-    className: 'bg-red-50 text-red-700 border-red-200 hover:bg-red-50',
+    className: 'bg-red-500 text-white',
   },
   [Role.EDITOR]: {
     label: 'Éditeur',
-    className: 'bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-50',
+    className: 'bg-orange-500 text-white',
   },
   [Role.CLIENT_MANAGER]: {
     label: 'Responsable',
-    className: 'bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-50',
+    className: 'bg-indigo-500 text-white',
   },
   [Role.TRAINEE]: {
     label: 'Stagiaire',
-    className: 'bg-sky-50 text-sky-700 border-sky-200 hover:bg-sky-50',
+    className: 'bg-sky-500 text-white',
   },
 };
 
@@ -40,7 +40,7 @@ export function UserRoleBadge({ role }: UserRoleBadgeProps) {
     <Badge
       variant="outline"
       className={cn(
-        'inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full border',
+        'inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full',
         config.className,
       )}
     >

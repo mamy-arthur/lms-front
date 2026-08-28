@@ -172,7 +172,7 @@ export function UsersContentTable<T extends UsersContentRow = UsersContentRow>({
       onSort={onSort}
       onPageChange={onPageChange}
       onPageSizeChange={onPageSizeChange}
-      onRowClick={onView}
+      onRowClick={onEdit ?? onView}
       rowTestId={rowTestId}
     />
   );

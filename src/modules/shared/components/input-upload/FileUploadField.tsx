@@ -1,7 +1,6 @@
 import { useRef, useState, type ChangeEvent, type DragEvent, type MouseEvent } from 'react';
 import { Upload, FileArchive, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
 
 interface FileUploadFieldProps {
   label?: string;
@@ -13,7 +12,6 @@ interface FileUploadFieldProps {
 }
 
 export function FileUploadField({
-  label = 'Fichier',
   fileName,
   accept = 'application/xml,application/zip,.xml,.zip',
   hint = 'XML ou ZIP',
@@ -42,8 +40,6 @@ export function FileUploadField({
 
   return (
     <div className="space-y-2 w-full">
-      <Label>{label}</Label>
-
       <div
         onClick={() => inputRef.current?.click()}
         onDragOver={(e) => {

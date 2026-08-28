@@ -117,6 +117,7 @@ export function AdminModulesTable({
       onSort={onSort}
       onPageChange={onPageChange}
       onPageSizeChange={onPageSizeChange}
+      onRowClick={onEdit}
       rowTestId="admin-module-row"
       emptyState={{
         title: 'Aucun module',

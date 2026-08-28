@@ -55,7 +55,10 @@ export function NavMain({
                 <CollapsibleContent>
                   <SidebarMenuSub>
                     {item.items.map((subItem) => {
-                      const isSubActive = pathname === subItem.url;
+                      const isSubActive =
+                        pathname === subItem.url ||
+                        (subItem.url.split('/').filter(Boolean).length > 1 &&
+                          pathname.startsWith(subItem.url + '/'));
 
                       return (
                         <SidebarMenuSubItem key={subItem.title}>
@@ -83,7 +86,9 @@ export function NavMain({
                 asChild
                 tooltip={item.title}
                 className={cn(
-                  pathname === item.url &&
+                  (pathname === item.url ||
+                    (item.url.split('/').filter(Boolean).length > 1 &&
+                      pathname.startsWith(item.url + '/'))) &&
                     'bg-(--color-primary)/10 text-(--color-primary) hover:bg-(--color-primary)/15 hover:text-(--color-primary)',
                 )}
               >

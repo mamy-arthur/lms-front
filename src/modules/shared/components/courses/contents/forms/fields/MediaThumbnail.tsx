@@ -37,6 +37,14 @@ const iconMap: Record<
 export function MediaThumbnail({ media }: { media: ApiMedia }) {
   const category = getMediaCategory(media.mime_type);
 
+  if (category === 'pdf') {
+    return (
+      <div className="h-50 shrink-0 rounded flex items-center justify-center bg-gray-50 dark:bg-red-900/30">
+        <img src="/assets/pdf.png" alt="PDF" className="h-12 w-12 object-contain" />
+      </div>
+    );
+  }
+
   if (category === 'image') {
     return (
       <img
@@ -56,7 +64,7 @@ export function MediaThumbnail({ media }: { media: ApiMedia }) {
           playsInline
           preload="metadata"
         />
-        <Play className="relative z-10 h-10 w-10 fill-white text-white drop-shadow" />
+        <Play className="relative z-10 h-8 w-8 fill-white text-white drop-shadow" />
       </div>
     );
   }
@@ -64,8 +72,8 @@ export function MediaThumbnail({ media }: { media: ApiMedia }) {
   const { Icon, bg, fg } = iconMap[category];
 
   return (
-    <div className={`h-10 w-10 shrink-0 rounded flex items-center justify-center ${bg}`}>
-      <Icon className={`h-5 w-5 ${fg}`} />
+    <div className={`h-50 shrink-0 rounded flex items-center justify-center ${bg}`}>
+      <Icon className={`${fg}`} />
     </div>
   );
 }
