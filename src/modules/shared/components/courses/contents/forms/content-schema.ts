@@ -23,8 +23,12 @@ function fieldSchema(field: ContentTypeField): z.ZodTypeAny {
       return req ? z.string().refine((v) => stripHtml(v).length > 0, REQUIRED_MSG) : z.string();
 
     case 'number': {
-      const base = z.number({ error: REQUIRED_MSG });
-      return req ? base : base.optional();
+      // Coerce '' (initial empty) and NaN to undefined so optional fields don't fail validation
+      const coerce = (v: unknown) =>
+        v === '' || (typeof v === 'number' && Number.isNaN(v)) ? undefined : v;
+      return req
+        ? z.preprocess(coerce, z.number({ error: REQUIRED_MSG }))
+        : z.preprocess(coerce, z.number({ error: REQUIRED_MSG }).optional());
     }
 
     case 'date': {
@@ -33,7 +37,8 @@ function fieldSchema(field: ContentTypeField): z.ZodTypeAny {
     }
 
     case 'checkbox':
-      return z.boolean();
+      // Initial value is '' when no initialData is provided — coerce to false
+      return z.preprocess((v) => (v === '' ? false : v), z.boolean());
 
     case 'media':
       if (field.multiple) {

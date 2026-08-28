@@ -36,6 +36,7 @@ Object.defineProperty(window, 'matchMedia', {
 jest.mock('@/shared/api/media.api', () => ({
   mediaApi: {
     upload: jest.fn(),
+    uploadWithProgress: jest.fn(),
     uploadInline: jest.fn(),
     get: jest.fn(),
     delete: jest.fn(),
@@ -411,24 +412,29 @@ describe('DynamicContentForm', () => {
 
   describe('Champ média (fichier unique)', () => {
     it("appelle mediaApi.upload avec l'id du content type et du champ", async () => {
-      mockMediaApi.upload.mockResolvedValue({ data: MEDIA_UPLOADED });
+      mockMediaApi.uploadWithProgress.mockResolvedValue({ data: MEDIA_UPLOADED });
       const user = userEvent.setup();
       renderForm();
 
       await user.click(screen.getByText('Choisir un fichier'));
 
       await waitFor(() => {
-        expect(mockMediaApi.upload).toHaveBeenCalledWith(expect.any(File), 'ct-test', 'f7');
+        expect(mockMediaApi.uploadWithProgress).toHaveBeenCalledWith(
+          expect.any(File),
+          'ct-test',
+          'f7',
+          expect.any(Function),
+        );
       });
     });
 
     it("inclut l'UUID du média dans onSubmit après upload", async () => {
-      mockMediaApi.upload.mockResolvedValue({ data: MEDIA_UPLOADED });
+      mockMediaApi.uploadWithProgress.mockResolvedValue({ data: MEDIA_UPLOADED });
       const user = userEvent.setup();
       const { onSubmit } = renderForm();
 
       await user.click(screen.getByText('Choisir un fichier'));
-      await waitFor(() => expect(mockMediaApi.upload).toHaveBeenCalled());
+      await waitFor(() => expect(mockMediaApi.uploadWithProgress).toHaveBeenCalled());
 
       await user.click(screen.getByRole('button', { name: /enregistrer/i }));
 
@@ -440,19 +446,24 @@ describe('DynamicContentForm', () => {
 
   describe('Champ média (multi-fichiers)', () => {
     it("appelle mediaApi.upload avec l'id du content type et du champ multi", async () => {
-      mockMediaApi.upload.mockResolvedValue({ data: MEDIA_UPLOADED });
+      mockMediaApi.uploadWithProgress.mockResolvedValue({ data: MEDIA_UPLOADED });
       const user = userEvent.setup();
       renderForm();
 
       await user.click(screen.getByTestId('multi-upload-btn'));
 
       await waitFor(() => {
-        expect(mockMediaApi.upload).toHaveBeenCalledWith(expect.any(File), 'ct-test', 'f8');
+        expect(mockMediaApi.uploadWithProgress).toHaveBeenCalledWith(
+          expect.any(File),
+          'ct-test',
+          'f8',
+          expect.any(Function),
+        );
       });
     });
 
     it('affiche le nom du fichier dans la liste après upload', async () => {
-      mockMediaApi.upload.mockResolvedValue({ data: MEDIA_UPLOADED });
+      mockMediaApi.uploadWithProgress.mockResolvedValue({ data: MEDIA_UPLOADED });
       const user = userEvent.setup();
       renderForm();
 
@@ -464,7 +475,7 @@ describe('DynamicContentForm', () => {
     });
 
     it('accumule plusieurs fichiers dans la liste', async () => {
-      mockMediaApi.upload
+      mockMediaApi.uploadWithProgress
         .mockResolvedValueOnce({ data: MEDIA_UPLOADED })
         .mockResolvedValueOnce({ data: MEDIA_UPLOADED_B });
       const user = userEvent.setup();
@@ -481,7 +492,7 @@ describe('DynamicContentForm', () => {
     });
 
     it('inclut tous les UUIDs dans onSubmit', async () => {
-      mockMediaApi.upload
+      mockMediaApi.uploadWithProgress
         .mockResolvedValueOnce({ data: MEDIA_UPLOADED })
         .mockResolvedValueOnce({ data: MEDIA_UPLOADED_B });
       const user = userEvent.setup();
