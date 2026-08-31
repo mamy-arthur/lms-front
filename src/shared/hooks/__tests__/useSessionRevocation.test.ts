@@ -33,7 +33,7 @@ function makeEchoMock() {
   const leave = jest.fn();
   const listenCallbacks: Record<string, (e: unknown) => void> = {};
 
-  const channelMock = {
+  const channelMock: { listen: jest.Mock; stopListening: jest.Mock } = {
     listen: jest.fn((event: string, cb: (e: unknown) => void) => {
       listenCallbacks[event] = cb;
       return channelMock;

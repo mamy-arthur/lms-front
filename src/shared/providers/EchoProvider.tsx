@@ -2,14 +2,15 @@
 
 import { createContext, useContext, useEffect, useState } from 'react';
 import type Echo from 'laravel-echo';
+import type { ChannelAuthorizationCallback } from 'pusher-js';
 
-const EchoContext = createContext<Echo | null>(null);
+const EchoContext = createContext<Echo<'reverb'> | null>(null);
 
-export function useEcho(): Echo | null {
+export function useEcho(): Echo<'reverb'> | null {
   return useContext(EchoContext);
 }
 
-async function createEchoInstance(): Promise<Echo> {
+async function createEchoInstance(): Promise<Echo<'reverb'>> {
   const [{ default: EchoClass }, { default: Pusher }] = await Promise.all([
     import('laravel-echo'),
     import('pusher-js'),
@@ -31,7 +32,7 @@ async function createEchoInstance(): Promise<Echo> {
     enabledTransports: ['ws', 'wss'],
     // Private channel auth uses credentials: 'include' so the Sanctum cookie is sent
     authorizer: (channel: { name: string }) => ({
-      authorize: (socketId: string, callback: (error: Error | null, data: unknown) => void) => {
+      authorize: (socketId: string, callback: ChannelAuthorizationCallback) => {
         fetch('/broadcasting/auth', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
@@ -51,10 +52,10 @@ interface Props {
 }
 
 export function EchoProvider({ children }: Props) {
-  const [echo, setEcho] = useState<Echo | null>(null);
+  const [echo, setEcho] = useState<Echo<'reverb'> | null>(null);
 
   useEffect(() => {
-    let instance: Echo | null = null;
+    let instance: Echo<'reverb'> | null = null;
 
     createEchoInstance().then((e) => {
       instance = e;

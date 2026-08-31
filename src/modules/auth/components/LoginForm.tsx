@@ -11,10 +11,13 @@ import { ArrowRight, Eye, EyeOff, GraduationCap, Loader2 } from 'lucide-react';
 import { loginSchema, type LoginSchema } from '@/shared/schemas/auth.schema';
 import { useAuthStore } from '@/shared/stores/auth.store';
 import { useTenantStore } from '@/shared/stores/tenant.store';
-import { resolveLogin, resolveRedirectPath,clearSessionCache } from '@/modules/auth/utils/loginUtils';
+import {
+  resolveLogin,
+  resolveRedirectPath,
+  clearSessionCache,
+} from '@/modules/auth/utils/loginUtils';
 import { authApi, type ExistingSessionInfo } from '@/shared/api/auth.api';
 import { SessionConflictModal } from '@/modules/auth/components/SessionConflictModal';
-
 
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
