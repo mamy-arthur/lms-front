@@ -28,16 +28,16 @@ export interface ApiEnrollmentsListResponse {
   };
 }
 
-/** Shape retourné par GET /purchased-learning-paths/{id}/enrollments */
-export interface ApiEnrollmentWithLearner {
+/** Shape retourné par GET /purchased-learning-paths/{id}/enrollments/history */
+export interface ApiEnrollmentHistoryWithLearner {
   id: string;
   learner_id: string;
   status: EnrollmentStatus;
   enrolled_at: string;
   started_at: string | null;
   completed_at: string | null;
+  expires_at: string | null;
   learner: {
-    id: string;
     first_name: string;
     last_name: string;
     email: string;
@@ -45,8 +45,8 @@ export interface ApiEnrollmentWithLearner {
   } | null;
 }
 
-export interface ApiEnrollmentsWithLearnerListResponse {
-  data: ApiEnrollmentWithLearner[];
+export interface ApiEnrollmentsHistoryWithLearnerListResponse {
+  data: ApiEnrollmentHistoryWithLearner[];
   meta: {
     total: number;
     page: number;

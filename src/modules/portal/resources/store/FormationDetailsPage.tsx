@@ -4,10 +4,10 @@ import {
   BookOpen,
   CalendarDays,
   ClipboardCheck,
+  Clock,
   FileText,
   Globe,
   GraduationCap,
-  Layers,
   Lock,
   ShoppingCart,
   Timer,
@@ -85,14 +85,11 @@ function ProgramModule({ step, stepIndex }: { step: StoreModuleStep; stepIndex: 
   );
 }
 
-function ProgramEvaluation({ step, stepIndex }: { step: StoreEvaluationStep; stepIndex: number }) {
+function ProgramEvaluation({ step }: { step: StoreEvaluationStep }) {
   return (
     <div className="rounded-lg border border-border bg-background p-3">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
-            Étape {stepIndex + 1}
-          </p>
           <p className="mt-1 flex items-center gap-2 text-xs font-semibold">
             <ClipboardCheck className="size-4 text-(--color-primary)" />
             {step.title}
@@ -156,7 +153,15 @@ export function FormationDetailsPage({ formation }: FormationDetailsPageProps) {
             </div>
 
             <div className="mt-auto flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-3xl text-foreground">{formatPrice(formation.price)}</p>
+              <p className="text-3xl text-foreground">
+                {formation.price === 0 ? (
+                  <span className="font-semibold text-foreground">Gratuit</span>
+                ) : (
+                  <span className="bg-background/90 text-lg font-medium text-foreground">
+                    {formatPrice(formation.price)}
+                  </span>
+                )}
+              </p>
               <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
                 {canManageCart &&
                   (isInCart && cartItem ? (
@@ -231,7 +236,7 @@ export function FormationDetailsPage({ formation }: FormationDetailsPageProps) {
                     return <ProgramModule key={step.id} step={step} stepIndex={index} />;
                   }
 
-                  return <ProgramEvaluation key={step.id} step={step} stepIndex={index} />;
+                  return <ProgramEvaluation key={step.id} step={step} />;
                 })}
               </div>
             </CardContent>
@@ -244,13 +249,6 @@ export function FormationDetailsPage({ formation }: FormationDetailsPageProps) {
               <CardTitle>Informations</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="flex items-center justify-between text-xs">
-                <span className="flex items-center gap-2 text-muted-foreground">
-                  <Layers className="size-3.5" /> Niveau
-                </span>
-                <span className="font-medium">{formation.level}</span>
-              </div>
-              <Separator />
               <div className="flex items-center justify-between text-xs">
                 <span className="flex items-center gap-2 text-muted-foreground">
                   <Timer className="size-3.5" /> Durée
@@ -278,22 +276,17 @@ export function FormationDetailsPage({ formation }: FormationDetailsPageProps) {
                 </span>
                 <span className="font-medium">{formatDate(formation.updatedAt)}</span>
               </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-amber-200 bg-amber-50/50">
-            <CardHeader>
-              <CardTitle className="text-sm">Accès restreint avant achat</CardTitle>
-              <CardDescription>
-                Le client visualise uniquement la structure. Les cours, vidéos, ressources et
-                évaluations restent verrouillés.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-2 rounded-md border border-amber-200 bg-background px-3 py-2 text-xs text-muted-foreground">
-                <Lock className="size-3.5" />
-                Contenu pédagogique non accessible avant achat.
-              </div>
+              {formation.validity && (
+                <>
+                  <Separator />
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="flex items-center gap-2 text-muted-foreground">
+                      <Clock className="size-3.5" /> Validité
+                    </span>
+                    <span className="font-medium">{formation.validity}</span>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
         </div>

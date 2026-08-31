@@ -200,6 +200,7 @@ const MOCK_PATH_1: LearningPath = {
   isPublished: false,
   isSellable: false,
   duration: null,
+  validity: null,
   competencies: [],
   evaluations: [],
   createdAt: '2024-01-01T00:00:00Z',

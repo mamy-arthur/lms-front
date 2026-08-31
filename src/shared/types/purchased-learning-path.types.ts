@@ -42,3 +42,26 @@ export interface ApiPurchasedLearningPathsResponse {
     per_page: number;
   };
 }
+
+export interface ApiPurchasedLearningPathLearner {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  profile_photo: { url: string } | null;
+  enrollment: {
+    id: string;
+    status: EnrollmentStatus;
+    enrolled_at: string;
+  } | null;
+}
+
+export interface ApiPurchasedLearningPathLearnersResponse {
+  data: ApiPurchasedLearningPathLearner[];
+  meta: { total: number; page: number; per_page: number };
+}
+
+export interface PurchasedLearningPathLearnersParams {
+  page?: number;
+  per_page?: number;
+}

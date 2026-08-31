@@ -19,7 +19,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { formatDate } from '@/shared/lib/date';
-import { usePurchasedLearningPathEnrollmentsQuery } from '../../hooks/usePurchasedLearningPathEnrollmentsQuery';
+import { usePurchasedLearningPathEnrollmentsHistoryQuery } from '../../hooks/usePurchasedLearningPathEnrollmentsHistoryQuery';
 import type { PurchasedLearningPathStatKey } from '../../types';
 
 const STAT_LABELS: Record<PurchasedLearningPathStatKey, string> = {
@@ -43,10 +43,8 @@ export function PurchasedLearningPathStatsUsersDrawer({
   purchasedLearningPathName,
   stat,
 }: PurchasedLearningPathStatsUsersDrawerProps) {
-  const { enrollments, isLoading, isFetching, total } = usePurchasedLearningPathEnrollmentsQuery(
-    open ? purchasedLearningPathId : null,
-    stat,
-  );
+  const { enrollments, isLoading, isFetching, total } =
+    usePurchasedLearningPathEnrollmentsHistoryQuery(open ? purchasedLearningPathId : null, stat);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -80,12 +78,13 @@ export function PurchasedLearningPathStatsUsersDrawer({
                       <TableHead>Date d'inscription</TableHead>
                       <TableHead>Date de début</TableHead>
                       <TableHead>Date de fin</TableHead>
+                      <TableHead>Date d'expiration</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {enrollments.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={4} className="py-8 text-center text-muted-foreground">
+                        <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
                           Aucun stagiaire pour ce filtre.
                         </TableCell>
                       </TableRow>
@@ -99,6 +98,9 @@ export function PurchasedLearningPathStatsUsersDrawer({
                           </TableCell>
                           <TableCell>
                             {enrollment.completedAt ? formatDate(enrollment.completedAt) : '—'}
+                          </TableCell>
+                          <TableCell>
+                            {enrollment.expiresAt ? formatDate(enrollment.expiresAt) : '—'}
                           </TableCell>
                         </TableRow>
                       ))
