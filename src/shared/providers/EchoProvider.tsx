@@ -57,10 +57,12 @@ export function EchoProvider({ children }: Props) {
   useEffect(() => {
     let instance: Echo<'reverb'> | null = null;
 
-    createEchoInstance().then((e) => {
-      instance = e;
-      setEcho(e);
-    });
+    createEchoInstance()
+      .then((e) => {
+        instance = e;
+        setEcho(e);
+      })
+      .catch((err: unknown) => console.error('[EchoProvider] Failed to initialize Echo:', err));
 
     return () => {
       instance?.disconnect();

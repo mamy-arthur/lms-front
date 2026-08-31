@@ -86,11 +86,16 @@ export function LoginForm() {
   };
 
   const handleReplaceSession = async (token: string) => {
-    const hasTenant = !!useTenantStore.getState().tenant;
-    const result = await authApi.replaceSession(token);
-    setAuth(result.user, result.sessionId);
-    setSessionConflict(null);
-    router.replace(resolveRedirectPath(result.user, hasTenant));
+    try {
+      const hasTenant = !!useTenantStore.getState().tenant;
+      const result = await authApi.replaceSession(token);
+      setAuth(result.user, result.sessionId);
+      setSessionConflict(null);
+      router.replace(resolveRedirectPath(result.user, hasTenant));
+    } catch {
+      setServerError('La tentative de connexion a échoué. Veuillez réessayer.');
+      setSessionConflict(null);
+    }
   };
 
   return (

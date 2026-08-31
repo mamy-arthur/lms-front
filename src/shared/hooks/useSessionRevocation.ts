@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/shared/stores/auth.store';
 import { queryClient } from '@/shared/lib/query-client';
@@ -27,6 +27,12 @@ export function useSessionRevocation() {
   const pathname = usePathname();
   const sessionId = useAuthStore((s) => s.sessionId);
 
+  // Ref to read latest pathname inside the event callback without re-subscribing on navigation
+  const pathnameRef = useRef(pathname);
+  useEffect(() => {
+    pathnameRef.current = pathname;
+  }, [pathname]);
+
   useEffect(() => {
     if (!echo || !sessionId) return;
 
@@ -39,12 +45,12 @@ export function useSessionRevocation() {
       useAuthStore.getState().clearAuth();
       queryClient.clear();
       sessionStorage.setItem('revocation_reason', 'NEW_LOGIN');
-      router.replace(resolveLoginPath(pathname ?? '/'));
+      router.replace(resolveLoginPath(pathnameRef.current ?? '/'));
     });
 
     return () => {
       channel.stopListening('.SessionRevoked');
       echo.leave(`session.${sessionId}`);
     };
-  }, [echo, sessionId, router, pathname]);
+  }, [echo, sessionId, router]);
 }
