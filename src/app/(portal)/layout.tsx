@@ -8,6 +8,8 @@ import { useTenant } from '@/shared/hooks/useTenant';
 import { authApi } from '@/shared/api/auth.api';
 import { ROUTES } from '@/shared/constants/routes';
 import { usePermissions } from '@/shared/hooks/usePermissions';
+import { EchoProvider } from '@/shared/providers/EchoProvider';
+import { SessionRevocationListener } from '@/shared/providers/SessionRevocationListener';
 
 function PortalLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -42,7 +44,10 @@ function PortalLayout({ children }: { children: React.ReactNode }) {
 export default function PortalRouteLayout({ children }: { children: React.ReactNode }) {
   return (
     <AuthGuard>
-      <PortalLayout>{children}</PortalLayout>
+      <EchoProvider>
+        <SessionRevocationListener />
+        <PortalLayout>{children}</PortalLayout>
+      </EchoProvider>
     </AuthGuard>
   );
 }

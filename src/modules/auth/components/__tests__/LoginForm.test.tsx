@@ -57,6 +57,13 @@ jest.mock('@/modules/auth/utils/loginUtils', () => ({
 import { resolveLogin } from '@/modules/auth/utils/loginUtils';
 const mockResolveLogin = jest.mocked(resolveLogin);
 
+/** Mock de authApi pour replaceSession (appelé depuis handleReplaceSession). */
+jest.mock('@/shared/api/auth.api', () => ({
+  authApi: { replaceSession: jest.fn() },
+}));
+import { authApi } from '@/shared/api/auth.api';
+const mockReplaceSession = jest.mocked(authApi.replaceSession);
+
 /**
  * Mock du store d'authentification :
  * on capture l'appel à setAuth sans effets de bord (cookie, localStorage).
@@ -92,13 +99,24 @@ const VALID_CREDENTIALS = {
 };
 
 const MOCK_AUTH_RESPONSE = {
-  token: 'eyJhbGci.mock.token',
+  outcome: 'authenticated' as const,
   user: {
     id: 'u-001',
     name: 'Alice Dupont',
     email: VALID_CREDENTIALS.email,
     role: Role.SUPER_ADMIN,
   },
+  sessionId: 'session-uuid-001',
+};
+
+const MOCK_SESSION_CONFLICT = {
+  outcome: 'session_conflict' as const,
+  existingSession: {
+    deviceName: 'PC (Windows)',
+    browser: 'Chrome',
+    lastActivityAt: '2026-08-25T10:00:00Z',
+  },
+  replacementToken: 'replace-token-abc',
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -157,14 +175,16 @@ describe('LoginForm', () => {
     await fillAndSubmit(user, VALID_CREDENTIALS.email, VALID_CREDENTIALS.password);
 
     await waitFor(() => {
-      expect(mockSetAuth).toHaveBeenCalledWith(MOCK_AUTH_RESPONSE.user);
+      expect(mockSetAuth).toHaveBeenCalledWith(
+        MOCK_AUTH_RESPONSE.user,
+        MOCK_AUTH_RESPONSE.sessionId,
+      );
     });
   });
 
   it('redirige vers /admin pour un SUPER_ADMIN (avec ou sans tenant)', async () => {
     const user = userEvent.setup();
     mockResolveLogin.mockResolvedValue(MOCK_AUTH_RESPONSE);
-    // Pas de tenant dans le store → hasTenant = false
     render(<LoginForm />);
 
     await fillAndSubmit(user, VALID_CREDENTIALS.email, VALID_CREDENTIALS.password);
@@ -180,7 +200,6 @@ describe('LoginForm', () => {
       ...MOCK_AUTH_RESPONSE,
       user: { ...MOCK_AUTH_RESPONSE.user, role: Role.TRAINEE },
     });
-    // Pas de tenant dans le store → hasTenant = false
     render(<LoginForm />);
 
     await fillAndSubmit(user, VALID_CREDENTIALS.email, VALID_CREDENTIALS.password);
@@ -196,17 +215,58 @@ describe('LoginForm', () => {
       ...MOCK_AUTH_RESPONSE,
       user: { ...MOCK_AUTH_RESPONSE.user, role: Role.TRAINEE },
     });
-    // Tenant présent dans le store → hasTenant = true
-    useTenantStore.setState({
-      tenant: MOCK_TENANT,
-      resolutionStatus: 'resolved',
-    });
+    useTenantStore.setState({ tenant: MOCK_TENANT, resolutionStatus: 'resolved' });
     render(<LoginForm />);
 
     await fillAndSubmit(user, VALID_CREDENTIALS.email, VALID_CREDENTIALS.password);
 
     await waitFor(() => {
       expect(mockReplace).toHaveBeenCalledWith('/dashboard');
+    });
+  });
+
+  it('affiche la modale de conflit de session sur une réponse 409', async () => {
+    const user = userEvent.setup();
+    mockResolveLogin.mockResolvedValue(MOCK_SESSION_CONFLICT);
+    render(<LoginForm />);
+
+    await fillAndSubmit(user, VALID_CREDENTIALS.email, VALID_CREDENTIALS.password);
+
+    await waitFor(() => {
+      expect(screen.getByText('Session déjà active')).toBeInTheDocument();
+    });
+  });
+
+  it("annuler la modale ne déclenche pas d'appel de remplacement", async () => {
+    const user = userEvent.setup();
+    mockResolveLogin.mockResolvedValue(MOCK_SESSION_CONFLICT);
+    render(<LoginForm />);
+
+    await fillAndSubmit(user, VALID_CREDENTIALS.email, VALID_CREDENTIALS.password);
+    await waitFor(() => screen.getByText('Session déjà active'));
+    await user.click(screen.getByRole('button', { name: /annuler/i }));
+
+    expect(mockReplaceSession).not.toHaveBeenCalled();
+    expect(mockReplace).not.toHaveBeenCalled();
+  });
+
+  it('confirmer appelle replaceSession et redirige', async () => {
+    const user = userEvent.setup();
+    mockResolveLogin.mockResolvedValue(MOCK_SESSION_CONFLICT);
+    mockReplaceSession.mockResolvedValue({
+      user: MOCK_AUTH_RESPONSE.user,
+      sessionId: 'session-new-001',
+    });
+    render(<LoginForm />);
+
+    await fillAndSubmit(user, VALID_CREDENTIALS.email, VALID_CREDENTIALS.password);
+    await waitFor(() => screen.getByText('Session déjà active'));
+    await user.click(screen.getByRole('button', { name: /me connecter sur cet appareil/i }));
+
+    await waitFor(() => {
+      expect(mockReplaceSession).toHaveBeenCalledWith('replace-token-abc');
+      expect(mockSetAuth).toHaveBeenCalledWith(MOCK_AUTH_RESPONSE.user, 'session-new-001');
+      expect(mockReplace).toHaveBeenCalledWith('/admin');
     });
   });
 
