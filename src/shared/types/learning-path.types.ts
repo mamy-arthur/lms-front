@@ -77,6 +77,8 @@ export interface ApiLearningPath {
     location_x: number | null;
     location_y: number | null;
   } | null;
+  /** Present only in detail responses — true when at least one purchase exists, meaning the flow is locked. */
+  is_locked?: boolean;
   created_at: string;
   updated_at: string;
 }

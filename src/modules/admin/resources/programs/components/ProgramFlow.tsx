@@ -1,10 +1,8 @@
 'use client';
 
 import {
-  createContext,
   forwardRef,
   useCallback,
-  useContext,
   useEffect,
   useImperativeHandle,
   useMemo,
@@ -13,471 +11,77 @@ import {
 } from 'react';
 import {
   Background,
-  BaseEdge,
   Controls,
-  EdgeLabelRenderer,
-  Handle,
-  Position,
   ReactFlow,
   addEdge,
   applyEdgeChanges,
   applyNodeChanges,
-  getSmoothStepPath,
 } from '@xyflow/react';
-import type {
-  Connection,
-  Edge,
-  EdgeChange,
-  EdgeProps,
-  Node,
-  NodeChange,
-  NodeProps,
-} from '@xyflow/react';
+import type { Connection, Edge, EdgeChange, NodeChange } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
-import {
-  Award,
-  BadgeCheck,
-  BookOpen,
-  ClipboardCheck,
-  Info,
-  Lock,
-  Mail,
-  Settings2,
-  Trash2,
-} from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { AlertCircleIcon, BadgeCheck, BookOpen, ClipboardCheck } from 'lucide-react';
+import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/shared/lib/cn';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import {
-  ProgressionRuleDialog,
-  type NodeOption,
-  type ProgressionRuleFormData,
-} from './dialog/ProgressionRuleDialog';
-import type {
-  ProgressionCondition,
-  ProgressionNodeRef,
-  ProgressionNodeType,
-} from '@/shared/types/progression-rule.types';
-import { SelectModuleDialog, type ModuleItem } from './dialog/SelectModuleDialog';
-import { AddEvaluationDialog, type EvaluationConfig } from './dialog/AddEvaluationDialog';
-import { SelectAttestationDialog, type AttestationItem } from './dialog/SelectAttestationDialog';
-import { SelectEmailTemplateDialog, type EmailTemplate } from './dialog/SelectEmailTemplateDialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
 import { evaluationsApi } from '@/shared/api/evaluations.api';
-import type { CreateEvaluationPayload } from '@/shared/api/evaluations.api';
 import { getApiErrorMessage } from '@/shared/lib/errors';
+import type {
+  ProgressionNodeRef,
+  ProgressionNodeType,
+} from '@/shared/types/progression-rule.types';
+import type { NodeOption, ProgressionRuleFormData } from './dialog/ProgressionRuleDialog';
+import type { ModuleItem } from './dialog/SelectModuleDialog';
+import type { EvaluationConfig } from './dialog/AddEvaluationDialog';
+import type { AttestationItem } from './dialog/SelectAttestationDialog';
+import type { EmailTemplate } from './dialog/SelectEmailTemplateDialog';
+import { FlowDialogs } from './FlowDialogs';
+import type {
+  EditAttestationDialogState,
+  EditEmailDialogState,
+  EditEvalDialogState,
+  EditModuleDialogState,
+  ProgressionRuleDialogState,
+} from './FlowDialogs';
+import {
+  CANVAS_X,
+  EMAIL_NODE_ID,
+  NODE_GAP,
+  genId,
+  initialEmailNode,
+} from './ProgramFlow.constants';
+import { STEP_CONFIG } from './ProgramFlow.config';
+import { FlowActionsContext } from './ProgramFlow.context';
+import { nodeTypes } from './ProgramStepNode';
+import { edgeTypes } from './ConfigurableEdge';
+import type {
+  EdgeRuleData,
+  FlowConnectionPayload,
+  FlowStepPayload,
+  ProgramFlowHandle,
+  ProgramFlowPayload,
+  ProgramFlowProps,
+  StepNode,
+  StepType,
+} from './ProgramFlow.types';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-type StepType = 'email' | 'module' | 'evaluation-intermediate' | 'evaluation-final' | 'attestation';
-
-export type StepNodeData = {
-  stepType: StepType;
-  label: string;
-  moduleId?: string;
-  attestationId?: string;
-  emailTemplateId?: string;
-  emailTemplateName?: string;
-  evaluationId?: string;
-  evaluationConfig?: Omit<EvaluationConfig, 'stepType'>;
-};
-
-export type StepNode = Node<StepNodeData, 'programStep'>;
-
-export type ProgressionRuleData = {
-  progressionRuleId: string;
-  condition: ProgressionCondition;
-  failureTargetNodeId: string | null;
-  maxAttempts: number | null;
-  exhaustedTargetNodeId: string | null;
-};
-
-export type EdgeRuleData = {
-  kind?: 'retake';
-  retakeForRuleId?: string;
-  retakeForEdgeId?: string;
-  progressionRule?: ProgressionRuleData;
-};
-
-// ─── Payload Types ────────────────────────────────────────────────────────────
-
-type StepPosition = { x: number; y: number };
-
-export type EmailStepPayload = {
-  id: string;
-  type: 'email';
-  position: StepPosition;
-  emailTemplateId: string | undefined;
-  emailTemplateName: string | undefined;
-};
-
-export type ModuleStepPayload = {
-  id: string;
-  type: 'module';
-  position: StepPosition;
-  label: string;
-  moduleId: string | undefined;
-};
-
-export type EvaluationStepPayload = {
-  id: string;
-  type: 'evaluation-intermediate' | 'evaluation-final';
-  position: StepPosition;
-  label: string;
-  title: string;
-  evaluationId?: string;
-  questionBankIds: string[];
-  questionBankNames: string[];
-  questionCount: number;
-  attemptCount: number;
-  durationEnabled: boolean;
-  durationHours: number;
-  durationMinutes: number;
-};
-
-export type AttestationStepPayload = {
-  id: string;
-  type: 'attestation';
-  position: StepPosition;
-  label: string;
-  attestationId: string | undefined;
-};
-
-export type FlowStepPayload =
-  EmailStepPayload | ModuleStepPayload | EvaluationStepPayload | AttestationStepPayload;
-
-export type FlowConnectionPayload = {
-  sourceId: string;
-  targetId: string;
-  estReprise: boolean;
-  progressionRule?: {
-    ruleId: string | null;
-    condition: ProgressionCondition;
-    targetOnSuccess: ProgressionNodeRef;
-    targetOnFailure: ProgressionNodeRef | null;
-    maxAttempts: number | null;
-    targetOnExhausted: ProgressionNodeRef | null;
-  };
-};
-
-export type ProgramFlowPayload = {
-  /** Étapes ordonnées du parcours (email de démarrage inclus) */
-  etapes: FlowStepPayload[];
-  /** Connexions entre les étapes avec leurs règles */
-  connexions: FlowConnectionPayload[];
-};
-
-export type ProgramFlowHandle = {
-  getPayload: () => ProgramFlowPayload;
-  getRawFlow: () => {
-    nodes: StepNode[];
-    edges: Edge<EdgeRuleData>[];
-    nodeOrder: string[];
-  };
-};
-
-// ─── Step config ──────────────────────────────────────────────────────────────
-
-type StepConfig = {
-  label: string;
-  Icon: React.ComponentType<{ className?: string }>;
-  border: string;
-  bg: string;
-  iconColor: string;
-  badgeClass: string;
-  badgeLabel: string;
-};
-
-const STEP_CONFIG: Record<StepType, StepConfig> = {
-  email: {
-    label: 'Email de démarrage',
-    Icon: Mail,
-    border: 'border-violet-300',
-    bg: 'bg-violet-50',
-    iconColor: 'text-violet-500',
-    badgeClass: 'border-violet-200 bg-violet-100 text-violet-700',
-    badgeLabel: 'Email',
-  },
-  module: {
-    label: 'Module',
-    Icon: BookOpen,
-    border: 'border-blue-300',
-    bg: 'bg-blue-50',
-    iconColor: 'text-blue-500',
-    badgeClass: 'border-blue-200 bg-blue-100 text-blue-700',
-    badgeLabel: 'Module',
-  },
-  'evaluation-intermediate': {
-    label: 'Évaluation intermédiaire',
-    Icon: ClipboardCheck,
-    border: 'border-orange-300',
-    bg: 'bg-orange-50',
-    iconColor: 'text-orange-500',
-    badgeClass: 'border-orange-200 bg-orange-100 text-orange-700',
-    badgeLabel: 'Intermédiaire',
-  },
-  'evaluation-final': {
-    label: 'Évaluation finale',
-    Icon: Award,
-    border: 'border-red-300',
-    bg: 'bg-red-50',
-    iconColor: 'text-red-500',
-    badgeClass: 'border-red-200 bg-red-100 text-red-700',
-    badgeLabel: 'Finale',
-  },
-  attestation: {
-    label: 'Attestation',
-    Icon: BadgeCheck,
-    border: 'border-emerald-300',
-    bg: 'bg-emerald-50',
-    iconColor: 'text-emerald-500',
-    badgeClass: 'border-emerald-200 bg-emerald-100 text-emerald-700',
-    badgeLabel: 'Attestation',
-  },
-};
-
-// ─── Context ──────────────────────────────────────────────────────────────────
-
-const FlowActionsContext = createContext<{
-  onDeleteNode: (id: string) => void | Promise<void>;
-  onConfigureEdge: (edgeId: string) => void;
-  onEditNode: (id: string) => void;
-}>({
-  onDeleteNode: () => {},
-  onConfigureEdge: () => {},
-  onEditNode: () => {},
-});
-
-// ─── Custom Node ──────────────────────────────────────────────────────────────
-
-function ProgramStepNode({ id, data, isConnectable }: NodeProps<StepNode>) {
-  const { onDeleteNode, onEditNode } = useContext(FlowActionsContext);
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const cfg = STEP_CONFIG[data.stepType];
-  const { Icon } = cfg;
-  const isEmail = data.stepType === 'email';
-  const isAttestation = data.stepType === 'attestation';
-
-  const isConfigured =
-    (data.stepType === 'email' && !!data.emailTemplateId) ||
-    (data.stepType === 'module' && !!data.moduleId) ||
-    ((data.stepType === 'evaluation-intermediate' || data.stepType === 'evaluation-final') &&
-      !!data.evaluationId) ||
-    (data.stepType === 'attestation' && !!data.attestationId);
-
-  const handleConfirmDelete = () => {
-    setConfirmOpen(false);
-    onDeleteNode(id);
-  };
-
-  return (
-    <div
-      className={cn(
-        'min-w-55 rounded-md border px-4 py-3 shadow-sm',
-        isConfigured && !isEmail && !isAttestation ? 'cursor-default' : 'cursor-pointer',
-        cfg.border,
-        cfg.bg,
-      )}
-      onClick={isConfigured && !isEmail && !isAttestation ? undefined : () => onEditNode(id)}
-    >
-      <Handle type="target" position={Position.Top} isConnectable={isConnectable} />
-
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-2">
-          <Icon className={cn('size-4 shrink-0', cfg.iconColor)} />
-          <span className="truncate text-sm font-semibold text-foreground">{data.label}</span>
-        </div>
-        {!isEmail && (
-          <Popover open={confirmOpen} onOpenChange={setConfirmOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                onPointerDown={(e) => e.stopPropagation()}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setConfirmOpen((v) => !v);
-                }}
-                className="flex size-5 shrink-0 bg-gray-50 items-center justify-center rounded-full text-muted-foreground/50 transition-colors hover:bg-black/10 hover:text-red-500"
-                aria-label="Supprimer ce nœud"
-              >
-                <Trash2 className="size-3" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent
-              side="top"
-              className="w-52 p-3"
-              onPointerDown={(e) => e.stopPropagation()}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <p className="text-xs font-medium">Supprimer cette étape ?</p>
-              <div className="flex justify-end gap-2">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-7 text-xs"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setConfirmOpen(false);
-                  }}
-                >
-                  Annuler
-                </Button>
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  className="h-7 text-xs"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleConfirmDelete();
-                  }}
-                >
-                  Supprimer
-                </Button>
-              </div>
-            </PopoverContent>
-          </Popover>
-        )}
-      </div>
-
-      <div className="mt-2">
-        <Badge variant="outline" className={cn('text-xs', cfg.badgeClass)}>
-          {cfg.badgeLabel}
-        </Badge>
-      </div>
-      <Handle type="source" position={Position.Bottom} isConnectable={isConnectable} />
-    </div>
-  );
-}
-
-// nodeTypes must be stable (defined outside component)
-const nodeTypes = { programStep: ProgramStepNode };
-
-// ─── Custom Edge ──────────────────────────────────────────────────────────────
-
-function ConfigurableEdge({
-  id,
-  sourceX,
-  sourceY,
-  targetX,
-  targetY,
-  sourcePosition,
-  targetPosition,
-  markerEnd,
-  style,
-  data,
-}: EdgeProps) {
-  const { onConfigureEdge } = useContext(FlowActionsContext);
-  const ruleData = data as EdgeRuleData | undefined;
-  const isRetake = ruleData?.kind === 'retake';
-
-  const hasRules = !!ruleData?.progressionRule;
-
-  const [edgePath, labelX, labelY] = getSmoothStepPath({
-    sourceX,
-    sourceY,
-    sourcePosition,
-    targetX,
-    targetY,
-    targetPosition,
-  });
-
-  const edgeStyle = isRetake
-    ? { stroke: '#ef4444', strokeDasharray: '6 3', ...style }
-    : hasRules
-      ? { stroke: '#6366f1', strokeWidth: 2, ...style }
-      : style;
-
-  return (
-    <>
-      <BaseEdge id={id} path={edgePath} markerEnd={markerEnd} style={edgeStyle} />
-      {!isRetake && (
-        <EdgeLabelRenderer>
-          <button
-            style={{
-              position: 'absolute',
-              transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
-              pointerEvents: 'all',
-            }}
-            className={
-              hasRules
-                ? 'nodrag nopan flex size-5 items-center justify-center rounded-full border-2 border-indigo-400 bg-indigo-50 shadow-sm transition-colors hover:bg-indigo-100'
-                : 'nodrag nopan flex size-5 items-center justify-center rounded-full border border-border bg-background shadow-sm transition-colors hover:bg-muted'
-            }
-            onClick={(e) => {
-              e.stopPropagation();
-              onConfigureEdge(id);
-            }}
-            title="Configurer les règles d'accès"
-          >
-            {hasRules ? (
-              <Lock className="size-3 text-indigo-500" />
-            ) : (
-              <Settings2 className="size-3 text-muted-foreground" />
-            )}
-          </button>
-        </EdgeLabelRenderer>
-      )}
-    </>
-  );
-}
-
-// edgeTypes must be stable (defined outside component)
-const edgeTypes = { configurableEdge: ConfigurableEdge };
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const CANVAS_X = 300;
-const NODE_GAP = 150;
-let _counter = 0;
-const genId = () => `step-${++_counter}`;
-
-const EMAIL_NODE_ID = 'email-start';
-
-const initialEmailNode: StepNode = {
-  id: EMAIL_NODE_ID,
-  type: 'programStep',
-  position: { x: CANVAS_X, y: 0 },
-  data: { stepType: 'email', label: "Choisir l'email de démarrage" },
-};
+export type {
+  EdgeRuleData,
+  StepNode,
+  StepNodeData,
+  ProgramFlowProps,
+  ProgramFlowHandle,
+  ProgramFlowPayload,
+  FlowStepPayload,
+  FlowConnectionPayload,
+  EmailStepPayload,
+  ModuleStepPayload,
+  EvaluationStepPayload,
+  AttestationStepPayload,
+} from './ProgramFlow.types';
 
 // ─── ProgramFlow ──────────────────────────────────────────────────────────────
-
-export type ProgramFlowProps = {
-  initialNodes?: StepNode[];
-  initialEdges?: Edge<EdgeRuleData>[];
-  initialNodeOrder?: string[];
-  onModulesChange?: (hasModules: boolean) => void;
-  onModuleAdd?: (moduleId: string, position: { x: number; y: number }) => Promise<void>;
-  onModuleRemove?: (moduleId: string) => Promise<void>;
-  onModuleMove?: (moduleId: string, position: { x: number; y: number }) => Promise<void>;
-  onEvalCreate?: (data: CreateEvaluationPayload) => Promise<string>;
-  onEvalDelete?: (evaluationId: string) => Promise<void>;
-  onEvalMove?: (evaluationId: string, position: { x: number; y: number }) => Promise<void>;
-  onMailTemplateAssign?: (
-    mailTemplateId: string,
-    position: { x: number; y: number },
-  ) => Promise<void>;
-  onCertificateAssign?: (
-    certificateId: string,
-    position: { x: number; y: number },
-  ) => Promise<void>;
-  onCertificateDetach?: () => Promise<void>;
-  onMailTemplateMove?: (position: { x: number; y: number }) => Promise<void>;
-  onCertificateMove?: (position: { x: number; y: number }) => Promise<void>;
-  learningPathId?: string;
-  onProgressionRuleCreate?: (
-    learningPathId: string,
-    payload: import('@/shared/types/progression-rule.types').CreateProgressionRulePayload,
-  ) => Promise<import('@/shared/types/progression-rule.types').ApiProgressionRule>;
-  onProgressionRuleUpdate?: (
-    ruleId: string,
-    learningPathId: string,
-    payload: import('@/shared/types/progression-rule.types').UpdateProgressionRulePayload,
-  ) => Promise<import('@/shared/types/progression-rule.types').ApiProgressionRule>;
-  onProgressionRuleDeactivate?: (ruleId: string, learningPathId: string) => Promise<void>;
-};
 
 const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function ProgramFlow(
   {
@@ -497,6 +101,7 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
     onMailTemplateMove,
     onCertificateMove,
     learningPathId,
+    isLocked = false,
     onProgressionRuleCreate,
     onProgressionRuleUpdate,
     onProgressionRuleDeactivate,
@@ -521,37 +126,15 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
   const [attestationDialogOpen, setAttestationDialogOpen] = useState(false);
 
   // ── Rule configuration dialog state ──
-  const [progressionRuleDialog, setProgressionRuleDialog] = useState<{
-    edgeId: string;
-    sourceNodeId: string;
-    targetNodeId: string;
-    sourceNodeType: 'module' | 'evaluation';
-    initialFormData?: ProgressionRuleFormData;
-    hasExistingRule: boolean;
-  } | null>(null);
+  const [progressionRuleDialog, setProgressionRuleDialog] =
+    useState<ProgressionRuleDialogState | null>(null);
 
   // ── Edit-node dialog states ──
-  const [editModuleDialog, setEditModuleDialog] = useState<{
-    nodeId: string;
-    moduleId?: string;
-  } | null>(null);
-
-  const [editEvalDialog, setEditEvalDialog] = useState<{
-    nodeId: string;
-    evaluationId?: string;
-    config: EvaluationConfig;
-    hasFinalEval: boolean;
-  } | null>(null);
-
-  const [editAttestationDialog, setEditAttestationDialog] = useState<{
-    nodeId: string;
-    attestationId?: string;
-  } | null>(null);
-
-  const [editEmailDialog, setEditEmailDialog] = useState<{
-    nodeId: string;
-    emailTemplateId?: string;
-  } | null>(null);
+  const [editModuleDialog, setEditModuleDialog] = useState<EditModuleDialogState | null>(null);
+  const [editEvalDialog, setEditEvalDialog] = useState<EditEvalDialogState | null>(null);
+  const [editAttestationDialog, setEditAttestationDialog] =
+    useState<EditAttestationDialogState | null>(null);
+  const [editEmailDialog, setEditEmailDialog] = useState<EditEmailDialogState | null>(null);
 
   // ── Business rule flags ──
   const {
@@ -618,43 +201,48 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
   );
 
   // ── Open the rule dialog when an edge settings button is clicked ──
-  const onConfigureEdge = useCallback((edgeId: string) => {
-    const edge = edgesRef.current.find((e) => e.id === edgeId);
-    if (!edge) return;
+  const onConfigureEdge = useCallback(
+    (edgeId: string) => {
+      if (isLocked) return;
+      const edge = edgesRef.current.find((e) => e.id === edgeId);
+      if (!edge) return;
 
-    const sourceNode = nodesRef.current.find((n) => n.id === edge.source);
-    if (!sourceNode) return;
+      const sourceNode = nodesRef.current.find((n) => n.id === edge.source);
+      if (!sourceNode) return;
 
-    const stepType = sourceNode.data.stepType;
-    // Only modules and evaluations can be rule sources
-    if (
-      stepType !== 'module' &&
-      stepType !== 'evaluation-intermediate' &&
-      stepType !== 'evaluation-final'
-    )
-      return;
+      const stepType = sourceNode.data.stepType;
+      // Only modules and evaluations can be rule sources
+      if (
+        stepType !== 'module' &&
+        stepType !== 'evaluation-intermediate' &&
+        stepType !== 'evaluation-final'
+      )
+        return;
 
-    const sourceNodeType: 'module' | 'evaluation' = stepType === 'module' ? 'module' : 'evaluation';
+      const sourceNodeType: 'module' | 'evaluation' =
+        stepType === 'module' ? 'module' : 'evaluation';
 
-    const existing = edge.data?.progressionRule;
-    const initialFormData: ProgressionRuleFormData | undefined = existing
-      ? {
-          condition: existing.condition,
-          failureTargetNodeId: existing.failureTargetNodeId,
-          maxAttempts: existing.maxAttempts,
-          exhaustedTargetNodeId: existing.exhaustedTargetNodeId,
-        }
-      : undefined;
+      const existing = edge.data?.progressionRule;
+      const initialFormData: ProgressionRuleFormData | undefined = existing
+        ? {
+            condition: existing.condition,
+            failureTargetNodeId: existing.failureTargetNodeId,
+            maxAttempts: existing.maxAttempts,
+            exhaustedTargetNodeId: existing.exhaustedTargetNodeId,
+          }
+        : undefined;
 
-    setProgressionRuleDialog({
-      edgeId,
-      sourceNodeId: edge.source,
-      targetNodeId: edge.target,
-      sourceNodeType,
-      initialFormData,
-      hasExistingRule: !!existing,
-    });
-  }, []);
+      setProgressionRuleDialog({
+        edgeId,
+        sourceNodeId: edge.source,
+        targetNodeId: edge.target,
+        sourceNodeType,
+        initialFormData,
+        hasExistingRule: !!existing,
+      });
+    },
+    [isLocked],
+  );
 
   // ── Save progression rule ──
   const handleProgressionRuleSave = useCallback(
@@ -1393,12 +981,23 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
 
   // ── ReactFlow handlers ──
   const onNodesChange = useCallback(
-    (changes: NodeChange[]) => setNodes((nds) => applyNodeChanges(changes, nds) as StepNode[]),
-    [],
+    (changes: NodeChange[]) => {
+      if (isLocked) {
+        // Drop position and remove changes — selection/dimension changes are harmless
+        const safe = changes.filter((c) => c.type !== 'position' && c.type !== 'remove');
+        if (safe.length > 0) setNodes((nds) => applyNodeChanges(safe, nds) as StepNode[]);
+        return;
+      }
+      setNodes((nds) => applyNodeChanges(changes, nds) as StepNode[]);
+    },
+    [isLocked],
   );
   const onEdgesChange = useCallback(
-    (changes: EdgeChange[]) => setEdges((eds) => applyEdgeChanges(changes, eds)),
-    [],
+    (changes: EdgeChange[]) => {
+      if (isLocked) return;
+      setEdges((eds) => applyEdgeChanges(changes, eds));
+    },
+    [isLocked],
   );
   const onConnect = useCallback(
     (params: Connection) => setEdges((eds) => addEdge(params, eds)),
@@ -1410,8 +1009,10 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
       onDeleteNode,
       onConfigureEdge,
       onEditNode,
+      isLocked,
+      lastNodeId: nodeOrder.at(-1) ?? null,
     }),
-    [onDeleteNode, onConfigureEdge, onEditNode],
+    [onDeleteNode, onConfigureEdge, onEditNode, isLocked, nodeOrder],
   );
 
   return (
@@ -1423,7 +1024,7 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
             <TooltipTrigger asChild>
               <Button
                 variant="outline"
-                disabled={hasFinalEval || hasAttestation}
+                disabled={isLocked || hasFinalEval || hasAttestation}
                 onClick={() => {
                   if (hasEmailConfigured) setModuleDialogOpen(true);
                 }}
@@ -1433,7 +1034,7 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
                 Module
               </Button>
             </TooltipTrigger>
-            {!hasEmailConfigured && (
+            {!isLocked && !hasEmailConfigured && (
               <TooltipContent side="bottom">
                 Configurez d&apos;abord l&apos;email de démarrage
               </TooltipContent>
@@ -1442,6 +1043,7 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
           <Button
             variant="outline"
             disabled={
+              isLocked ||
               !hasModule ||
               hasFinalEval ||
               hasAttestation ||
@@ -1456,7 +1058,7 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
 
           <Button
             variant="outline"
-            disabled={!hasModule || !hasFinalEval || hasAttestation}
+            disabled={isLocked || !hasModule || !hasFinalEval || hasAttestation}
             onClick={() => setAttestationDialogOpen(true)}
             className="gap-1.5 border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-700"
           >
@@ -1464,10 +1066,17 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
             Attestation
           </Button>
 
-          <span className="ml-auto flex items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-xs text-amber-700">
-            <Info className="size-3 shrink-0" />
-            Les modifications du canvas sont enregistrées automatiquement
-          </span>
+          {isLocked ? (
+            <Alert variant="destructive" className="ml-auto w-fit">
+              <AlertCircleIcon />
+              Parcours verrouillé , cette formation a déjà été vendue
+            </Alert>
+          ) : (
+            <Alert className="ml-auto w-fit  text-amber-900">
+              <AlertCircleIcon />
+              Les modifications du canvas sont enregistrées automatiquement
+            </Alert>
+          )}
         </div>
 
         {/* ── Canvas ── */}
@@ -1477,10 +1086,12 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
             edges={edges}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
-            onConnect={onConnect}
-            onNodeDragStop={handleNodeDragStop}
+            onConnect={isLocked ? undefined : onConnect}
+            onNodeDragStop={isLocked ? undefined : handleNodeDragStop}
             nodeTypes={nodeTypes}
             edgeTypes={edgeTypes}
+            nodesDraggable={!isLocked}
+            nodesConnectable={!isLocked}
             fitView
             fitViewOptions={{ padding: 0.8, maxZoom: 0.9 }}
             proOptions={{ hideAttribution: true }}
@@ -1491,79 +1102,38 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
         </div>
       </div>
 
-      {/* ── Add-node dialogs ── */}
-      <SelectModuleDialog
-        open={moduleDialogOpen}
-        onOpenChange={setModuleDialogOpen}
+      <FlowDialogs
+        moduleDialogOpen={moduleDialogOpen}
+        setModuleDialogOpen={setModuleDialogOpen}
         usedModuleIds={usedModuleIds}
-        onSelect={handleModuleSelect}
-      />
-      <AddEvaluationDialog
-        open={evalDialogOpen}
-        onOpenChange={setEvalDialogOpen}
+        onModuleSelect={handleModuleSelect}
+        evalDialogOpen={evalDialogOpen}
+        setEvalDialogOpen={setEvalDialogOpen}
         hasFinalEval={hasFinalEval}
-        hasPartialForLastModule={hasPartialForLastModule || lastNodeIsEvaluation}
-        alreadyUsedBankIds={allUsedBankIds}
-        onConfirm={handleEvalConfirm}
-      />
-      <SelectAttestationDialog
-        open={attestationDialogOpen}
-        onOpenChange={setAttestationDialogOpen}
-        onSelect={handleAttestationSelect}
-      />
-
-      {/* ── Progression rule dialog ── */}
-      <ProgressionRuleDialog
-        open={progressionRuleDialog !== null}
-        onOpenChange={(open) => {
-          if (!open) setProgressionRuleDialog(null);
-        }}
-        sourceNodeType={progressionRuleDialog?.sourceNodeType ?? 'module'}
-        hasExistingRule={progressionRuleDialog?.hasExistingRule ?? false}
-        initialFormData={progressionRuleDialog?.initialFormData}
-        nodeOptions={retakeNodeOptions}
-        onSave={handleProgressionRuleSave}
-      />
-
-      {/* ── Edit-node dialogs ── */}
-      <SelectEmailTemplateDialog
-        key={editEmailDialog?.nodeId}
-        open={editEmailDialog !== null}
-        onOpenChange={(open) => {
-          if (!open) setEditEmailDialog(null);
-        }}
-        initialTemplateId={editEmailDialog?.emailTemplateId}
-        onSelect={handleEditEmailSave}
-      />
-      <SelectModuleDialog
-        key={editModuleDialog?.nodeId}
-        open={editModuleDialog !== null}
-        onOpenChange={(open) => {
-          if (!open) setEditModuleDialog(null);
-        }}
-        usedModuleIds={editModuleUsedIds}
-        onSelect={handleEditModuleSave}
-      />
-      <AddEvaluationDialog
-        key={editEvalDialog?.nodeId}
-        open={editEvalDialog !== null}
-        onOpenChange={(open) => {
-          if (!open) setEditEvalDialog(null);
-        }}
-        hasFinalEval={editEvalDialog?.hasFinalEval ?? false}
-        initialConfig={editEvalDialog?.config}
-        evaluationId={editEvalDialog?.evaluationId}
-        alreadyUsedBankIds={allUsedBankIds}
-        onConfirm={handleEditEvalSave}
-      />
-      <SelectAttestationDialog
-        key={editAttestationDialog?.nodeId}
-        open={editAttestationDialog !== null}
-        onOpenChange={(open) => {
-          if (!open) setEditAttestationDialog(null);
-        }}
-        initialAttestationId={editAttestationDialog?.attestationId}
-        onSelect={handleEditAttestationSave}
+        hasPartialForLastModule={hasPartialForLastModule}
+        lastNodeIsEvaluation={lastNodeIsEvaluation}
+        allUsedBankIds={allUsedBankIds}
+        onEvalConfirm={handleEvalConfirm}
+        attestationDialogOpen={attestationDialogOpen}
+        setAttestationDialogOpen={setAttestationDialogOpen}
+        onAttestationSelect={handleAttestationSelect}
+        progressionRuleDialog={progressionRuleDialog}
+        setProgressionRuleDialog={setProgressionRuleDialog}
+        retakeNodeOptions={retakeNodeOptions}
+        onProgressionRuleSave={handleProgressionRuleSave}
+        editEmailDialog={editEmailDialog}
+        setEditEmailDialog={setEditEmailDialog}
+        onEditEmailSave={handleEditEmailSave}
+        editModuleDialog={editModuleDialog}
+        setEditModuleDialog={setEditModuleDialog}
+        editModuleUsedIds={editModuleUsedIds}
+        onEditModuleSave={handleEditModuleSave}
+        editEvalDialog={editEvalDialog}
+        setEditEvalDialog={setEditEvalDialog}
+        onEditEvalSave={handleEditEvalSave}
+        editAttestationDialog={editAttestationDialog}
+        setEditAttestationDialog={setEditAttestationDialog}
+        onEditAttestationSave={handleEditAttestationSave}
       />
     </FlowActionsContext.Provider>
   );

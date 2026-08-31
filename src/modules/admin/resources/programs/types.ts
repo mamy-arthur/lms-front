@@ -108,6 +108,8 @@ export interface LearningPath {
     locationX: number | null;
     locationY: number | null;
   } | null;
+  /** True when at least one purchase exists — the flow is read-only. Only present in detail responses. */
+  isLocked?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -168,6 +170,7 @@ export function normalizeLearningPath(api: ApiLearningPath): LearningPath {
           locationY: api.certificate.location_y,
         }
       : null,
+    isLocked: api.is_locked,
     createdAt: api.created_at,
     updatedAt: api.updated_at,
   };

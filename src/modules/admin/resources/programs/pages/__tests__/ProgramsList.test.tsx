@@ -964,4 +964,53 @@ describe('ProgramsList', () => {
       expect(deleteEvaluationMutateAsync).not.toHaveBeenCalled();
     });
   });
+
+  // ── Verrouillage du parcours vendu ────────────────────────────────────────
+
+  describe('verrouillage du parcours vendu', () => {
+    const MOCK_PATH_LOCKED: LearningPath = {
+      ...MOCK_PATH_1,
+      id: 'lp-locked',
+      name: 'Formation déjà vendue',
+      isLocked: true,
+    };
+
+    it('passe isLocked={true} au ProgramFlow quand le parcours est vendu', async () => {
+      mockDefaults({ paths: [MOCK_PATH_LOCKED] });
+
+      let capturedIsLocked: boolean | undefined = undefined;
+      MockProgramFlow.mockImplementation((props: ProgramFlowProps) => {
+        capturedIsLocked = props.isLocked;
+        return null;
+      });
+
+      const user = userEvent.setup();
+      render(<ProgramsList />, { wrapper: createWrapper() });
+
+      await user.click(
+        screen.getByRole('button', { name: `Actions pour ${MOCK_PATH_LOCKED.name}` }),
+      );
+      await user.click(screen.getByRole('menuitem', { name: /modifier/i }));
+
+      await waitFor(() => expect(capturedIsLocked).toBe(true));
+    });
+
+    it("passe isLocked={false} au ProgramFlow quand le parcours n'est pas vendu", async () => {
+      mockDefaults({ paths: [MOCK_PATH_1] });
+
+      let capturedIsLocked: boolean | undefined = undefined;
+      MockProgramFlow.mockImplementation((props: ProgramFlowProps) => {
+        capturedIsLocked = props.isLocked;
+        return null;
+      });
+
+      const user = userEvent.setup();
+      render(<ProgramsList />, { wrapper: createWrapper() });
+
+      await user.click(screen.getByRole('button', { name: `Actions pour ${MOCK_PATH_1.name}` }));
+      await user.click(screen.getByRole('menuitem', { name: /modifier/i }));
+
+      await waitFor(() => expect(capturedIsLocked).toBeFalsy());
+    });
+  });
 });
