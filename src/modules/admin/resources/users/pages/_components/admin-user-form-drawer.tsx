@@ -145,10 +145,16 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
 
   const defaultValues = useMemo(() => buildDefaults(user), [user, buildDefaults]);
 
+  // Invalide le cache profil pour que la page profil reflète les changements
+  const handleSuccess = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: ['profile'] });
+    onSuccess?.();
+  }, [queryClient, onSuccess]);
+
   const formState = useUserFormDrawer({
     open,
     onClose,
-    onSuccess,
+    onSuccess: handleSuccess,
     user,
     createMutation,
     updateMutation,
@@ -195,18 +201,7 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
   const onSubmitWithPhoto = useCallback(
     async (values: Record<string, unknown>) => {
       if (isEdit && user && pendingPhotoRef.current) {
-        let mediaId: string;
-        try {
-          const media = await uploadUserProfilePhoto(
-            user.id,
-            pendingPhotoRef.current,
-            'platform/users',
-          );
-          mediaId = media.id;
-        } catch {
-          toast.error("Échec de l'upload photo. Réessayez.");
-          return;
-        }
+        // PATCH d'abord — l'upload photo n'a lieu qu'après la sauvegarde réussie
         try {
           await updateMutation.mutateAsync({
             id: user.id,
@@ -217,7 +212,6 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
               role: values.role as UpdateUserPayload['role'],
               tenant_id: (values.tenant_id as string | null) ?? null,
               is_active: values.is_active as boolean,
-              profile_photo_media_id: mediaId,
               address: (values.address as string | null) ?? null,
               zip_code: (values.zip_code as string | null) ?? null,
               city: (values.city as string | null) ?? null,
@@ -226,12 +220,20 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
               preferred_language: (values.preferred_language as string | null) ?? null,
             } as UpdateUserPayload,
           });
-          pendingPhotoRef.current = null;
-          onSuccess?.();
-          onClose();
         } catch {
           toast.error("Échec de la mise à jour de l'utilisateur.");
+          return;
         }
+        // L'endpoint profile-photo lie déjà la photo côté backend — best-effort
+        try {
+          await uploadUserProfilePhoto(user.id, pendingPhotoRef.current, 'platform/users');
+          await queryClient.invalidateQueries({ queryKey: ADMIN_USERS_QUERY_KEY });
+        } catch {
+          toast.warning("Données sauvegardées, mais l'upload photo a échoué.");
+        }
+        pendingPhotoRef.current = null;
+        handleSuccess();
+        onClose();
       } else if (!isEdit && pendingPhotoRef.current) {
         // Création : créer d'abord l'utilisateur, puis uploader la photo
         let newUserId: string;
@@ -264,7 +266,7 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
         }
         await queryClient.invalidateQueries({ queryKey: ADMIN_USERS_QUERY_KEY });
         pendingPhotoRef.current = null;
-        onSuccess?.();
+        handleSuccess();
         onClose();
       } else {
         formState.onSubmit(values);
@@ -280,12 +282,13 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
       name="is_active"
       render={({ field }) => (
         <FieldGroup>
-          <div className="flex items-center justify-between">
-            <FieldLabel className="text-xs">Compte actif</FieldLabel>
+          <div className="flex items-center justify-between border p-3 bg-gray-50/40 rounded-sm">
+            <FieldLabel className="text-xs">Autoriser l’accès au compte</FieldLabel>
             <Switch
               checked={field.value}
               onCheckedChange={field.onChange}
               aria-label="Compte actif"
+              className="data-checked:bg-(--color-primary)"
             />
           </div>
         </FieldGroup>
@@ -330,8 +333,6 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
       <SheetContent
         className="flex w-full flex-col gap-0 p-0 overflow-hidden sm:max-w-150! lg:max-w-200!"
         showCloseButton={true}
-        onInteractOutside={(e) => e.preventDefault()}
-        onEscapeKeyDown={(e) => e.preventDefault()}
       >
         <SheetHeader className="border-b px-4 py-4">
           <SheetTitle>{isEdit ? "Modifier l'utilisateur" : 'Créer un utilisateur'}</SheetTitle>
@@ -358,8 +359,8 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
           extraFields={
             <>
               {tenantField}
-              {activeField}
               <UserProfileFields form={formState.form} />
+              {activeField}
             </>
           }
         />

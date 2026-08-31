@@ -1416,7 +1416,7 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
 
   return (
     <FlowActionsContext.Provider value={flowActions}>
-      <div className="flex h-175 flex-col overflow-hidden">
+      <div className="flex h-full flex-col overflow-hidden">
         {/* ── Toolbar ── */}
         <div className="flex flex-wrap items-center gap-2 px-4 py-3">
           <Tooltip>

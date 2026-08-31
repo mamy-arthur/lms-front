@@ -103,10 +103,10 @@ export function StorePage() {
                 setPerPage(PAGE_SIZE);
               }}
               className={cn(
-                'flex items-center rounded-full px-4 py-1.5 text-xs font-medium transition-all',
+                'flex items-center rounded-full px-4 py-1.5 text-xs font-medium',
                 selectedCategoryId === null
                   ? 'bg-(--color-primary) text-white shadow-sm'
-                  : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50',
+                  : 'bg-white border border-slate-200 hover:bg-slate-50',
               )}
             >
               Toutes
@@ -122,10 +122,10 @@ export function StorePage() {
                     setPerPage(PAGE_SIZE);
                   }}
                   className={cn(
-                    'flex items-center rounded-full px-4 py-1.5 text-xs font-medium transition-all',
+                    'flex items-center rounded-full px-4 py-1.5 text-xs font-medium',
                     active
                       ? 'bg-(--color-primary) text-white shadow-sm'
-                      : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50',
+                      : 'bg-white border border-slate-200 hover:bg-slate-50',
                   )}
                 >
                   {cat.name}

@@ -24,7 +24,7 @@ export function CartSummary({ cart, onCheckout }: CartSummaryProps) {
   const currency = cart.currency || 'EUR';
 
   return (
-    <div className="space-y-3 pt-4 bg-gray-50 p-4 rounded-lg">
+    <div className="space-y-3 pt-4 bg-gray-50/50 p-4 rounded-sm">
       <div className="flex justify-between items-center gap-2 space-y-1">
         <p className="text-sm font-semibold text-foreground">Résumé de la commande</p>
         <p className="text-xs text-muted-foreground">

@@ -9,8 +9,8 @@ import { loginSchema, type LoginSchema } from '@/shared/schemas/auth.schema';
 import { authApi, type ExistingSessionInfo } from '@/shared/api/auth.api';
 import { useAuthStore } from '@/shared/stores/auth.store';
 import { useTenantStore } from '@/shared/stores/tenant.store';
-import { resolveRedirectPath } from '@/modules/auth/utils/loginUtils';
 import { SessionConflictModal } from '@/modules/auth/components/SessionConflictModal';
+import { resolveRedirectPath, clearSessionCache } from '@/modules/auth/utils/loginUtils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -63,6 +63,7 @@ export function PlatformLoginForm() {
         });
         return;
       }
+      clearSessionCache();
 
       setAuth(result.user, result.sessionId);
       router.replace(resolveRedirectPath(result.user, hasTenant));

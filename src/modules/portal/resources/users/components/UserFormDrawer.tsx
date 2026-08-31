@@ -121,10 +121,16 @@ function UserFormDrawerBase({ open, onClose, onSuccess, user }: UserFormDrawerPr
 
   const defaultValues = useMemo(() => buildDefaults(user), [user, buildDefaults]);
 
+  // Invalide le cache profil pour que la page profil reflète les changements
+  const handleSuccess = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: ['profile'] });
+    onSuccess?.();
+  }, [queryClient, onSuccess]);
+
   const formState = useUserFormDrawer({
     open,
     onClose,
-    onSuccess,
+    onSuccess: handleSuccess,
     user,
     createMutation,
     updateMutation,
@@ -175,14 +181,7 @@ function UserFormDrawerBase({ open, onClose, onSuccess, user }: UserFormDrawerPr
   const onSubmitWithPhoto = useCallback(
     async (values: Record<string, unknown>) => {
       if (isEdit && user && pendingPhotoRef.current) {
-        let mediaId: string;
-        try {
-          const media = await uploadUserProfilePhoto(user.id, pendingPhotoRef.current, 'users');
-          mediaId = media.id;
-        } catch {
-          toast.error("Échec de l'upload photo. Réessayez.");
-          return;
-        }
+        // PATCH d'abord — l'upload photo n'a lieu qu'après la sauvegarde réussie
         try {
           await updateMutation.mutateAsync({
             id: user.id,
@@ -192,7 +191,6 @@ function UserFormDrawerBase({ open, onClose, onSuccess, user }: UserFormDrawerPr
               email: values.email as string,
               role: values.role as UpdateClientUserPayload['role'],
               is_active: values.is_active as boolean,
-              profile_photo_media_id: mediaId,
               address: (values.address as string | null) ?? null,
               zip_code: (values.zip_code as string | null) ?? null,
               city: (values.city as string | null) ?? null,
@@ -201,12 +199,20 @@ function UserFormDrawerBase({ open, onClose, onSuccess, user }: UserFormDrawerPr
               preferred_language: (values.preferred_language as string | null) ?? null,
             } as UpdateClientUserPayload,
           });
-          pendingPhotoRef.current = null;
-          onSuccess?.();
-          onClose();
         } catch {
           toast.error("Échec de la mise à jour de l'utilisateur.");
+          return;
         }
+        // L'endpoint profile-photo lie déjà la photo côté backend — best-effort
+        try {
+          await uploadUserProfilePhoto(user.id, pendingPhotoRef.current, 'users');
+          await queryClient.invalidateQueries({ queryKey: TENANT_USERS_QUERY_KEY });
+        } catch {
+          toast.warning("Données sauvegardées, mais l'upload photo a échoué.");
+        }
+        pendingPhotoRef.current = null;
+        handleSuccess();
+        onClose();
       } else if (!isEdit && pendingPhotoRef.current) {
         // Création : créer d'abord l'utilisateur, puis uploader la photo
         let newUserId: string;
@@ -239,7 +245,7 @@ function UserFormDrawerBase({ open, onClose, onSuccess, user }: UserFormDrawerPr
         }
         await queryClient.invalidateQueries({ queryKey: TENANT_USERS_QUERY_KEY });
         pendingPhotoRef.current = null;
-        onSuccess?.();
+        handleSuccess();
         onClose();
       } else {
         formState.onSubmit(values);

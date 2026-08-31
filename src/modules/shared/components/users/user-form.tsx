@@ -58,7 +58,7 @@ export function UserForm({
         className="flex flex-1 flex-col min-h-0"
         noValidate
       >
-        <div className="flex-1 space-y-5 overflow-y-auto px-6 py-4">
+        <div className="flex-1 space-y-4 overflow-y-auto px-6 py-4">
           {mutation.isError && (
             <div
               role="alert"
@@ -67,10 +67,8 @@ export function UserForm({
               {extractApiError(mutation.error, isEdit)}
             </div>
           )}
-
           {topFields}
-
-          <div className="flex flex-row gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <FieldRoot
               control={form.control}
               name="last_name"
@@ -78,7 +76,13 @@ export function UserForm({
                 <FieldGroup>
                   <FieldLabel className="text-xs">Nom</FieldLabel>
                   <FieldContent>
-                    <Input autoFocus aria-label="Nom" className="text-xs" {...field} />
+                    <Input
+                      autoFocus
+                      aria-label="Nom"
+                      placeholder="Dupont"
+                      className="text-xs"
+                      {...field}
+                    />
                   </FieldContent>
                   <FieldError />
                 </FieldGroup>
@@ -91,14 +95,13 @@ export function UserForm({
                 <FieldGroup>
                   <FieldLabel className="text-xs">Prénom</FieldLabel>
                   <FieldContent>
-                    <Input aria-label="Prénom" className="text-xs" {...field} />
+                    <Input aria-label="Prénom" placeholder="Jean" className="text-xs" {...field} />
                   </FieldContent>
                   <FieldError />
                 </FieldGroup>
               )}
             />
           </div>
-
           <FieldRoot
             control={form.control}
             name="email"
@@ -106,13 +109,18 @@ export function UserForm({
               <FieldGroup>
                 <FieldLabel className="text-xs">Email</FieldLabel>
                 <FieldContent>
-                  <Input type="email" aria-label="Email" className="text-xs" {...field} />
+                  <Input
+                    type="email"
+                    aria-label="Email"
+                    placeholder="jean.dupont@exemple.com"
+                    className="text-xs"
+                    {...field}
+                  />
                 </FieldContent>
                 <FieldError />
               </FieldGroup>
             )}
           />
-
           <FieldRoot
             control={form.control}
             name="role"
@@ -137,9 +145,7 @@ export function UserForm({
               </FieldGroup>
             )}
           />
-
           {extraFields}
-
           {isEdit && lastLogin && (
             <div className="flex flex-col gap-1">
               <span className="text-xs text-muted-foreground">Dernière connexion</span>
@@ -154,7 +160,6 @@ export function UserForm({
               </span>
             </div>
           )}
-
           {!isEdit && (
             <FieldRoot
               control={form.control}
@@ -167,6 +172,7 @@ export function UserForm({
                       <Input
                         type={showPassword ? 'text' : 'password'}
                         aria-label="Mot de passe"
+                        placeholder="••••••••"
                         className="text-xs"
                         {...field}
                       />

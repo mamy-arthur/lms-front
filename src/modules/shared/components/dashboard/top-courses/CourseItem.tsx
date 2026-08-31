@@ -11,8 +11,8 @@ export function CourseItem({ course }: Props) {
   return (
     <div
       className="
-                group rounded-xl
-                px-4 py-4 bg-gray-100/50
+                group rounded-lg
+                px-4 py-4 border
             "
     >
       <div className="flex items-start justify-between">

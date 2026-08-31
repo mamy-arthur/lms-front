@@ -1,21 +1,14 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import {
-  LayoutGrid,
-  List,
-  ChevronDown,
-  BookOpen,
-  CheckCircle2,
-  Clock,
-  Play,
-  Search,
-} from 'lucide-react';
+import { LayoutGrid, ChevronDown, CheckCircle2, Clock, Play, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { FormationCard } from '@/modules/portal/resources/_shared/trainee/FormationCard';
 import { useMyEnrollmentsQuery } from './hooks/useMyEnrollmentsQuery';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { FormationStatus } from '@/modules/portal/resources/_shared/trainee/types';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 
 type FilterTab = 'all' | FormationStatus;
 
@@ -28,10 +21,16 @@ const FILTER_TABS: { label: string; value: FilterTab; icon: React.ReactNode }[] 
 
 export default function FormationListPage() {
   const [filter, setFilter] = useState<FilterTab>('all');
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [search, setSearch] = useState('');
 
   const { data: formations = [], isLoading } = useMyEnrollmentsQuery();
+
+  const hasFilters = filter !== 'all' || search.trim() !== '';
+
+  const handleReset = () => {
+    setFilter('all');
+    setSearch('');
+  };
 
   const filtered = useMemo(() => {
     let result = filter === 'all' ? formations : formations.filter((c) => c.status === filter);
@@ -60,13 +59,12 @@ export default function FormationListPage() {
                 type="button"
                 onClick={() => setFilter(tab.value)}
                 className={cn(
-                  'flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-medium transition-all',
+                  'flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-medium',
                   filter === tab.value
                     ? 'bg-(--color-primary) text-white shadow-sm'
-                    : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50',
+                    : 'bg-white border hover:bg-slate-50',
                 )}
               >
-                {tab.icon}
                 {tab.label}
               </button>
             ))}
@@ -87,12 +85,12 @@ export default function FormationListPage() {
             </button>
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400 pointer-events-none" />
-              <input
+              <Input
                 type="search"
                 placeholder="Rechercher..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="h-8 w-44 rounded-lg border border-slate-200 bg-white pl-8 pr-3 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-(--color-primary)"
+                className="h-8 w-44 rounded-lg bg-white pl-8 pr-3 text-xs  focus:outline-none focus:ring-1 focus:ring-(--color-primary)"
               />
             </div>
             <button
@@ -101,34 +99,6 @@ export default function FormationListPage() {
             >
               Trier par : Plus récent <ChevronDown className="h-4 w-4 text-slate-400" />
             </button>
-            <div className="flex rounded-lg border border-slate-200 bg-white overflow-hidden">
-              <button
-                type="button"
-                onClick={() => setViewMode('grid')}
-                className={cn(
-                  'p-2 transition-colors',
-                  viewMode === 'grid'
-                    ? 'bg-slate-100 text-slate-800'
-                    : 'text-slate-400 hover:text-slate-600',
-                )}
-                aria-label="Vue grille"
-              >
-                <LayoutGrid className="h-4 w-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode('list')}
-                className={cn(
-                  'p-2 transition-colors',
-                  viewMode === 'list'
-                    ? 'bg-slate-100 text-slate-800'
-                    : 'text-slate-400 hover:text-slate-600',
-                )}
-                aria-label="Vue liste"
-              >
-                <List className="h-4 w-4" />
-              </button>
-            </div>
           </div>
         </div>
 
@@ -139,9 +109,13 @@ export default function FormationListPage() {
             ))}
           </div>
         ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-slate-200 bg-white py-20">
-            <BookOpen className="h-10 w-10 text-slate-300" />
-            <p className="text-sm font-medium text-slate-400">Aucune formation trouvée</p>
+          <div className="flex flex-col items-center justify-center py-24 text-center text-muted-foreground">
+            <p className="text-sm">Aucune formation ne correspond à votre recherche.</p>
+            {hasFilters && (
+              <Button variant="link" size="sm" onClick={handleReset} className="mt-2">
+                Voir toutes les formations
+              </Button>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">

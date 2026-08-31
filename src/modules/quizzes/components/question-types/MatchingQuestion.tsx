@@ -37,6 +37,11 @@ export function MatchingQuestion({
 
   const handleRightClick = (rightId: string) => {
     if (disabled || !selectedLeft) return;
+    // Free the right item if it's already claimed by a different left
+    const conflictingLeft = rightToLeft[rightId];
+    if (conflictingLeft && conflictingLeft !== selectedLeft) {
+      onPairChange(conflictingLeft, '');
+    }
     onPairChange(selectedLeft, rightId);
     setSelectedLeft(null);
   };
@@ -52,7 +57,8 @@ export function MatchingQuestion({
   );
 
   const matchColor = (leftId: string): string => {
-    const keys = Object.keys(answer);
+    // Only count keys with an actual rightId to keep color indices stable
+    const keys = Object.keys(answer).filter((k) => !!answer[k]);
     const idx = keys.indexOf(leftId);
     if (idx === -1) return '';
     const hues = [210, 155, 34, 280, 16, 190];
@@ -68,7 +74,7 @@ export function MatchingQuestion({
 
           // Left state
           const isLeftSelected = selectedLeft === pair.id;
-          const isLeftMatched = pair.id in answer;
+          const isLeftMatched = !!answer[pair.id]; // truthy check — onPairChange(id,'') leaves key with empty value
           const leftColor = isLeftMatched ? matchColor(pair.id) : undefined;
 
           // Right state
@@ -84,17 +90,18 @@ export function MatchingQuestion({
                 disabled={disabled}
                 onClick={() => handleLeftClick(pair.id)}
                 className={cn(
-                  'rounded-xl border-2 px-5 py-4 text-left text-sm font-medium transition-all duration-150',
+                  'rounded-sm border px-5 py-4 text-left text-sm font-medium transition-all duration-150',
                   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                   isLeftSelected
                     ? 'border-(--color-primary) bg-primary/10 shadow-md'
                     : isLeftMatched
-                      ? 'border-2 bg-card'
-                      : 'border-border bg-card hover:border-primary/40 hover:bg-(--color-primary)/4',
+                      ? 'border bg-card'
+                      : 'border-border bg-card hover:border-primary/40 hover:bg-primary/4',
+                  !isLeftSelected && !isLeftMatched && !!selectedLeft && 'opacity-40',
                   disabled && 'cursor-not-allowed opacity-60',
                 )}
                 style={
-                  isLeftMatched && leftColor
+                  isLeftMatched && leftColor && !isLeftSelected
                     ? { borderColor: leftColor, backgroundColor: `${leftColor}14` }
                     : undefined
                 }
@@ -111,10 +118,10 @@ export function MatchingQuestion({
                   disabled={disabled || (!selectedLeft && !isRightMatched)}
                   onClick={() => handleRightClick(rightItem.id)}
                   className={cn(
-                    'rounded-xl border-2 px-5 py-4 text-left text-sm font-medium transition-all duration-150',
+                    'rounded-sm border px-5 py-4 text-left text-sm font-medium transition-all duration-150',
                     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                     isRightMatched
-                      ? 'border-2 bg-card'
+                      ? 'border bg-card'
                       : isTargetable
                         ? 'border-primary/50 bg-(--color-primary)/10 hover:border-(--color-primary) hover:shadow-md'
                         : 'border-border bg-card opacity-70',

@@ -456,6 +456,7 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
   }, [learningPath, moduleNameMap, evaluationsData, progressionRules]);
 
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const formInitializedRef = useRef(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [pendingImageFile, setPendingImageFile] = useState<File | null>(null);
   const [imageId, setImageId] = useState<string | null>(null);
@@ -680,46 +681,52 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
   const watchedDurationValue = watch('duration_value');
   const watchedDurationUnit = watch('duration_unit');
 
-  // Sync form state when drawer opens
+  // Sync form state when drawer opens — only once per open, not on every refetch
   useEffect(() => {
-    if (open) {
-      if (learningPath) {
-        const durationParts =
-          learningPath.duration !== null && learningPath.duration !== undefined
-            ? minutesToDuration(learningPath.duration)
-            : { value: null as number | null, unit: 'hours' as DurationUnit };
-        reset({
-          name: learningPath.name,
-          description: learningPath.description,
-          category_id: learningPath.categoryId,
-          price: learningPath.price ?? 0,
-          currency: learningPath.currency ?? 'EUR',
-          published_at: learningPath.publishedAt,
-          show_in_shop: learningPath.showInShop,
-          duration_value: durationParts.value,
-          duration_unit: durationParts.unit,
-        });
-        setImageId(learningPath.image?.id ?? null);
-        setImagePreview(learningPath.image?.url ?? null);
-      } else {
-        reset({
-          name: '',
-          description: null,
-          category_id: null,
-          price: 0,
-          currency: 'EUR',
-          published_at: null,
-          show_in_shop: false,
-          duration_value: null,
-          duration_unit: 'hours',
-        });
-        setImageId(null);
-        setImagePreview(null);
-        setLazyLpId(null);
-      }
-      setPendingImageFile(null);
+    if (!open) {
+      formInitializedRef.current = false;
+      return;
     }
-  }, [open, learningPath, reset]);
+    if (formInitializedRef.current) return;
+    if (isEdit && !learningPath) return; // wait for data to load
+
+    if (learningPath) {
+      const durationParts =
+        learningPath.duration !== null && learningPath.duration !== undefined
+          ? minutesToDuration(learningPath.duration)
+          : { value: null as number | null, unit: 'hours' as DurationUnit };
+      reset({
+        name: learningPath.name,
+        description: learningPath.description,
+        category_id: learningPath.categoryId,
+        price: learningPath.price ?? 0,
+        currency: learningPath.currency ?? 'EUR',
+        published_at: learningPath.publishedAt,
+        show_in_shop: learningPath.showInShop,
+        duration_value: durationParts.value,
+        duration_unit: durationParts.unit,
+      });
+      setImageId(learningPath.image?.id ?? null);
+      setImagePreview(learningPath.image?.url ?? null);
+    } else {
+      reset({
+        name: '',
+        description: null,
+        category_id: null,
+        price: 0,
+        currency: 'EUR',
+        published_at: null,
+        show_in_shop: false,
+        duration_value: null,
+        duration_unit: 'hours',
+      });
+      setImageId(null);
+      setImagePreview(null);
+      setLazyLpId(null);
+    }
+    setPendingImageFile(null);
+    formInitializedRef.current = true;
+  }, [open, isEdit, learningPath, reset]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null;
@@ -921,50 +928,6 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
                     rows={3}
                   />
                 </div>
-                {/* Image */}
-                <div className="space-y-1.5">
-                  <Label>Image de couverture</Label>
-                  <input
-                    ref={imageInputRef}
-                    type="file"
-                    accept="image/jpeg,image/png,image/gif,image/webp"
-                    className="hidden"
-                    onChange={handleImageChange}
-                  />
-                  {imagePreview ? (
-                    <div className="group relative overflow-hidden rounded-lg border">
-                      <img src={imagePreview} alt="Aperçu" className="h-28 w-full object-cover" />
-                      <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => imageInputRef.current?.click()}
-                        >
-                          Changer
-                        </Button>
-                        <Button
-                          type="button"
-                          size="icon"
-                          variant="destructive"
-                          className="size-7"
-                          onClick={clearImage}
-                        >
-                          <X className="size-3.5" />
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => imageInputRef.current?.click()}
-                      className="flex h-20 w-full items-center justify-center gap-2 rounded-lg border border-dashed border-muted-foreground/25 text-xs text-muted-foreground transition-colors hover:border-muted-foreground/40 hover:bg-muted/50"
-                    >
-                      <Image className="size-4" />
-                      Cliquer pour ajouter une image
-                    </button>
-                  )}
-                </div>
                 {/* Catégorie */}
                 <div className="space-y-1.5">
                   <Label>Catégorie</Label>
@@ -974,7 +937,7 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
                         type="button"
                         variant="outline"
                         role="combobox"
-                        className="h-8 w-full justify-between text-xs font-normal"
+                        className="w-full justify-between text-xs font-normal"
                       >
                         <span className={watch('category_id') ? '' : 'text-muted-foreground'}>
                           {categories.find((c) => c.id === watch('category_id'))?.name ??
@@ -1074,7 +1037,7 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
                       min={0}
                       step={0.01}
                       placeholder="0.00"
-                      className="h-8 text-sm"
+                      className="text-sm"
                       value={watchedPrice ?? ''}
                       onChange={(e) => {
                         const val = e.target.value;
@@ -1117,7 +1080,7 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
                       min={0}
                       step={1}
                       placeholder="Ex: 2"
-                      className="h-8 text-sm"
+                      className="text-sm"
                       value={watchedDurationValue ?? ''}
                       onChange={(e) => {
                         const val = e.target.value;
@@ -1152,6 +1115,50 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
                     onChange={(iso) => setValue('published_at', iso)}
                     placeholder="Non définie"
                   />
+                </div>
+                {/* Image */}
+                <div className="space-y-1.5">
+                  <Label>Image de couverture</Label>
+                  <input
+                    ref={imageInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/gif,image/webp"
+                    className="hidden"
+                    onChange={handleImageChange}
+                  />
+                  {imagePreview ? (
+                    <div className="group relative overflow-hidden rounded-lg border">
+                      <img src={imagePreview} alt="Aperçu" className="h-62.5 w-full object-cover" />
+                      <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => imageInputRef.current?.click()}
+                        >
+                          Changer
+                        </Button>
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="destructive"
+                          className="size-7"
+                          onClick={clearImage}
+                        >
+                          <X className="size-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => imageInputRef.current?.click()}
+                      className="flex h-62.5 w-full items-center justify-center gap-2 rounded-lg border border-dashed border-muted-foreground/25 text-xs text-muted-foreground transition-colors hover:border-muted-foreground/40 hover:bg-muted/50"
+                    >
+                      <Image className="size-4" />
+                      Cliquer pour ajouter une image
+                    </button>
+                  )}
                 </div>
                 {/* Visible en boutique */}
                 <div className="space-y-2">

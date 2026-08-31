@@ -44,6 +44,7 @@ interface TenantDomain {
 export interface BackendTenant {
   id: string;
   client_id: string;
+  editor_id: string | null;
   name: string;
   slug: string;
   status: 'active' | 'suspended' | 'pending';

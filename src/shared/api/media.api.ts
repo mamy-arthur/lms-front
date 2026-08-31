@@ -1,4 +1,4 @@
-import { apiGet, apiDelete, apiUpload } from '@/shared/lib/apiClient';
+import { apiGet, apiDelete, apiUpload, apiUploadWithProgress } from '@/shared/lib/apiClient';
 
 export interface ApiMedia {
   id: string;
@@ -16,6 +16,18 @@ export const mediaApi = {
     form.append('content_type_id', contentTypeId);
     form.append('field_id', fieldId);
     return apiUpload<{ data: ApiMedia }>('platform/media', form);
+  },
+  uploadWithProgress: (
+    file: File,
+    contentTypeId: string,
+    fieldId: string,
+    onProgress: (percent: number) => void,
+  ): Promise<{ data: ApiMedia }> => {
+    const form = new FormData();
+    form.append('file', file);
+    form.append('content_type_id', contentTypeId);
+    form.append('field_id', fieldId);
+    return apiUploadWithProgress<{ data: ApiMedia }>('platform/media', form, onProgress);
   },
   uploadInline: (
     file: File,

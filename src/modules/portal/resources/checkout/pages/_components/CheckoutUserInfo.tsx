@@ -10,8 +10,7 @@ interface CheckoutUserInfoProps {
 
 export function CheckoutUserInfo({ name, email }: CheckoutUserInfoProps) {
   return (
-    <section className="rounded-xl border border-border bg-card p-6">
-      <h2 className="mb-4 text-xs font-semibold">Vos informations</h2>
+    <section>
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
           <Label htmlFor="checkout-name">Nom complet</Label>

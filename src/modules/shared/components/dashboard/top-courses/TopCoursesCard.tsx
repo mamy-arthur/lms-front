@@ -24,7 +24,7 @@ export default function TopCoursesCard() {
         </Button>
       </CardHeader>
 
-      <CardContent className="space-y-3 overflow-y-auto">
+      <CardContent className="space-y-2 overflow-y-auto">
         <CourseList courses={topCourses} />
       </CardContent>
     </Card>

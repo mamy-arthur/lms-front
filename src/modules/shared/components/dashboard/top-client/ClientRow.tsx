@@ -14,7 +14,7 @@ export function ClientRow({ client, index, onClick }: Props) {
 
   return (
     <div
-      className="flex items-center justify-between rounded-xl px-3 py-4 bg-gray-100/50 cursor-pointer"
+      className="flex items-center justify-between rounded-lg px-3 py-4  border cursor-pointer"
       onClick={onClick}
     >
       <div className="flex items-center gap-3 min-w-0">

@@ -49,6 +49,7 @@ jest.mock('next/navigation', () => ({
  */
 jest.mock('@/modules/auth/utils/loginUtils', () => ({
   resolveLogin: jest.fn(),
+  clearSessionCache: jest.fn(),
   resolveRedirectPath: (user: { role: string }, hasTenant: boolean): string => {
     if (user.role === 'SUPER_ADMIN' || user.role === 'EDITOR') return '/admin';
     return hasTenant ? '/dashboard' : '/tenant-not-found';

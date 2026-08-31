@@ -29,6 +29,7 @@ interface AvailableCourseRaw {
   full_name?: string | null;
   category_id?: string | null;
   category_name?: string | null;
+  status?: string | null;
 }
 
 export const adminModulesApi = {
@@ -83,12 +84,16 @@ export const adminModulesApi = {
       ? `${BASE}/available-courses?competency_id=${encodeURIComponent(competencyId)}`
       : `${BASE}/available-courses`;
     const res = await apiGet<{ data: AvailableCourseRaw[] }>(url);
-    return (res.data ?? []).map((c) => ({
-      id: c.id,
-      fullName: String(c.full_name ?? ''),
-      categoryId: c.category_id ?? '',
-      categoryName: String(c.category_name ?? ''),
-    }));
+    return (res.data ?? []).map(
+      (c) =>
+        ({
+          id: c.id,
+          fullName: String(c.full_name ?? ''),
+          categoryId: c.category_id ?? '',
+          categoryName: String(c.category_name ?? ''),
+          status: c.status === 'ALREADY_LINKED' ? 'ALREADY_LINKED' : 'AVAILABLE',
+        }) satisfies import('../types').AvailableCourse,
+    );
   },
 };
 

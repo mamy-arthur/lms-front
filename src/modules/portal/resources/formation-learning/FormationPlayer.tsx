@@ -23,6 +23,7 @@ export default function FormationPlayer({ enrollmentId }: Props) {
 
   const [activeId, setActiveId] = useState<string>('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   // Initialise activeId once the formation is available.
   const effectiveActiveId = activeId || (formation ? getDefaultActiveId(formation) : '');
@@ -93,11 +94,15 @@ export default function FormationPlayer({ enrollmentId }: Props) {
         </main>
       </div>
 
-      <aside className="hidden w-88 2xl:w-104 shrink-0 border-l border-slate-100 bg-white xl:flex xl:flex-col sticky top-0 overflow-hidden">
+      <aside
+        className={`hidden shrink-0 border-l border-slate-100 bg-white xl:flex xl:flex-col sticky top-0 overflow-hidden transition-all duration-300 ${sidebarCollapsed ? 'w-12' : 'w-88 2xl:w-104'}`}
+      >
         <FormationSidebar
           formation={formation}
           activeId={effectiveActiveId}
           onSelect={handleSelect}
+          collapsed={sidebarCollapsed}
+          onToggleCollapse={() => setSidebarCollapsed((v) => !v)}
         />
       </aside>
 

@@ -121,7 +121,7 @@ export function ExamOverlay({
 
         {/* ── Content ───────────────────────────────────────────────────── */}
         <div className="flex flex-1 overflow-y-auto px-4 py-10">
-          <div className="mx-auto flex w-full max-w-[520px] flex-col gap-8">
+          <div className="mx-auto flex w-full max-w-130 flex-col gap-8">
             <ExamQuestionPanel question={currentQuestion} />
             <ExamAnswerPanel
               question={currentQuestion}
