@@ -7,7 +7,10 @@ import type {
   ProgressionNodeRef,
   UpdateProgressionRulePayload,
 } from '@/shared/types/progression-rule.types';
-import type { CreateEvaluationPayload, UpdateEvaluationPayload } from '@/shared/api/evaluations.api';
+import type {
+  CreateEvaluationPayload,
+  UpdateEvaluationPayload,
+} from '@/shared/api/evaluations.api';
 
 export type StepType =
   'email' | 'module' | 'evaluation-intermediate' | 'evaluation-final' | 'attestation';
