@@ -18,12 +18,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { getInitials } from '@/shared/lib/string/getInitials';
-import type { TenantAssignableUser } from '../../types';
+import type { PurchasedLearningPathLearner } from '../../types';
 
 interface CreateGroupDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  allUsers: TenantAssignableUser[];
+  allUsers: PurchasedLearningPathLearner[];
   onConfirm: (name: string, userIds: string[]) => void | Promise<void>;
   /** Pré-remplit le formulaire — active le mode édition. */
   initialName?: string;

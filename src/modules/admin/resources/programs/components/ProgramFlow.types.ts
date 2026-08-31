@@ -7,7 +7,7 @@ import type {
   ProgressionNodeRef,
   UpdateProgressionRulePayload,
 } from '@/shared/types/progression-rule.types';
-import type { CreateEvaluationPayload } from '@/shared/api/evaluations.api';
+import type { CreateEvaluationPayload, UpdateEvaluationPayload } from '@/shared/api/evaluations.api';
 
 export type StepType =
   'email' | 'module' | 'evaluation-intermediate' | 'evaluation-final' | 'attestation';
@@ -127,6 +127,7 @@ export type ProgramFlowProps = {
   onModuleMove?: (moduleId: string, position: { x: number; y: number }) => Promise<void>;
   onEvalCreate?: (data: CreateEvaluationPayload) => Promise<string>;
   onEvalDelete?: (evaluationId: string) => Promise<void>;
+  onEvalUpdate?: (evaluationId: string, payload: UpdateEvaluationPayload) => Promise<void>;
   onEvalMove?: (evaluationId: string, position: { x: number; y: number }) => Promise<void>;
   onMailTemplateAssign?: (
     mailTemplateId: string,

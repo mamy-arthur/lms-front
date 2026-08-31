@@ -1,12 +1,14 @@
-import type { ApiEnrollmentWithLearner } from '@/shared/types/enrollment.types';
+import type { ApiEnrollmentHistoryWithLearner } from '@/shared/types/enrollment.types';
 import type { ApiGroup } from '@/shared/types/group.types';
-import type { ApiPurchasedLearningPath } from '@/shared/types/purchased-learning-path.types';
-import type { ApiAssignableTraineeUser } from '@/shared/types/user.types';
+import type {
+  ApiPurchasedLearningPath,
+  ApiPurchasedLearningPathLearner,
+} from '@/shared/types/purchased-learning-path.types';
 import type {
   AssignableGroup,
   PurchasedLearningPath,
   PurchasedLearningPathEnrollment,
-  TenantAssignableUser,
+  PurchasedLearningPathLearner,
 } from '../types';
 
 /** Mappe une ressource API vers le modèle UI purchasedLearningPath. */
@@ -26,17 +28,21 @@ export function mapToPurchasedLearningPath(api: ApiPurchasedLearningPath): Purch
   };
 }
 
-export function mapToAssignableUser(user: ApiAssignableTraineeUser): TenantAssignableUser {
-  const fullName =
-    user.full_name?.trim() ||
-    [user.first_name, user.last_name].filter(Boolean).join(' ').trim() ||
-    user.id;
-
+export function mapLearnerToRow(
+  learner: ApiPurchasedLearningPathLearner,
+): PurchasedLearningPathLearner {
   return {
-    id: user.id,
-    fullName,
-    email: user.email ?? null,
-    avatarUrl: user.profile_photo?.url ?? null,
+    id: learner.id,
+    fullName: `${learner.first_name} ${learner.last_name}`.trim() || learner.id,
+    email: learner.email,
+    avatarUrl: learner.profile_photo?.url ?? null,
+    enrollment: learner.enrollment
+      ? {
+          id: learner.enrollment.id,
+          status: learner.enrollment.status,
+          enrolledAt: learner.enrollment.enrolled_at,
+        }
+      : null,
   };
 }
 
@@ -49,8 +55,8 @@ export function mapApiGroupToAssignable(group: ApiGroup): AssignableGroup {
   };
 }
 
-export function mapEnrollmentToRow(
-  enrollment: ApiEnrollmentWithLearner,
+export function mapEnrollmentHistoryToRow(
+  enrollment: ApiEnrollmentHistoryWithLearner,
 ): PurchasedLearningPathEnrollment {
   const fullName = enrollment.learner
     ? `${enrollment.learner.first_name} ${enrollment.learner.last_name}`.trim()
@@ -64,5 +70,6 @@ export function mapEnrollmentToRow(
     enrolledAt: enrollment.enrolled_at,
     startedAt: enrollment.started_at,
     completedAt: enrollment.completed_at,
+    expiresAt: enrollment.expires_at,
   };
 }
