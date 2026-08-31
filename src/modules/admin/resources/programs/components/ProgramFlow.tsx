@@ -66,8 +66,10 @@ import { SelectAttestationDialog, type AttestationItem } from './dialog/SelectAt
 import { SelectEmailTemplateDialog, type EmailTemplate } from './dialog/SelectEmailTemplateDialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
-import { evaluationsApi } from '@/shared/api/evaluations.api';
-import type { CreateEvaluationPayload } from '@/shared/api/evaluations.api';
+import type {
+  CreateEvaluationPayload,
+  UpdateEvaluationPayload,
+} from '@/shared/api/evaluations.api';
 import { getApiErrorMessage } from '@/shared/lib/errors';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -454,6 +456,7 @@ export type ProgramFlowProps = {
   onModuleMove?: (moduleId: string, position: { x: number; y: number }) => Promise<void>;
   onEvalCreate?: (data: CreateEvaluationPayload) => Promise<string>;
   onEvalDelete?: (evaluationId: string) => Promise<void>;
+  onEvalUpdate?: (evaluationId: string, payload: UpdateEvaluationPayload) => Promise<void>;
   onEvalMove?: (evaluationId: string, position: { x: number; y: number }) => Promise<void>;
   onMailTemplateAssign?: (
     mailTemplateId: string,
@@ -490,6 +493,7 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
     onModuleMove,
     onEvalCreate,
     onEvalDelete,
+    onEvalUpdate,
     onEvalMove,
     onMailTemplateAssign,
     onCertificateAssign,
@@ -1137,9 +1141,9 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
       const { stepType, ...rest } = cfg;
 
       const node = nodesRef.current.find((n) => n.id === editEvalDialog.nodeId);
-      if (node?.data.evaluationId) {
+      if (node?.data.evaluationId && onEvalUpdate) {
         try {
-          await evaluationsApi.update(node.data.evaluationId, {
+          await onEvalUpdate(node.data.evaluationId, {
             title: cfg.title,
             question_bank_ids: cfg.questionBankIds.length > 0 ? cfg.questionBankIds : undefined,
             question_count: cfg.questionCount,
@@ -1168,7 +1172,7 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
       );
       setEditEvalDialog(null);
     },
-    [editEvalDialog],
+    [editEvalDialog, onEvalUpdate],
   );
 
   const handleEditAttestationSave = useCallback(

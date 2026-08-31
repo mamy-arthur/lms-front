@@ -155,7 +155,7 @@ export function FormationDetailsPage({ formation }: FormationDetailsPageProps) {
             <div className="mt-auto flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-3xl text-foreground">
                 {formation.price === 0 ? (
-                  <span className="font-semibold text-text-foreground">Gratuit</span>
+                  <span className="font-semibold text-foreground">Gratuit</span>
                 ) : (
                   <span className="bg-background/90 text-lg font-medium text-foreground">
                     {formatPrice(formation.price)}
