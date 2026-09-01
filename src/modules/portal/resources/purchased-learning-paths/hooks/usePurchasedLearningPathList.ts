@@ -4,7 +4,6 @@ import type {
   PurchasedLearningPathRow,
   PurchasedLearningPathStatKey,
 } from '../types';
-import { useAssignableTraineesQuery } from './useAssignableTraineesQuery';
 import { useCreateEnrollments } from './useCreateEnrollments';
 import { useCreateGroupWithMembers } from './useCreateGroupWithMembers';
 import { useDeleteGroup } from './useDeleteGroup';
@@ -32,7 +31,6 @@ export function usePurchasedLearningPathList() {
     page: page + 1,
     perPage: pageSize,
   });
-  const { data: trainees = [] } = useAssignableTraineesQuery(Boolean(assignmentTarget));
   const { data: groups = [] } = useGroupsQuery(Boolean(assignmentTarget));
 
   const createGroupMutation = useCreateGroupWithMembers();
@@ -83,7 +81,6 @@ export function usePurchasedLearningPathList() {
     sortedRows,
     statsDrawer,
     assignmentTargetRow,
-    trainees,
     groups,
     setPage,
     setStatsDrawer,

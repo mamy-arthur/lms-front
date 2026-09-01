@@ -18,7 +18,6 @@ export function PurchasedLearningPathList() {
     sortedRows,
     statsDrawer,
     assignmentTargetRow,
-    trainees,
     groups,
     setPage,
     setStatsDrawer,
@@ -104,7 +103,6 @@ export function PurchasedLearningPathList() {
           }
         }}
         purchasedLearningPath={assignmentTargetRow}
-        users={trainees}
         groups={groups}
         onCreateGroup={handleCreateGroup}
         onEditGroup={handleEditGroup}

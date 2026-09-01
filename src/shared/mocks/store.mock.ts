@@ -34,6 +34,7 @@ export interface StoreFormationDetails extends StoreFormation {
   fullDescription: string;
   level: StoreFormationLevel;
   duration: string;
+  validity: string | null;
   language: string;
   certificate: boolean;
   learningObjectives: string[];
@@ -277,6 +278,7 @@ function buildFormationDetails(formation: StoreFormation, index: number): StoreF
       `Vous visualisez ici l'architecture complète du parcours (modules et évaluations) sans accès au contenu pédagogique avant l'achat.`,
     level: levels[index % levels.length],
     duration: '3h 30min',
+    validity: null,
     language: 'Français',
     certificate: true,
     learningObjectives: [

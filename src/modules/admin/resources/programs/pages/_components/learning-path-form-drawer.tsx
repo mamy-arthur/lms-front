@@ -68,6 +68,8 @@ import ProgramFlow, { EdgeRuleData, type StepNode } from '../../components/Progr
 import type { CreateEvaluationPayload } from '@/shared/api/evaluations.api';
 import { useCreateEvaluation } from '../../hooks/useCreateEvaluation';
 import { useDeleteEvaluation } from '../../hooks/useDeleteEvaluation';
+import { useUpdateEvaluation } from '../../hooks/useUpdateEvaluation';
+import type { UpdateEvaluationPayload } from '@/shared/api/evaluations.api';
 import { useAssignMailTemplate } from '../../hooks/useAssignMailTemplate';
 import { useAssignCertificate } from '../../hooks/useAssignCertificate';
 import { useDetachCertificate } from '../../hooks/useDetachCertificate';
@@ -104,6 +106,8 @@ const schema = z
     show_in_shop: z.boolean().optional(),
     duration_value: z.number().min(0).nullable().optional(),
     duration_unit: durationUnitSchema.optional(),
+    validity_value: z.number().min(1).nullable().optional(),
+    validity_unit: durationUnitSchema.optional(),
   })
   .refine(
     (data) => {
@@ -200,19 +204,25 @@ type Props = {
 export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, categories }: Props) {
   const isEdit = !!learningPathId;
 
-  const { data: learningPath, isLoading: isLoadingPath } = useLearningPathQuery(
-    open && isEdit ? learningPathId : null,
-  );
+  const {
+    data: learningPath,
+    isLoading: isLoadingPath,
+    isError: isErrorPath,
+  } = useLearningPathQuery(open && isEdit ? learningPathId : null);
 
   // Fetch full evaluation details (includes question_bank_ids) for the initial flow
-  const { data: evaluationsData, isLoading: isLoadingEvaluations } = useEvaluationsQuery(
-    open && isEdit ? learningPathId : null,
-  );
+  const {
+    data: evaluationsData,
+    isLoading: isLoadingEvaluations,
+    isError: isErrorEvaluations,
+  } = useEvaluationsQuery(open && isEdit ? learningPathId : null);
 
   // Fetch existing progression rules to pre-populate edge data
-  const { data: progressionRules, isLoading: isLoadingRules } = useProgressionRulesQuery(
-    open && isEdit ? (learningPathId ?? null) : null,
-  );
+  const {
+    data: progressionRules,
+    isLoading: isLoadingRules,
+    isError: isErrorRules,
+  } = useProgressionRulesQuery(open && isEdit ? (learningPathId ?? null) : null);
 
   const hasCompetencies = isEdit && (learningPath?.competencies?.length ?? 0) > 0;
 
@@ -227,6 +237,7 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
   const unlinkCompetency = useUnlinkCompetencyFromLearningPath();
   const createEvaluation = useCreateEvaluation();
   const deleteEvaluation = useDeleteEvaluation();
+  const updateEvaluation = useUpdateEvaluation();
   const assignMailTemplate = useAssignMailTemplate();
   const assignCertificate = useAssignCertificate();
   const detachCertificate = useDetachCertificate();
@@ -239,7 +250,11 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
   const updateCertificateLocation = useUpdateCertificateLocation();
 
   // Pre-fetch all modules so competency names are ready when the flow renders
-  const { data: modulesResult, isLoading: isLoadingModules } = useModules();
+  const {
+    data: modulesResult,
+    isLoading: isLoadingModules,
+    isError: isErrorModules,
+  } = useModules();
 
   const moduleNameMap = useMemo(() => {
     const map = new Map<string, string>();
@@ -487,6 +502,8 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
       show_in_shop: false,
       duration_value: null,
       duration_unit: 'hours',
+      validity_value: null,
+      validity_unit: 'days',
     },
   });
 
@@ -622,6 +639,15 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
     [currentLpId, deleteEvaluation],
   );
 
+  // Update evaluation config (title, banks, attempts)
+  const handleEvalUpdate = useCallback(
+    async (evaluationId: string, payload: UpdateEvaluationPayload) => {
+      if (!currentLpId) return;
+      await updateEvaluation.mutateAsync({ evaluationId, learningPathId: currentLpId, payload });
+    },
+    [currentLpId, updateEvaluation],
+  );
+
   // Update module canvas position when dragged
   const handleModuleMove = useCallback(
     async (moduleId: string, position: { x: number; y: number }) => {
@@ -680,6 +706,10 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
   const watchedPublishedAt = watch('published_at');
   const watchedDurationValue = watch('duration_value');
   const watchedDurationUnit = watch('duration_unit');
+  const watchedValidityValue = watch('validity_value');
+  const watchedValidityUnit = watch('validity_unit');
+  const watchedCategoryId = watch('category_id');
+  const watchedShowInShop = watch('show_in_shop');
 
   // Sync form state when drawer opens — only once per open, not on every refetch
   useEffect(() => {
@@ -705,6 +735,14 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
         show_in_shop: learningPath.showInShop,
         duration_value: durationParts.value,
         duration_unit: durationParts.unit,
+        validity_value:
+          learningPath.validity !== null && learningPath.validity !== undefined
+            ? minutesToDuration(learningPath.validity).value
+            : null,
+        validity_unit:
+          learningPath.validity !== null && learningPath.validity !== undefined
+            ? minutesToDuration(learningPath.validity).unit
+            : 'days',
       });
       setImageId(learningPath.image?.id ?? null);
       setImagePreview(learningPath.image?.url ?? null);
@@ -719,6 +757,8 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
         show_in_shop: false,
         duration_value: null,
         duration_unit: 'hours',
+        validity_value: null,
+        validity_unit: 'days',
       });
       setImageId(null);
       setImagePreview(null);
@@ -774,6 +814,7 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
         published_at: values.published_at ?? null,
         show_in_shop: values.show_in_shop ?? false,
         duration: toApiDuration(values.duration_value, values.duration_unit),
+        validity: toApiDuration(values.validity_value, values.validity_unit),
       };
 
       if (currentLpId) {
@@ -827,7 +868,16 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
     createMutation.isPending ||
     updateMutation.isPending ||
     linkCompetency.isPending ||
-    unlinkCompetency.isPending;
+    unlinkCompetency.isPending ||
+    createEvaluation.isPending ||
+    deleteEvaluation.isPending ||
+    updateEvaluation.isPending ||
+    assignMailTemplate.isPending ||
+    assignCertificate.isPending ||
+    detachCertificate.isPending ||
+    createProgressionRule.isPending ||
+    patchProgressionRule.isPending ||
+    deactivateProgressionRule.isPending;
   const title = isEdit ? `Modifier — ${learningPath?.name}` : 'Nouveau parcours';
 
   return (
@@ -867,8 +917,12 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
         <div className="flex min-h-0 flex-1 overflow-hidden">
           {/* Flow canvas */}
           <div className="flex-6 overflow-hidden">
-            {isEdit &&
-            (isLoadingModules || isLoadingPath || isLoadingEvaluations || isLoadingRules) ? (
+            {isEdit && (isErrorPath || isErrorEvaluations || isErrorRules || isErrorModules) ? (
+              <div className="flex h-full items-center justify-center">
+                <p className="text-sm text-destructive">Impossible de charger le parcours.</p>
+              </div>
+            ) : isEdit &&
+              (isLoadingModules || isLoadingPath || isLoadingEvaluations || isLoadingRules) ? (
               <div className="flex h-full items-center justify-center">
                 <Loader2 className="size-5 animate-spin text-muted-foreground" />
               </div>
@@ -884,6 +938,7 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
                 onModuleMove={handleModuleMove}
                 onEvalCreate={handleEvalCreate}
                 onEvalDelete={handleEvalDelete}
+                onEvalUpdate={handleEvalUpdate}
                 onEvalMove={handleEvalMove}
                 onMailTemplateAssign={handleMailTemplateAssign}
                 onCertificateAssign={handleCertificateAssign}
@@ -939,8 +994,8 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
                         role="combobox"
                         className="w-full justify-between text-xs font-normal"
                       >
-                        <span className={watch('category_id') ? '' : 'text-muted-foreground'}>
-                          {categories.find((c) => c.id === watch('category_id'))?.name ??
+                        <span className={watchedCategoryId ? '' : 'text-muted-foreground'}>
+                          {categories.find((c) => c.id === watchedCategoryId)?.name ??
                             'Sélectionner une catégorie'}
                         </span>
                         <ChevronsUpDown className="size-3.5 shrink-0 text-muted-foreground" />
@@ -960,7 +1015,7 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
                         <CommandEmpty>Aucune catégorie trouvée.</CommandEmpty>
                         <CommandList>
                           <CommandGroup>
-                            {watch('category_id') && (
+                            {watchedCategoryId && (
                               <CommandItem
                                 value="__clear__"
                                 onSelect={() => {
@@ -978,7 +1033,7 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
                                 onSelect={() => {
                                   setValue(
                                     'category_id',
-                                    watch('category_id') === cat.id ? null : cat.id,
+                                    watchedCategoryId === cat.id ? null : cat.id,
                                   );
                                   setCatSearch('');
                                   setCatOpen(false);
@@ -987,7 +1042,7 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
                                 <Check
                                   className={cn(
                                     'mr-2 size-3.5',
-                                    watch('category_id') === cat.id ? 'opacity-100' : 'opacity-0',
+                                    watchedCategoryId === cat.id ? 'opacity-100' : 'opacity-0',
                                   )}
                                 />
                                 {cat.name}
@@ -1107,6 +1162,46 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
                     <p className="text-xs text-destructive">{errors.duration_value.message}</p>
                   )}
                 </div>
+                {/* Durée de validité */}
+                <div className="space-y-1.5">
+                  <Label>Durée de validité</Label>
+                  <p className="text-[11px] text-muted-foreground -mt-1">
+                    Temps accordé à l'apprenant pour terminer la formation après enrollment.
+                  </p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Input
+                      id="lp-validity"
+                      type="number"
+                      min={1}
+                      step={1}
+                      placeholder="Ex: 3"
+                      className="h-8 text-sm"
+                      value={watchedValidityValue ?? ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setValue('validity_value', val === '' ? null : Math.round(Number(val)));
+                      }}
+                    />
+                    <Select
+                      value={watchedValidityUnit ?? 'days'}
+                      onValueChange={(v) => setValue('validity_unit', v as DurationUnit)}
+                    >
+                      <SelectTrigger className="h-8 text-xs w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {DURATION_UNITS.map((u) => (
+                          <SelectItem key={u.value} value={u.value}>
+                            {u.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {errors.validity_value && (
+                    <p className="text-xs text-destructive">{errors.validity_value.message}</p>
+                  )}
+                </div>
                 {/* Date de publication */}{' '}
                 <div className="space-y-1.5">
                   <Label>Date de publication</Label>
@@ -1171,7 +1266,7 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
                     </div>
                     <Switch
                       aria-label="Visible en boutique"
-                      checked={watch('show_in_shop') ?? false}
+                      checked={watchedShowInShop ?? false}
                       onCheckedChange={(v) => setValue('show_in_shop', v)}
                       disabled={!canPublish}
                       className="data-checked:bg-(--color-primary)"
