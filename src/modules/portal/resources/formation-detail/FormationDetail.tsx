@@ -88,7 +88,7 @@ export default function FormationDetail({ formation }: FormationDetailProps) {
                           <Clock className="h-4 w-4" />
                           <span className="text-xs font-medium">Temps passé</span>
                         </div>
-                        <p className="text-lg font-semibold">x min</p>
+                        <p className="text-lg font-semibold">—</p>
                         <p className="text-xs">sur la formation</p>
                       </div>
                       <div className="rounded-sm bg-muted/40 p-4">

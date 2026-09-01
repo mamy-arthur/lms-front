@@ -50,9 +50,9 @@ export default function FormationPlayer({ enrollmentId }: Props) {
     enrollmentId ?? '',
   );
 
-  function handleMarkComplete() {
+  function handleMarkComplete(onDone?: () => void) {
     if (!enrollmentId || !activeCourseId || !activeEntryId) return;
-    markComplete({ courseId: activeCourseId, entryId: activeEntryId });
+    markComplete({ courseId: activeCourseId, entryId: activeEntryId }, { onSuccess: onDone });
   }
 
   function handleSelect(id: string) {

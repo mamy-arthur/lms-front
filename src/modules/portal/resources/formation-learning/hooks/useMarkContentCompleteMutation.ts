@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { portalContentEntriesApi } from '@/shared/api/portal.api';
 import { portalLearningPathKeys, portalMyEnrollmentsKeys } from '@/shared/queries/keys';
 
@@ -21,6 +22,9 @@ export function useMarkContentCompleteMutation(enrollmentId: string) {
       queryClient.invalidateQueries({
         queryKey: portalMyEnrollmentsKeys.all,
       });
+    },
+    onError: () => {
+      toast.error('Erreur lors de la sauvegarde de la progression. Veuillez réessayer.');
     },
   });
 }

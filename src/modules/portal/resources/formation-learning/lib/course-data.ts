@@ -24,6 +24,7 @@ const module1: FormationModule = {
               type: 'text-media',
               title: 'TypeScript en 100 secondes',
               status: 'completed',
+              completed: true,
               durationMin: 2,
               data: { mediaType: 'video', url: 'https://www.youtube.com/embed/zQnBQ4tB3ZA' },
             },
@@ -33,6 +34,7 @@ const module1: FormationModule = {
               type: 'url',
               title: 'Documentation officielle TypeScript',
               status: 'completed',
+              completed: true,
               durationMin: 1,
               data: {
                 url: 'https://www.typescriptlang.org/docs/handbook/typescript-from-scratch.html',
@@ -57,6 +59,7 @@ const module1: FormationModule = {
               type: 'text-media',
               title: 'Node.js & TypeScript – Setup complet',
               status: 'completed',
+              completed: true,
               durationMin: 14,
               data: { mediaType: 'video', url: 'https://www.youtube.com/embed/ENrzD9HAZK4' },
             },
@@ -66,6 +69,7 @@ const module1: FormationModule = {
               type: 'page',
               title: 'Configuration tsconfig.json',
               status: 'completed',
+              completed: true,
               durationMin: 8,
               data: {
                 language: 'json',
@@ -78,6 +82,7 @@ const module1: FormationModule = {
               type: 'file',
               title: 'TypeScript Handbook (PDF)',
               status: 'completed',
+              completed: true,
               durationMin: 4,
               data: {
                 mimeType: 'application/pdf',
@@ -91,6 +96,7 @@ const module1: FormationModule = {
               type: 'page',
               title: 'Pourquoi TypeScript ?',
               status: 'completed',
+              completed: true,
               durationMin: 4,
               data: {
                 body: 'TypeScript est un sur-ensemble typé de JavaScript.\n\nIl compile vers JavaScript standard.',
@@ -184,6 +190,7 @@ const module2: FormationModule = {
               type: 'text-media',
               title: 'React & TypeScript – crash course',
               status: 'completed',
+              completed: true,
               durationMin: 22,
               data: { mediaType: 'video', url: 'https://www.youtube.com/embed/TPACABQTHvM' },
             },

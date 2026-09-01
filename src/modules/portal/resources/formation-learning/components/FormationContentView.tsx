@@ -18,7 +18,7 @@ interface Props {
   /** When provided, uses the real API entry instead of mock content.data. */
   portalEntry?: ApiPortalContentEntry | null;
   portalEntryLoading?: boolean;
-  onMarkComplete?: () => void;
+  onMarkComplete?: (onDone?: () => void) => void;
   isCompleting?: boolean;
 }
 
@@ -97,10 +97,7 @@ export default function FormationContentView({
         {onMarkComplete && !content.completed ? (
           // Not yet done: one button that marks complete then moves on (or just marks if last).
           <Button
-            onClick={() => {
-              onMarkComplete();
-              if (next) onNavigate(next);
-            }}
+            onClick={() => onMarkComplete(next ? () => onNavigate(next) : undefined)}
             disabled={isCompleting}
             className="flex items-center gap-2 rounded-sm disabled:opacity-60 disabled:cursor-not-allowed text-xs font-medium text-white transition-colors"
             style={{ background: 'var(--color-primary)' }}
