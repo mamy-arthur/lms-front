@@ -241,7 +241,7 @@ export function CourseTable({ basePath }: Props) {
           onEdit={(course) => setCourseDrawer({ open: true, course })}
           onDelete={setConfirmDelete}
           onToggleVisibility={(course) => {
-            toggleCourseVisibility(course.id);
+            toggleCourseVisibility(course.id, course.visibility ?? 'DRAFT');
             toast.success(course.visible ? 'Cours masqué' : 'Cours rendu visible');
           }}
         />
@@ -289,7 +289,7 @@ export function CourseTable({ basePath }: Props) {
                 onEdit={(course) => setCourseDrawer({ open: true, course })}
                 onDelete={setConfirmDelete}
                 onToggleVisibility={(course) => {
-                  toggleCourseVisibility(course.id);
+                  toggleCourseVisibility(course.id, course.visibility ?? 'DRAFT');
                   toast.success(course.visible ? 'Cours masqué' : 'Cours rendu visible');
                 }}
                 href={() => `${basePath}/${course.id}`}

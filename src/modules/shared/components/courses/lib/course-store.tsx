@@ -1,3 +1,4 @@
+import type { CourseVisibility } from '@/shared/types/course.types';
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import type { Category, Course } from '../types/index';
 import { mapApiCourse, mapApiCategory } from './course-mappers';
@@ -31,7 +32,7 @@ type Ctx = {
   loading: boolean;
   upsertCourse: (c: UpsertCourseInput) => Promise<Course>;
   deleteCourse: (id: string) => Promise<void>;
-  toggleCourseVisibility: (id: string) => void;
+  toggleCourseVisibility: (id: string, currentVisibility: CourseVisibility) => void;
   upsertCategory: (c: UpsertCategoryInput) => Promise<Category>;
   deleteCategory: (id: string) => Promise<void>;
 };
@@ -82,10 +83,8 @@ export function CoursesProvider({ children }: { children: ReactNode }) {
 
       deleteCourse: (id) => deleteCourse.mutateAsync(id),
 
-      toggleCourseVisibility: (id) => {
-        const current = courses.find((c) => c.id === id);
-        const newVisibility =
-          current?.visibility === 'PUBLISHED' ? ('DRAFT' as const) : ('PUBLISHED' as const);
+      toggleCourseVisibility: (id, currentVisibility) => {
+        const newVisibility = currentVisibility === 'PUBLISHED' ? ('DRAFT' as const) : ('PUBLISHED' as const);
         updateCourse.mutate({ id, visibility: newVisibility });
       },
 
