@@ -13,6 +13,7 @@ function makeApiPath(overrides: Partial<ApiLearningPath> = {}): ApiLearningPath 
     currency: null,
     image: null,
     published_at: null,
+    validity: null,
     author_id: null,
     show_in_shop: false,
     is_published: false,
