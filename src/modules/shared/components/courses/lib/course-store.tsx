@@ -84,7 +84,8 @@ export function CoursesProvider({ children }: { children: ReactNode }) {
       deleteCourse: (id) => deleteCourse.mutateAsync(id),
 
       toggleCourseVisibility: (id, currentVisibility) => {
-        const newVisibility = currentVisibility === 'PUBLISHED' ? ('DRAFT' as const) : ('PUBLISHED' as const);
+        const newVisibility =
+          currentVisibility === 'PUBLISHED' ? ('DRAFT' as const) : ('PUBLISHED' as const);
         updateCourse.mutate({ id, visibility: newVisibility });
       },
 
