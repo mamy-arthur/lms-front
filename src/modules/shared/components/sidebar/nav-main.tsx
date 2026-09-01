@@ -32,6 +32,20 @@ export function NavMain({
   }[];
 }) {
   const pathname = usePathname();
+
+  const isUrlMatch = (url: string) =>
+    pathname === url || (url !== '/' && pathname.startsWith(url + '/'));
+
+  // Pick the most specific (longest) matching url so a parent route like /admin
+  // doesn't stay active on sibling routes that share the same prefix.
+  const activeUrl = items
+    .flatMap((item) => [item.url, ...(item.items?.map((subItem) => subItem.url) ?? [])])
+    .filter(isUrlMatch)
+    .reduce<string | null>(
+      (longest, url) => (!longest || url.length > longest.length ? url : longest),
+      null,
+    );
+
   return (
     <SidebarGroup>
       <SidebarGroupLabel>Menu</SidebarGroupLabel>
@@ -55,10 +69,7 @@ export function NavMain({
                 <CollapsibleContent>
                   <SidebarMenuSub>
                     {item.items.map((subItem) => {
-                      const isSubActive =
-                        pathname === subItem.url ||
-                        (subItem.url.split('/').filter(Boolean).length > 1 &&
-                          pathname.startsWith(subItem.url + '/'));
+                      const isSubActive = subItem.url === activeUrl;
 
                       return (
                         <SidebarMenuSubItem key={subItem.title}>
@@ -86,9 +97,7 @@ export function NavMain({
                 asChild
                 tooltip={item.title}
                 className={cn(
-                  (pathname === item.url ||
-                    (item.url.split('/').filter(Boolean).length > 1 &&
-                      pathname.startsWith(item.url + '/'))) &&
+                  item.url === activeUrl &&
                     'bg-(--color-primary)/10 text-(--color-primary) hover:bg-(--color-primary)/15 hover:text-(--color-primary)',
                 )}
               >
