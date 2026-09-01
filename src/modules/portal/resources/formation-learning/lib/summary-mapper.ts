@@ -39,7 +39,7 @@ export function mapSummaryToFormation(summary: ApiPortalLearningPathSummary): Fo
           courseId: course.id,
           type: 'page', // placeholder; real type resolved when entry is fetched
           title: entry.title ?? '',
-          status: entry.completed ? 'completed' : 'available',
+          status: entry.completed ? 'completed' : mod.accessible ? 'available' : 'locked',
           completed: entry.completed,
         })),
       })),

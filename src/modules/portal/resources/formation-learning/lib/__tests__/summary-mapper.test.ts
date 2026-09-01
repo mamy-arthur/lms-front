@@ -95,12 +95,12 @@ describe('mapSummaryToFormation', () => {
     expect(entry1.status).toBe('completed');
   });
 
-  it('maps non-completed entry to available status', () => {
+  it('maps non-completed entry in inaccessible module to locked status', () => {
     const result = mapSummaryToFormation(SUMMARY);
     const mod2 = result.nodes.find((n) => n.id === 'mod-2') as FormationModule;
     const entry3 = mod2.courses[0].sections[0].contents[0];
     expect(entry3.completed).toBe(false);
-    expect(entry3.status).toBe('available');
+    expect(entry3.status).toBe('locked');
   });
 
   it('maps null entry title to empty string', () => {
