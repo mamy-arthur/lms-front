@@ -5,6 +5,11 @@ import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
 import Image from '@tiptap/extension-image';
 import Placeholder from '@tiptap/extension-placeholder';
+import Superscript from '@tiptap/extension-superscript';
+import Subscript from '@tiptap/extension-subscript';
+import Highlight from '@tiptap/extension-highlight';
+import TextAlign from '@tiptap/extension-text-align';
+import { TextStyle, Color } from '@tiptap/extension-text-style';
 import {
   Dialog,
   DialogContent,
@@ -32,7 +37,17 @@ import {
   Minus,
   Maximize2,
   Minimize2,
+  Superscript as SuperscriptIcon,
+  Subscript as SubscriptIcon,
+  RemoveFormatting,
+  Baseline,
+  Highlighter,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  AlignJustify,
 } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -97,9 +112,10 @@ type Props = {
   /**
    * Format de sortie émis dans `onChange`.
    * - `'markdown'` (défaut) : texte Markdown
-   * - `'html'` : HTML brut (pour attestations et templates mail)
+   * - `'tiptap-html'` : HTML via Tiptap WYSIWYG (toolbar active, pour les champs richtext)
+   * - `'html'` : HTML brut via contenteditable (pour attestations et templates mail)
    */
-  outputFormat?: 'markdown' | 'html';
+  outputFormat?: 'markdown' | 'tiptap-html' | 'html';
   /** Boutons optionnels ajoutés à la fin de la toolbar. Reçoit l'instance editor.
    * En mode `html`, un second argument `ctx` est fourni :
    * - `ctx.insertHtml`  : insère du HTML brut dans le contenteditable
@@ -143,6 +159,133 @@ function Separator() {
   return <div className="mx-1 h-6 w-px self-center bg-border" />;
 }
 
+const TEXT_COLORS = [
+  '#000000',
+  '#374151',
+  '#6b7280',
+  '#dc2626',
+  '#ea580c',
+  '#ca8a04',
+  '#16a34a',
+  '#2563eb',
+  '#7c3aed',
+  '#db2777',
+];
+
+const HIGHLIGHT_COLORS = [
+  '#fef08a',
+  '#bbf7d0',
+  '#bfdbfe',
+  '#fbcfe8',
+  '#e9d5ff',
+  '#fed7aa',
+  '#e5e7eb',
+];
+
+function ColorPicker({
+  label,
+  icon,
+  colors,
+  onPick,
+  onReset,
+}: {
+  label: string;
+  icon: ReactNode;
+  colors: string[];
+  onPick: (color: string) => void;
+  onReset: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [custom, setCustom] = useState('#2563eb');
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          aria-label={label}
+          title={label}
+          className="size-8"
+          // Empeche la perte de selection dans le contenteditable a l'ouverture.
+          onMouseDown={(e) => e.preventDefault()}
+        >
+          {icon}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent
+        className="w-auto p-2"
+        align="start"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
+        <div className="grid grid-cols-5 gap-1">
+          {colors.map((color) => (
+            <button
+              key={color}
+              type="button"
+              aria-label={color}
+              title={color}
+              className="size-6 rounded border border-border transition-transform hover:scale-110"
+              style={{ backgroundColor: color }}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => {
+                onPick(color);
+                setOpen(false);
+              }}
+            />
+          ))}
+        </div>
+
+        <div className="mt-2 flex items-center gap-1.5 border-t pt-2">
+          <input
+            type="color"
+            aria-label="Couleur personnalisée"
+            value={custom}
+            className="size-7 cursor-pointer rounded border border-border bg-transparent p-0.5"
+            onMouseDown={(e) => e.stopPropagation()}
+            onChange={(e) => setCustom(e.target.value)}
+          />
+          <input
+            type="text"
+            aria-label="Code hexadécimal"
+            value={custom}
+            spellCheck={false}
+            className="h-7 w-20 rounded border border-border bg-background px-1.5 font-mono text-xs uppercase focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            onChange={(e) => setCustom(e.target.value)}
+          />
+          <Button
+            type="button"
+            size="sm"
+            className="h-7 px-2 text-xs"
+            disabled={!/^#[0-9a-f]{6}$/i.test(custom)}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => {
+              onPick(custom);
+              setOpen(false);
+            }}
+          >
+            OK
+          </Button>
+        </div>
+
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="mt-2 h-7 w-full text-xs"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => {
+            onReset();
+            setOpen(false);
+          }}
+        >
+          Réinitialiser
+        </Button>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 function Toolbar({
   editor,
   extras,
@@ -150,6 +293,8 @@ function Toolbar({
   onMinimize,
   onToggleSource,
   sourceMode,
+  rawHtmlExec,
+  overrideActive,
 }: {
   editor: Editor;
   extras?: (editor: Editor) => ReactNode;
@@ -157,18 +302,43 @@ function Toolbar({
   onMinimize?: () => void;
   onToggleSource?: () => void;
   sourceMode?: boolean;
+  /** When provided, buttons use execCommand on the raw contenteditable instead of Tiptap. */
+  rawHtmlExec?: (command: string, value?: string) => void;
+  /** When provided, overrides Tiptap-based active state (used in html contenteditable mode). */
+  overrideActive?: {
+    bold: boolean;
+    italic: boolean;
+    strike: boolean;
+    code: boolean;
+    blockquote: boolean;
+    heading1: boolean;
+    heading2: boolean;
+    heading3: boolean;
+    bulletList: boolean;
+    orderedList: boolean;
+    superscript: boolean;
+    subscript: boolean;
+    alignLeft: boolean;
+    alignCenter: boolean;
+    alignRight: boolean;
+    alignJustify: boolean;
+  };
 }) {
   const setLink = () => {
+    if (rawHtmlExec) {
+      const url = window.prompt('URL du lien', '');
+      if (url === null) return;
+      if (url === '') rawHtmlExec('unlink');
+      else rawHtmlExec('createLink', url);
+      return;
+    }
     const previousUrl = editor.getAttributes('link').href as string | undefined;
     const url = window.prompt('URL du lien', previousUrl ?? '');
-
     if (url === null) return;
-
     if (url === '') {
       editor.chain().focus().extendMarkRange('link').unsetLink().run();
       return;
     }
-
     editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
   };
 
@@ -188,6 +358,12 @@ function Toolbar({
       orderedList: editor.isActive('orderedList'),
       blockquote: editor.isActive('blockquote'),
       link: editor.isActive('link'),
+      superscript: editor.isActive('superscript'),
+      subscript: editor.isActive('subscript'),
+      alignLeft: editor.isActive({ textAlign: 'left' }),
+      alignCenter: editor.isActive({ textAlign: 'center' }),
+      alignRight: editor.isActive({ textAlign: 'right' }),
+      alignJustify: editor.isActive({ textAlign: 'justify' }),
       canUndo: editor.can().undo(),
       canRedo: editor.can().redo(),
     }),
@@ -197,53 +373,183 @@ function Toolbar({
     <div className="flex flex-wrap items-center gap-0.5 rounded-t-md border border-b-0 bg-muted/30 p-1">
       <ToolbarButton
         label="Gras"
-        active={state.bold}
-        onClick={() => editor.chain().focus().toggleBold().run()}
+        active={overrideActive ? overrideActive.bold : state.bold}
+        onClick={() =>
+          rawHtmlExec ? rawHtmlExec('bold') : editor.chain().focus().toggleBold().run()
+        }
       >
         <Bold className="size-4" />
       </ToolbarButton>
       <ToolbarButton
         label="Italique"
-        active={state.italic}
-        onClick={() => editor.chain().focus().toggleItalic().run()}
+        active={overrideActive ? overrideActive.italic : state.italic}
+        onClick={() =>
+          rawHtmlExec ? rawHtmlExec('italic') : editor.chain().focus().toggleItalic().run()
+        }
       >
         <Italic className="size-4" />
       </ToolbarButton>
       <ToolbarButton
         label="Barré"
-        active={state.strike}
-        onClick={() => editor.chain().focus().toggleStrike().run()}
+        active={overrideActive ? overrideActive.strike : state.strike}
+        onClick={() =>
+          rawHtmlExec ? rawHtmlExec('strikeThrough') : editor.chain().focus().toggleStrike().run()
+        }
       >
         <Strikethrough className="size-4" />
       </ToolbarButton>
       <ToolbarButton
         label="Code"
-        active={state.code}
-        onClick={() => editor.chain().focus().toggleCode().run()}
+        active={overrideActive ? overrideActive.code : state.code}
+        onClick={() =>
+          rawHtmlExec ? rawHtmlExec('code') : editor.chain().focus().toggleCode().run()
+        }
       >
         <Code className="size-4" />
+      </ToolbarButton>
+      <ToolbarButton
+        label="Exposant"
+        active={overrideActive ? overrideActive.superscript : state.superscript}
+        onClick={() =>
+          rawHtmlExec
+            ? rawHtmlExec('superscript')
+            : editor.chain().focus().toggleSuperscript().run()
+        }
+      >
+        <SuperscriptIcon className="size-4" />
+      </ToolbarButton>
+      <ToolbarButton
+        label="Indice"
+        active={overrideActive ? overrideActive.subscript : state.subscript}
+        onClick={() =>
+          rawHtmlExec ? rawHtmlExec('subscript') : editor.chain().focus().toggleSubscript().run()
+        }
+      >
+        <SubscriptIcon className="size-4" />
+      </ToolbarButton>
+      <ToolbarButton
+        label="Effacer la mise en forme"
+        onClick={() =>
+          rawHtmlExec
+            ? rawHtmlExec('removeFormat')
+            : editor.chain().focus().unsetAllMarks().clearNodes().run()
+        }
+      >
+        <RemoveFormatting className="size-4" />
+      </ToolbarButton>
+
+      <Separator />
+
+      <ColorPicker
+        label="Couleur du texte"
+        icon={<Baseline className="size-4" />}
+        colors={TEXT_COLORS}
+        onPick={(color) =>
+          rawHtmlExec
+            ? rawHtmlExec('foreColor', color)
+            : editor.chain().focus().setColor(color).run()
+        }
+        onReset={() =>
+          rawHtmlExec
+            ? rawHtmlExec('foreColor', 'inherit')
+            : editor.chain().focus().unsetColor().run()
+        }
+      />
+      <ColorPicker
+        label="Couleur de surlignage"
+        icon={<Highlighter className="size-4" />}
+        colors={HIGHLIGHT_COLORS}
+        onPick={(color) =>
+          rawHtmlExec
+            ? rawHtmlExec('hiliteColor', color)
+            : editor.chain().focus().setHighlight({ color }).run()
+        }
+        onReset={() =>
+          rawHtmlExec
+            ? rawHtmlExec('hiliteColor', 'transparent')
+            : editor.chain().focus().unsetHighlight().run()
+        }
+      />
+
+      <Separator />
+
+      <ToolbarButton
+        label="Aligner à gauche"
+        active={overrideActive ? overrideActive.alignLeft : state.alignLeft}
+        onClick={() =>
+          rawHtmlExec
+            ? rawHtmlExec('justifyLeft')
+            : editor.chain().focus().setTextAlign('left').run()
+        }
+      >
+        <AlignLeft className="size-4" />
+      </ToolbarButton>
+      <ToolbarButton
+        label="Centrer"
+        active={overrideActive ? overrideActive.alignCenter : state.alignCenter}
+        onClick={() =>
+          rawHtmlExec
+            ? rawHtmlExec('justifyCenter')
+            : editor.chain().focus().setTextAlign('center').run()
+        }
+      >
+        <AlignCenter className="size-4" />
+      </ToolbarButton>
+      <ToolbarButton
+        label="Aligner à droite"
+        active={overrideActive ? overrideActive.alignRight : state.alignRight}
+        onClick={() =>
+          rawHtmlExec
+            ? rawHtmlExec('justifyRight')
+            : editor.chain().focus().setTextAlign('right').run()
+        }
+      >
+        <AlignRight className="size-4" />
+      </ToolbarButton>
+      <ToolbarButton
+        label="Justifier"
+        active={overrideActive ? overrideActive.alignJustify : state.alignJustify}
+        onClick={() =>
+          rawHtmlExec
+            ? rawHtmlExec('justifyFull')
+            : editor.chain().focus().setTextAlign('justify').run()
+        }
+      >
+        <AlignJustify className="size-4" />
       </ToolbarButton>
 
       <Separator />
 
       <ToolbarButton
         label="Titre 1"
-        active={state.heading1}
-        onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+        active={overrideActive ? overrideActive.heading1 : state.heading1}
+        onClick={() =>
+          rawHtmlExec
+            ? rawHtmlExec('formatBlock', overrideActive?.heading1 ? 'p' : 'h1')
+            : editor.chain().focus().toggleHeading({ level: 1 }).run()
+        }
       >
         <Heading1 className="size-4" />
       </ToolbarButton>
       <ToolbarButton
         label="Titre 2"
-        active={state.heading2}
-        onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+        active={overrideActive ? overrideActive.heading2 : state.heading2}
+        onClick={() =>
+          rawHtmlExec
+            ? rawHtmlExec('formatBlock', overrideActive?.heading2 ? 'p' : 'h2')
+            : editor.chain().focus().toggleHeading({ level: 2 }).run()
+        }
       >
         <Heading2 className="size-4" />
       </ToolbarButton>
       <ToolbarButton
         label="Titre 3"
-        active={state.heading3}
-        onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+        active={overrideActive ? overrideActive.heading3 : state.heading3}
+        onClick={() =>
+          rawHtmlExec
+            ? rawHtmlExec('formatBlock', 'h3')
+            : editor.chain().focus().toggleHeading({ level: 3 }).run()
+        }
       >
         <Heading3 className="size-4" />
       </ToolbarButton>
@@ -252,28 +558,44 @@ function Toolbar({
 
       <ToolbarButton
         label="Liste à puces"
-        active={state.bulletList}
-        onClick={() => editor.chain().focus().toggleBulletList().run()}
+        active={overrideActive ? overrideActive.bulletList : state.bulletList}
+        onClick={() =>
+          rawHtmlExec
+            ? rawHtmlExec('insertUnorderedList')
+            : editor.chain().focus().toggleBulletList().run()
+        }
       >
         <List className="size-4" />
       </ToolbarButton>
       <ToolbarButton
         label="Liste numérotée"
-        active={state.orderedList}
-        onClick={() => editor.chain().focus().toggleOrderedList().run()}
+        active={overrideActive ? overrideActive.orderedList : state.orderedList}
+        onClick={() =>
+          rawHtmlExec
+            ? rawHtmlExec('insertOrderedList')
+            : editor.chain().focus().toggleOrderedList().run()
+        }
       >
         <ListOrdered className="size-4" />
       </ToolbarButton>
       <ToolbarButton
         label="Citation"
-        active={state.blockquote}
-        onClick={() => editor.chain().focus().toggleBlockquote().run()}
+        active={overrideActive ? overrideActive.blockquote : state.blockquote}
+        onClick={() =>
+          rawHtmlExec
+            ? rawHtmlExec('formatBlock', overrideActive?.blockquote ? 'p' : 'blockquote')
+            : editor.chain().focus().toggleBlockquote().run()
+        }
       >
         <Quote className="size-4" />
       </ToolbarButton>
       <ToolbarButton
         label="Ligne horizontale"
-        onClick={() => editor.chain().focus().setHorizontalRule().run()}
+        onClick={() =>
+          rawHtmlExec
+            ? rawHtmlExec('insertHorizontalRule')
+            : editor.chain().focus().setHorizontalRule().run()
+        }
       >
         <Minus className="size-4" />
       </ToolbarButton>
@@ -286,7 +608,9 @@ function Toolbar({
       <ToolbarButton
         label="Retirer le lien"
         disabled={!state.link}
-        onClick={() => editor.chain().focus().unsetLink().run()}
+        onClick={() =>
+          rawHtmlExec ? rawHtmlExec('unlink') : editor.chain().focus().unsetLink().run()
+        }
       >
         <Unlink className="size-4" />
       </ToolbarButton>
@@ -296,14 +620,14 @@ function Toolbar({
       <ToolbarButton
         label="Annuler"
         disabled={!state.canUndo}
-        onClick={() => editor.chain().focus().undo().run()}
+        onClick={() => (rawHtmlExec ? rawHtmlExec('undo') : editor.chain().focus().undo().run())}
       >
         <Undo className="size-4" />
       </ToolbarButton>
       <ToolbarButton
         label="Rétablir"
         disabled={!state.canRedo}
-        onClick={() => editor.chain().focus().redo().run()}
+        onClick={() => (rawHtmlExec ? rawHtmlExec('redo') : editor.chain().focus().redo().run())}
       >
         <Redo className="size-4" />
       </ToolbarButton>
@@ -358,6 +682,25 @@ export function RichTextEditor({
   const [expandedContent, setExpandedContent] = useState('');
   const [sourceMode, setSourceMode] = useState(false);
   const [sourceValue, setSourceValue] = useState('');
+  // Active formatting state for html mode (driven by document.queryCommandState, not Tiptap).
+  const [htmlActiveState, setHtmlActiveState] = useState({
+    bold: false,
+    italic: false,
+    strike: false,
+    code: false,
+    blockquote: false,
+    heading1: false,
+    heading2: false,
+    heading3: false,
+    bulletList: false,
+    orderedList: false,
+    superscript: false,
+    subscript: false,
+    alignLeft: false,
+    alignCenter: false,
+    alignRight: false,
+    alignJustify: false,
+  });
 
   const editor = useEditor({
     extensions: [
@@ -373,6 +716,12 @@ export function RichTextEditor({
       Placeholder.configure({
         placeholder: placeholder ?? 'Décrivez le cours…',
       }),
+      Superscript,
+      Subscript,
+      TextStyle,
+      Color,
+      Highlight.configure({ multicolor: true }),
+      TextAlign.configure({ types: ['heading', 'paragraph'] }),
       ...(outputFormat === 'markdown'
         ? [
             Markdown.configure({
@@ -391,10 +740,6 @@ export function RichTextEditor({
           'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
           'prose prose-sm max-w-none dark:prose-invert',
           '[&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_h1]:mb-2 [&_h1]:mt-3 [&_h2]:mb-2 [&_h2]:mt-3 [&_h3]:mb-1 [&_h3]:mt-2',
-          '[&_blockquote]:border-l-2 [&_blockquote]:border-muted-foreground/30 [&_blockquote]:pl-3 [&_blockquote]:italic',
-          '[&_code]:rounded [&_code]:bg-[#1e1e1e] [&_code]:text-[#d4d4d4] [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:text-xs [&_code]:font-mono',
-          '[&_pre]:rounded [&_pre]:bg-[#1e1e1e] [&_pre]:text-[#d4d4d4] [&_pre]:p-4 [&_pre]:text-xs [&_pre]:font-mono [&_pre]:overflow-x-auto',
-          '[&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_pre_code]:text-inherit',
           '[&_a]:text-primary [&_a]:underline',
           // overflow-y:auto crée un BFC → contient les images flottantes.
           'max-h-96 overflow-y-auto after:content-[""] after:block after:clear-both',
@@ -418,8 +763,12 @@ export function RichTextEditor({
           : undefined,
     },
     onUpdate: ({ editor }) => {
-      // En mode HTML le contenu est géré via le div contenteditable, pas TipTap.
+      // Mode html : le contenu est géré via le div contenteditable, pas TipTap.
       if (outputFormat === 'html') return;
+      if (outputFormat === 'tiptap-html') {
+        onChange(editor.getHTML());
+        return;
+      }
       onChange(editor.storage.markdown.getMarkdown());
     },
   });
@@ -429,58 +778,154 @@ export function RichTextEditor({
   // pour éviter que le schéma ProseMirror ne dénature les styles/divs custom.
   useEffect(() => {
     if (!editor || outputFormat === 'html') return;
-    const current = editor.storage.markdown.getMarkdown();
+    const current =
+      outputFormat === 'tiptap-html' ? editor.getHTML() : editor.storage.markdown.getMarkdown();
     if (current !== value) {
       editor.commands.setContent(value ?? '', { emitUpdate: false });
     }
     // biome-ignore lint/correctness/useExhaustiveDependencies: outputFormat is a stable prop
   }, [value, editor]);
 
-  // Sync externe value → div contenteditable (mode HTML uniquement).
+  // Sync externe value → div contenteditable (mode html uniquement).
   const htmlPreviewRef = useRef<HTMLDivElement>(null);
-  // Ref pour la textarea en mode source.
   const sourceTextareaRef = useRef<HTMLTextAreaElement>(null);
-  // Toujours à jour pendant le render : utilisé dans la callback ref ci-dessous.
   const latestValueRef = useRef(value);
   latestValueRef.current = value;
 
-  // Sauvegarde du dernier range de sélection dans le contenteditable.
-  // Nécessaire car l'ouverture du dialog image fait perdre le focus (et donc
-  // la sélection) avant qu'on appelle insertHtmlAtCursor.
   const savedRangeRef = useRef<Range | null>(null);
+
+  // Retrouve le <code> concerné par la sélection : soit la sélection est dedans,
+  // soit elle l'enveloppe entièrement (état juste après surroundContents).
+  const findCodeAncestor = (): HTMLElement | null => {
+    const el = htmlPreviewRef.current;
+    const sel = window.getSelection();
+    if (!el || !sel || sel.rangeCount === 0) return null;
+    const range = sel.getRangeAt(0);
+    const start = range.startContainer;
+    const startEl = start.nodeType === Node.TEXT_NODE ? start.parentElement : (start as Element);
+    const inside = startEl?.closest('code');
+    if (inside && el.contains(inside)) return inside as HTMLElement;
+    const container = range.commonAncestorContainer;
+    const scope =
+      container.nodeType === Node.ELEMENT_NODE ? (container as Element) : container.parentElement;
+    for (const c of Array.from(scope?.querySelectorAll('code') ?? [])) {
+      if (range.intersectsNode(c) && el.contains(c)) return c as HTMLElement;
+    }
+    return null;
+  };
+
+  const syncHtmlActiveState = () => {
+    try {
+      const block = document.queryCommandValue('formatBlock').toLowerCase();
+      setHtmlActiveState({
+        bold: document.queryCommandState('bold'),
+        italic: document.queryCommandState('italic'),
+        strike: document.queryCommandState('strikeThrough'),
+        code: findCodeAncestor() !== null,
+        blockquote: block === 'blockquote',
+        heading1: block === 'h1',
+        heading2: block === 'h2',
+        heading3: block === 'h3',
+        bulletList: document.queryCommandState('insertUnorderedList'),
+        orderedList: document.queryCommandState('insertOrderedList'),
+        superscript: document.queryCommandState('superscript'),
+        subscript: document.queryCommandState('subscript'),
+        alignLeft: document.queryCommandState('justifyLeft'),
+        alignCenter: document.queryCommandState('justifyCenter'),
+        alignRight: document.queryCommandState('justifyRight'),
+        alignJustify: document.queryCommandState('justifyFull'),
+      });
+    } catch {
+      /* queryCommandState throws in rare edge cases */
+    }
+  };
 
   const saveSelection = () => {
     const sel = window.getSelection();
     const el = htmlPreviewRef.current;
     if (sel && sel.rangeCount > 0 && el && el.contains(sel.getRangeAt(0).commonAncestorContainer)) {
       savedRangeRef.current = sel.getRangeAt(0).cloneRange();
+      syncHtmlActiveState();
     }
   };
 
-  // Callback ref : appelé immédiatement à chaque montage du div (même quand
-  // TipTap s'initialise en différé ou quand sourceMode bascule).
-  // Grâce à latestValueRef, la valeur est toujours celle du dernier render.
   const htmlPreviewCallbackRef = useCallback((el: HTMLDivElement | null) => {
     (htmlPreviewRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
-    if (el) {
-      el.innerHTML = latestValueRef.current ?? '';
-    }
-  }, []); // stable — latestValueRef mis à jour inline à chaque render
+    if (el) el.innerHTML = latestValueRef.current ?? '';
+  }, []);
 
-  // Sync value → div quand la valeur change depuis le parent (ex : form.reset)
-  // mais que l'utilisateur n'est pas en train d'éditer.
   useLayoutEffect(() => {
     if (outputFormat !== 'html' || sourceMode) return;
     const el = htmlPreviewRef.current;
     if (!el || document.activeElement === el) return;
-    if (el.innerHTML !== value) {
-      el.innerHTML = value ?? '';
-    }
+    if (el.innerHTML !== value) el.innerHTML = value ?? '';
   }, [value, outputFormat, sourceMode]);
 
   if (!editor) return null;
 
-  // En mode HTML, insère du HTML à la position sauvegardée dans le contenteditable.
+  // Applique un execCommand sur le contenteditable en restaurant la sélection sauvegardée.
+  // 'code' est géré via DOM (pas d'équivalent execCommand).
+  const rawHtmlExec =
+    outputFormat === 'html' && !sourceMode
+      ? (command: string, value?: string) => {
+          const el = htmlPreviewRef.current;
+          if (!el) return;
+          const savedRange = savedRangeRef.current;
+          if (savedRange && el.contains(savedRange.commonAncestorContainer)) {
+            const sel = window.getSelection();
+            sel?.removeAllRanges();
+            sel?.addRange(savedRange);
+          } else {
+            el.focus();
+          }
+          if (command === 'code') {
+            const sel = window.getSelection();
+            const range = sel?.rangeCount ? sel.getRangeAt(0) : null;
+            const existing = findCodeAncestor();
+            if (existing) {
+              // Unwrap + rends la sélection sur le texte libéré.
+              const parent = existing.parentNode;
+              const first = existing.firstChild;
+              const last = existing.lastChild;
+              while (existing.firstChild) parent?.insertBefore(existing.firstChild, existing);
+              parent?.removeChild(existing);
+              if (first && last) {
+                const r = document.createRange();
+                r.setStartBefore(first);
+                r.setEndAfter(last);
+                sel?.removeAllRanges();
+                sel?.addRange(r);
+                savedRangeRef.current = r.cloneRange();
+              }
+            } else if (range && !range.collapsed) {
+              const code = document.createElement('code');
+              try {
+                range.surroundContents(code);
+                // Repositionne la sélection DANS le <code> pour que le clic suivant le détecte.
+                const r = document.createRange();
+                r.selectNodeContents(code);
+                sel?.removeAllRanges();
+                sel?.addRange(r);
+                savedRangeRef.current = r.cloneRange();
+              } catch {
+                /* sélection à cheval sur plusieurs éléments */
+              }
+            }
+          } else {
+            // styleWithCSS : produit <span style="color:…"> au lieu du <font> deprecie.
+            document.execCommand('styleWithCSS', false, 'true');
+            document.execCommand(command, false, value);
+            // execCommand remplace le bloc : l'ancien range pointe sur des nœuds détruits.
+            // On re-capture la sélection vivante, sinon le prochain clic agit sur un range collapsé.
+            const sel = window.getSelection();
+            const live = sel && sel.rangeCount > 0 ? sel.getRangeAt(0) : null;
+            savedRangeRef.current =
+              live && el.contains(live.commonAncestorContainer) ? live.cloneRange() : null;
+          }
+          onChange(el.innerHTML);
+          syncHtmlActiveState();
+        }
+      : undefined;
   const insertHtmlAtCursor = (html: string) => {
     const el = htmlPreviewRef.current;
     if (!el) return;
@@ -501,8 +946,7 @@ export function RichTextEditor({
     onChange(el.innerHTML);
   };
 
-  // En mode HTML, insère du texte brut (pas parsé comme HTML) à la position sauvegardée.
-  // Utilisé pour les variables `{{user.name}}` qui ne doivent pas être interprétées.
+  // Insère du texte brut (ex : variables {{user.name}}) sans interprétation HTML.
   const insertTextAtCursor = (text: string) => {
     const el = htmlPreviewRef.current;
     if (!el) return;
@@ -552,18 +996,13 @@ export function RichTextEditor({
 
   const handleToggleSource = () => {
     if (!sourceMode) {
-      // Passe en mode source : pour le mode HTML on utilise `value` directement
-      // (évite que getHTML() retourne un HTML dénaturé par le schéma ProseMirror).
       setSourceValue(outputFormat === 'html' ? value : editor.getHTML());
       setSourceMode(true);
     } else {
       if (outputFormat === 'html') {
-        // Mode HTML : on NE repasse PAS par TipTap (son schéma ProseMirror supprime
-        // les styles, divs arbitraires, etc.). On appelle simplement onChange et on
-        // affiche un preview via dangerouslySetInnerHTML.
+        // Ne repasse pas par TipTap : ProseMirror supprimerait les styles custom.
         onChange(sourceValue);
       } else {
-        // Mode markdown : repasse dans TipTap WYSIWYG normalement.
         editor.commands.setContent(sourceValue, { emitUpdate: false });
         onChange(editor.getHTML());
       }
@@ -572,16 +1011,19 @@ export function RichTextEditor({
   };
 
   const handleExpand = () => {
-    // En mode HTML, utiliser `value` directement pour ne pas passer
-    // par editor.getHTML() qui dégraderait le HTML via ProseMirror.
-    setExpandedContent(outputFormat === 'html' ? value : editor.storage.markdown.getMarkdown());
+    setExpandedContent(
+      outputFormat === 'html'
+        ? value
+        : outputFormat === 'tiptap-html'
+          ? editor.getHTML()
+          : editor.storage.markdown.getMarkdown(),
+    );
     setIsExpanded(true);
   };
 
   const handleApply = () => {
     onChange(expandedContent);
-    // En mode HTML, ne pas repasser par setContent (ProseMirror supprimerait
-    // les styles/divs custom). Le useEffect de sync htmlPreviewRef s'en charge.
+    // Mode html : ne pas repasser par setContent (ProseMirror supprimerait les styles custom).
     if (outputFormat !== 'html') {
       editor.commands.setContent(expandedContent);
     }
@@ -599,8 +1041,10 @@ export function RichTextEditor({
           editor={editor}
           extras={wrappedToolbarExtras}
           onExpand={expandable ? handleExpand : undefined}
-          onToggleSource={outputFormat === 'html' ? handleToggleSource : undefined}
+          onToggleSource={outputFormat !== 'markdown' ? handleToggleSource : undefined}
           sourceMode={sourceMode}
+          rawHtmlExec={rawHtmlExec}
+          overrideActive={outputFormat === 'html' ? htmlActiveState : undefined}
         />
         {sourceMode ? (
           <textarea
@@ -614,11 +1058,7 @@ export function RichTextEditor({
             spellCheck={false}
           />
         ) : outputFormat === 'html' ? (
-          // Contenteditable brut : le navigateur conserve le HTML tel quel
-          // (styles inline, divs arbitraires, position:absolute…) sans jamais
-          // passer par le schéma ProseMirror qui supprimerait tout cela.
-          // La valeur initiale est injectée via ref/useEffect pour éviter
-          // les conflits de cursor avec dangerouslySetInnerHTML.
+          // Contenteditable brut : préserve les styles inline et divs custom des certificats.
           <div
             ref={htmlPreviewCallbackRef}
             contentEditable
@@ -628,8 +1068,10 @@ export function RichTextEditor({
             onMouseUp={saveSelection}
             onKeyUp={saveSelection}
             className={cn(
+              'richtext-content',
               'min-h-32 max-h-96 overflow-y-auto w-full rounded-b-md border bg-background px-3 py-2 text-sm',
               'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
+              '[&_a]:text-primary [&_a]:underline',
             )}
           />
         ) : (

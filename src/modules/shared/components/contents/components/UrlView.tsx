@@ -1,4 +1,4 @@
-import ReactMarkdown from 'react-markdown';
+import { RichTextRenderer } from '@/shared/components/RichTextRenderer';
 import { ExternalLink, Globe } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -29,11 +29,7 @@ export function UrlContentView({ title, description, url }: UrlContentViewProps)
       <Separator />
 
       <CardContent className="space-y-6">
-        {description && (
-          <div className="prose prose-sm dark:prose-invert max-w-none">
-            <ReactMarkdown>{description}</ReactMarkdown>
-          </div>
-        )}
+        {description && <RichTextRenderer content={description} />}
 
         {url && (
           <div className="bg-muted/30 rounded-lg border p-4 flex justify-between items-center">

@@ -2,6 +2,8 @@
 @import 'tw-animate-css';
 @import 'shadcn/tailwind.css';
 
+@plugin "@tailwindcss/typography";
+
 @custom-variant dark (&:is(.dark *));
 
 :root {
@@ -131,9 +133,10 @@
   }
 }
 
-/* Basic editor styles */
+/* Styles partages par l'editeur (TipTap + contenteditable) et le rendu (apercu, portail). */
 .tiptap,
-.react-markdown {
+.react-markdown,
+.richtext-content {
   :first-child {
     margin-top: 0;
   }
@@ -196,17 +199,23 @@
 
   /* Code and preformatted text styles */
   code {
-    background-color: var(--purple-light);
+    background-color: #1e1e1e;
     border-radius: 0.4rem;
-    color: var(--black);
+    color: #d4d4d4;
     font-size: 0.85rem;
     padding: 0.25em 0.3em;
   }
 
+  /* Retire les backticks ajoutes par @tailwindcss/typography. */
+  code::before,
+  code::after {
+    content: none;
+  }
+
   pre {
-    background: var(--black);
+    background: #1e1e1e;
     border-radius: 0.5rem;
-    color: var(--white);
+    color: #d4d4d4;
     font-family: 'JetBrainsMono', monospace;
     margin: 1.5rem 0;
     padding: 0.75rem 1rem;
@@ -226,15 +235,55 @@
     padding: 0.1rem 0.3rem;
   }
 
+  sup {
+    vertical-align: super;
+    font-size: 0.75em;
+  }
+
+  sub {
+    vertical-align: sub;
+    font-size: 0.75em;
+  }
+
   blockquote {
-    border-left: 3px solid var(--gray-3);
-    margin: 1.5rem 0;
-    padding-left: 1rem;
+    /* Neutralise la bordure gauche de @tailwindcss/typography. */
+    border-inline-start: 0;
+    margin: 1.25rem 0;
+    padding: 0;
+    font-style: italic;
+    color: var(--muted-foreground);
+  }
+
+  /* Guillemets colles au texte. Deux cas : contenu enveloppe dans des <p>
+     (TipTap) ou texte brut dans le blockquote (execCommand). */
+  blockquote > p:first-of-type::before,
+  blockquote > p:last-of-type::after,
+  blockquote:not(:has(> p))::before,
+  blockquote:not(:has(> p))::after {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 1.6rem;
+    line-height: 0;
+    vertical-align: -0.35em;
+    color: var(--color-primary);
+    opacity: 0.4;
+    user-select: none;
+  }
+
+  blockquote > p:first-of-type::before,
+  blockquote:not(:has(> p))::before {
+    content: '\201C';
+    margin-inline-end: 0.1em;
+  }
+
+  blockquote > p:last-of-type::after,
+  blockquote:not(:has(> p))::after {
+    content: '\201D';
+    margin-inline-start: 0.1em;
   }
 
   hr {
     border: none;
-    border-top: 1px solid var(--gray-2);
+    border-top: 1px solid var(--border);
     margin: 2rem 0;
   }
 }
