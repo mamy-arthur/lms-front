@@ -29,7 +29,6 @@ import {
   Heading3,
   List,
   ListOrdered,
-  Quote,
   Link as LinkIcon,
   Unlink,
   Undo,
@@ -310,7 +309,6 @@ function Toolbar({
     italic: boolean;
     strike: boolean;
     code: boolean;
-    blockquote: boolean;
     heading1: boolean;
     heading2: boolean;
     heading3: boolean;
@@ -356,7 +354,6 @@ function Toolbar({
       heading3: editor.isActive('heading', { level: 3 }),
       bulletList: editor.isActive('bulletList'),
       orderedList: editor.isActive('orderedList'),
-      blockquote: editor.isActive('blockquote'),
       link: editor.isActive('link'),
       superscript: editor.isActive('superscript'),
       subscript: editor.isActive('subscript'),
@@ -579,17 +576,6 @@ function Toolbar({
         <ListOrdered className="size-4" />
       </ToolbarButton>
       <ToolbarButton
-        label="Citation"
-        active={overrideActive ? overrideActive.blockquote : state.blockquote}
-        onClick={() =>
-          rawHtmlExec
-            ? rawHtmlExec('formatBlock', overrideActive?.blockquote ? 'p' : 'blockquote')
-            : editor.chain().focus().toggleBlockquote().run()
-        }
-      >
-        <Quote className="size-4" />
-      </ToolbarButton>
-      <ToolbarButton
         label="Ligne horizontale"
         onClick={() =>
           rawHtmlExec
@@ -688,7 +674,6 @@ export function RichTextEditor({
     italic: false,
     strike: false,
     code: false,
-    blockquote: false,
     heading1: false,
     heading2: false,
     heading3: false,
@@ -822,7 +807,6 @@ export function RichTextEditor({
         italic: document.queryCommandState('italic'),
         strike: document.queryCommandState('strikeThrough'),
         code: findCodeAncestor() !== null,
-        blockquote: block === 'blockquote',
         heading1: block === 'h1',
         heading2: block === 'h2',
         heading3: block === 'h3',
@@ -882,20 +866,52 @@ export function RichTextEditor({
             const sel = window.getSelection();
             const range = sel?.rangeCount ? sel.getRangeAt(0) : null;
             const existing = findCodeAncestor();
-            if (existing) {
-              // Unwrap + rends la sélection sur le texte libéré.
-              const parent = existing.parentNode;
-              const first = existing.firstChild;
-              const last = existing.lastChild;
-              while (existing.firstChild) parent?.insertBefore(existing.firstChild, existing);
-              parent?.removeChild(existing);
-              if (first && last) {
-                const r = document.createRange();
-                r.setStartBefore(first);
-                r.setEndAfter(last);
-                sel?.removeAllRanges();
-                sel?.addRange(r);
-                savedRangeRef.current = r.cloneRange();
+            const parent = existing?.parentNode;
+            if (existing && parent) {
+              const partiel =
+                range && !range.collapsed && existing.contains(range.commonAncestorContainer);
+              if (partiel) {
+                // Decoupe le <code> en trois : avant / selection liberee / apres.
+                const afterRange = document.createRange();
+                afterRange.setStart(range.endContainer, range.endOffset);
+                afterRange.setEnd(existing, existing.childNodes.length);
+                const afterFrag = afterRange.extractContents();
+                const midFrag = range.extractContents();
+
+                const ref = existing.nextSibling;
+                const midFirst = midFrag.firstChild;
+                const midLast = midFrag.lastChild;
+                parent.insertBefore(midFrag, ref);
+
+                if (afterFrag.textContent) {
+                  const tail = document.createElement('code');
+                  tail.appendChild(afterFrag);
+                  parent.insertBefore(tail, ref);
+                }
+                if (!existing.textContent) parent.removeChild(existing);
+
+                if (midFirst && midLast) {
+                  const r = document.createRange();
+                  r.setStartBefore(midFirst);
+                  r.setEndAfter(midLast);
+                  sel?.removeAllRanges();
+                  sel?.addRange(r);
+                  savedRangeRef.current = r.cloneRange();
+                }
+              } else {
+                // Curseur seul : rien a decouper, on retire le <code> entier.
+                const first = existing.firstChild;
+                const last = existing.lastChild;
+                while (existing.firstChild) parent.insertBefore(existing.firstChild, existing);
+                parent.removeChild(existing);
+                if (first && last) {
+                  const r = document.createRange();
+                  r.setStartBefore(first);
+                  r.setEndAfter(last);
+                  sel?.removeAllRanges();
+                  sel?.addRange(r);
+                  savedRangeRef.current = r.cloneRange();
+                }
               }
             } else if (range && !range.collapsed) {
               const code = document.createElement('code');
