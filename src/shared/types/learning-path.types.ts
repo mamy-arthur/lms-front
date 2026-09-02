@@ -74,7 +74,8 @@ export interface ApiLearningPath {
   is_sellable: boolean;
   /** Durée estimée du parcours en minutes */
   duration: number | null;
-  competencies: ApiLearningPathCompetency[];
+  competencies?: ApiLearningPathCompetency[];
+  competencies_count?: number;
   /** Only present in detail endpoint responses — absent from list/shop endpoints */
   evaluations?: ApiLearningPathEvaluation[];
   /** Mail template attached as the first node of the LP — id + name only, null if none attached yet. Present in both list and detail responses. */

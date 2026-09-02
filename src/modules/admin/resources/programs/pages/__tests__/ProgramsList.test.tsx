@@ -373,6 +373,43 @@ describe('ProgramsList', () => {
       expect(screen.getByText('Parcours Data Science')).toBeInTheDocument();
     });
 
+    it('affiche une liste paginée sans propriété competencies dans le payload API', () => {
+      mockUseLearningPathsQuery.mockReturnValue({
+        data: {
+          data: [
+            {
+              id: 'lp-list-1',
+              tenantId: 'tenant-1',
+              name: 'Development web',
+              description: null,
+              idnumber: 'PARC-02092026-0001',
+              categoryId: 'cat-1',
+              categoryName: 'dev',
+              price: 10,
+              currency: 'EUR',
+              image: null,
+              publishedAt: '2026-08-31T21:00:00+00:00',
+              authorId: null,
+              showInShop: false,
+              isPublished: true,
+              isSellable: false,
+              duration: 518400,
+              validity: 1051200,
+              evaluations: [],
+              createdAt: '2026-09-02T09:10:12+00:00',
+              updatedAt: '2026-09-02T09:10:12+00:00',
+            },
+          ],
+          total: 1,
+        },
+        isLoading: false,
+      } as never);
+
+      render(<ProgramsList />, { wrapper: createWrapper() });
+
+      expect(screen.getByText('Development web')).toBeInTheDocument();
+    });
+
     it("affiche un état vide si aucun parcours n'est renvoyé", () => {
       mockDefaults({ paths: [] });
 

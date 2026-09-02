@@ -35,7 +35,7 @@ export interface LearningPathListParams {
   q?: string;
   category_ids?: string;
   sort_by?: string;
-  sort_order?: 'asc' | 'desc';
+  sort_dir?: 'asc' | 'desc';
 }
 
 export const learningPathsApi = {
@@ -49,7 +49,7 @@ export const learningPathsApi = {
       q: params.q,
       category_ids: params.category_ids,
       sort_by: params.sort_by,
-      sort_order: params.sort_order,
+      sort_dir: params.sort_dir,
     }),
 
   get: (id: string) => apiGet<{ data: ApiLearningPath }>(`platform/learning-paths/${id}`),

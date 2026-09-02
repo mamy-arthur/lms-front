@@ -16,7 +16,7 @@ export function useProgramListController(opts?: UseProgramListControllerOptions)
     page: 1,
     per_page: defaultPageSize,
     sort_by: defaultSortBy,
-    sort_order: defaultSortDir,
+    sort_dir: defaultSortDir,
   });
   const [draftSearch, setDraftSearch] = useState('');
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -33,7 +33,7 @@ export function useProgramListController(opts?: UseProgramListControllerOptions)
     setParams((prev) => ({
       ...prev,
       sort_by: column,
-      sort_order: prev.sort_by === column && prev.sort_order === 'asc' ? 'desc' : 'asc',
+      sort_dir: prev.sort_by === column && prev.sort_dir === 'asc' ? 'desc' : 'asc',
       page: 1,
     }));
   }, []);
@@ -78,7 +78,7 @@ export function useProgramListController(opts?: UseProgramListControllerOptions)
   const page = (params.page ?? 1) - 1;
   const sort = {
     column: params.sort_by ?? defaultSortBy,
-    direction: (params.sort_order ?? defaultSortDir) as 'asc' | 'desc',
+    direction: (params.sort_dir ?? defaultSortDir) as 'asc' | 'desc',
   };
   const hasQuery = !!(params.q || params.category_ids);
 

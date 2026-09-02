@@ -171,7 +171,7 @@ function LearningPathsTableBase({
       {
         key: 'duration',
         label: 'Durée',
-        sortable: true,
+        sortable: false,
         render: (row) => (
           <span className="text-xs text-muted-foreground tabular-nums">
             {formatDuration(row.duration)}
@@ -194,7 +194,7 @@ function LearningPathsTableBase({
         key: 'isPublished',
         label: 'Statut',
         sortable: false,
-        render: (row) => <StatusBadge isPublished={row.showInShop} />,
+        render: (row) => <StatusBadge isPublished={row.isPublished} />,
         skeleton: <Skeleton className="h-5 w-16 rounded-full" />,
       },
       {

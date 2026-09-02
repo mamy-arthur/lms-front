@@ -112,7 +112,7 @@ export function normalizeLearningPath(api: ApiLearningPath): LearningPath {
     isSellable: api.is_sellable,
     duration: api.duration ?? null,
     validity: api.validity ?? null,
-    competencies: api.competencies.map((c) => ({
+    competencies: (api.competencies ?? []).map((c) => ({
       competencyId: c.competency_id,
       position: c.position,
       locationX: c.location_x ?? null,
