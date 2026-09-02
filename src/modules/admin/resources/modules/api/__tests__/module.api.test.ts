@@ -84,11 +84,11 @@ describe('adminModulesApi', () => {
     it('inclut le tri quand sort_by est fourni', async () => {
       mockApiGet.mockResolvedValue({ data: [], meta: { total: 0, current_page: 1, per_page: 25 } });
 
-      await adminModulesApi.list({ sort_by: 'shortname', sort_order: 'asc' });
+      await adminModulesApi.list({ sort_by: 'shortname', sort_dir: 'desc' });
 
       expect(mockApiGet).toHaveBeenCalledWith(
         'platform/competencies',
-        expect.objectContaining({ sort_by: 'shortname', sort_order: 'asc' }),
+        expect.objectContaining({ sort_by: 'shortname', sort_dir: 'desc' }),
       );
     });
 

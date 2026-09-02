@@ -22,6 +22,7 @@ interface ListParams {
   q?: string;
   category_ids?: string;
   sort_by?: string;
+  sort_dir?: 'asc' | 'desc';
   sort_order?: 'asc' | 'desc';
 }
 
@@ -41,7 +42,7 @@ export const adminModulesApi = {
       q: params.q,
       category_ids: params.category_ids,
       sort_by: params.sort_by,
-      sort_order: params.sort_order,
+      sort_dir: params.sort_dir ?? params.sort_order,
     }),
 
   getById: (id: string) => apiGet<{ data: CompetencyApiResponse }>(`${BASE}/${id}`),

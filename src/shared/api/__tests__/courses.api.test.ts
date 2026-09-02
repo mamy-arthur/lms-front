@@ -22,7 +22,7 @@ describe('coursesApi family', () => {
     mockApiPatch.mockResolvedValue({ data: { id: 'course-1' } });
     mockApiDelete.mockResolvedValue(undefined);
 
-    await coursesApi.list();
+    await coursesApi.list({ sort_by: 'full_name', sort_dir: 'desc' });
     await coursesApi.get('course-1');
     await coursesApi.create({ title: 'Course A' } as never);
     await coursesApi.update('course-1', { title: 'Course B' } as never);
@@ -31,7 +31,7 @@ describe('coursesApi family', () => {
     expect(mockApiGet).toHaveBeenNthCalledWith(
       1,
       'platform/courses',
-      expect.objectContaining({ page: 1, per_page: 25 }),
+      expect.objectContaining({ page: 1, per_page: 25, sort_by: 'full_name', sort_dir: 'desc' }),
     );
     expect(mockApiGet).toHaveBeenNthCalledWith(2, 'platform/courses/course-1');
     expect(mockApiPost).toHaveBeenCalledWith('platform/courses', { title: 'Course A' });

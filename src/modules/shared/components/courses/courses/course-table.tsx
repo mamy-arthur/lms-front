@@ -56,7 +56,7 @@ export function CourseTable({ basePath }: Props) {
     page: 1,
     per_page: 25,
     sort_by: 'full_name',
-    sort_order: 'asc',
+    sort_dir: 'asc',
   });
   const [draftSearch, setDraftSearch] = useState('');
 
@@ -72,7 +72,7 @@ export function CourseTable({ basePath }: Props) {
   const pageCount = useMemo(() => Math.max(1, Math.ceil(total / pageSize)), [total, pageSize]);
   const sort = {
     column: params.sort_by ?? 'full_name',
-    direction: (params.sort_order ?? 'asc') as 'asc' | 'desc',
+    direction: (params.sort_dir ?? params.sort_order ?? 'asc') as 'asc' | 'desc',
   };
   const hasQuery = !!(params.q || params.category_ids);
 
@@ -102,7 +102,10 @@ export function CourseTable({ basePath }: Props) {
     setParams((prev) => ({
       ...prev,
       sort_by: column,
-      sort_order: prev.sort_by === column && prev.sort_order === 'asc' ? 'desc' : 'asc',
+      sort_dir:
+        prev.sort_by === column && (prev.sort_dir ?? prev.sort_order ?? 'asc') === 'asc'
+          ? 'desc'
+          : 'asc',
       page: 1,
     }));
   }, []);
