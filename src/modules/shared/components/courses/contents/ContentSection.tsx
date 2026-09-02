@@ -4,6 +4,7 @@ import { useUpdateEntry } from '../hooks/useCourseContentApi';
 import type { ApiContentEntry } from '../hooks/useCourseContentApi';
 import type { ContentTypeResource } from '@/shared/types/content-type.types';
 import { DynamicContentForm } from './forms/DynamicContentForm';
+import { ScormPackageField } from './forms/fields/ScormPackageField';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
@@ -79,7 +80,8 @@ export function SectionContent({
         </div>
       </div>
       <Separator />
-      <main className="mt-5">
+      <main className="mt-5 space-y-5">
+        {contentType.module_type === 'scorm' && <ScormPackageField entry={entry} />}
         <DynamicContentForm
           contentType={contentType}
           initialData={entry.data}

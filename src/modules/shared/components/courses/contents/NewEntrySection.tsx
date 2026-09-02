@@ -56,7 +56,12 @@ export function NewEntrySection({
         </div>
       </div>
       <Separator />
-      <main className="mt-5">
+      <main className="mt-5 space-y-4">
+        {contentType.module_type === 'scorm' && (
+          <p className="rounded-sm border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
+            Enregistrez d'abord ce contenu pour pouvoir y attacher un package SCORM (.zip).
+          </p>
+        )}
         <DynamicContentForm
           contentType={contentType}
           onCancel={onCancel}
