@@ -946,6 +946,7 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
                 onMailTemplateMove={handleMailTemplateMove}
                 onCertificateMove={handleCertificateMove}
                 learningPathId={currentLpId ?? undefined}
+                isLocked={learningPath?.isLocked}
                 onProgressionRuleCreate={handleProgressionRuleCreate}
                 onProgressionRuleUpdate={handleProgressionRuleUpdate}
                 onProgressionRuleDeactivate={handleProgressionRuleDeactivate}
