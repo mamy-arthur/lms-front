@@ -1069,7 +1069,7 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
           {isLocked ? (
             <Alert variant="destructive" className="ml-auto w-fit">
               <AlertCircleIcon />
-              Parcours verrouillé , cette formation a déjà été vendue
+              Parcours verrouillé, cette formation a déjà été vendue
             </Alert>
           ) : (
             <Alert className="ml-auto w-fit  text-amber-900">

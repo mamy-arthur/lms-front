@@ -188,8 +188,8 @@ export function FormationDetailsPage({ formation }: FormationDetailsPageProps) {
                   <span className="font-medium">Certificat</span>
                   <span className="text-xs text-gray-800">
                     {formation.certificate
-                      ? 'vous recevrez un certificat'
-                      : "vous ne recevrez pas de certificat mais ca n'empêche pas d'apprendre efficacement"}
+                      ? 'Vous recevrez un certificat'
+                      : "Vous ne recevrez pas de certificat, mais cela n'empêche pas d'apprendre efficacement"}
                   </span>
                 </div>
               </div>

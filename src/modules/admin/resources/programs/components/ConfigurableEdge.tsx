@@ -19,7 +19,7 @@ function ConfigurableEdge({
   style,
   data,
 }: EdgeProps) {
-  const { onConfigureEdge } = useContext(FlowActionsContext);
+  const { onConfigureEdge, isLocked } = useContext(FlowActionsContext);
   const ruleData = data as EdgeRuleData | undefined;
   const isRetake = ruleData?.kind === 'retake';
   const hasRules = !!ruleData?.progressionRule;
@@ -52,14 +52,20 @@ function ConfigurableEdge({
             }}
             className={
               hasRules
-                ? 'nodrag nopan flex size-5 items-center justify-center rounded-full border-2 border-indigo-400 bg-indigo-50 shadow-sm transition-colors hover:bg-indigo-100'
-                : 'nodrag nopan flex size-5 items-center justify-center rounded-full border border-border bg-background shadow-sm transition-colors hover:bg-muted'
+                ? 'nodrag nopan flex size-5 items-center justify-center rounded-full border-2 border-indigo-400 bg-indigo-50 shadow-sm transition-colors hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-indigo-50'
+                : 'nodrag nopan flex size-5 items-center justify-center rounded-full border border-border bg-background shadow-sm transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-background'
             }
             onClick={(e) => {
               e.stopPropagation();
               onConfigureEdge(id);
             }}
-            title="Configurer les règles d'accès"
+            disabled={isLocked}
+            aria-disabled={isLocked}
+            title={
+              isLocked
+                ? 'Parcours verrouillé - configuration impossible'
+                : "Configurer les règles d'accès"
+            }
           >
             {hasRules ? (
               <Lock className="size-3 text-indigo-500" />
