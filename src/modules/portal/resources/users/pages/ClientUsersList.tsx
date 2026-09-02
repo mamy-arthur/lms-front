@@ -36,7 +36,6 @@ export function ClientUserList() {
     params,
     sort,
     handleSearch,
-    handleSearchOnly,
     handleSort,
     handleRoleToggle,
     handleStatusFilter,

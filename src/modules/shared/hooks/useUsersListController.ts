@@ -23,8 +23,9 @@ export function useUsersListController<TUser, TParams = Record<string, unknown>>
   const [editingUser, setEditingUser] = useState<TUser | undefined>(undefined);
 
   const [draftSearch, setDraftSearch] = useState('');
-  const [draftStatus, setDraftStatus] = useState('all');
-  const [draftTenant, setDraftTenant] = useState('all');
+  const [draftRole, setDraftRoleState] = useState('all');
+  const [draftStatus, setDraftStatusState] = useState('all');
+  const [draftTenant, setDraftTenantState] = useState('all');
 
   type ParamsState = TParams & Record<string, unknown>;
   const [params, setParams] = useState<ParamsState>(
@@ -38,12 +39,49 @@ export function useUsersListController<TUser, TParams = Record<string, unknown>>
 
   // Application explicite uniquement (bouton Appliquer ou touche Entrée)
   const handleSearch = useCallback(() => {
+    const isActive = draftStatus === 'active' ? true : draftStatus === 'inactive' ? false : undefined;
+    const tenantId = includeTenantFilter && draftTenant !== 'all' ? draftTenant : undefined;
+
     setParams((prev) => ({
       ...prev,
       q: draftSearch || undefined,
+      is_active: isActive,
+      tenant_id: tenantId,
       page: 0,
     }));
-  }, [draftSearch]);
+  }, [draftSearch, draftStatus, includeTenantFilter, draftTenant]);
+
+  const setDraftRole = useCallback((role: string) => {
+    setDraftRoleState(role);
+    setParams((prev) => ({
+      ...prev,
+      roles: role !== 'all' ? role : undefined,
+      page: 0,
+    }));
+  }, []);
+
+  const setDraftStatus = useCallback((status: string) => {
+    setDraftStatusState(status);
+    const isActive = status === 'active' ? true : status === 'inactive' ? false : undefined;
+    setParams((prev) => ({
+      ...prev,
+      is_active: isActive,
+      page: 0,
+    }));
+  }, []);
+
+  const setDraftTenant = useCallback(
+    (tenant: string) => {
+      setDraftTenantState(tenant);
+      if (!includeTenantFilter) return;
+      setParams((prev) => ({
+        ...prev,
+        tenant_id: tenant !== 'all' ? tenant : undefined,
+        page: 0,
+      }));
+    },
+    [includeTenantFilter],
+  );
 
   const handleRoleToggle = useCallback((role: string) => {
     setParams((prev) => {
@@ -53,11 +91,12 @@ export function useUsersListController<TUser, TParams = Record<string, unknown>>
     });
   }, []);
 
-  const handleStatusFilter = useCallback((status: string) => {
-    setDraftStatus(status);
-    const isActive = status === 'active' ? true : status === 'inactive' ? false : undefined;
-    setParams((prev) => ({ ...prev, is_active: isActive, page: 0 }));
-  }, []);
+  const handleStatusFilter = useCallback(
+    (status: string) => {
+      setDraftStatus(status);
+    },
+    [setDraftStatus],
+  );
 
   // Utilisé par le debounce de la barre de recherche — n'applique que le filtre `q` sans toucher aux autres filtres
   const handleSearchOnly = useCallback(() => {
@@ -115,6 +154,7 @@ export function useUsersListController<TUser, TParams = Record<string, unknown>>
 
   const hasQuery = !!(
     draftSearch ||
+    draftRole !== 'all' ||
     selectedRoles.length > 0 ||
     draftStatus !== 'all' ||
     (includeTenantFilter && draftTenant !== 'all')
@@ -125,6 +165,8 @@ export function useUsersListController<TUser, TParams = Record<string, unknown>>
     editingUser,
     draftSearch,
     setDraftSearch,
+    draftRole,
+    setDraftRole,
     selectedRoles,
     draftStatus,
     setDraftStatus,
