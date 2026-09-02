@@ -301,6 +301,7 @@ function Toolbar({
     italic: boolean;
     strike: boolean;
     code: boolean;
+    link: boolean;
     heading1: boolean;
     heading2: boolean;
     heading3: boolean;
@@ -312,6 +313,8 @@ function Toolbar({
     alignCenter: boolean;
     alignRight: boolean;
     alignJustify: boolean;
+    canUndo: boolean;
+    canRedo: boolean;
   };
 }) {
   const setLink = () => {
@@ -580,12 +583,16 @@ function Toolbar({
 
       <Separator />
 
-      <ToolbarButton label="Insérer un lien" active={state.link} onClick={setLink}>
+      <ToolbarButton
+        label="Insérer un lien"
+        active={overrideActive ? overrideActive.link : state.link}
+        onClick={setLink}
+      >
         <LinkIcon className="size-4" />
       </ToolbarButton>
       <ToolbarButton
         label="Retirer le lien"
-        disabled={!state.link}
+        disabled={overrideActive ? !overrideActive.link : !state.link}
         onClick={() =>
           rawHtmlExec ? rawHtmlExec('unlink') : editor.chain().focus().unsetLink().run()
         }
@@ -597,14 +604,14 @@ function Toolbar({
 
       <ToolbarButton
         label="Annuler"
-        disabled={!state.canUndo}
+        disabled={overrideActive ? !overrideActive.canUndo : !state.canUndo}
         onClick={() => (rawHtmlExec ? rawHtmlExec('undo') : editor.chain().focus().undo().run())}
       >
         <Undo className="size-4" />
       </ToolbarButton>
       <ToolbarButton
         label="Rétablir"
-        disabled={!state.canRedo}
+        disabled={overrideActive ? !overrideActive.canRedo : !state.canRedo}
         onClick={() => (rawHtmlExec ? rawHtmlExec('redo') : editor.chain().focus().redo().run())}
       >
         <Redo className="size-4" />
@@ -666,6 +673,7 @@ export function RichTextEditor({
     italic: false,
     strike: false,
     code: false,
+    link: false,
     heading1: false,
     heading2: false,
     heading3: false,
@@ -677,6 +685,8 @@ export function RichTextEditor({
     alignCenter: false,
     alignRight: false,
     alignJustify: false,
+    canUndo: false,
+    canRedo: false,
   });
 
   const editor = useEditor({
@@ -704,6 +714,7 @@ export function RichTextEditor({
     editorProps: {
       attributes: {
         class: cn(
+          'richtext-content',
           'min-h-32 w-full rounded-b-md border bg-background px-3 py-2 text-sm',
           'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
           'prose prose-sm max-w-none dark:prose-invert',
@@ -756,25 +767,27 @@ export function RichTextEditor({
 
   const savedRangeRef = useRef<Range | null>(null);
 
-  // Retrouve le <code> concerné par la sélection : soit la sélection est dedans,
-  // soit elle l'enveloppe entièrement (état juste après surroundContents).
-  const findCodeAncestor = (): HTMLElement | null => {
+  // Retrouve l'element `tag` concerne par la selection : soit la selection est
+  // dedans, soit elle l'enveloppe entierement (etat juste apres surroundContents).
+  const findAncestor = (tag: string): HTMLElement | null => {
     const el = htmlPreviewRef.current;
     const sel = window.getSelection();
     if (!el || !sel || sel.rangeCount === 0) return null;
     const range = sel.getRangeAt(0);
     const start = range.startContainer;
     const startEl = start.nodeType === Node.TEXT_NODE ? start.parentElement : (start as Element);
-    const inside = startEl?.closest('code');
+    const inside = startEl?.closest(tag);
     if (inside && el.contains(inside)) return inside as HTMLElement;
     const container = range.commonAncestorContainer;
     const scope =
       container.nodeType === Node.ELEMENT_NODE ? (container as Element) : container.parentElement;
-    for (const c of Array.from(scope?.querySelectorAll('code') ?? [])) {
+    for (const c of Array.from(scope?.querySelectorAll(tag) ?? [])) {
       if (range.intersectsNode(c) && el.contains(c)) return c as HTMLElement;
     }
     return null;
   };
+
+  const findCodeAncestor = (): HTMLElement | null => findAncestor('code');
 
   const syncHtmlActiveState = () => {
     try {
@@ -784,6 +797,7 @@ export function RichTextEditor({
         italic: document.queryCommandState('italic'),
         strike: document.queryCommandState('strikeThrough'),
         code: findCodeAncestor() !== null,
+        link: findAncestor('a') !== null,
         heading1: block === 'h1',
         heading2: block === 'h2',
         heading3: block === 'h3',
@@ -795,6 +809,8 @@ export function RichTextEditor({
         alignCenter: document.queryCommandState('justifyCenter'),
         alignRight: document.queryCommandState('justifyRight'),
         alignJustify: document.queryCommandState('justifyFull'),
+        canUndo: document.queryCommandEnabled('undo'),
+        canRedo: document.queryCommandEnabled('redo'),
       });
     } catch {
       /* queryCommandState throws in rare edge cases */

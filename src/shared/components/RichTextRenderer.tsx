@@ -1,3 +1,5 @@
+'use client';
+
 import { sanitizeHtml } from '@/lib/sanitize-html';
 import { cn } from '@/lib/utils';
 
