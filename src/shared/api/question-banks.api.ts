@@ -13,6 +13,7 @@ export interface QuestionBankListParams {
   competency_id?: string;
   q?: string;
   sort_by?: string;
+  sort_dir?: 'asc' | 'desc';
   sort_order?: 'asc' | 'desc';
   page?: number;
   per_page?: number;
@@ -23,6 +24,7 @@ export interface QuizListParams {
   competency_ids?: string;
   q?: string;
   sort_by?: string;
+  sort_dir?: 'asc' | 'desc';
   sort_order?: 'asc' | 'desc';
   page?: number;
   per_page?: number;
@@ -37,7 +39,7 @@ export const questionBanksApi = {
     if (params?.per_page !== undefined) p.per_page = params.per_page;
     if (params?.q) p.q = params.q;
     if (params?.sort_by) p.sort_by = params.sort_by;
-    if (params?.sort_order) p.sort_order = params.sort_order;
+    if (params?.sort_dir ?? params?.sort_order) p.sort_dir = params?.sort_dir ?? params?.sort_order;
     const hasParams = Object.keys(p).length > 0;
     return apiGet<{
       data: ApiQuestionBank[];
@@ -61,7 +63,7 @@ export const questionBanksApi = {
     if (params?.competency_ids) p.competency_ids = params.competency_ids;
     if (params?.q) p.q = params.q;
     if (params?.sort_by) p.sort_by = params.sort_by;
-    if (params?.sort_order) p.sort_order = params.sort_order;
+    if (params?.sort_dir ?? params?.sort_order) p.sort_dir = params?.sort_dir ?? params?.sort_order;
     if (params?.page !== undefined) p.page = params.page;
     if (params?.per_page !== undefined) p.per_page = params.per_page;
     return apiGet<{

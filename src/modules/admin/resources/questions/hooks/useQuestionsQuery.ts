@@ -15,7 +15,7 @@ export function useQuestionsQuery(questionBankId: string, params?: QuestionSearc
         competency_ids: params?.competency_ids || undefined,
         q: params?.q,
         sort_by: params?.sort_by,
-        sort_order: params?.sort_dir,
+        sort_dir: params?.sort_dir,
         page: params?.page !== undefined ? (params.page ?? 0) + 1 : undefined,
         per_page: params?.page_size,
       });

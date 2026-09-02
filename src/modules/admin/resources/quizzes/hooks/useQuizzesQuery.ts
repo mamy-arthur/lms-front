@@ -17,7 +17,7 @@ export function useQuizzesQuery(params?: QuizSearchParams) {
             per_page: params.page_size ?? 25,
             q: params.q,
             sort_by: params.sort_by,
-            sort_order: params.sort_dir,
+            sort_dir: params.sort_dir,
           }
         : undefined;
       const res = await questionBanksApi.list(apiParams);
