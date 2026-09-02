@@ -17,7 +17,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Markdown } from 'tiptap-markdown';
 import {
   Bold,
   Italic,
@@ -50,13 +49,6 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
-declare module '@tiptap/core' {
-  interface Storage {
-    markdown: {
-      getMarkdown: () => string;
-    };
-  }
-}
 export const ALIGN_STYLES: Record<string, string> = {
   left: 'float: left; margin: 0 1em 0.5em 0;',
   center: 'display: block; margin: 0 auto 1em; float: none;',
@@ -109,12 +101,12 @@ type Props = {
   className?: string;
   expandable?: boolean;
   /**
-   * Format de sortie émis dans `onChange`.
-   * - `'markdown'` (défaut) : texte Markdown
-   * - `'tiptap-html'` : HTML via Tiptap WYSIWYG (toolbar active, pour les champs richtext)
-   * - `'html'` : HTML brut via contenteditable (pour attestations et templates mail)
+   * Format de sortie emis dans `onChange`.
+   * - `'tiptap-html'` (defaut) : HTML via Tiptap WYSIWYG, pour les champs richtext
+   * - `'html'` : HTML brut via contenteditable, pour attestations et templates mail
+   *   (preserve les styles inline que le schema ProseMirror degraderait)
    */
-  outputFormat?: 'markdown' | 'tiptap-html' | 'html';
+  outputFormat?: 'tiptap-html' | 'html';
   /** Boutons optionnels ajoutés à la fin de la toolbar. Reçoit l'instance editor.
    * En mode `html`, un second argument `ctx` est fourni :
    * - `ctx.insertHtml`  : insère du HTML brut dans le contenteditable
@@ -544,7 +536,7 @@ function Toolbar({
         active={overrideActive ? overrideActive.heading3 : state.heading3}
         onClick={() =>
           rawHtmlExec
-            ? rawHtmlExec('formatBlock', 'h3')
+            ? rawHtmlExec('formatBlock', overrideActive?.heading3 ? 'p' : 'h3')
             : editor.chain().focus().toggleHeading({ level: 3 }).run()
         }
       >
@@ -661,7 +653,7 @@ export function RichTextEditor({
   placeholder,
   className,
   expandable = true,
-  outputFormat = 'markdown',
+  outputFormat = 'tiptap-html',
   toolbarExtras,
 }: Props) {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -707,15 +699,6 @@ export function RichTextEditor({
       Color,
       Highlight.configure({ multicolor: true }),
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
-      ...(outputFormat === 'markdown'
-        ? [
-            Markdown.configure({
-              html: false,
-              tightLists: true,
-              transformPastedText: true,
-            }),
-          ]
-        : []),
     ],
     content: value,
     editorProps: {
@@ -750,11 +733,7 @@ export function RichTextEditor({
     onUpdate: ({ editor }) => {
       // Mode html : le contenu est géré via le div contenteditable, pas TipTap.
       if (outputFormat === 'html') return;
-      if (outputFormat === 'tiptap-html') {
-        onChange(editor.getHTML());
-        return;
-      }
-      onChange(editor.storage.markdown.getMarkdown());
+      onChange(editor.getHTML());
     },
   });
 
@@ -763,9 +742,7 @@ export function RichTextEditor({
   // pour éviter que le schéma ProseMirror ne dénature les styles/divs custom.
   useEffect(() => {
     if (!editor || outputFormat === 'html') return;
-    const current =
-      outputFormat === 'tiptap-html' ? editor.getHTML() : editor.storage.markdown.getMarkdown();
-    if (current !== value) {
+    if (editor.getHTML() !== value) {
       editor.commands.setContent(value ?? '', { emitUpdate: false });
     }
     // biome-ignore lint/correctness/useExhaustiveDependencies: outputFormat is a stable prop
@@ -860,7 +837,26 @@ export function RichTextEditor({
             sel?.removeAllRanges();
             sel?.addRange(savedRange);
           } else {
+            // Sans range memorise, focus() seul ne place aucun caret : execCommand
+            // n'aurait alors aucun bloc cible. On pose le caret en fin de contenu.
             el.focus();
+            const r = document.createRange();
+            r.selectNodeContents(el);
+            r.collapse(false);
+            const sel = window.getSelection();
+            sel?.removeAllRanges();
+            sel?.addRange(r);
+          }
+          // formatBlock et les listes exigent un conteneur de bloc : un noeud texte
+          // nu a la racine du contenteditable les fait echouer silencieusement.
+          if (command === 'formatBlock' || command.startsWith('insert')) {
+            for (const node of Array.from(el.childNodes)) {
+              if (node.nodeType === Node.TEXT_NODE && node.textContent?.trim()) {
+                const p = document.createElement('p');
+                el.insertBefore(p, node);
+                p.appendChild(node);
+              }
+            }
           }
           if (command === 'code') {
             const sel = window.getSelection();
@@ -930,6 +926,8 @@ export function RichTextEditor({
           } else {
             // styleWithCSS : produit <span style="color:…"> au lieu du <font> deprecie.
             document.execCommand('styleWithCSS', false, 'true');
+            // Sans ca Chrome cree des <div> a l'appui sur Entree, que formatBlock gere mal.
+            document.execCommand('defaultParagraphSeparator', false, 'p');
             document.execCommand(command, false, value);
             // execCommand remplace le bloc : l'ancien range pointe sur des nœuds détruits.
             // On re-capture la sélection vivante, sinon le prochain clic agit sur un range collapsé.
@@ -1027,13 +1025,7 @@ export function RichTextEditor({
   };
 
   const handleExpand = () => {
-    setExpandedContent(
-      outputFormat === 'html'
-        ? value
-        : outputFormat === 'tiptap-html'
-          ? editor.getHTML()
-          : editor.storage.markdown.getMarkdown(),
-    );
+    setExpandedContent(outputFormat === 'html' ? value : editor.getHTML());
     setIsExpanded(true);
   };
 
@@ -1057,7 +1049,7 @@ export function RichTextEditor({
           editor={editor}
           extras={wrappedToolbarExtras}
           onExpand={expandable ? handleExpand : undefined}
-          onToggleSource={outputFormat !== 'markdown' ? handleToggleSource : undefined}
+          onToggleSource={handleToggleSource}
           sourceMode={sourceMode}
           rawHtmlExec={rawHtmlExec}
           overrideActive={outputFormat === 'html' ? htmlActiveState : undefined}

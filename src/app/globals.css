@@ -134,8 +134,7 @@
 }
 
 /* Styles partages par l'editeur (TipTap + contenteditable) et le rendu (apercu, portail). */
-.tiptap,
-.react-markdown,
+
 .richtext-content {
   :first-child {
     margin-top: 0;
