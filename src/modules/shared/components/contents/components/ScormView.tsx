@@ -1,4 +1,4 @@
-import ReactMarkdown from 'react-markdown';
+import { RichTextRenderer } from '@/shared/components/RichTextRenderer';
 import { Package, PlayCircle } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -41,21 +41,10 @@ export function ScormContentView({
 
       <CardContent className="space-y-6">
         {description && (
-          <div
-            className="
-                            react-markdown
-                            prose
-                            prose-sm
-                            dark:prose-invert
-                            max-w-none
-                            [&_ol]:list-decimal
-                            [&_ol]:pl-6
-                            [&_ul]:list-disc
-                            [&_ul]:pl-6
-                        "
-          >
-            <ReactMarkdown>{description}</ReactMarkdown>
-          </div>
+          <RichTextRenderer
+            content={description}
+            className="[&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6"
+          />
         )}
 
         {launchUrl ? (

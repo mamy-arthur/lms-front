@@ -82,6 +82,7 @@ export function RichTextField({
       value={(value as string) ?? ''}
       onChange={onChange}
       placeholder={label}
+      outputFormat="tiptap-html"
       toolbarExtras={(editor) => (
         <RichtextImageToolbarExtra
           editor={editor}

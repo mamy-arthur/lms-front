@@ -1,4 +1,4 @@
-import ReactMarkdown from 'react-markdown';
+import { RichTextRenderer } from '@/shared/components/RichTextRenderer';
 import { Folder, FileText } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -38,11 +38,7 @@ export function FolderContentView({
       <Separator />
 
       <CardContent className="space-y-6">
-        {description && (
-          <div className="react-markdown prose prose-sm dark:prose-invert max-w-none">
-            <ReactMarkdown>{description}</ReactMarkdown>
-          </div>
-        )}
+        {description && <RichTextRenderer content={description} />}
 
         <div className="rounded-lg border">
           <div className="border-b p-4">
