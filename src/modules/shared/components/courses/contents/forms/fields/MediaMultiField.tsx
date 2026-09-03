@@ -90,17 +90,18 @@ export function MediaMultiField({
 
   return (
     <div className="space-y-2">
-      {isLoadingMedia && (
-        <p className="flex items-center gap-1 text-xs text-muted-foreground">
-          <Loader2 className="size-3 animate-spin" /> Chargement…
-        </p>
-      )}
       <MultiFileUploadField
         files={[]}
         accept={field.accept.join(',')}
         hint={field.accept.join(', ')}
         onFilesChange={uploadMultiple}
       />
+
+      {isLoadingMedia && (
+        <p className="flex items-center gap-1 text-xs text-muted-foreground">
+          <Loader2 className="size-3 animate-spin" /> Chargement…
+        </p>
+      )}
 
       <div className="grid grid-cols-3 gap-4">
         {mediaList.map((media) => (

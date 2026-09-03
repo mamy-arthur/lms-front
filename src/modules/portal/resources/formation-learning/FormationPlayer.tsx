@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Loader2, AlertCircle } from 'lucide-react';
+import { Loader2, AlertCircle, Menu } from 'lucide-react';
 import { MOCK_FORMATION } from './lib/course-data';
 import { getDefaultActiveId, resolveActive } from './lib/course-utils';
 import { useFormationSummaryQuery } from './hooks/useFormationSummaryQuery';
@@ -12,7 +12,6 @@ import { portalLearningPathKeys } from '@/shared/queries/keys';
 import FormationSidebar from './components/FormationSidebar';
 import FormationContentView from './components/FormationContentView';
 import FormationMobileSidebar from './components/FormationMobileSidebar';
-import FormationTopBar from './components/FormationTopBar';
 
 interface Props {
   /** Enrollment UUID. Falls back to mock data when absent. */
@@ -98,11 +97,14 @@ export default function FormationPlayer({ enrollmentId }: Props) {
   return (
     <div className="flex flex-1  -mx-4 -mt-2 -mb-4 overflow-hidden bg-white">
       <div className="flex-1 flex flex-col min-w-0">
-        <FormationTopBar
-          title={formation.title}
-          progress={formation.progress}
-          onOpenSidebar={() => setSidebarOpen(true)}
-        />
+        <button
+          type="button"
+          onClick={() => setSidebarOpen(true)}
+          className="flex size-8 items-center justify-center rounded-lg hover:bg-slate-100 xl:hidden m-2"
+          aria-label="Ouvrir la navigation"
+        >
+          <Menu className="size-4 text-slate-500" />
+        </button>
         <main className="h-[88vh] overflow-y-auto">
           <FormationContentView
             formation={formation}
@@ -116,9 +118,8 @@ export default function FormationPlayer({ enrollmentId }: Props) {
           />
         </main>
       </div>
-
       <aside
-        className={`hidden shrink-0 border-l border-slate-100 bg-white xl:flex xl:flex-col sticky top-0 overflow-hidden transition-all duration-300 ${sidebarCollapsed ? 'w-12' : 'w-88 2xl:w-104'}`}
+        className={`hidden shrink-0  bg-white xl:flex xl:flex-col sticky top-0 overflow-auto h-[88vh] transition-all duration-300 ${sidebarCollapsed ? 'w-12' : 'w-96 2xl:w-md'}`}
       >
         <FormationSidebar
           formation={formation}
