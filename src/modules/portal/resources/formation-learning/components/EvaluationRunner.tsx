@@ -44,13 +44,6 @@ export default function EvaluationRunner({ evaluation, onComplete }: Props) {
     () => evaluation.questions.map(normalizeQuestion),
     [evaluation.questions],
   );
-  const mockStats = useMemo(() => {
-    const types = mockQuestions.reduce<Record<string, number>>((acc, q) => {
-      acc[q.type] = (acc[q.type] ?? 0) + 1;
-      return acc;
-    }, {});
-    return { types, hasDuration: mockQuestions.filter((q) => q.duration !== null).length };
-  }, [mockQuestions]);
 
   // ── Real mode state ──────────────────────────────────────────────────────
   const [attempt, setAttempt] = useState<ApiEvaluationAttempt | null>(null);
@@ -82,12 +75,17 @@ export default function EvaluationRunner({ evaluation, onComplete }: Props) {
     if (!attempt) return;
     setIsSubmitting(true);
     try {
-      // Send each answer individually
-      for (const [attemptQuizId, answer] of Object.entries(answers)) {
-        const quiz = attempt.quizzes.find((q) => q.id === attemptQuizId);
-        if (!quiz || answer === null || answer === undefined) continue;
-        await evaluationAttemptsApi.answer(attempt.id, attemptQuizId, toApiPayload(quiz, answer));
-      }
+      await Promise.all(
+        Object.entries(answers).map(([attemptQuizId, answer]) => {
+          const quiz = attempt.quizzes.find((q) => q.id === attemptQuizId);
+          if (!quiz || answer === null || answer === undefined) return Promise.resolve();
+          return evaluationAttemptsApi.answer(
+            attempt.id,
+            attemptQuizId,
+            toApiPayload(quiz, answer),
+          );
+        }),
+      );
       // Finalize
       const res = await evaluationAttemptsApi.submit(attempt.id);
       const score = res.data.score ?? 0;
@@ -96,7 +94,7 @@ export default function EvaluationRunner({ evaluation, onComplete }: Props) {
       onComplete(score, score >= evaluation.passingScore);
       invalidateLearnerEvaluation(evaluation.formationId);
     } catch {
-      toast.error('Erreur lors de la soumission. Vos réponses ont été sauvegardées.');
+      toast.error('Erreur lors de la soumission. Veuillez réessayer.');
     } finally {
       setIsSubmitting(false);
     }
@@ -121,10 +119,6 @@ export default function EvaluationRunner({ evaluation, onComplete }: Props) {
       <EvaluationSplash
         title={evaluation.title}
         evaluationType={evaluation.evaluationType}
-        passingScore={evaluation.passingScore}
-        questionCount={mockQuestions.length}
-        withTimerCount={mockStats.hasDuration}
-        typeCount={Object.keys(mockStats.types).length}
         onStart={() => setMockStarted(true)}
       />
     );
@@ -140,6 +134,11 @@ export default function EvaluationRunner({ evaluation, onComplete }: Props) {
         maxAttempts={evalInfo?.max_attempts}
         attemptsUsed={evalInfo?.attempts_used}
         attemptsRemaining={evalInfo?.attempts_remaining}
+        onRetry={() => {
+          setAttempt(null);
+          setFinalScore(null);
+          setPhase('splash');
+        }}
       />
     );
   }
@@ -170,10 +169,6 @@ export default function EvaluationRunner({ evaluation, onComplete }: Props) {
     <EvaluationSplash
       title={evaluation.title}
       evaluationType={evaluation.evaluationType}
-      passingScore={evaluation.passingScore}
-      questionCount={attempt?.quizzes.length ?? evaluation.questions.length}
-      withTimerCount={0}
-      typeCount={0}
       onStart={handleRealStart}
       isLoading={isStarting}
       maxAttempts={evalInfo?.max_attempts}

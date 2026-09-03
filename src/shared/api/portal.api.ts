@@ -20,6 +20,9 @@ export const portalContentEntriesApi = {
     apiGet<{ data: ApiPortalContentEntry }>(
       `enrollments/${enrollmentId}/courses/${courseId}/entries/${entryId}`,
     ),
+
+  markComplete: (enrollmentId: string, courseId: string, entryId: string): Promise<void> =>
+    apiPost<void>(`enrollments/${enrollmentId}/courses/${courseId}/entries/${entryId}/complete`),
 };
 
 export const evaluationAttemptsApi = {

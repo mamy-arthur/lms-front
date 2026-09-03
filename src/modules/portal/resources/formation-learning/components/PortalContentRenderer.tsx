@@ -128,6 +128,7 @@ function FieldsRenderer({
               title="Contenu externe"
               src={toYouTubeEmbedUrl(secureUrl(value))}
               className="w-full rounded-lg border border-slate-200 h-[60vh]"
+              sandbox="allow-scripts allow-same-origin allow-presentation"
               allowFullScreen
             />
           </div>,

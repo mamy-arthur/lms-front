@@ -20,19 +20,21 @@ const module1: FormationModule = {
           contents: [
             {
               id: 'c1',
-              sectionId: 'sec1',
+              courseId: 'sec1',
               type: 'text-media',
               title: 'TypeScript en 100 secondes',
               status: 'completed',
+              completed: true,
               durationMin: 2,
               data: { mediaType: 'video', url: 'https://www.youtube.com/embed/zQnBQ4tB3ZA' },
             },
             {
               id: 'c2',
-              sectionId: 'sec1',
+              courseId: 'sec1',
               type: 'url',
               title: 'Documentation officielle TypeScript',
               status: 'completed',
+              completed: true,
               durationMin: 1,
               data: {
                 url: 'https://www.typescriptlang.org/docs/handbook/typescript-from-scratch.html',
@@ -53,19 +55,21 @@ const module1: FormationModule = {
           contents: [
             {
               id: 'c3',
-              sectionId: 'sec2',
+              courseId: 'sec2',
               type: 'text-media',
               title: 'Node.js & TypeScript – Setup complet',
               status: 'completed',
+              completed: true,
               durationMin: 14,
               data: { mediaType: 'video', url: 'https://www.youtube.com/embed/ENrzD9HAZK4' },
             },
             {
               id: 'c4',
-              sectionId: 'sec2',
+              courseId: 'sec2',
               type: 'page',
               title: 'Configuration tsconfig.json',
               status: 'completed',
+              completed: true,
               durationMin: 8,
               data: {
                 language: 'json',
@@ -74,10 +78,11 @@ const module1: FormationModule = {
             },
             {
               id: 'c5',
-              sectionId: 'sec2',
+              courseId: 'sec2',
               type: 'file',
               title: 'TypeScript Handbook (PDF)',
               status: 'completed',
+              completed: true,
               durationMin: 4,
               data: {
                 mimeType: 'application/pdf',
@@ -87,10 +92,11 @@ const module1: FormationModule = {
             },
             {
               id: 'c5b',
-              sectionId: 'sec2',
+              courseId: 'sec2',
               type: 'page',
               title: 'Pourquoi TypeScript ?',
               status: 'completed',
+              completed: true,
               durationMin: 4,
               data: {
                 body: 'TypeScript est un sur-ensemble typé de JavaScript.\n\nIl compile vers JavaScript standard.',
@@ -180,16 +186,17 @@ const module2: FormationModule = {
           contents: [
             {
               id: 'c6',
-              sectionId: 'sec3',
+              courseId: 'sec3',
               type: 'text-media',
               title: 'React & TypeScript – crash course',
               status: 'completed',
+              completed: true,
               durationMin: 22,
               data: { mediaType: 'video', url: 'https://www.youtube.com/embed/TPACABQTHvM' },
             },
             {
               id: 'c7',
-              sectionId: 'sec3',
+              courseId: 'sec3',
               type: 'page',
               title: 'Les bases des props typées',
               status: 'in_progress',
@@ -200,7 +207,7 @@ const module2: FormationModule = {
             },
             {
               id: 'c8',
-              sectionId: 'sec3',
+              courseId: 'sec3',
               type: 'text-media',
               title: 'Diagramme – flux de données React',
               status: 'available',
@@ -219,7 +226,7 @@ const module2: FormationModule = {
           contents: [
             {
               id: 'c9',
-              sectionId: 'sec4',
+              courseId: 'sec4',
               type: 'scorm',
               title: 'React Query Fundamentals – Module SCORM',
               status: 'available',
@@ -228,7 +235,7 @@ const module2: FormationModule = {
             },
             {
               id: 'c10',
-              sectionId: 'sec4',
+              courseId: 'sec4',
               type: 'survey',
               title: 'Sondage – Votre expérience avec les Hooks',
               status: 'available',

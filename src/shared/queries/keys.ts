@@ -104,6 +104,10 @@ export const learningPathCompetencyAssociationKeys = {
   lists: () => [...learningPathCompetencyAssociationKeys.all, 'list'] as const,
 };
 
+export const portalMyEnrollmentsKeys = {
+  all: ['portal', 'me', 'enrollments'] as const,
+};
+
 export const portalLearningPathKeys = {
   all: ['portal', 'learning-paths'] as const,
   summary: (enrollmentId: string) =>

@@ -11,15 +11,10 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-// import EvalStats from './EvalStats';
 
 interface EvaluationSplashProps {
   title: string;
   evaluationType: 'intermediate' | 'final';
-  passingScore: number;
-  questionCount: number;
-  withTimerCount: number;
-  typeCount: number;
   onStart: () => void;
   isLoading?: boolean;
   maxAttempts?: number | null;
@@ -30,10 +25,6 @@ interface EvaluationSplashProps {
 export default function EvaluationSplash({
   title,
   evaluationType,
-  // passingScore,
-  // questionCount,
-  // withTimerCount,
-  // typeCount,
   onStart,
   isLoading = false,
   maxAttempts,
