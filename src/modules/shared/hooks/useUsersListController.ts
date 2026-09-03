@@ -39,7 +39,8 @@ export function useUsersListController<TUser, TParams = Record<string, unknown>>
 
   // Application explicite uniquement (bouton Appliquer ou touche Entrée)
   const handleSearch = useCallback(() => {
-    const isActive = draftStatus === 'active' ? true : draftStatus === 'inactive' ? false : undefined;
+    const isActive =
+      draftStatus === 'active' ? true : draftStatus === 'inactive' ? false : undefined;
     const tenantId = includeTenantFilter && draftTenant !== 'all' ? draftTenant : undefined;
 
     setParams((prev) => ({

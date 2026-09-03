@@ -45,7 +45,6 @@ export function AdminCertificatesTable({
   onEdit,
   onDelete,
   onPreview,
-  tenantNames,
 }: AdminCertificatesTableProps) {
   const duplicateMutation = useDuplicateCertificate();
   const columns: DataTableColumn<Certificate>[] = [

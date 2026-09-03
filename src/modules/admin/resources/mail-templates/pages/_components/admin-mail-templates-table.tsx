@@ -45,7 +45,6 @@ export function AdminMailTemplatesTable({
   onEdit,
   onDelete,
   onPreview,
-  tenantNames,
 }: AdminMailTemplatesTableProps) {
   const duplicateMutation = useDuplicateMailTemplate();
   const columns: DataTableColumn<MailTemplate>[] = [

@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
 import { meApi } from '@/shared/api/portal.api';
-import { portalMyEnrollmentsKeys } from '@/shared/queries/keys';
 import type { ApiMeEnrollment } from '@/shared/types/enrollment.types';
 import type {
   TraineeFormation,
