@@ -77,23 +77,23 @@ export default function FormationContentView({
         )}
       </div>
 
-      <div className="shrink-0 px-6 py-4 border-t border-slate-100 bg-slate-50/60 flex items-center justify-between gap-4">
+      <div className="shrink-0 px-6 py-4 flex items-center justify-between gap-4">
         <Button
           onClick={() => onNavigate(prev)}
           disabled={!prev}
-          className="flex items-center gap-2 rounded-sm border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-medium text-slate-600 transition-colors"
+          className="flex items-center rounded-sm border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-medium text-slate-600 transition-colors"
         >
           <ArrowLeft /> Précédent
         </Button>
 
-        <span className="text-xs text-slate-400">
+        <span className="text-xs">
           {pos.index} / {pos.total}
         </span>
 
         <Button
           onClick={() => onNavigate(next)}
           disabled={!next}
-          className="flex items-center gap-2 rounded-sm disabled:opacity-40 disabled:cursor-not-allowed text-xs font-medium text-white transition-colors"
+          className="flex items-center rounded-sm disabled:opacity-40 disabled:cursor-not-allowed text-xs font-medium text-white transition-colors"
           style={{ background: 'var(--color-primary)' }}
         >
           Suivant <ArrowRight />
