@@ -14,8 +14,8 @@ export const VALIDITY_UNITS: { value: DurationUnit; label: string }[] = [
   { value: 'minutes', label: 'Minutes' },
   { value: 'hours', label: 'Heures' },
   { value: 'days', label: 'Jours' },
-  { value: 'months', label: 'Mois' },
-  { value: 'years', label: 'Années' },
+  { value: 'months', label: 'Mois (30 j)' },
+  { value: 'years', label: 'Années (365 j)' },
 ];
 
 const UNIT_TO_MINUTES: Record<DurationUnit, number> = {
