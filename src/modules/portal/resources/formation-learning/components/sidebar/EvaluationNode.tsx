@@ -33,16 +33,20 @@ export default function EvaluationNode({ node, active, onSelect }: Props) {
           : undefined
       }
     >
-      {isLocked && <Lock className="h-3.5 w-3.5 text-slate-300" />}
-      {node.status === 'completed' ? (
-        <div className="bg-emerald-100 p-2 rounded-2xl">
-          <CheckCircle className="size-3 text-emerald-500" />{' '}
+      {isLocked ? (
+        <div className="rounded-2xl bg-gray-300 p-2">
+          <Lock className="size-3 text-white" />
+        </div>
+      ) : node.status === 'completed' ? (
+        <div className="rounded-2xl bg-emerald-100 p-2">
+          <CheckCircle className="size-3 text-emerald-500" />
         </div>
       ) : (
-        <div className="bg-(--color-primary) p-2 rounded-2xl">
-          <File className="size-3 text-[var(--color-primary)-500]" />{' '}
+        <div className="rounded-2xl bg-(--color-primary) p-2">
+          <File className="size-3 text-white" />
         </div>
       )}
+
       <div className="flex flex-col gap-1 items-start">
         <span className="text-sm">{node.title}</span>
         <span className="text-[12px] text-gray-400">Évaluation {typeLabel}</span>
