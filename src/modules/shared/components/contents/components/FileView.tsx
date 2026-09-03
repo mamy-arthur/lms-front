@@ -3,7 +3,7 @@ import { FileText, Download } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 import { Button } from '@/components/ui/button';
-import ReactMarkdown from 'react-markdown';
+import { RichTextRenderer } from '@/shared/components/RichTextRenderer';
 import { Separator } from '@/components/ui/separator';
 import { CONTENT_TYPE_META } from '@/modules/shared/components/courses/types';
 import { Badge } from '@/components/ui/badge';
@@ -30,9 +30,7 @@ export function FileContentView({ title, description, fileName }: FileContentVie
       <CardContent className="space-y-6">
         {description && (
           <>
-            <div className="react-markdown prose prose-sm dark:prose-invert max-w-none">
-              <ReactMarkdown>{description}</ReactMarkdown>
-            </div>
+            <RichTextRenderer content={description} />
           </>
         )}
         {fileName && (
