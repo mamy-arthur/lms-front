@@ -10,6 +10,8 @@ interface Props {
 }
 
 // Extra utility classes for portal richtext content.
+const RICHTEXT_EXTRA_CLASSES =
+  'richtext-content [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6 [&_li]:my-0.5 [&_img]:max-w-full [&_img]:h-auto [&_table]:w-full [&_table]:table-fixed';
 
 type ResolvedMedia = { id: string; url: string; mime_type: string };
 
@@ -89,7 +91,9 @@ function FieldsRenderer({
     const type = fieldTypes[key];
 
     if (type === 'richtext' && typeof value === 'string' && value) {
-      rendered.push(<RichTextRenderer key={key} content={value} />);
+      rendered.push(
+        <RichTextRenderer key={key} content={value} className={RICHTEXT_EXTRA_CLASSES} />,
+      );
       continue;
     }
 
