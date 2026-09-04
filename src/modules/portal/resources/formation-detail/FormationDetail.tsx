@@ -10,6 +10,7 @@ import {
   ClipboardCheck,
   FileText,
   Loader2,
+  ImageIcon,
 } from 'lucide-react';
 import type { FormationDetailData } from './lib/types';
 import { ProgressVariant } from '@/shared/components/ui/progress/Progress';
@@ -22,6 +23,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
+import { formatDuration } from '@/shared/lib/duration';
 
 interface FormationDetailProps {
   formation: FormationDetailData;
@@ -31,10 +33,15 @@ export default function FormationDetail({ formation }: FormationDetailProps) {
   const router = useRouter();
   const summaryQuery = useFormationSummaryQuery(formation.enrollmentId);
 
-  const totalDurationH = Math.floor(formation.totalDurationMin / 60);
-  const totalDurationM = formation.totalDurationMin % 60;
-  const durationLabel =
-    totalDurationM > 0 ? `${totalDurationH}h ${totalDurationM}m` : `${totalDurationH}h`;
+  const completedModules = summaryQuery.data
+    ? summaryQuery.data.nodes.filter(
+        (n) => n.type === 'module' && (n as FormationModule).progress === 100,
+      ).length
+    : formation.completedModules;
+
+  const totalModules = summaryQuery.data
+    ? summaryQuery.data.nodes.filter((n) => n.type === 'module').length
+    : formation.totalModules;
 
   return (
     <div>
@@ -42,11 +49,17 @@ export default function FormationDetail({ formation }: FormationDetailProps) {
         <div className="grid grid-cols-1 gap-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="h-52 sm:h-72 md:h-100 w-full shrink-0 overflow-hidden">
-              <img
-                src={formation.coverImage}
-                alt={formation.title}
-                className="h-full w-full object-cover rounded-sm"
-              />
+              {formation.coverImage ? (
+                <img
+                  src={formation.coverImage}
+                  alt={formation.title}
+                  className="h-full w-full object-cover rounded-sm"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-muted-foreground/40">
+                  <ImageIcon className="size-12" strokeWidth={1} />
+                </div>
+              )}
             </div>
             <div className="flex flex-1 flex-col gap-3">
               <div className="flex flex-col gap-5">
@@ -65,8 +78,8 @@ export default function FormationDetail({ formation }: FormationDetailProps) {
                           <span className="text-xs font-medium">Modules</span>
                         </div>
                         <p className="text-lg font-semibold">
-                          {formation.completedModules}
-                          <span className="text-sm font-normal"> / {formation.totalModules}</span>
+                          {completedModules}
+                          <span className="text-sm font-normal"> / {totalModules}</span>
                         </p>
                         <p className="text-xs">complétés</p>
                       </div>
@@ -75,7 +88,7 @@ export default function FormationDetail({ formation }: FormationDetailProps) {
                           <Clock className="h-4 w-4" />
                           <span className="text-xs font-medium">Temps passé</span>
                         </div>
-                        <p className="text-lg font-semibold">{durationLabel}</p>
+                        <p className="text-lg font-semibold">—</p>
                         <p className="text-xs">sur la formation</p>
                       </div>
                       <div className="rounded-sm bg-muted/40 p-4">
@@ -83,7 +96,11 @@ export default function FormationDetail({ formation }: FormationDetailProps) {
                           <Timer className="h-4 w-4" />
                           <span className="text-xs font-medium">Durée totale</span>
                         </div>
-                        <p className="text-lg font-semibold">{formation.totalDurationMin} min</p>
+                        <p className="text-lg font-semibold">
+                          {formation.totalDurationMin > 0
+                            ? formatDuration(formation.totalDurationMin)
+                            : '—'}
+                        </p>
                         <p className="text-xs">de contenu</p>
                       </div>
                       <div className="rounded-sm bg-muted/40 p-4">
@@ -98,9 +115,14 @@ export default function FormationDetail({ formation }: FormationDetailProps) {
                     <div className="space-y-1.5">
                       <div className="flex items-center justify-between text-xs text-slate-500">
                         <span>Progression</span>
-                        <span className="font-semibold text-slate-800">{formation.progress}%</span>
+                        <span className="font-semibold text-slate-800">
+                          {summaryQuery.data?.progress ?? formation.progress}%
+                        </span>
                       </div>
-                      <ProgressVariant value={formation.progress} className="h-2" />
+                      <ProgressVariant
+                        value={summaryQuery.data?.progress ?? formation.progress}
+                        className="h-2"
+                      />
                     </div>
                   </div>
                 </div>

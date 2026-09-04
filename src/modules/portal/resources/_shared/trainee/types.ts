@@ -14,6 +14,7 @@ export interface TraineeFormation {
   lastActivity: string;
   completedDate?: string;
   hasAttestation?: boolean;
+  totalDurationMin: number;
   currentLesson?: string;
   progressDelta?: number;
 }

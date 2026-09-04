@@ -19,32 +19,24 @@ export function flattenContents(formation: Formation): CourseContent[] {
 }
 
 // ─────────────────────────────────────────────────────────
-// Default active id (first in_progress item or evaluation)
+// Default active id (first non-completed content in accessible module)
 // ─────────────────────────────────────────────────────────
 
 export function getDefaultActiveId(formation: Formation): string {
-  for (const node of formation.nodes) {
-    if (node.type === 'module') {
-      for (const course of node.courses) {
-        for (const section of course.sections) {
-          for (const content of section.contents) {
-            if (content.status === 'in_progress') return content.id;
-          }
-        }
-      }
-    }
-  }
-  // fallback: first non-locked content
-  for (const node of formation.nodes) {
-    if (node.type === 'module') {
-      for (const course of node.courses) {
-        for (const section of course.sections) {
-          const first = section.contents.find((c) => c.status !== 'locked');
-          if (first) return first.id;
-        }
-      }
-    }
-  }
+  const allContents = flattenContents(formation);
+
+  // First content that is not yet completed (and not locked).
+  const resume = allContents.find((c) => !c.completed && c.status !== 'locked');
+  if (resume) return resume.id;
+
+  // All done or all locked — land on the last completed content.
+  const lastCompleted = [...allContents].reverse().find((c) => c.completed);
+  if (lastCompleted) return lastCompleted.id;
+
+  // Absolute fallback: first available content.
+  const first = allContents.find((c) => c.status !== 'locked');
+  if (first) return first.id;
+
   return formation.nodes[0]?.id ?? '';
 }
 

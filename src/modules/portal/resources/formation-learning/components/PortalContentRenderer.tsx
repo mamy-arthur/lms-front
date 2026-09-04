@@ -1,5 +1,5 @@
 import type { ApiPortalContentEntry } from '@/shared/types/portal.types';
-import ReactMarkdown from 'react-markdown';
+import { RichTextRenderer } from '@/shared/components/RichTextRenderer';
 import { Loader2, FileDown, ExternalLink, FolderOpen } from 'lucide-react';
 import { toYouTubeEmbedUrl } from '@/lib/utils';
 import { getMediaCategory } from '@/modules/shared/components/courses/contents/forms/fields/media-utils';
@@ -9,9 +9,9 @@ interface Props {
   isLoading: boolean;
 }
 
-// Same prose classes as HtmlPreviewDialog / PageView — canonical richtext renderer.
-const PROSE_CLASSES =
-  'react-markdown prose prose-sm max-w-none dark:prose-invert [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6 [&_li]:my-0.5 [&_img]:max-w-full [&_img]:h-auto [&_table]:w-full [&_table]:table-fixed';
+// Extra utility classes for portal richtext content.
+const RICHTEXT_EXTRA_CLASSES =
+  'richtext-content [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6 [&_li]:my-0.5 [&_img]:max-w-full [&_img]:h-auto [&_table]:w-full [&_table]:table-fixed';
 
 type ResolvedMedia = { id: string; url: string; mime_type: string };
 
@@ -92,9 +92,7 @@ function FieldsRenderer({
 
     if (type === 'richtext' && typeof value === 'string' && value) {
       rendered.push(
-        <div key={key} className={PROSE_CLASSES}>
-          <ReactMarkdown>{value}</ReactMarkdown>
-        </div>,
+        <RichTextRenderer key={key} content={value} className={RICHTEXT_EXTRA_CLASSES} />,
       );
       continue;
     }
@@ -130,6 +128,7 @@ function FieldsRenderer({
               title="Contenu externe"
               src={toYouTubeEmbedUrl(secureUrl(value))}
               className="w-full rounded-lg border border-slate-200 h-[60vh]"
+              sandbox="allow-scripts allow-same-origin allow-presentation"
               allowFullScreen
             />
           </div>,

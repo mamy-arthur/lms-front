@@ -8,7 +8,7 @@ import type { Formation } from '../lib/types';
 import type { Resolved } from '../lib/course-utils';
 import type { ApiPortalContentEntry } from '@/shared/types/portal.types';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CheckCircle2 } from 'lucide-react';
 
 interface Props {
   formation: Formation;
@@ -18,6 +18,8 @@ interface Props {
   /** When provided, uses the real API entry instead of mock content.data. */
   portalEntry?: ApiPortalContentEntry | null;
   portalEntryLoading?: boolean;
+  onMarkComplete?: (onDone?: () => void) => void;
+  isCompleting?: boolean;
 }
 
 export default function FormationContentView({
@@ -27,6 +29,8 @@ export default function FormationContentView({
   onEvaluationComplete,
   portalEntry,
   portalEntryLoading,
+  onMarkComplete,
+  isCompleting,
 }: Props) {
   if (!resolved) {
     return (
@@ -54,7 +58,7 @@ export default function FormationContentView({
 
   return (
     <div className="flex flex-1 flex-col min-h-0">
-      <div className="px-6 py-5 border-b border-slate-100 shrink-0">
+      <div className="px-6 py-3 shrink-0">
         <h1 className="text-xl font-bold text-slate-800">
           {(portalEntry?.data?.title as string | undefined) ?? content.title}
         </h1>
@@ -66,7 +70,7 @@ export default function FormationContentView({
         })()}
       </div>
 
-      <div className="flex-1 px-6 py-6 overflow-y-auto">
+      <div className="flex-1 px-6  overflow-y-auto">
         {usePortal ? (
           <PortalContentRenderer
             entry={portalEntry ?? undefined}
@@ -77,27 +81,42 @@ export default function FormationContentView({
         )}
       </div>
 
-      <div className="shrink-0 px-6 py-4 border-t border-slate-100 bg-slate-50/60 flex items-center justify-between gap-4">
+      <div className="shrink-0 px-6 py-4 flex items-center justify-between">
         <Button
           onClick={() => onNavigate(prev)}
           disabled={!prev}
-          className="flex items-center gap-2 rounded-sm border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-medium text-slate-600 transition-colors"
+          className="flex items-center rounded-sm border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-medium text-slate-600 transition-colors"
         >
           <ArrowLeft /> Précédent
         </Button>
 
-        <span className="text-xs text-slate-400">
+        <span className="text-xs">
           {pos.index} / {pos.total}
         </span>
 
-        <Button
-          onClick={() => onNavigate(next)}
-          disabled={!next}
-          className="flex items-center gap-2 rounded-sm disabled:opacity-40 disabled:cursor-not-allowed text-xs font-medium text-white transition-colors"
-          style={{ background: 'var(--color-primary)' }}
-        >
-          Suivant <ArrowRight />
-        </Button>
+        {onMarkComplete && !content.completed ? (
+          <Button
+            onClick={() => onMarkComplete(next ? () => onNavigate(next) : undefined)}
+            disabled={isCompleting}
+            className="flex items-center gap-2 rounded-sm disabled:opacity-60 disabled:cursor-not-allowed text-xs font-medium text-white transition-colors"
+            style={{ background: 'var(--color-primary)' }}
+          >
+            <CheckCircle2 className="h-4 w-4" />
+            {isCompleting ? 'Enregistrement…' : next ? 'Terminer et continuer' : 'Terminer'}
+          </Button>
+        ) : (
+          // Already completed: show badge + navigate-only button.
+          <div className="flex items-center gap-3">
+            <Button
+              onClick={() => onNavigate(next)}
+              disabled={!next}
+              className="flex items-center rounded-sm disabled:opacity-40 disabled:cursor-not-allowed text-xs font-medium text-white transition-colors"
+              style={{ background: 'var(--color-primary)' }}
+            >
+              Suivant <ArrowRight />
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );

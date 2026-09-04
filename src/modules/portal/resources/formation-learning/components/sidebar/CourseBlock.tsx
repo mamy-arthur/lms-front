@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronRight, BookOpen } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { CourseSummary } from '../../lib/types';
 import SectionBlock from './SectionBlock';
@@ -23,12 +23,11 @@ export default function CourseBlock({ course, activeId, onSelect }: Props) {
         <ChevronRight
           className={cn('h-3 w-3 shrink-0  transition-transform', open && 'rotate-90')}
         />
-        <BookOpen className="h-3 w-3 shrink-0 " />
-        <span className="flex-1 truncate">{course.title}</span>
+        <span className="flex-1 truncate text-[13px] font-medium">{course.title}</span>
       </button>
 
       {open && (
-        <div className="ml-4 border-l border-slate-100 pl-2">
+        <div>
           {course.sections.map((s) => (
             <SectionBlock key={s.id} section={s} activeId={activeId} onSelect={onSelect} />
           ))}
