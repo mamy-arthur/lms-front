@@ -1,106 +1,156 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { AlertCircle, CheckCircle2, Clock, Loader2 } from 'lucide-react';
 import { FileUploadField } from '@/modules/shared/components/input-upload/FileUploadField';
-import { scormApi, type ApiScormPackage } from '@/shared/api/scorm.api';
-import { useAttachScormPackage } from '@/modules/shared/components/courses/hooks/useCourseContentApi';
+import { scormApi, type ApiScormPackage, type ScormPackageStatus } from '@/shared/api/scorm.api';
+import {
+  useScormPackageChannel,
+  type ScormPackageStatusChangedEvent,
+} from '@/shared/hooks/useScormPackageChannel';
 import type { ApiContentEntry } from '@/shared/types/course.types';
 import { extractErrorMessage } from './media-utils';
-
-const POLL_INTERVAL_MS = 1500;
 
 const PROCESSING_LABELS: Record<string, string> = {
   pending: 'En attente de traitement…',
   extracting: 'Extraction du package…',
   extracted: 'Analyse du manifeste…',
-  ready: 'Rattachement au contenu…',
 };
+
+export interface ScormPackageFieldState {
+  packageId: string | null;
+  status: ScormPackageStatus | null;
+}
 
 interface ScormPackageFieldProps {
   entry: ApiContentEntry;
+  /** Notifie le parent du package courant (uploadé ou déjà attaché) et de son statut, afin de
+   *  déclencher la liaison au clic sur « Enregistrer » et de conditionner la publication. */
+  onStateChange?: (state: ScormPackageFieldState) => void;
 }
 
-/** Uploads a SCORM zip, polls until the backend has parsed its manifest, then attaches it to the entry. */
-export function ScormPackageField({ entry }: ScormPackageFieldProps) {
-  const attachPackage = useAttachScormPackage(entry.course_section_id);
+/**
+ * Upload un package SCORM et suit son traitement via la WebSocket du backend
+ * (aucun polling). La liaison à l'entrée de contenu n'est pas faite ici : elle
+ * est déclenchée par le parent au clic sur « Enregistrer ».
+ */
+export function ScormPackageField({ entry, onStateChange }: ScormPackageFieldProps) {
+  const attachedPackageId = (entry.data.scorm_package_id as string | undefined) ?? null;
+
+  const [packageId, setPackageId] = useState<string | null>(attachedPackageId);
+  const [pkg, setPkg] = useState<ApiScormPackage | null>(null);
+  const [status, setStatus] = useState<ScormPackageStatus | null>(null);
+  const [failureReason, setFailureReason] = useState<string | null>(null);
+  const [isCheckingInitialStatus, setIsCheckingInitialStatus] = useState(!!attachedPackageId);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
-  const [processingStatus, setProcessingStatus] = useState<ApiScormPackage['status'] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const pollTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(
-    () => () => {
-      if (pollTimer.current) clearTimeout(pollTimer.current);
-    },
-    [],
-  );
+  // Report the current package/status up so the parent can attach it on save
+  // and gate publication until it is ready.
+  useEffect(() => {
+    onStateChange?.({ packageId, status });
+  }, [packageId, status, onStateChange]);
 
-  const attachedPackageId = entry.data.scorm_package_id as string | undefined;
-  const attachedVersion = entry.data.scorm_version as string | undefined;
-  const attachedLaunchPath = entry.data.scorm_launch_path as string | undefined;
-
-  const pollUntilReady = (packageId: string) => {
+  // Fetch the current state of an already-attached package once on mount —
+  // it may still be processing, or may have finished while the page was closed.
+  useEffect(() => {
+    if (!attachedPackageId) return;
+    let cancelled = false;
+    setIsCheckingInitialStatus(true);
     scormApi
-      .get(packageId)
+      .get(attachedPackageId)
       .then((res) => {
-        const pkg = res.data;
-        setProcessingStatus(pkg.status);
-
-        if (pkg.status === 'ready') {
-          attachPackage.mutate(
-            { entryId: entry.id, scormPackageId: pkg.id },
-            {
-              onError: (err: unknown) => setError(extractErrorMessage(err)),
-              onSettled: () => setProcessingStatus(null),
-            },
-          );
-          return;
+        if (cancelled) return;
+        setPkg(res.data);
+        setStatus(res.data.status);
+        if (res.data.status === 'failed') {
+          setFailureReason(res.data.failure_reason ?? "L'extraction du package SCORM a échoué.");
         }
-
-        if (pkg.status === 'failed') {
-          setProcessingStatus(null);
-          setError(pkg.failure_reason ?? "L'extraction du package SCORM a échoué.");
-          return;
-        }
-
-        pollTimer.current = setTimeout(() => pollUntilReady(packageId), POLL_INTERVAL_MS);
       })
-      .catch((err) => {
-        setProcessingStatus(null);
-        setError(extractErrorMessage(err));
+      .catch(() => {
+        if (!cancelled) setError('Impossible de récupérer le statut du package SCORM.');
+      })
+      .finally(() => {
+        if (!cancelled) setIsCheckingInitialStatus(false);
       });
-  };
+    return () => {
+      cancelled = true;
+    };
+  }, [attachedPackageId]);
+
+  const handleStatusChanged = useCallback((event: ScormPackageStatusChangedEvent) => {
+    setStatus(event.status);
+    if (event.status === 'ready') {
+      scormApi
+        .get(event.packageId)
+        .then((res) => setPkg(res.data))
+        .catch(() => setError('Impossible de récupérer les informations du package SCORM traité.'));
+    } else if (event.status === 'failed') {
+      setFailureReason(event.errorMessage ?? "L'extraction du package SCORM a échoué.");
+    }
+  }, []);
+
+  const handleSubscriptionError = useCallback(() => {
+    setError('Connexion au suivi temps réel du package SCORM impossible.');
+  }, []);
+
+  useScormPackageChannel(packageId, handleStatusChanged, handleSubscriptionError);
 
   const handleUpload = async (file: File) => {
     setError(null);
+    setFailureReason(null);
+    setPkg(null);
     setUploadProgress(0);
     try {
       const res = await scormApi.upload(file, setUploadProgress);
       setUploadProgress(null);
-      setProcessingStatus(res.data.status);
-      pollUntilReady(res.data.id);
+      setPkg(res.data);
+      setStatus(res.data.status);
+      setPackageId(res.data.id);
     } catch (err) {
       setUploadProgress(null);
       setError(extractErrorMessage(err));
     }
   };
 
-  const isBusy = uploadProgress !== null || processingStatus !== null;
+  const isPendingAttachment = !!packageId && packageId !== attachedPackageId;
+  const isBusy = uploadProgress !== null || isCheckingInitialStatus;
 
   return (
     <div className="space-y-2">
-      {attachedPackageId && !isBusy && (
+      {isCheckingInitialStatus && (
+        <p className="flex items-center gap-1 text-xs text-muted-foreground">
+          <Loader2 className="size-3 animate-spin" />
+          Vérification du statut du package SCORM…
+        </p>
+      )}
+
+      {status === 'ready' && !isBusy && (
         <div className="flex items-center gap-2 rounded-sm border border-border bg-card p-3">
           <CheckCircle2 className="size-4 shrink-0 text-emerald-500" />
           <div className="min-w-0">
-            <p className="truncate text-xs font-medium">Package SCORM rattaché</p>
+            <p className="truncate text-xs font-medium">Package SCORM prêt</p>
             <p className="truncate text-xs text-muted-foreground">
-              Version {attachedVersion ?? '—'}
-              {attachedLaunchPath ? ` · ${attachedLaunchPath}` : ''}
+              Version {pkg?.version ?? '—'}
+              {pkg?.launch_path ? ` · ${pkg.launch_path}` : ''}
             </p>
           </div>
         </div>
+      )}
+
+      {status && status !== 'ready' && status !== 'failed' && !isBusy && (
+        <div className="flex items-center gap-2 rounded-sm border border-border bg-muted/40 p-3">
+          <Clock className="size-4 shrink-0 text-muted-foreground" />
+          <p className="truncate text-xs text-muted-foreground">
+            {PROCESSING_LABELS[status] ?? 'Traitement en cours…'}
+          </p>
+        </div>
+      )}
+
+      {isPendingAttachment && status === 'ready' && (
+        <p className="text-xs text-muted-foreground">
+          Cliquez sur « Enregistrer » pour rattacher ce package à ce contenu.
+        </p>
       )}
 
       <FileUploadField
@@ -129,10 +179,9 @@ export function ScormPackageField({ entry }: ScormPackageFieldProps) {
         </div>
       )}
 
-      {processingStatus && (
-        <p className="flex items-center gap-1 text-xs text-muted-foreground">
-          <Loader2 className="size-3 animate-spin" />
-          {PROCESSING_LABELS[processingStatus] ?? 'Traitement en cours…'}
+      {status === 'failed' && (
+        <p className="flex items-center gap-1 text-xs text-destructive">
+          <AlertCircle className="size-3" /> {failureReason}
         </p>
       )}
 
