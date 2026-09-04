@@ -57,6 +57,10 @@ export type FlowDialogsProps = {
   hasPartialForLastModule: boolean;
   lastNodeIsEvaluation: boolean;
   allUsedBankIds: string[];
+  learningPathId: string;
+  precedingModuleId?: string;
+  allModuleIds: string[];
+  moduleNameById: Record<string, string>;
   onEvalConfirm: (cfg: EvaluationConfig) => Promise<void>;
 
   attestationDialogOpen: boolean;
@@ -99,6 +103,10 @@ export function FlowDialogs({
   hasPartialForLastModule,
   lastNodeIsEvaluation,
   allUsedBankIds,
+  learningPathId,
+  precedingModuleId,
+  allModuleIds,
+  moduleNameById,
   onEvalConfirm,
   attestationDialogOpen,
   setAttestationDialogOpen,
@@ -136,6 +144,10 @@ export function FlowDialogs({
         hasFinalEval={hasFinalEval}
         hasPartialForLastModule={hasPartialForLastModule || lastNodeIsEvaluation}
         alreadyUsedBankIds={allUsedBankIds}
+        learningPathId={learningPathId}
+        precedingModuleId={precedingModuleId}
+        allModuleIds={allModuleIds}
+        moduleNameById={moduleNameById}
         onConfirm={onEvalConfirm}
       />
       <SelectAttestationDialog
@@ -186,6 +198,9 @@ export function FlowDialogs({
         initialConfig={editEvalDialog?.config}
         evaluationId={editEvalDialog?.evaluationId}
         alreadyUsedBankIds={allUsedBankIds}
+        learningPathId={learningPathId}
+        allModuleIds={allModuleIds}
+        moduleNameById={moduleNameById}
         onConfirm={onEditEvalSave}
       />
       <SelectAttestationDialog
