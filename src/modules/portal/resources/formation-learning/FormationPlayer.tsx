@@ -115,6 +115,7 @@ export default function FormationPlayer({ enrollmentId }: Props) {
             portalEntryLoading={isRealMode ? entryQuery.isLoading : undefined}
             onMarkComplete={isRealMode ? handleMarkComplete : undefined}
             isCompleting={isRealMode ? isCompleting : undefined}
+            enrollmentId={isRealMode ? enrollmentId : undefined}
           />
         </main>
       </div>

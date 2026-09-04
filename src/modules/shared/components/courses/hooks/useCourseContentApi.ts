@@ -3,6 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { courseSectionsApi } from '@/shared/api/courses.api';
 import { contentEntriesApi } from '@/shared/api/content-entries.api';
+import { scormApi } from '@/shared/api/scorm.api';
 import { courseSectionKeys, contentEntryKeys } from '@/shared/queries/keys';
 import type { ApiCourseSection, ApiContentEntry } from '@/shared/types/course.types';
 import type { ContentTypeResource } from '@/shared/types/content-type.types';
@@ -86,10 +87,17 @@ export function useAddEntry(sectionId: string) {
     mutationFn: ({
       contentTypeId,
       data,
+      scormPackageId,
     }: {
       contentTypeId: string;
       data: Record<string, unknown>;
-    }) => contentEntriesApi.create(sectionId, { content_type_id: contentTypeId, data }),
+      scormPackageId?: string;
+    }) =>
+      contentEntriesApi.create(sectionId, {
+        content_type_id: contentTypeId,
+        data,
+        ...(scormPackageId ? { scorm_package_id: scormPackageId } : {}),
+      }),
     onSuccess: ({ data: entry }) => {
       queryClient.setQueryData<ApiContentEntry[]>(contentEntryKeys.list(sectionId), (prev = []) => [
         ...prev,
@@ -131,6 +139,21 @@ export function useRemoveEntry(sectionId: string) {
     onSuccess: (_, entryId) => {
       queryClient.setQueryData<ApiContentEntry[]>(contentEntryKeys.list(sectionId), (prev = []) =>
         prev.filter((e) => e.id !== entryId),
+      );
+    },
+  });
+}
+
+// ─── Scorm package attachment ────────────────────────────────────────────────
+
+export function useAttachScormPackage(sectionId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ entryId, scormPackageId }: { entryId: string; scormPackageId: string }) =>
+      scormApi.attachToEntry(entryId, scormPackageId),
+    onSuccess: ({ data: entry }) => {
+      queryClient.setQueryData<ApiContentEntry[]>(contentEntryKeys.list(sectionId), (prev = []) =>
+        prev.map((e) => (e.id === entry.id ? entry : e)),
       );
     },
   });

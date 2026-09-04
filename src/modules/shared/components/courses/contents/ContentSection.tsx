@@ -1,13 +1,16 @@
 import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
-import { useUpdateEntry } from '../hooks/useCourseContentApi';
+import { useUpdateEntry, useAttachScormPackage } from '../hooks/useCourseContentApi';
 import type { ApiContentEntry } from '../hooks/useCourseContentApi';
 import type { ContentTypeResource } from '@/shared/types/content-type.types';
+import type { ScormPackageStatus } from '@/shared/api/scorm.api';
 import { DynamicContentForm } from './forms/DynamicContentForm';
+import type { ScormPackageFieldState } from './forms/fields/ScormPackageField';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
 
 export function SectionContent({
@@ -22,11 +25,30 @@ export function SectionContent({
   onDeselect: () => void;
 }) {
   const updateEntry = useUpdateEntry();
+  const attachScormPackage = useAttachScormPackage(sectionId);
   const [isPublished, setIsPublished] = useState(entry.is_published);
   const [isTogglingPublish, setIsTogglingPublish] = useState(false);
 
+  const isScorm = contentType.module_type === 'scorm';
+  const attachedScormPackageId = (entry.data.scorm_package_id as string | undefined) ?? null;
+  const [scormState, setScormState] = useState<ScormPackageFieldState>({
+    packageId: attachedScormPackageId,
+    status: null,
+  });
+  // While unresolved (null), a scorm entry cannot be published yet.
+  const canPublishScorm = !isScorm || scormState.status === ('ready' as ScormPackageStatus);
+  const scormBlockReason = !scormState.packageId
+    ? 'Le package SCORM doit exister avant de pouvoir publier ce contenu.'
+    : "Le package SCORM est encore en cours de traitement. Attendez qu'il soit prêt pour publier ce contenu.";
+
   const handleSave = async (data: Record<string, unknown>) => {
     try {
+      if (isScorm && scormState.packageId && scormState.packageId !== attachedScormPackageId) {
+        await attachScormPackage.mutateAsync({
+          entryId: entry.id,
+          scormPackageId: scormState.packageId,
+        });
+      }
       await updateEntry.mutateAsync({ entryId: entry.id, sectionId, data });
       toast.success('Contenu enregistré');
     } catch {
@@ -35,6 +57,10 @@ export function SectionContent({
   };
 
   const handleTogglePublish = async (published: boolean) => {
+    if (published && !canPublishScorm) {
+      toast.error(scormBlockReason);
+      return;
+    }
     setIsPublished(published);
     setIsTogglingPublish(true);
     try {
@@ -60,6 +86,20 @@ export function SectionContent({
           <div className="flex items-center gap-1.5 ml-2">
             {isTogglingPublish ? (
               <Loader2 className="size-4 animate-spin text-muted-foreground" />
+            ) : !isPublished && !canPublishScorm ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span>
+                    <Switch
+                      id={`publish-${entry.id}`}
+                      checked={isPublished}
+                      disabled
+                      className="data-[state=checked]:bg-(--color-primary)"
+                    />
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>{scormBlockReason}</TooltipContent>
+              </Tooltip>
             ) : (
               <Switch
                 id={`publish-${entry.id}`}
@@ -79,13 +119,15 @@ export function SectionContent({
         </div>
       </div>
       <Separator />
-      <main className="mt-5">
+      <main className="mt-5 space-y-5">
         <DynamicContentForm
           contentType={contentType}
           initialData={entry.data}
           onCancel={onDeselect}
           onSubmit={handleSave}
           isSubmitting={updateEntry.isPending}
+          attachedScormPackageId={attachedScormPackageId}
+          onScormStateChange={setScormState}
         />
       </main>
     </div>

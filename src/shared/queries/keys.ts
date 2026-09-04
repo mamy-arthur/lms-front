@@ -124,6 +124,12 @@ export const portalLearnerEvaluationKeys = {
   list: (learningPathId: string) => [...portalLearnerEvaluationKeys.all, learningPathId] as const,
 };
 
+export const portalScormLaunchKeys = {
+  all: ['portal', 'scorm-launch'] as const,
+  detail: (enrollmentId: string, courseId: string, entryId: string) =>
+    [...portalScormLaunchKeys.all, enrollmentId, courseId, entryId] as const,
+};
+
 export const questionBankKeys = {
   all: ['question-banks'] as const,
   lists: () => [...questionBankKeys.all, 'list'] as const,

@@ -87,6 +87,8 @@ export interface UpdateCourseCategoryPayload {
 export interface CreateContentEntryPayload {
   content_type_id: string;
   data: Record<string, unknown>;
+  /** Attaches an already-uploaded SCORM package atomically (may still be `pending`). */
+  scorm_package_id?: string;
 }
 
 export interface UpdateContentEntryPayload {
