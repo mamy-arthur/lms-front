@@ -112,8 +112,8 @@ export function ScormPackageField({ attachedPackageId, onStateChange }: ScormPac
     }
   };
 
-  const isPendingAttachment = !!packageId && packageId !== attachedPackageId;
   const isBusy = uploadProgress !== null || isCheckingInitialStatus;
+  const isPendingAttachment = !!packageId && packageId !== attachedPackageId;
   const showCard = !!pkg && !isBusy && status !== null && status !== 'failed';
 
   const handleRemove = () => {

@@ -37,6 +37,9 @@ export function SectionContent({
   });
   // While unresolved (null), a scorm entry cannot be published yet.
   const canPublishScorm = !isScorm || scormState.status === ('ready' as ScormPackageStatus);
+  const scormBlockReason = !scormState.packageId
+    ? 'Le package SCORM doit exister avant de pouvoir publier ce contenu.'
+    : "Le package SCORM est encore en cours de traitement. Attendez qu'il soit prêt pour publier ce contenu.";
 
   const handleSave = async (data: Record<string, unknown>) => {
     try {
@@ -55,9 +58,7 @@ export function SectionContent({
 
   const handleTogglePublish = async (published: boolean) => {
     if (published && !canPublishScorm) {
-      toast.error(
-        "Le package SCORM est encore en cours de traitement. Attendez qu'il soit prêt pour publier ce contenu.",
-      );
+      toast.error(scormBlockReason);
       return;
     }
     setIsPublished(published);
@@ -97,7 +98,7 @@ export function SectionContent({
                     />
                   </span>
                 </TooltipTrigger>
-                <TooltipContent>Le package SCORM est encore en cours de traitement.</TooltipContent>
+                <TooltipContent>{scormBlockReason}</TooltipContent>
               </Tooltip>
             ) : (
               <Switch
