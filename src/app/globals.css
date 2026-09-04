@@ -136,6 +136,7 @@
 /* Styles partages par l'editeur (TipTap + contenteditable) et le rendu (apercu, portail). */
 
 .richtext-content {
+  color: var(--body-foreground);
   :first-child {
     margin-top: 0;
   }

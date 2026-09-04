@@ -1,4 +1,4 @@
-import { Check, FileQuestion, Lock } from 'lucide-react';
+import { CheckCircle, File, Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { FormationEvaluation } from '../../lib/types';
 
@@ -18,7 +18,7 @@ export default function EvaluationNode({ node, active, onSelect }: Props) {
       onClick={isLocked ? undefined : onSelect}
       disabled={isLocked}
       className={cn(
-        'flex w-full items-center gap-2 rounded-sm px-3 py-1.5 text-sm transition-colors',
+        'flex w-full items-start gap-2 rounded-sm px-3 py-1.5 text-sm transition-colors',
         active ? 'font-semibold' : '',
         isLocked
           ? 'cursor-not-allowed opacity-40 text-slate-400'
@@ -33,13 +33,25 @@ export default function EvaluationNode({ node, active, onSelect }: Props) {
           : undefined
       }
     >
-      <FileQuestion className="h-3.5 w-3.5" />
-      <span>{node.title}</span>
-      <span className={`text-xs  ${typeLabel === 'Finale' ? 'text-red-500' : 'text-slate-400'}`}>
-        ({typeLabel})
-      </span>
-      {node.status === 'completed' && !active && <Check className="h-3.5 w-3.5 text-emerald-500" />}
-      {isLocked && <Lock className="h-3.5 w-3.5 text-slate-300" />}
+      {isLocked ? (
+        <div className="rounded-2xl bg-gray-300 p-2">
+          <Lock className="size-3 text-white" />
+        </div>
+      ) : node.status === 'completed' ? (
+        <div className="rounded-2xl bg-emerald-100 p-2">
+          <CheckCircle className="size-3 text-emerald-500" />
+        </div>
+      ) : (
+        <div className="rounded-2xl bg-(--color-primary) p-2">
+          <File className="size-3 text-white" />
+        </div>
+      )}
+
+      <div className="flex flex-col gap-1 items-start">
+        <span className="text-sm">{node.title}</span>
+        <span className="text-[12px] text-gray-400">Évaluation {typeLabel}</span>
+      </div>
+
       {node.attempt && (
         <span
           className={cn(

@@ -1,7 +1,6 @@
 import { cn } from '@/lib/utils';
 import type { CourseContent } from '../../lib/types';
 import StatusIcon from './StatusIcon';
-import ContentTypeIcon from './ContentTypeIcon';
 
 interface Props {
   content: CourseContent;
@@ -31,7 +30,6 @@ export default function ContentRow({ content, active, onSelect }: Props) {
       }
     >
       <StatusIcon status={content.status} />
-      <ContentTypeIcon type={content.type} />
       <span className="flex-1 truncate">{content.title}</span>
     </button>
   );

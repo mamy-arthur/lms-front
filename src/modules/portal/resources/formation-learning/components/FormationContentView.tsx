@@ -58,7 +58,7 @@ export default function FormationContentView({
 
   return (
     <div className="flex flex-1 flex-col min-h-0">
-      <div className="px-6 py-5 border-b border-slate-100 shrink-0">
+      <div className="px-6 py-3 shrink-0">
         <h1 className="text-xl font-bold text-slate-800">
           {(portalEntry?.data?.title as string | undefined) ?? content.title}
         </h1>
@@ -70,7 +70,7 @@ export default function FormationContentView({
         })()}
       </div>
 
-      <div className="flex-1 px-6 py-6 overflow-y-auto">
+      <div className="flex-1 px-6  overflow-y-auto">
         {usePortal ? (
           <PortalContentRenderer
             entry={portalEntry ?? undefined}
@@ -81,7 +81,7 @@ export default function FormationContentView({
         )}
       </div>
 
-      <div className="shrink-0 px-6 py-4 flex items-center justify-between gap-4">
+      <div className="shrink-0 px-6 py-4 flex items-center justify-between">
         <Button
           onClick={() => onNavigate(prev)}
           disabled={!prev}
@@ -95,7 +95,6 @@ export default function FormationContentView({
         </span>
 
         {onMarkComplete && !content.completed ? (
-          // Not yet done: one button that marks complete then moves on (or just marks if last).
           <Button
             onClick={() => onMarkComplete(next ? () => onNavigate(next) : undefined)}
             disabled={isCompleting}
@@ -108,16 +107,10 @@ export default function FormationContentView({
         ) : (
           // Already completed: show badge + navigate-only button.
           <div className="flex items-center gap-3">
-            {content.completed && (
-              <span className="flex items-center gap-1 text-xs font-medium text-green-600">
-                <CheckCircle2 className="h-3 w-3" />
-                Terminé
-              </span>
-            )}
             <Button
               onClick={() => onNavigate(next)}
               disabled={!next}
-              className="flex items-center gap-2 rounded-sm disabled:opacity-40 disabled:cursor-not-allowed text-xs font-medium text-white transition-colors"
+              className="flex items-center rounded-sm disabled:opacity-40 disabled:cursor-not-allowed text-xs font-medium text-white transition-colors"
               style={{ background: 'var(--color-primary)' }}
             >
               Suivant <ArrowRight />

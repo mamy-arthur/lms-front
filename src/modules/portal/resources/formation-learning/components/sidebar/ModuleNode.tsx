@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronRight, FolderOpen, Lock } from 'lucide-react';
+import { ChevronRight, Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { FormationModule } from '../../lib/types';
 import CourseBlock from './CourseBlock';
@@ -20,13 +20,13 @@ export default function ModuleNode({ node, activeId, onSelect }: Props) {
   const isLocked = node.status === 'locked';
 
   return (
-    <div>
+    <div className="rounded-sm">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         disabled={isLocked}
         className={cn(
-          'flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-xs font-bold transition-colors',
+          'flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm transition-colors',
           isLocked ? 'cursor-not-allowed opacity-40 text-slate-400' : 'hover:bg-slate-50',
         )}
       >
@@ -40,21 +40,11 @@ export default function ModuleNode({ node, activeId, onSelect }: Props) {
             )}
           />
         )}
-        <FolderOpen
-          className="h-3.5 w-3.5 shrink-0"
-          style={
-            node.status === 'in_progress'
-              ? { color: 'var(--color-primary)' }
-              : node.status === 'completed'
-                ? { color: '#10b981' }
-                : { color: '#94a3b8' }
-          }
-        />
-        <span className="flex-1 truncate">{node.title}</span>
+        <span className="flex-1 truncate text-muted-foreground">{node.title}</span>
       </button>
 
       {open && !isLocked && (
-        <div className="ml-4 space-y-0.5 border-l border-slate-100 pl-2">
+        <div className="divide-y divide-slate-100 space-y-2">
           {node.courses.map((course) => (
             <CourseBlock key={course.id} course={course} activeId={activeId} onSelect={onSelect} />
           ))}
