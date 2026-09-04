@@ -63,27 +63,30 @@ export function useListController<TItem>(opts?: UseListControllerOptions) {
     }));
   }, []);
 
-  const handleCategoryChange = useCallback((value: string) => {
-    if (value === 'all') {
-      setDraftCategory(['all']);
-      setParams((prev) => ({ ...prev, category: undefined, page: 0 }));
-      return;
-    }
-    setDraftCategory((prev) => {
-      const without = prev.filter((c) => c !== 'all');
+  const handleCategoryChange = useCallback(
+    (value: string) => {
+      if (value === 'all') {
+        setDraftCategory(['all']);
+        setParams((prev) => ({ ...prev, category: undefined, page: 0 }));
+        return;
+      }
+      const without = draftCategory.filter((c) => c !== 'all');
       const next = without.includes(value)
         ? without.filter((c) => c !== value)
         : [...without, value];
       const newCategory = next.length === 0 ? ['all'] : next;
       const selected = newCategory.filter((c) => c !== 'all');
-      setParams((p) => ({
-        ...p,
+      // Two independent state updates instead of one nested inside the other —
+      // updater functions must stay pure (React re-invokes them in Strict Mode).
+      setDraftCategory(newCategory);
+      setParams((prev) => ({
+        ...prev,
         category: selected.length > 0 ? selected.join(',') : undefined,
         page: 0,
       }));
-      return newCategory;
-    });
-  }, []);
+    },
+    [draftCategory],
+  );
 
   const handleOpenCreate = useCallback(() => {
     setEditingItem(undefined);

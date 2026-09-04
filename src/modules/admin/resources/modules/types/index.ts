@@ -28,7 +28,7 @@ export type UpdateModulePayload = ModulePayload;
 
 export interface ModuleSearchParams {
   q?: string;
-  /** Frontend-only — not sent to the API (pour l'instant). */
+  /** Comma-separated category ids — sent to the API as `category_ids`. */
   category?: string;
   sort_by?: string;
   sort_dir?: 'asc' | 'desc';
