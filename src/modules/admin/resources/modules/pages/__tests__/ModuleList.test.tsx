@@ -107,6 +107,7 @@ const MOD_1: Module = {
   category_name: null,
   tenantId: '1',
   courseIds: [],
+  coursesCount: 0,
   createdAt: '2025-01-01T00:00:00Z',
   updatedAt: '2025-01-01T00:00:00Z',
 };
@@ -120,6 +121,7 @@ const MOD_2: Module = {
   category_name: null,
   tenantId: '1',
   courseIds: [],
+  coursesCount: 0,
   createdAt: '2025-02-01T00:00:00Z',
   updatedAt: '2025-02-01T00:00:00Z',
 };

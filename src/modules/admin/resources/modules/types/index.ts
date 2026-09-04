@@ -9,6 +9,8 @@ export interface Module {
   category_name: string | null;
   tenantId: string;
   courseIds: string[];
+  /** Total linked courses — from `courses_count` (list endpoint doesn't return full course ids/objects). */
+  coursesCount: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -127,6 +129,7 @@ export function normalizeModule(raw: CompetencyApiResponse): Module {
     category_name: raw.category_name ?? null,
     tenantId: raw.tenant_id ?? '',
     courseIds,
+    coursesCount: raw.courses_count ?? courseIds.length,
     createdAt: raw.created_at ?? '',
     updatedAt: raw.updated_at ?? '',
   };

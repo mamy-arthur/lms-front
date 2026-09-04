@@ -100,7 +100,6 @@ import { QuestionList } from '../QuestionList';
 import type { Question } from '../../types';
 import type { Module } from '@/modules/admin/resources/modules/types';
 
-
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 function makeModule(id: string, shortname: string): Module {
   return {
@@ -112,6 +111,7 @@ function makeModule(id: string, shortname: string): Module {
     category_name: null,
     tenantId: '1',
     courseIds: [],
+    coursesCount: 0,
     createdAt: '2025-01-01T00:00:00Z',
     updatedAt: '2025-01-01T00:00:00Z',
   };
@@ -166,7 +166,7 @@ describe('QuestionList — filtre multi-select Modules', () => {
     expect(screen.queryByText('Module C')).not.toBeInTheDocument();
   });
 
-  it("ne restreint pas la liste des modules disponibles aux seuls modules déjà sélectionnés", () => {
+  it('ne restreint pas la liste des modules disponibles aux seuls modules déjà sélectionnés', () => {
     // Un seul module est sélectionné, mais la banque contient 3 modules distincts.
     mockControllerParams = { competency_ids: 'comp-1' };
     renderPage();

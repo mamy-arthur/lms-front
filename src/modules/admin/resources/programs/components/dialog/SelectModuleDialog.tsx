@@ -138,7 +138,7 @@ export function SelectModuleDialog({ open, onOpenChange, usedModuleIds, onSelect
             {!isLoadingCompetencies &&
               catalog.map((comp) => {
                 const isAdded = usedModuleIds.includes(comp.id);
-                const hasCourses = comp.courseIds.length > 0;
+                const hasCourses = comp.coursesCount > 0;
                 const categoryName = comp.category_id
                   ? (categoryMap.get(comp.category_id) ?? null)
                   : null;
@@ -148,7 +148,7 @@ export function SelectModuleDialog({ open, onOpenChange, usedModuleIds, onSelect
                     id={comp.id}
                     shortname={comp.shortname}
                     categoryName={categoryName}
-                    courseCount={comp.courseIds.length}
+                    courseCount={comp.coursesCount}
                     isSelected={selected?.id === comp.id}
                     isAdded={isAdded}
                     hasCourses={hasCourses}
