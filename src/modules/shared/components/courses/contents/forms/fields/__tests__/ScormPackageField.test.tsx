@@ -173,7 +173,9 @@ describe('ScormPackageField — statut temps réel (WebSocket)', () => {
 
 describe('ScormPackageField — entrée déjà attachée', () => {
   it('récupère le statut courant au montage', async () => {
-    mockScormApi.get.mockResolvedValue({ data: makePackage({ id: 'pkg-existing', status: 'ready', version: '2004' }) });
+    mockScormApi.get.mockResolvedValue({
+      data: makePackage({ id: 'pkg-existing', status: 'ready', version: '2004' }),
+    });
 
     render(<ScormPackageField attachedPackageId="pkg-existing" />);
 
@@ -189,9 +191,11 @@ describe('ScormPackageField — entrée déjà attachée', () => {
 });
 
 describe('ScormPackageField — suppression', () => {
-  it('le bouton Supprimer réinitialise la sélection et réaffiche l\'upload', async () => {
+  it("le bouton Supprimer réinitialise la sélection et réaffiche l'upload", async () => {
     const user = userEvent.setup();
-    mockScormApi.upload.mockResolvedValue({ data: makePackage({ status: 'ready', version: '1.2' }) });
+    mockScormApi.upload.mockResolvedValue({
+      data: makePackage({ status: 'ready', version: '1.2' }),
+    });
     const onStateChange = jest.fn();
 
     render(<ScormPackageField attachedPackageId={null} onStateChange={onStateChange} />);
