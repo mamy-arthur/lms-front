@@ -9,6 +9,15 @@ describe('duration helpers', () => {
       expect(durationToMinutes(1, 'months')).toBe(43200);
       expect(durationToMinutes(1, 'years')).toBe(525600);
     });
+
+    it("n'arrondit jamais une valeur strictement positive à 0 minute", () => {
+      expect(durationToMinutes(0.2, 'minutes')).toBe(1);
+      expect(durationToMinutes(0.49, 'minutes')).toBe(1);
+    });
+
+    it('laisse 0 minute pour une valeur nulle', () => {
+      expect(durationToMinutes(0, 'minutes')).toBe(0);
+    });
   });
 
   describe('minutesToDuration', () => {

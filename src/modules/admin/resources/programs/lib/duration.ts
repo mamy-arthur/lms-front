@@ -45,7 +45,9 @@ function pluralLabel(value: number, unit: DurationUnit): string {
 
 /** Convertit une valeur + unité UI en minutes (stockage API). */
 export function durationToMinutes(value: number, unit: DurationUnit): number {
-  return Math.round(value * UNIT_TO_MINUTES[unit]);
+  const minutes = Math.round(value * UNIT_TO_MINUTES[unit]);
+  // Une valeur strictement positive ne doit jamais s'arrondir à 0 minute (ex: 0.2 "Minutes").
+  return value > 0 ? Math.max(1, minutes) : minutes;
 }
 
 /**
