@@ -87,10 +87,17 @@ export function useAddEntry(sectionId: string) {
     mutationFn: ({
       contentTypeId,
       data,
+      scormPackageId,
     }: {
       contentTypeId: string;
       data: Record<string, unknown>;
-    }) => contentEntriesApi.create(sectionId, { content_type_id: contentTypeId, data }),
+      scormPackageId?: string;
+    }) =>
+      contentEntriesApi.create(sectionId, {
+        content_type_id: contentTypeId,
+        data,
+        ...(scormPackageId ? { scorm_package_id: scormPackageId } : {}),
+      }),
     onSuccess: ({ data: entry }) => {
       queryClient.setQueryData<ApiContentEntry[]>(contentEntryKeys.list(sectionId), (prev = []) => [
         ...prev,

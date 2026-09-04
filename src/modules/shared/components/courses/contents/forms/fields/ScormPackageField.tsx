@@ -1,15 +1,15 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { AlertCircle, CheckCircle2, Clock, Loader2 } from 'lucide-react';
+import { AlertCircle, Loader2, Trash } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { FileUploadField } from '@/modules/shared/components/input-upload/FileUploadField';
 import { scormApi, type ApiScormPackage, type ScormPackageStatus } from '@/shared/api/scorm.api';
 import {
   useScormPackageChannel,
   type ScormPackageStatusChangedEvent,
 } from '@/shared/hooks/useScormPackageChannel';
-import type { ApiContentEntry } from '@/shared/types/course.types';
-import { extractErrorMessage } from './media-utils';
+import { extractErrorMessage, formatFileSize } from './media-utils';
 
 const PROCESSING_LABELS: Record<string, string> = {
   pending: 'En attente de traitement…',
@@ -23,7 +23,8 @@ export interface ScormPackageFieldState {
 }
 
 interface ScormPackageFieldProps {
-  entry: ApiContentEntry;
+  /** Package déjà attaché à l'entrée (édition), ou `null` pour une entrée pas encore créée. */
+  attachedPackageId: string | null;
   /** Notifie le parent du package courant (uploadé ou déjà attaché) et de son statut, afin de
    *  déclencher la liaison au clic sur « Enregistrer » et de conditionner la publication. */
   onStateChange?: (state: ScormPackageFieldState) => void;
@@ -34,9 +35,7 @@ interface ScormPackageFieldProps {
  * (aucun polling). La liaison à l'entrée de contenu n'est pas faite ici : elle
  * est déclenchée par le parent au clic sur « Enregistrer ».
  */
-export function ScormPackageField({ entry, onStateChange }: ScormPackageFieldProps) {
-  const attachedPackageId = (entry.data.scorm_package_id as string | undefined) ?? null;
-
+export function ScormPackageField({ attachedPackageId, onStateChange }: ScormPackageFieldProps) {
   const [packageId, setPackageId] = useState<string | null>(attachedPackageId);
   const [pkg, setPkg] = useState<ApiScormPackage | null>(null);
   const [status, setStatus] = useState<ScormPackageStatus | null>(null);
@@ -115,6 +114,14 @@ export function ScormPackageField({ entry, onStateChange }: ScormPackageFieldPro
 
   const isPendingAttachment = !!packageId && packageId !== attachedPackageId;
   const isBusy = uploadProgress !== null || isCheckingInitialStatus;
+  const showCard = !!pkg && !isBusy && status !== null && status !== 'failed';
+
+  const handleRemove = () => {
+    setPkg(null);
+    setStatus(null);
+    setFailureReason(null);
+    setPackageId(null);
+  };
 
   return (
     <div className="space-y-2">
@@ -125,26 +132,43 @@ export function ScormPackageField({ entry, onStateChange }: ScormPackageFieldPro
         </p>
       )}
 
-      {status === 'ready' && !isBusy && (
-        <div className="flex items-center gap-2 rounded-sm border border-border bg-card p-3">
-          <CheckCircle2 className="size-4 shrink-0 text-emerald-500" />
-          <div className="min-w-0">
-            <p className="truncate text-xs font-medium">Package SCORM prêt</p>
-            <p className="truncate text-xs text-muted-foreground">
-              Version {pkg?.version ?? '—'}
-              {pkg?.launch_path ? ` · ${pkg.launch_path}` : ''}
-            </p>
+      {showCard && pkg ? (
+        <div className="relative flex flex-col gap-3 w-75 rounded-sm bg-card">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            aria-label="Supprimer"
+            className="z-50 absolute top-1.5 right-1.5 size-5 rounded-full bg-black/50 text-white hover:bg-destructive hover:text-white transition-colors"
+            onClick={handleRemove}
+          >
+            <Trash className="size-2.5" />
+          </Button>
+
+          <div className="h-50 shrink-0 rounded flex items-center justify-center bg-gray-50 dark:bg-orange-900/30">
+            <img src="/assets/book.png" alt="SCORM" className="h-12 w-12 object-contain" />
+          </div>
+
+          <div className="flex-1 min-w-0 pr-7">
+            <span className="block truncate text-xs font-medium">{pkg.original_filename}</span>
+            <span className="block truncate text-xs text-muted-foreground">
+              {status === 'ready'
+                ? `Prêt · v${pkg.version ?? '—'}`
+                : (PROCESSING_LABELS[status] ?? 'Traitement en cours…')}
+            </span>
+            <span className="text-xs text-muted-foreground">{formatFileSize(pkg.size_bytes)}</span>
           </div>
         </div>
-      )}
-
-      {status && status !== 'ready' && status !== 'failed' && !isBusy && (
-        <div className="flex items-center gap-2 rounded-sm border border-border bg-muted/40 p-3">
-          <Clock className="size-4 shrink-0 text-muted-foreground" />
-          <p className="truncate text-xs text-muted-foreground">
-            {PROCESSING_LABELS[status] ?? 'Traitement en cours…'}
-          </p>
-        </div>
+      ) : (
+        !isBusy && (
+          <FileUploadField
+            fileName={undefined}
+            accept=".zip,application/zip,application/x-zip-compressed"
+            hint="Package SCORM (.zip)"
+            onFileSelect={handleUpload}
+            onRemove={() => {}}
+          />
+        )
       )}
 
       {isPendingAttachment && status === 'ready' && (
@@ -152,14 +176,6 @@ export function ScormPackageField({ entry, onStateChange }: ScormPackageFieldPro
           Cliquez sur « Enregistrer » pour rattacher ce package à ce contenu.
         </p>
       )}
-
-      <FileUploadField
-        fileName={undefined}
-        accept=".zip,application/zip,application/x-zip-compressed"
-        hint="Package SCORM (.zip)"
-        onFileSelect={handleUpload}
-        onRemove={() => {}}
-      />
 
       {uploadProgress !== null && (
         <div className="space-y-1">

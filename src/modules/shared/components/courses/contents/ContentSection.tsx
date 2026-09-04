@@ -5,7 +5,7 @@ import type { ApiContentEntry } from '../hooks/useCourseContentApi';
 import type { ContentTypeResource } from '@/shared/types/content-type.types';
 import type { ScormPackageStatus } from '@/shared/api/scorm.api';
 import { DynamicContentForm } from './forms/DynamicContentForm';
-import { ScormPackageField, type ScormPackageFieldState } from './forms/fields/ScormPackageField';
+import type { ScormPackageFieldState } from './forms/fields/ScormPackageField';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
@@ -119,13 +119,14 @@ export function SectionContent({
       </div>
       <Separator />
       <main className="mt-5 space-y-5">
-        {isScorm && <ScormPackageField entry={entry} onStateChange={setScormState} />}
         <DynamicContentForm
           contentType={contentType}
           initialData={entry.data}
           onCancel={onDeselect}
           onSubmit={handleSave}
           isSubmitting={updateEntry.isPending}
+          attachedScormPackageId={attachedScormPackageId}
+          onScormStateChange={setScormState}
         />
       </main>
     </div>
