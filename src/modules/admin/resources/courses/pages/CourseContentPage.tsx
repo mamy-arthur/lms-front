@@ -161,7 +161,7 @@ export function CourseContentPage({ courseId }: Props) {
               )}
             </aside>
 
-            <main className="h-fit min-h-120 rounded-sm border bg-card p-4">
+            <main className="h-fit rounded-sm border bg-card p-4">
               <EditorPanel
                 selection={selection}
                 onDeselect={() => setSelection(null)}
