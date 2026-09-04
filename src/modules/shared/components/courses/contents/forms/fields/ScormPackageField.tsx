@@ -60,10 +60,14 @@ export function ScormPackageField({ attachedPackageId, onStateChange }: ScormPac
       .get(attachedPackageId)
       .then((res) => {
         if (cancelled) return;
-        setPkg(res.data);
         setStatus(res.data.status);
         if (res.data.status === 'failed') {
           setFailureReason(res.data.failure_reason ?? "L'extraction du package SCORM a échoué.");
+          // A failed package must not be treated as "available" by the parent.
+          setPkg(null);
+          setPackageId(null);
+        } else {
+          setPkg(res.data);
         }
       })
       .catch(() => {
@@ -86,6 +90,9 @@ export function ScormPackageField({ attachedPackageId, onStateChange }: ScormPac
         .catch(() => setError('Impossible de récupérer les informations du package SCORM traité.'));
     } else if (event.status === 'failed') {
       setFailureReason(event.errorMessage ?? "L'extraction du package SCORM a échoué.");
+      // A failed package must not be treated as "available" by the parent.
+      setPkg(null);
+      setPackageId(null);
     }
   }, []);
 

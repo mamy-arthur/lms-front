@@ -151,8 +151,9 @@ describe('ScormPackageField — statut temps réel (WebSocket)', () => {
   it('affiche le message d\'échec et repropose l\'upload sur scorm.status.changed "failed"', async () => {
     const user = userEvent.setup();
     mockScormApi.upload.mockResolvedValue({ data: makePackage({ status: 'pending' }) });
+    const onStateChange = jest.fn();
 
-    render(<ScormPackageField attachedPackageId={null} />);
+    render(<ScormPackageField attachedPackageId={null} onStateChange={onStateChange} />);
     await user.click(screen.getByText('Choisir un fichier'));
     await waitFor(() => expect(screen.getByText('package.zip')).toBeInTheDocument());
 
@@ -168,6 +169,8 @@ describe('ScormPackageField — statut temps réel (WebSocket)', () => {
       expect(screen.getByText('Manifeste invalide.')).toBeInTheDocument();
       expect(screen.getByText('Choisir un fichier')).toBeInTheDocument();
     });
+    // A failed package must not be reported as "available" to the parent.
+    expect(onStateChange).toHaveBeenLastCalledWith({ packageId: null, status: 'failed' });
   });
 });
 
@@ -187,6 +190,26 @@ describe('ScormPackageField — entrée déjà attachée', () => {
     });
     // Same id as attachedPackageId — no "click save" hint needed.
     expect(screen.queryByText(/cliquez sur « enregistrer »/i)).not.toBeInTheDocument();
+  });
+
+  it('réinitialise la sélection si le package attaché est déjà en échec', async () => {
+    const onStateChange = jest.fn();
+    mockScormApi.get.mockResolvedValue({
+      data: makePackage({
+        id: 'pkg-existing',
+        status: 'failed',
+        failure_reason: 'Manifeste absent.',
+      }),
+    });
+
+    render(<ScormPackageField attachedPackageId="pkg-existing" onStateChange={onStateChange} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Manifeste absent.')).toBeInTheDocument();
+      expect(screen.getByText('Choisir un fichier')).toBeInTheDocument();
+    });
+    // The parent must no longer consider this (failed) package as available.
+    expect(onStateChange).toHaveBeenLastCalledWith({ packageId: null, status: 'failed' });
   });
 });
 
