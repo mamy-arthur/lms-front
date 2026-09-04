@@ -111,7 +111,7 @@ export function MediaMultiField({
             tabIndex={0}
             onClick={() => handleItemClick(media)}
             onKeyDown={(e) => e.key === 'Enter' && handleItemClick(media)}
-            className="relative flex flex-col gap-3 w-full rounded-sm cursor-pointer hover:bg-muted/50 transition-colors"
+            className="relative flex flex-col gap-3 w-full rounded-sm cursor-pointer transition-colors"
           >
             <Button
               type="button"
