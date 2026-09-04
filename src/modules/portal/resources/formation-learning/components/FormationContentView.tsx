@@ -20,6 +20,8 @@ interface Props {
   portalEntryLoading?: boolean;
   onMarkComplete?: (onDone?: () => void) => void;
   isCompleting?: boolean;
+  /** Required (with the resolved content's courseId) to play 'scorm' entries. */
+  enrollmentId?: string;
 }
 
 export default function FormationContentView({
@@ -31,6 +33,7 @@ export default function FormationContentView({
   portalEntryLoading,
   onMarkComplete,
   isCompleting,
+  enrollmentId,
 }: Props) {
   if (!resolved) {
     return (
@@ -75,6 +78,9 @@ export default function FormationContentView({
           <PortalContentRenderer
             entry={portalEntry ?? undefined}
             isLoading={portalEntryLoading ?? false}
+            enrollmentId={enrollmentId}
+            courseId={content.courseId}
+            onScormCompleted={onMarkComplete ? () => onMarkComplete() : undefined}
           />
         ) : (
           <ContentRenderer content={content} />

@@ -3,10 +3,15 @@ import { RichTextRenderer } from '@/shared/components/RichTextRenderer';
 import { Loader2, FileDown, ExternalLink, FolderOpen } from 'lucide-react';
 import { toYouTubeEmbedUrl } from '@/lib/utils';
 import { getMediaCategory } from '@/modules/shared/components/courses/contents/forms/fields/media-utils';
+import ScormPlayer from './ScormPlayer';
 
 interface Props {
   entry: ApiPortalContentEntry | undefined;
   isLoading: boolean;
+  /** Required to render the 'scorm' module_type (launch/tracking are enrollment-scoped). */
+  enrollmentId?: string;
+  courseId?: string;
+  onScormCompleted?: () => void;
 }
 
 // Extra utility classes for portal richtext content.
@@ -167,7 +172,13 @@ function FieldsRenderer({
   );
 }
 
-export default function PortalContentRenderer({ entry, isLoading }: Props) {
+export default function PortalContentRenderer({
+  entry,
+  isLoading,
+  enrollmentId,
+  courseId,
+  onScormCompleted,
+}: Props) {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-40 text-slate-400">
@@ -180,7 +191,25 @@ export default function PortalContentRenderer({ entry, isLoading }: Props) {
     return <p className="text-slate-400 italic text-sm">Contenu non disponible.</p>;
   }
 
-  // module_type === 'folder' is the only special case needing a different layout.
+  if (entry.module_type === 'scorm') {
+    const scormPackageId =
+      typeof entry.data.scorm_package_id === 'string' ? entry.data.scorm_package_id : null;
+    if (!scormPackageId || !enrollmentId || !courseId) {
+      return (
+        <p className="text-slate-400 italic text-sm">Aucun package SCORM rattaché à ce contenu.</p>
+      );
+    }
+    return (
+      <ScormPlayer
+        enrollmentId={enrollmentId}
+        courseId={courseId}
+        entryId={entry.id}
+        onCompleted={onScormCompleted}
+      />
+    );
+  }
+
+  // module_type === 'folder' is the only other special case needing a different layout.
   if (entry.module_type === 'folder') {
     return (
       <div className="flex flex-col gap-3">
