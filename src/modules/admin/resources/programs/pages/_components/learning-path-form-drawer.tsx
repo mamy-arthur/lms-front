@@ -149,20 +149,23 @@ function DatePickerField({
   value,
   onChange,
   placeholder,
+  disabled,
 }: {
   value: string | null | undefined;
   onChange: (iso: string | null) => void;
   placeholder?: string;
+  disabled?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const date = value ? new Date(value) : undefined;
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={disabled ? false : open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
           type="button"
           variant="outline"
+          disabled={disabled}
           className={cn(
             'h-8 w-full justify-between px-3 text-xs font-normal',
             !date && 'text-muted-foreground',
@@ -719,6 +722,36 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
     return Math.round((totalMinutes / 1_440) * 10) / 10;
   }, [watchedValidityValue, watchedValidityUnit]);
 
+  // Shop visibility additionally requires an actual publication date.
+  const canShowInShop = canPublish && !!watchedPublishedAt;
+
+  // Module add/remove persists to the API immediately (ProgramFlow), so unpublishing must follow suit
+  // instead of waiting for the user to hit "Enregistrer" — otherwise the LP stays published server-side
+  // with zero modules once the last one is removed.
+  const hasAutoUnpublishedRef = useRef(false);
+  useEffect(() => {
+    if (!formInitializedRef.current) return;
+    if (canPublish) {
+      hasAutoUnpublishedRef.current = false;
+      return;
+    }
+    if (hasAutoUnpublishedRef.current) return;
+    hasAutoUnpublishedRef.current = true;
+
+    const wasPublished = getValues('show_in_shop') || !!getValues('published_at');
+    setValue('show_in_shop', false);
+    setValue('published_at', null);
+    if (wasPublished && currentLpId) {
+      updateMutation.mutate({ id: currentLpId, show_in_shop: false, published_at: null });
+    }
+  }, [canPublish, currentLpId, getValues, setValue, updateMutation]);
+
+  // Without a publication date, the LP can't be visible in the shop either.
+  useEffect(() => {
+    if (!formInitializedRef.current || canShowInShop) return;
+    setValue('show_in_shop', false);
+  }, [canShowInShop, setValue]);
+
   // Sync form state when drawer opens — only once per open, not on every refetch
   useEffect(() => {
     if (!open) {
@@ -1223,6 +1256,7 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
                     value={watchedPublishedAt}
                     onChange={(iso) => setValue('published_at', iso)}
                     placeholder="Non définie"
+                    disabled={!canPublish}
                   />
                 </div>
                 {/* Image */}
@@ -1282,15 +1316,16 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
                       aria-label="Visible en boutique"
                       checked={watchedShowInShop ?? false}
                       onCheckedChange={(v) => setValue('show_in_shop', v)}
-                      disabled={!canPublish}
+                      disabled={!canShowInShop}
                       className="data-checked:bg-(--color-primary)"
                     />
                   </div>
-                  {!canPublish && (
+                  {(!canPublish || !watchedPublishedAt) && (
                     <p className="mt-5 flex items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-xs text-amber-700">
                       <AlertCircle className="size-3 shrink-0" />
-                      Ce parcours ne contient aucun module et ne peut pas être publié dans la
-                      boutique.
+                      {!canPublish
+                        ? 'Ce parcours ne contient aucun module et ne peut pas être publié dans la boutique.'
+                        : 'Définissez une date de publication pour rendre ce parcours visible en boutique.'}
                     </p>
                   )}
                 </div>
