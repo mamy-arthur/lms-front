@@ -67,10 +67,10 @@ describe('authApi', () => {
       });
     });
 
-    it('retourne { user } mappé sans champ token', async () => {
+    it('retourne une session mappée sans champ token', async () => {
       mockApiPost.mockResolvedValue(LOGIN_RESPONSE);
       const result = await authApi.login('alice@example.com', 'secret');
-      expect(result).toStrictEqual({ user: EXPECTED_AUTH_USER });
+      expect(result).toStrictEqual({ kind: 'session', user: EXPECTED_AUTH_USER });
       expect('token' in result).toBe(false);
     });
 
@@ -79,8 +79,8 @@ describe('authApi', () => {
         ...LOGIN_RESPONSE,
         user: { ...BACKEND_USER, full_name: 'Bob Martin' },
       });
-      const { user } = await authApi.login('bob@example.com', 'pass');
-      expect(user.name).toBe('Bob Martin');
+      const result = await authApi.login('bob@example.com', 'pass');
+      expect(result).toMatchObject({ kind: 'session', user: { name: 'Bob Martin' } });
     });
 
     it('mappe le rôle SUPER_ADMIN', async () => {
@@ -88,8 +88,8 @@ describe('authApi', () => {
         ...LOGIN_RESPONSE,
         user: { ...BACKEND_USER, role: Role.SUPER_ADMIN },
       });
-      const { user } = await authApi.login('admin@example.com', 'pass');
-      expect(user.role).toBe(Role.SUPER_ADMIN);
+      const result = await authApi.login('admin@example.com', 'pass');
+      expect(result).toMatchObject({ kind: 'session', user: { role: Role.SUPER_ADMIN } });
     });
 
     it("propage l'exception si l'API renvoie une erreur", async () => {
@@ -112,16 +112,86 @@ describe('authApi', () => {
       });
     });
 
-    it('retourne { user } sans token', async () => {
+    it('retourne une session sans token', async () => {
       mockApiPost.mockResolvedValue(LOGIN_RESPONSE);
       const result = await authApi.platformLogin('admin@example.com', 'secret');
-      expect(result).toStrictEqual({ user: EXPECTED_AUTH_USER });
+      expect(result).toStrictEqual({ kind: 'session', user: EXPECTED_AUTH_USER });
       expect('token' in result).toBe(false);
     });
 
     it("propage l'exception sur 403", async () => {
       mockApiPost.mockRejectedValue(Object.assign(new Error('Forbidden'), { status: 403 }));
       await expect(authApi.platformLogin('x@x.com', 'bad')).rejects.toMatchObject({ status: 403 });
+    });
+  });
+
+  // ── 2FA ────────────────────────────────────────────────────────────────────
+
+  describe('challenge 2FA', () => {
+    const CHALLENGE = {
+      two_factor_required: true as const,
+      challenge_token: 'chal-123',
+      expires_in: 600,
+      code_length: 6,
+    };
+
+    it('login retourne un challenge sans tenter de mapper user', async () => {
+      mockApiPost.mockResolvedValue(CHALLENGE);
+
+      const result = await authApi.login('alice@example.com', 'secret');
+
+      expect(result).toStrictEqual({ kind: 'challenge', challenge: CHALLENGE });
+    });
+
+    it('platformLogin retourne également un challenge', async () => {
+      mockApiPost.mockResolvedValue(CHALLENGE);
+
+      const result = await authApi.platformLogin('admin@example.com', 'secret');
+
+      expect(result).toStrictEqual({ kind: 'challenge', challenge: CHALLENGE });
+    });
+
+    it('twoFactorChallenge poste le code et retourne la session', async () => {
+      mockApiPost.mockResolvedValue(LOGIN_RESPONSE);
+
+      const result = await authApi.twoFactorChallenge({
+        challenge_token: 'chal-123',
+        code: '123456',
+        trust_device: true,
+      });
+
+      expect(mockApiPost).toHaveBeenCalledWith('auth/two-factor-challenge', {
+        challenge_token: 'chal-123',
+        code: '123456',
+        trust_device: true,
+      });
+      expect(result).toStrictEqual({ user: EXPECTED_AUTH_USER });
+    });
+
+    it('twoFactorResend poste le challenge_token', async () => {
+      mockApiPost.mockResolvedValue(CHALLENGE);
+
+      await authApi.twoFactorResend('chal-123');
+
+      expect(mockApiPost).toHaveBeenCalledWith('auth/two-factor-resend', {
+        challenge_token: 'chal-123',
+      });
+    });
+
+    it('les routes plateforme ciblent le préfixe platform', async () => {
+      mockApiPost.mockResolvedValue(LOGIN_RESPONSE);
+      await authApi.platformTwoFactorChallenge({ challenge_token: 'c', code: '1' });
+      expect(mockApiPost).toHaveBeenCalledWith(
+        'platform/auth/two-factor-challenge',
+        expect.anything(),
+      );
+
+      mockApiPost.mockResolvedValue(CHALLENGE);
+      await authApi.platformTwoFactorResend('c');
+      expect(mockApiPost).toHaveBeenCalledWith(
+        'platform/auth/two-factor-resend',
+        expect.anything(),
+      );
     });
   });
 

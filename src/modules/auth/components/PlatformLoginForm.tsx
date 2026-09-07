@@ -6,10 +6,12 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { loginSchema, type LoginSchema } from '@/shared/schemas/auth.schema';
-import { authApi } from '@/shared/api/auth.api';
+import { authApi, type TwoFactorChallenge } from '@/shared/api/auth.api';
 import { useAuthStore } from '@/shared/stores/auth.store';
 import { useTenantStore } from '@/shared/stores/tenant.store';
 import { resolveRedirectPath, clearSessionCache } from '@/modules/auth/utils/loginUtils';
+import { TwoFactorChallengeStep } from '@/modules/auth/components/TwoFactorChallengeStep';
+import type { AuthUser } from '@/shared/types/auth.types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -20,6 +22,7 @@ export function PlatformLoginForm() {
 
   const [serverError, setServerError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [challenge, setChallenge] = useState<TwoFactorChallenge | null>(null);
 
   const form = useForm<LoginSchema>({
     resolver: zodResolver(loginSchema),
@@ -29,22 +32,54 @@ export function PlatformLoginForm() {
     },
   });
 
+  const enterSession = (user: AuthUser) => {
+    const hasTenant = !!useTenantStore.getState().tenant;
+
+    clearSessionCache();
+    setAuth(user);
+
+    router.replace(resolveRedirectPath(user, hasTenant));
+  };
+
   const onSubmit = async (data: LoginSchema) => {
     setServerError(null);
 
     try {
-      const hasTenant = !!useTenantStore.getState().tenant;
+      const outcome = await authApi.platformLogin(data.email, data.password);
 
-      const { user } = await authApi.platformLogin(data.email, data.password);
+      if (outcome.kind === 'challenge') {
+        setChallenge(outcome.challenge);
 
-      clearSessionCache();
-      setAuth(user);
+        return;
+      }
 
-      router.replace(resolveRedirectPath(user, hasTenant));
+      enterSession(outcome.user);
     } catch {
       setServerError('Email ou mot de passe incorrect.');
     }
   };
+
+  if (challenge) {
+    return (
+      <TwoFactorChallengeStep
+        challenge={challenge}
+        onVerify={async ({ code, trustDevice }) => {
+          const { user } = await authApi.platformTwoFactorChallenge({
+            challenge_token: challenge.challenge_token,
+            code,
+            trust_device: trustDevice,
+          });
+
+          enterSession(user);
+        }}
+        onResend={() => authApi.platformTwoFactorResend(challenge.challenge_token)}
+        onAbandon={(reason) => {
+          setChallenge(null);
+          setServerError(reason ?? null);
+        }}
+      />
+    );
+  }
 
   return (
     <form onSubmit={form.handleSubmit(onSubmit)} className="mt-8 space-y-5">

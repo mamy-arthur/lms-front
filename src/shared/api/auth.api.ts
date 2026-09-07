@@ -22,6 +22,29 @@ interface LoginApiResponse {
   user: BackendUser;
 }
 
+/** Challenge émis par l'API quand le 2FA est actif et qu'aucun appareil de confiance n'est présenté. */
+export interface TwoFactorChallenge {
+  two_factor_required: true;
+  challenge_token: string;
+  /** Durée de validité du code, en secondes. */
+  expires_in: number;
+  /** Nombre de chiffres attendus, configurable de 6 à 10 côté backend. */
+  code_length: number;
+}
+
+/**
+ * Le login répond soit par une session, soit par un challenge 2FA : les deux cas
+ * doivent être distingués avant toute lecture de `user`.
+ */
+export type LoginOutcome =
+  { kind: 'session'; user: AuthUser } | { kind: 'challenge'; challenge: TwoFactorChallenge };
+
+export interface TwoFactorChallengePayload {
+  challenge_token: string;
+  code: string;
+  trust_device?: boolean;
+}
+
 interface MessageApiResponse {
   message: string;
 }
@@ -43,14 +66,32 @@ function toAuthUser(raw: BackendUser): AuthUser {
   };
 }
 
+function toLoginOutcome(res: LoginApiResponse | TwoFactorChallenge): LoginOutcome {
+  return (res as TwoFactorChallenge).two_factor_required === true
+    ? { kind: 'challenge', challenge: res as TwoFactorChallenge }
+    : { kind: 'session', user: toAuthUser((res as LoginApiResponse).user) };
+}
+
 export const authApi = {
-  login: async (email: string, password: string): Promise<{ user: AuthUser }> => {
-    const res = await apiPost<LoginApiResponse>('auth/login', {
+  login: async (email: string, password: string): Promise<LoginOutcome> => {
+    const res = await apiPost<LoginApiResponse | TwoFactorChallenge>('auth/login', {
       email,
       password,
     });
+    return toLoginOutcome(res);
+  },
+
+  /** Valide le code OTP et délivre la session. */
+  twoFactorChallenge: async (payload: TwoFactorChallengePayload): Promise<{ user: AuthUser }> => {
+    const res = await apiPost<LoginApiResponse>('auth/two-factor-challenge', payload);
     return { user: toAuthUser(res.user) };
   },
+
+  /** Réémet un code pour le même challenge ; le challenge_token reste identique. */
+  twoFactorResend: (challengeToken: string): Promise<TwoFactorChallenge> =>
+    apiPost<TwoFactorChallenge>('auth/two-factor-resend', {
+      challenge_token: challengeToken,
+    }),
 
   logout: (): Promise<MessageApiResponse> => apiPost<MessageApiResponse>('auth/logout'),
 
@@ -60,13 +101,25 @@ export const authApi = {
   resetPassword: (payload: ResetPasswordPayload): Promise<MessageApiResponse> =>
     apiPost<MessageApiResponse>('auth/reset-password', payload),
 
-  platformLogin: async (email: string, password: string): Promise<{ user: AuthUser }> => {
-    const res = await apiPost<LoginApiResponse>('platform/auth/login', {
+  platformLogin: async (email: string, password: string): Promise<LoginOutcome> => {
+    const res = await apiPost<LoginApiResponse | TwoFactorChallenge>('platform/auth/login', {
       email,
       password,
     });
+    return toLoginOutcome(res);
+  },
+
+  platformTwoFactorChallenge: async (
+    payload: TwoFactorChallengePayload,
+  ): Promise<{ user: AuthUser }> => {
+    const res = await apiPost<LoginApiResponse>('platform/auth/two-factor-challenge', payload);
     return { user: toAuthUser(res.user) };
   },
+
+  platformTwoFactorResend: (challengeToken: string): Promise<TwoFactorChallenge> =>
+    apiPost<TwoFactorChallenge>('platform/auth/two-factor-resend', {
+      challenge_token: challengeToken,
+    }),
 
   platformLogout: (): Promise<MessageApiResponse> =>
     apiPost<MessageApiResponse>('platform/auth/logout'),

@@ -59,6 +59,19 @@ import { resolveLogin } from '@/modules/auth/utils/loginUtils';
 const mockResolveLogin = jest.mocked(resolveLogin);
 
 /**
+ * Mock du client d'authentification : l'étape OTP l'appelle directement, et le
+ * module réel chargerait apiClient (cf. remarque sur loginUtils ci-dessus).
+ */
+jest.mock('@/shared/api/auth.api', () => ({
+  authApi: {
+    twoFactorChallenge: jest.fn(),
+    twoFactorResend: jest.fn(),
+  },
+}));
+import { authApi } from '@/shared/api/auth.api';
+const mockTwoFactorChallenge = jest.mocked(authApi.twoFactorChallenge);
+
+/**
  * Mock du store d'authentification :
  * on capture l'appel à setAuth sans effets de bord (cookie, localStorage).
  */
@@ -93,7 +106,7 @@ const VALID_CREDENTIALS = {
 };
 
 const MOCK_AUTH_RESPONSE = {
-  token: 'eyJhbGci.mock.token',
+  kind: 'session' as const,
   user: {
     id: 'u-001',
     name: 'Alice Dupont',
@@ -208,6 +221,160 @@ describe('LoginForm', () => {
 
     await waitFor(() => {
       expect(mockReplace).toHaveBeenCalledWith('/dashboard');
+    });
+  });
+
+  // ── 2FA ────────────────────────────────────────────────────────────────────
+
+  describe('vérification en deux étapes', () => {
+    const CHALLENGE = {
+      kind: 'challenge' as const,
+      challenge: {
+        two_factor_required: true as const,
+        challenge_token: 'chal-123',
+        expires_in: 600,
+        code_length: 6,
+      },
+    };
+
+    it('ne change rien au parcours quand le 2FA est désactivé', async () => {
+      const user = userEvent.setup();
+      mockResolveLogin.mockResolvedValue(MOCK_AUTH_RESPONSE);
+      render(<LoginForm />);
+
+      await fillAndSubmit(user, VALID_CREDENTIALS.email, VALID_CREDENTIALS.password);
+
+      await waitFor(() => {
+        expect(mockSetAuth).toHaveBeenCalledWith(MOCK_AUTH_RESPONSE.user);
+      });
+      expect(screen.queryByText(/vérification en deux étapes/i)).not.toBeInTheDocument();
+    });
+
+    it('affiche l’étape OTP sans ouvrir de session quand un challenge est renvoyé', async () => {
+      const user = userEvent.setup();
+      mockResolveLogin.mockResolvedValue(CHALLENGE);
+      render(<LoginForm />);
+
+      await fillAndSubmit(user, VALID_CREDENTIALS.email, VALID_CREDENTIALS.password);
+
+      await waitFor(() => {
+        expect(screen.getByText(/vérification en deux étapes/i)).toBeInTheDocument();
+      });
+      expect(screen.getAllByRole('textbox')).toHaveLength(6);
+      expect(mockSetAuth).not.toHaveBeenCalled();
+      expect(mockReplace).not.toHaveBeenCalled();
+    });
+
+    it('ouvre la session après validation du code', async () => {
+      const user = userEvent.setup();
+      mockResolveLogin.mockResolvedValue(CHALLENGE);
+      mockTwoFactorChallenge.mockResolvedValue({ user: MOCK_AUTH_RESPONSE.user });
+      render(<LoginForm />);
+
+      await fillAndSubmit(user, VALID_CREDENTIALS.email, VALID_CREDENTIALS.password);
+      await screen.findByText(/vérification en deux étapes/i);
+
+      await user.click(screen.getAllByRole('textbox')[0]);
+      await user.keyboard('123456');
+      await user.click(screen.getByRole('button', { name: /vérifier/i }));
+
+      await waitFor(() => {
+        expect(mockTwoFactorChallenge).toHaveBeenCalledWith({
+          challenge_token: 'chal-123',
+          code: '123456',
+          trust_device: false,
+        });
+      });
+      expect(mockSetAuth).toHaveBeenCalledWith(MOCK_AUTH_RESPONSE.user);
+      expect(mockReplace).toHaveBeenCalledWith('/admin');
+    });
+
+    it('transmet trust_device quand la case est cochée', async () => {
+      const user = userEvent.setup();
+      mockResolveLogin.mockResolvedValue(CHALLENGE);
+      mockTwoFactorChallenge.mockResolvedValue({ user: MOCK_AUTH_RESPONSE.user });
+      render(<LoginForm />);
+
+      await fillAndSubmit(user, VALID_CREDENTIALS.email, VALID_CREDENTIALS.password);
+      await screen.findByText(/vérification en deux étapes/i);
+
+      await user.click(screen.getAllByRole('textbox')[0]);
+      await user.keyboard('123456');
+      await user.click(screen.getByRole('checkbox'));
+      await user.click(screen.getByRole('button', { name: /vérifier/i }));
+
+      await waitFor(() => {
+        expect(mockTwoFactorChallenge).toHaveBeenCalledWith(
+          expect.objectContaining({ trust_device: true }),
+        );
+      });
+    });
+
+    it('revient à la saisie du mot de passe via « Retour à la connexion »', async () => {
+      const user = userEvent.setup();
+      mockResolveLogin.mockResolvedValue(CHALLENGE);
+      render(<LoginForm />);
+
+      await fillAndSubmit(user, VALID_CREDENTIALS.email, VALID_CREDENTIALS.password);
+      await screen.findByText(/vérification en deux étapes/i);
+
+      await user.click(screen.getByRole('button', { name: /retour à la connexion/i }));
+
+      expect(screen.getByLabelText(/adresse email/i)).toBeInTheDocument();
+      expect(screen.queryByText(/vérification en deux étapes/i)).not.toBeInTheDocument();
+    });
+
+    it('garde l’utilisateur sur l’étape OTP quand le code est incorrect', async () => {
+      const user = userEvent.setup();
+      mockResolveLogin.mockResolvedValue(CHALLENGE);
+      mockTwoFactorChallenge.mockRejectedValue(
+        Object.assign(new Error('Unprocessable'), {
+          status: 422,
+          headers: new Headers(),
+          json: {
+            message: 'Le code fourni est incorrect.',
+            error_code: 'two_factor.invalid_code',
+          },
+        }),
+      );
+      render(<LoginForm />);
+
+      await fillAndSubmit(user, VALID_CREDENTIALS.email, VALID_CREDENTIALS.password);
+      await screen.findByText(/vérification en deux étapes/i);
+
+      await user.click(screen.getAllByRole('textbox')[0]);
+      await user.keyboard('000000');
+      await user.click(screen.getByRole('button', { name: /vérifier/i }));
+
+      expect(await screen.findByRole('alert')).toHaveTextContent('Le code fourni est incorrect.');
+      expect(screen.getByText(/vérification en deux étapes/i)).toBeInTheDocument();
+      expect(mockSetAuth).not.toHaveBeenCalled();
+    });
+
+    it('ramène à la saisie du mot de passe quand le challenge n’est plus valide', async () => {
+      const user = userEvent.setup();
+      mockResolveLogin.mockResolvedValue(CHALLENGE);
+      mockTwoFactorChallenge.mockRejectedValue(
+        Object.assign(new Error('Unprocessable'), {
+          status: 422,
+          headers: new Headers(),
+          json: {
+            message: 'Ce challenge est invalide.',
+            error_code: 'two_factor.invalid_challenge',
+          },
+        }),
+      );
+      render(<LoginForm />);
+
+      await fillAndSubmit(user, VALID_CREDENTIALS.email, VALID_CREDENTIALS.password);
+      await screen.findByText(/vérification en deux étapes/i);
+
+      await user.click(screen.getAllByRole('textbox')[0]);
+      await user.keyboard('123456');
+      await user.click(screen.getByRole('button', { name: /vérifier/i }));
+
+      expect(await screen.findByText('Ce challenge est invalide.')).toBeInTheDocument();
+      expect(screen.getByLabelText(/adresse email/i)).toBeInTheDocument();
     });
   });
 

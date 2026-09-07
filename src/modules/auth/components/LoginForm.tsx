@@ -16,6 +16,9 @@ import {
   resolveRedirectPath,
   clearSessionCache,
 } from '@/modules/auth/utils/loginUtils';
+import { TwoFactorChallengeStep } from '@/modules/auth/components/TwoFactorChallengeStep';
+import { authApi, type TwoFactorChallenge } from '@/shared/api/auth.api';
+import type { AuthUser } from '@/shared/types/auth.types';
 
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -28,6 +31,7 @@ export function LoginForm() {
 
   const [showPassword, setShowPassword] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
+  const [challenge, setChallenge] = useState<TwoFactorChallenge | null>(null);
 
   const {
     register,
@@ -41,18 +45,28 @@ export function LoginForm() {
     },
   });
 
+  const enterSession = (user: AuthUser) => {
+    const hasTenant = !!useTenantStore.getState().tenant;
+
+    clearSessionCache();
+    setAuth(user);
+
+    router.replace(resolveRedirectPath(user, hasTenant));
+  };
+
   const onSubmit = async (data: LoginSchema) => {
     setServerError(null);
 
     try {
-      const hasTenant = !!useTenantStore.getState().tenant;
+      const outcome = await resolveLogin(data.email, data.password);
 
-      const { user } = await resolveLogin(data.email, data.password);
+      if (outcome.kind === 'challenge') {
+        setChallenge(outcome.challenge);
 
-      clearSessionCache();
-      setAuth(user);
+        return;
+      }
 
-      router.replace(resolveRedirectPath(user, hasTenant));
+      enterSession(outcome.user);
     } catch {
       setServerError('Email ou mot de passe incorrect.');
     }
@@ -81,78 +95,98 @@ export function LoginForm() {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="mt-8 space-y-5">
-          {/* EMAIL */}
-          <div className="space-y-2">
-            <Label htmlFor="email">Adresse email</Label>
+        {challenge ? (
+          <TwoFactorChallengeStep
+            challenge={challenge}
+            onVerify={async ({ code, trustDevice }) => {
+              const { user } = await authApi.twoFactorChallenge({
+                challenge_token: challenge.challenge_token,
+                code,
+                trust_device: trustDevice,
+              });
 
-            <Input id="email" placeholder="vous@exemple.com" {...register('email')} />
-          </div>
+              enterSession(user);
+            }}
+            onResend={() => authApi.twoFactorResend(challenge.challenge_token)}
+            onAbandon={(reason) => {
+              setChallenge(null);
+              setServerError(reason ?? null);
+            }}
+          />
+        ) : (
+          <form onSubmit={handleSubmit(onSubmit)} className="mt-8 space-y-5">
+            {/* EMAIL */}
+            <div className="space-y-2">
+              <Label htmlFor="email">Adresse email</Label>
 
-          {/* PASSWORD */}
-          <div className="space-y-2">
-            <div className="flex justify-between">
-              <Label htmlFor="password">Mot de passe</Label>
-
-              <Link href="/forgot-password" className="text-xs text-primary hover:underline">
-                Mot de passe oublié ?
-              </Link>
+              <Input id="email" placeholder="vous@exemple.com" {...register('email')} />
             </div>
 
-            <div className="relative">
-              <Input
-                id="password"
-                type={showPassword ? 'text' : 'password'}
-                placeholder="••••••••"
-                {...register('password')}
-              />
+            {/* PASSWORD */}
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <Label htmlFor="password">Mot de passe</Label>
 
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-              >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
+                <Link href="/forgot-password" className="text-xs text-primary hover:underline">
+                  Mot de passe oublié ?
+                </Link>
+              </div>
+
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="••••••••"
+                  {...register('password')}
+                />
+
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+
+              {errors.password && <p className="text-sm text-red-500">{errors.password.message}</p>}
             </div>
 
-            {errors.password && <p className="text-sm text-red-500">{errors.password.message}</p>}
-          </div>
+            {/* REMEMBER */}
+            <div className="flex items-center gap-3">
+              <Checkbox id="remember" />
 
-          {/* REMEMBER */}
-          <div className="flex items-center gap-3">
-            <Checkbox id="remember" />
-
-            <Label htmlFor="remember" className="cursor-pointer font-normal">
-              Rester connecté
-            </Label>
-          </div>
-
-          {serverError && (
-            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-600">
-              {serverError}
+              <Label htmlFor="remember" className="cursor-pointer font-normal">
+                Rester connecté
+              </Label>
             </div>
-          )}
 
-          {/* SUBMIT */}
-          <Button
-            type="submit"
-            disabled={isSubmitting}
-            className="h-12 w-full bg-(--color-primary) hover:bg-(--color-primary)/80"
-          >
-            {isSubmitting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Connexion...
-              </>
-            ) : (
-              <>
-                Se connecter
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </>
+            {serverError && (
+              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-600">
+                {serverError}
+              </div>
             )}
-          </Button>
-        </form>
+
+            {/* SUBMIT */}
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              className="h-12 w-full bg-(--color-primary) hover:bg-(--color-primary)/80"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Connexion...
+                </>
+              ) : (
+                <>
+                  Se connecter
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </>
+              )}
+            </Button>
+          </form>
+        )}
 
         <p className="mt-8 text-center text-xs text-muted-foreground">
           Pas encore de compte ?{' '}

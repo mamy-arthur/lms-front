@@ -1,4 +1,4 @@
-import { authApi } from '@/shared/api/auth.api';
+import { authApi, type LoginOutcome } from '@/shared/api/auth.api';
 import { PLATFORM_ROLES } from '@/shared/constants/roles';
 import { ROUTES } from '@/shared/constants/routes';
 import type { AuthUser } from '@/shared/types/auth.types';
@@ -8,7 +8,7 @@ import { queryClient } from '@/shared/lib/query-client';
  * Login via the tenant endpoint (POST /auth/login).
  * Used by /login — accepts all roles, no platform fallback.
  */
-export async function resolveLogin(email: string, password: string): Promise<{ user: AuthUser }> {
+export async function resolveLogin(email: string, password: string): Promise<LoginOutcome> {
   return authApi.login(email, password);
 }
 
