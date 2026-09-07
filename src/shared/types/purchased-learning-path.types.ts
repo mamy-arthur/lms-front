@@ -5,6 +5,8 @@ export interface ApiPurchasedLearningPathNested {
   id: string;
   name: string;
   image: ApiLearningPathImage | null;
+  category_id?: string | null;
+  category_name?: string | null;
 }
 
 export interface ApiPurchasedLearningPath {
@@ -26,6 +28,10 @@ export interface ApiPurchasedLearningPath {
 export interface PurchasedLearningPathListParams {
   page?: number;
   per_page?: number;
+  q?: string;
+  sort_by?: string;
+  sort_dir?: 'asc' | 'desc';
+  category_ids?: string;
 }
 
 export interface PurchasedLearningPathEnrollmentsParams {

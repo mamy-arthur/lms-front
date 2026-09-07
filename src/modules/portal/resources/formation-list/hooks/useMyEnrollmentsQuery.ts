@@ -7,6 +7,16 @@ import type {
   FormationStatus,
 } from '@/modules/portal/resources/_shared/trainee/types';
 
+export interface MyEnrollmentsQueryParams {
+  page?: number;
+  per_page?: number;
+  q?: string;
+  status?: string;
+  sort_by?: string;
+  sort_dir?: 'asc' | 'desc';
+  category_id?: string;
+}
+
 function formatRelativeDate(isoDate: string): string {
   const diffDays = Math.floor((Date.now() - new Date(isoDate).getTime()) / (1000 * 60 * 60 * 24));
   if (diffDays === 0) return "Aujourd'hui";
@@ -40,6 +50,7 @@ function normalizeEnrollment(api: ApiMeEnrollment): TraineeFormation {
     totalModules: api.learning_path.totalModules ?? 0,
     totalDurationMin: api.learning_path.duration ?? 0,
     status: STATUS_MAP[api.status] ?? 'not_started',
+    enrolledAt: api.enrolled_at,
     lastActivity: formatRelativeDate(api.created_at),
     completedDate: api.completed_at
       ? new Date(api.completed_at).toLocaleDateString('fr-FR', {
@@ -52,12 +63,16 @@ function normalizeEnrollment(api: ApiMeEnrollment): TraineeFormation {
   };
 }
 
-export function useMyEnrollmentsQuery() {
+export function useMyEnrollmentsQuery(params: MyEnrollmentsQueryParams = {}) {
   return useQuery({
-    queryKey: portalMyEnrollmentsKeys.all,
+    queryKey: [...portalMyEnrollmentsKeys.all, params],
     queryFn: async () => {
-      const response = await meApi.enrollments();
-      return response.data.map(normalizeEnrollment);
+      const response = await meApi.enrollments(params);
+      return {
+        data: response.data.map(normalizeEnrollment),
+        total: response.meta.total,
+      };
     },
+    placeholderData: (prev) => prev,
   });
 }

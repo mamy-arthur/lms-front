@@ -13,7 +13,8 @@ interface Props {
 
 export default function FormationDetailPage({ params }: Props) {
   const { slug } = use(params);
-  const { data: formations = [], isLoading } = useMyEnrollmentsQuery();
+  const { data, isLoading } = useMyEnrollmentsQuery();
+  const formations = data?.data ?? [];
 
   if (isLoading) {
     return (

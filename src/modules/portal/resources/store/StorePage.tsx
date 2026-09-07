@@ -2,17 +2,42 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronDown, LayoutGrid, List, Search } from 'lucide-react';
+import { Check, ChevronDown, Search } from 'lucide-react';
 import { FormationCard } from '@/modules/shared/components/store/FormationCard';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useCartActions } from '@/modules/portal/resources/cart/hooks/useCartActions';
 import { useShopLearningPathsQuery } from './hooks/useShopLearningPathsQuery';
 import { useShopLearningPathCategoriesQuery } from './hooks/useShopLearningPathCategoriesQuery';
+import type { ShopLearningPathSort } from '@/shared/types/learning-path.types';
 
 const PAGE_SIZE = 25;
+
+const SORT_OPTIONS: { value: ShopLearningPathSort; label: string }[] = [
+  { value: 'newest', label: 'Plus récent' },
+  { value: 'oldest', label: 'Plus ancien' },
+  { value: 'name_asc', label: 'Nom A → Z' },
+  { value: 'name_desc', label: 'Nom Z → A' },
+];
+
+type PriceRangeKey = 'all' | 'free' | 'lt50' | '50_100' | '100_200' | 'gt200';
+
+const PRICE_RANGE_OPTIONS: { value: PriceRangeKey; label: string; min?: number; max?: number }[] = [
+  { value: 'all', label: 'Tous les prix' },
+  { value: 'free', label: 'Gratuit', max: 0 },
+  { value: 'lt50', label: 'Moins de 50 €', max: 50 },
+  { value: '50_100', label: '50 – 100 €', min: 50, max: 100 },
+  { value: '100_200', label: '100 – 200 €', min: 100, max: 200 },
+  { value: 'gt200', label: 'Plus de 200 €', min: 200 },
+];
 
 function FormationCardSkeleton() {
   return (
@@ -37,7 +62,8 @@ export function StorePage() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [perPage, setPerPage] = useState(PAGE_SIZE);
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [sort, setSort] = useState<ShopLearningPathSort>('newest');
+  const [priceRange, setPriceRange] = useState<PriceRangeKey>('all');
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search.trim()), 300);
@@ -49,6 +75,9 @@ export function StorePage() {
     category_id: selectedCategoryId ?? undefined,
     per_page: perPage,
     page: 1,
+    sort,
+    price_min: PRICE_RANGE_OPTIONS.find((o) => o.value === priceRange)?.min,
+    price_max: PRICE_RANGE_OPTIONS.find((o) => o.value === priceRange)?.max,
   });
 
   const categoriesQuery = useShopLearningPathCategoriesQuery();
@@ -56,16 +85,22 @@ export function StorePage() {
   const items = shopQuery.data?.data ?? [];
   const total = shopQuery.data?.meta.total ?? 0;
   const hasMore = items.length < total;
-  const hasFilters = search.trim() !== '' || selectedCategoryId !== null;
+  const hasFilters = search.trim() !== '' || selectedCategoryId !== null || priceRange !== 'all';
 
   const handleReset = () => {
     setSearch('');
     setSelectedCategoryId(null);
     setPerPage(PAGE_SIZE);
+    setSort('newest');
+    setPriceRange('all');
   };
 
   const categoryName = (id: string | null) =>
     categoriesQuery.data?.data.find((c) => c.id === id)?.name ?? id ?? '';
+
+  const currentSortLabel = SORT_OPTIONS.find((o) => o.value === sort)?.label ?? 'Plus récent';
+  const currentPriceLabel =
+    PRICE_RANGE_OPTIONS.find((o) => o.value === priceRange)?.label ?? 'Tous les prix';
 
   const handleAddToCart = async (id: string) => {
     const lp = items.find((item) => item.id === id);
@@ -148,54 +183,64 @@ export function StorePage() {
                 className="h-8 w-44 rounded-lg border border-slate-200 bg-white pl-8 pr-3 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-(--color-primary)"
               />
             </div>
-            <button
-              type="button"
-              className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors"
-            >
-              Trier par : Plus récent <ChevronDown className="h-4 w-4 text-slate-400" />
-            </button>
-            <div className="flex rounded-lg border border-slate-200 bg-white overflow-hidden">
-              <button
-                type="button"
-                onClick={() => setViewMode('grid')}
-                className={cn(
-                  'p-2 transition-colors',
-                  viewMode === 'grid'
-                    ? 'bg-slate-100 text-slate-800'
-                    : 'text-slate-400 hover:text-slate-600',
-                )}
-                aria-label="Vue grille"
-              >
-                <LayoutGrid className="h-4 w-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode('list')}
-                className={cn(
-                  'p-2 transition-colors',
-                  viewMode === 'list'
-                    ? 'bg-slate-100 text-slate-800'
-                    : 'text-slate-400 hover:text-slate-600',
-                )}
-                aria-label="Vue liste"
-              >
-                <List className="h-4 w-4" />
-              </button>
-            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+                >
+                  Trier : {currentSortLabel} <ChevronDown className="h-4 w-4 text-slate-400" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-40">
+                {SORT_OPTIONS.map((option) => (
+                  <DropdownMenuItem
+                    key={option.value}
+                    onSelect={() => {
+                      setSort(option.value);
+                      setPerPage(PAGE_SIZE);
+                    }}
+                    className="flex items-center justify-between text-xs"
+                  >
+                    {option.label}
+                    {sort === option.value && <Check className="h-3.5 w-3.5 text-primary" />}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+                >
+                  Prix : {currentPriceLabel} <ChevronDown className="h-4 w-4 text-slate-400" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-44">
+                {PRICE_RANGE_OPTIONS.map((option) => (
+                  <DropdownMenuItem
+                    key={option.value}
+                    onSelect={() => {
+                      setPriceRange(option.value);
+                      setPerPage(PAGE_SIZE);
+                    }}
+                    className="flex items-center justify-between text-xs"
+                  >
+                    {option.label}
+                    {priceRange === option.value && <Check className="h-3.5 w-3.5 text-primary" />}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </div>
 
       {/* Grille */}
       {shopQuery.isLoading ? (
-        <div
-          className={cn(
-            'gap-4',
-            viewMode === 'grid'
-              ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
-              : 'grid grid-cols-1',
-          )}
-        >
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {Array.from({ length: PAGE_SIZE }).map((_, i) => (
             <FormationCardSkeleton key={i} />
           ))}
@@ -211,14 +256,7 @@ export function StorePage() {
         </div>
       ) : (
         <>
-          <div
-            className={cn(
-              'gap-4',
-              viewMode === 'grid'
-                ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
-                : 'grid grid-cols-1',
-            )}
-          >
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {items.map((lp) => {
               const cartItem = findItem(lp.id);
 
@@ -260,6 +298,7 @@ export function StorePage() {
                 variant="outline"
                 onClick={() => setPerPage((p) => p + PAGE_SIZE)}
                 disabled={shopQuery.isFetching}
+                className="text-xs"
               >
                 Voir plus ({total - items.length} restantes)
               </Button>

@@ -28,7 +28,6 @@ interface AdminCertificatesTableProps {
   onEdit: (certificate: Certificate) => void;
   onDelete?: (certificate: Certificate) => void;
   onPreview: (certificate: Certificate) => void;
-  tenantNames: Record<string, string>;
 }
 
 export function AdminCertificatesTable({
@@ -45,7 +44,6 @@ export function AdminCertificatesTable({
   onEdit,
   onDelete,
   onPreview,
-  tenantNames,
 }: AdminCertificatesTableProps) {
   const duplicateMutation = useDuplicateCertificate();
   const columns: DataTableColumn<Certificate>[] = [
@@ -97,16 +95,6 @@ export function AdminCertificatesTable({
         ) : (
           <span className="text-xs text-muted-foreground">Non</span>
         ),
-    },
-    {
-      key: 'tenantId',
-      label: 'Tenant',
-      sortable: true,
-      render: (cert) => (
-        <span className="text-xs text-muted-foreground">
-          {tenantNames[cert.tenantId] || cert.tenantId || '—'}
-        </span>
-      ),
     },
     {
       key: 'updatedAt',

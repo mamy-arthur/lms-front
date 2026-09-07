@@ -56,7 +56,7 @@ describe('useUsersListController', () => {
         q: 'bob',
         // Les filtres appliqués par handleSearch précédent sont préservés dans params
         // (handleSearchOnly ne touche pas role/is_active/tenant_id déjà en place)
-        role: paramsAfterFullSearch.role,
+        roles: paramsAfterFullSearch.roles,
         is_active: paramsAfterFullSearch.is_active,
         tenant_id: paramsAfterFullSearch.tenant_id,
       });
@@ -85,7 +85,7 @@ describe('useUsersListController', () => {
 
       expect(result.current.params).toMatchObject({
         q: 'alice',
-        role: 'EDITOR',
+        roles: 'EDITOR',
         is_active: true,
         page: 0,
       });
@@ -115,7 +115,7 @@ describe('useUsersListController', () => {
       act(() => result.current.setDraftRole('all'));
       act(() => result.current.handleSearch());
 
-      expect((result.current.params as Record<string, unknown>).role).toBeUndefined();
+      expect((result.current.params as Record<string, unknown>).roles).toBeUndefined();
     });
   });
 

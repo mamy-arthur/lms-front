@@ -39,6 +39,13 @@ export const evaluationAttemptsApi = {
 };
 
 export const meApi = {
-  enrollments: (params?: { page?: number; per_page?: number }) =>
-    apiGet<ApiMeEnrollmentsResponse>('me/enrollments', params as Record<string, unknown>),
+  enrollments: (params?: {
+    page?: number;
+    per_page?: number;
+    q?: string;
+    status?: string;
+    sort_by?: string;
+    sort_dir?: 'asc' | 'desc';
+    category_id?: string;
+  }) => apiGet<ApiMeEnrollmentsResponse>('me/enrollments', params as Record<string, unknown>),
 };

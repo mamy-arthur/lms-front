@@ -129,58 +129,60 @@ export function SelectModuleDialog({ open, onOpenChange, usedModuleIds, onSelect
           )}
 
           {/* Module grid */}
-          <div className="flex flex-col gap-2 flex-1 min-h-0 overflow-y-auto pr-1">
-            {isLoadingCompetencies && (
-              <div className="col-span-2 flex items-center justify-center py-12">
-                <Loader2 className="size-5 animate-spin text-muted-foreground" />
-              </div>
-            )}
-            {!isLoadingCompetencies &&
-              catalog.map((comp) => {
-                const isAdded = usedModuleIds.includes(comp.id);
-                const hasCourses = comp.coursesCount > 0;
-                const categoryName = comp.category_id
-                  ? (categoryMap.get(comp.category_id) ?? null)
-                  : null;
-                return (
-                  <ModuleCard
-                    key={comp.id}
-                    id={comp.id}
-                    shortname={comp.shortname}
-                    categoryName={categoryName}
-                    courseCount={comp.coursesCount}
-                    isSelected={selected?.id === comp.id}
-                    isAdded={isAdded}
-                    hasCourses={hasCourses}
-                    isExpanded={expandedId === comp.id}
-                    onSelect={() =>
-                      setSelected({
-                        id: comp.id,
-                        name: comp.shortname,
-                        category: categoryName ?? '',
-                      })
-                    }
-                    onToggleExpand={() =>
-                      setExpandedId((prev) => (prev === comp.id ? null : comp.id))
-                    }
-                  />
-                );
-              })}
-            {!isLoadingCompetencies && catalog.length === 0 && (
-              <p className="col-span-2 py-10 text-center text-xs text-muted-foreground">
-                Aucune compétence ne correspond à votre recherche.
-              </p>
-            )}
-            {hasNextPage && (
-              <Button
-                variant="ghost"
-                className="mt-1 w-full text-xs"
-                onClick={() => fetchNextPage()}
-                disabled={isFetchingNextPage}
-              >
-                {isFetchingNextPage ? <Loader2 className="size-3 animate-spin" /> : 'Voir plus'}
-              </Button>
-            )}
+          <div className="flex-1 min-h-0 overflow-y-auto pr-1">
+            <div className="flex flex-col gap-2">
+              {isLoadingCompetencies && (
+                <div className="col-span-2 flex items-center justify-center py-12">
+                  <Loader2 className="size-5 animate-spin text-muted-foreground" />
+                </div>
+              )}
+              {!isLoadingCompetencies &&
+                catalog.map((comp) => {
+                  const isAdded = usedModuleIds.includes(comp.id);
+                  const hasCourses = comp.coursesCount > 0;
+                  const categoryName = comp.category_id
+                    ? (categoryMap.get(comp.category_id) ?? null)
+                    : null;
+                  return (
+                    <ModuleCard
+                      key={comp.id}
+                      id={comp.id}
+                      shortname={comp.shortname}
+                      categoryName={categoryName}
+                      courseCount={comp.coursesCount}
+                      isSelected={selected?.id === comp.id}
+                      isAdded={isAdded}
+                      hasCourses={hasCourses}
+                      isExpanded={expandedId === comp.id}
+                      onSelect={() =>
+                        setSelected({
+                          id: comp.id,
+                          name: comp.shortname,
+                          category: categoryName ?? '',
+                        })
+                      }
+                      onToggleExpand={() =>
+                        setExpandedId((prev) => (prev === comp.id ? null : comp.id))
+                      }
+                    />
+                  );
+                })}
+              {!isLoadingCompetencies && catalog.length === 0 && (
+                <p className="col-span-2 py-10 text-center text-xs text-muted-foreground">
+                  Aucune compétence ne correspond à votre recherche.
+                </p>
+              )}
+              {hasNextPage && (
+                <Button
+                  variant="ghost"
+                  className="mt-1 w-full text-xs"
+                  onClick={() => fetchNextPage()}
+                  disabled={isFetchingNextPage}
+                >
+                  {isFetchingNextPage ? <Loader2 className="size-3 animate-spin" /> : 'Voir plus'}
+                </Button>
+              )}
+            </div>
           </div>
         </div>
 

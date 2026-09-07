@@ -1,8 +1,14 @@
 'use client';
 
+import { ChevronDown, X } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Skeleton } from '@/components/ui/skeleton';
 import { RoleGuard } from '@/modules/auth/guards/RoleGuard';
+import { UserSearch } from '@modules/shared/components/users';
 import { ACCESS } from '@/shared/auth/permissions';
 import { usePurchasedLearningPathList } from '../hooks/usePurchasedLearningPathList';
 import { PurchasedLearningPathEnrollmentDrawer } from './_components/enrollment-drawer';
@@ -15,6 +21,10 @@ export function PurchasedLearningPathList() {
     pageSize,
     total,
     isLoading,
+    search,
+    sort,
+    categoryIds,
+    availableCategories,
     sortedRows,
     statsDrawer,
     assignmentTargetRow,
@@ -22,6 +32,9 @@ export function PurchasedLearningPathList() {
     setPage,
     setStatsDrawer,
     setAssignmentTarget,
+    handleSearchChange,
+    handleCategoryToggle,
+    handleSort,
     handlePageSizeChange,
     handleCreateGroup,
     handleEditGroup,
@@ -32,6 +45,8 @@ export function PurchasedLearningPathList() {
     isDeletingGroup,
     isAssigning,
   } = usePurchasedLearningPathList();
+
+  const selectedCategories = availableCategories.filter((c) => categoryIds.includes(c.id));
 
   return (
     <RoleGuard
@@ -68,18 +83,88 @@ export function PurchasedLearningPathList() {
             </CardContent>
           </Card>
         ) : (
-          <PurchasedLearningPathsTable
-            purchasedLearningPaths={sortedRows}
-            page={page}
-            pageSize={pageSize}
-            total={total}
-            onPageChange={setPage}
-            onPageSizeChange={handlePageSizeChange}
-            onStatClick={(purchasedLearningPath, stat) =>
-              setStatsDrawer({ purchasedLearningPath, stat })
-            }
-            onAssign={(purchasedLearningPath) => setAssignmentTarget(purchasedLearningPath)}
-          />
+          <div className="space-y-4">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <UserSearch value={search} onChange={handleSearchChange} onSearch={() => {}} />
+              <div className="flex items-center gap-2 sm:ml-auto flex-wrap">
+                {availableCategories.length > 0 && (
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="justify-between text-xs font-normal">
+                        {categoryIds.length === 0
+                          ? 'Toutes les catégories'
+                          : `${categoryIds.length} catégorie${categoryIds.length > 1 ? 's' : ''}`}
+                        <ChevronDown className="ml-1 size-3.5 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-52 p-2" align="end">
+                      <div className="space-y-0.5">
+                        {availableCategories.map((cat) => (
+                          <label
+                            key={cat.id}
+                            className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 hover:bg-muted text-xs"
+                          >
+                            <Checkbox
+                              checked={categoryIds.includes(cat.id)}
+                              onCheckedChange={() => handleCategoryToggle(cat.id)}
+                              className="data-[state=checked]:bg-(--color-primary) data-[state=checked]:border-(--color-primary)"
+                            />
+                            {cat.name}
+                          </label>
+                        ))}
+                      </div>
+                      {categoryIds.length > 0 && (
+                        <button
+                          type="button"
+                          className="mt-1.5 w-full rounded px-2 py-1 text-center text-xs text-muted-foreground hover:bg-muted"
+                          onClick={() => categoryIds.forEach((id) => handleCategoryToggle(id))}
+                        >
+                          Effacer
+                        </button>
+                      )}
+                    </PopoverContent>
+                  </Popover>
+                )}
+              </div>
+            </div>
+
+            {selectedCategories.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {selectedCategories.map((cat) => (
+                  <Badge
+                    key={cat.id}
+                    variant="outline"
+                    className="h-6 gap-1 px-2 text-xs font-normal bg-(--color-primary) text-white"
+                  >
+                    {cat.name}
+                    <button
+                      onClick={() => handleCategoryToggle(cat.id)}
+                      className="ml-0.5 rounded-sm opacity-60 hover:opacity-100"
+                      aria-label="Retirer ce filtre"
+                    >
+                      <X className="size-3" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+            )}
+
+            <PurchasedLearningPathsTable
+              purchasedLearningPaths={sortedRows}
+              page={page}
+              pageSize={pageSize}
+              total={total}
+              hasQuery={Boolean(search || categoryIds.length > 0)}
+              sort={sort}
+              onSort={handleSort}
+              onPageChange={setPage}
+              onPageSizeChange={handlePageSizeChange}
+              onStatClick={(purchasedLearningPath, stat) =>
+                setStatsDrawer({ purchasedLearningPath, stat })
+              }
+              onAssign={(purchasedLearningPath) => setAssignmentTarget(purchasedLearningPath)}
+            />
+          </div>
         )}
       </div>
 
