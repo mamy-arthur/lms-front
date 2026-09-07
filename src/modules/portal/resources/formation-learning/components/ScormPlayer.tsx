@@ -82,11 +82,24 @@ export default function ScormPlayer({ enrollmentId, courseId, entryId, onComplet
           <Loader2 className="h-5 w-5 animate-spin" />
         </div>
       )}
+      {/*
+        The effective sandbox is the INTERSECTION of this attribute and the `sandbox`
+        directive in the Content-Security-Policy the backend sends with the asset
+        (learneo-be config/scorm.php → asset_csp_directives.sandbox). A token granted
+        on only one side has no effect, so the two lists must stay in sync — read that
+        config for why each token is granted and why bare `allow-top-navigation` is not.
+
+        `allow` carries the Permissions Policy the iframe needs to delegate: fullscreen
+        video is standard in SCORM content and is gated by this attribute, not by the
+        sandbox. Camera/microphone are intentionally NOT delegated to untrusted content.
+      */}
       <iframe
         key={launch.scorm_package_id}
         title="Contenu SCORM"
         src={isReady ? launch.launch_url : undefined}
-        sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
+        sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals allow-downloads allow-presentation allow-pointer-lock allow-orientation-lock allow-top-navigation-by-user-activation"
+        allow="fullscreen; autoplay; encrypted-media; picture-in-picture; clipboard-write"
+        allowFullScreen
         className={`w-full h-[70vh] rounded-lg border border-slate-200 bg-white ${isReady ? '' : 'hidden'}`}
       />
     </div>
