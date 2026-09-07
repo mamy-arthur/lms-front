@@ -143,6 +143,7 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
     hasPartialForLastModule,
     lastNodeIsEvaluation,
     hasEmailConfigured,
+    lastModuleId,
   } = useMemo(() => {
     const lastNodeId = nodeOrder.at(-1);
     const lastNodeStepType = nodes.find((n) => n.id === lastNodeId)?.data.stepType;
@@ -166,6 +167,10 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
       hasEmailConfigured: nodes.some(
         (n) => n.data.stepType === 'email' && !!n.data.emailTemplateId,
       ),
+      lastModuleId:
+        lastModuleIdx !== -1
+          ? nodes.find((n) => n.id === nodeOrder[lastModuleIdx])?.data.moduleId
+          : undefined,
     };
   }, [nodes, nodeOrder]);
 
@@ -177,6 +182,17 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
   // ── IDs of modules already present in the flow ──
   const usedModuleIds = useMemo(
     () => nodes.filter((n) => n.data.moduleId).map((n) => n.data.moduleId!),
+    [nodes],
+  );
+
+  // ── Module names by id, for display in the evaluation dialog ──
+  const moduleNameById = useMemo(
+    () =>
+      Object.fromEntries(
+        nodes
+          .filter((n) => n.data.stepType === 'module' && n.data.moduleId)
+          .map((n) => [n.data.moduleId!, n.data.label]),
+      ),
     [nodes],
   );
 
@@ -1121,9 +1137,13 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
         evalDialogOpen={evalDialogOpen}
         setEvalDialogOpen={setEvalDialogOpen}
         hasFinalEval={hasFinalEval}
-        hasPartialForLastModule={hasPartialForLastModule}
+        hasPartialForLastModule={hasPartialForLastModule || lastNodeIsEvaluation}
         lastNodeIsEvaluation={lastNodeIsEvaluation}
         allUsedBankIds={allUsedBankIds}
+        learningPathId={learningPathId ?? ''}
+        precedingModuleId={lastModuleId}
+        allModuleIds={usedModuleIds}
+        moduleNameById={moduleNameById}
         onEvalConfirm={handleEvalConfirm}
         attestationDialogOpen={attestationDialogOpen}
         setAttestationDialogOpen={setAttestationDialogOpen}
