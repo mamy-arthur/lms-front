@@ -201,8 +201,9 @@ export function AddEvaluationDialog({
     (sum, id) => sum + (bankCounts[id]?.available ?? 0),
     0,
   );
+  // Le pool doit couvrir le nombre de questions configuré, pas seulement être non-nul
   const poolInsufficient =
-    config.questionBankIds.length > 0 && poolChecked && selectedAvailable === 0;
+    config.questionBankIds.length > 0 && poolChecked && selectedAvailable < config.questionCount;
 
   const canSubmit =
     config.title.trim() !== '' &&
@@ -291,7 +292,7 @@ export function AddEvaluationDialog({
           </div>
 
           {/* ── Duration ── */}
-          <div className="space-y-2">
+          {/*<div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label htmlFor="sw-duration">Activer la durée</Label>
               <Switch
@@ -301,7 +302,7 @@ export function AddEvaluationDialog({
                 className="data-[state=checked]:bg-(--color-primary)"
               />
             </div>
-            {config.durationEnabled && (
+             {config.durationEnabled && (
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-1.5">
                   <Input
@@ -327,7 +328,7 @@ export function AddEvaluationDialog({
                 </div>
               </div>
             )}
-          </div>
+          </div> */}
 
           {/* ── Params ── */}
           <div className="grid grid-cols-2 gap-3">
@@ -466,8 +467,11 @@ export function AddEvaluationDialog({
               <div className="mt-1 flex items-start gap-1.5 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-[11px] text-destructive">
                 <AlertTriangle className="mt-0.5 size-3 shrink-0" />
                 <span>
-                  Aucune question n'est disponible pour les modules concernés dans cette banque de
-                  questions.
+                  {selectedAvailable} question{selectedAvailable !== 1 ? 's' : ''} disponible
+                  {selectedAvailable !== 1 ? 's' : ''} pour les modules concernés dans les banques
+                  sélectionnées, pour {config.questionCount} demandée
+                  {config.questionCount !== 1 ? 's' : ''}. Réduisez le nombre de questions ou
+                  sélectionnez d'autres banques.
                 </span>
               </div>
             )}
