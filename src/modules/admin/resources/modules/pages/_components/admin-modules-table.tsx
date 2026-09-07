@@ -7,7 +7,6 @@ import {
 } from '@/shared/components/ui/DataTable';
 import { formatDate } from '@/shared/lib/date';
 import type { Module } from '../../types';
-import { useCompetencyCategoriesQuery } from '../../hooks/useCompetencyCategoriesQuery';
 import { ModuleActions } from './module-actions';
 
 export type SortConfig = DataTableSort;
@@ -43,12 +42,9 @@ export function AdminModulesTable({
   onDuplicate,
   onDelete,
 }: AdminModulesTableProps) {
-  const { data: categories = [] } = useCompetencyCategoriesQuery();
-  const categoryNameById = new Map(categories.map((c) => [c.id, c.name]));
-
   const columns: DataTableColumn<Module>[] = [
     {
-      key: 'identifier',
+      key: 'idnumber',
       label: 'Référence',
       sortable: true,
       render: (mod) => (
@@ -58,7 +54,7 @@ export function AdminModulesTable({
       ),
     },
     {
-      key: 'name',
+      key: 'shortname',
       label: 'Module',
       sortable: true,
       render: (mod) => (
@@ -68,17 +64,15 @@ export function AdminModulesTable({
       ),
     },
     {
-      key: 'category',
+      key: 'category_name',
       label: 'Catégorie',
       sortable: true,
       render: (mod) => (
-        <span className="text-xs text-muted-foreground">
-          {mod.category_id ? (categoryNameById.get(mod.category_id) ?? '—') : '—'}
-        </span>
+        <span className="text-xs text-muted-foreground">{mod.category_name ?? '—'}</span>
       ),
     },
     {
-      key: 'createdAt',
+      key: 'created_at',
       label: 'Création',
       sortable: true,
       render: (mod) => (

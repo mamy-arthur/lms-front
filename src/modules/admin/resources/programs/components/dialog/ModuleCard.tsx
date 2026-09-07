@@ -34,7 +34,7 @@ export function ModuleCard({
   return (
     <div
       className={cn(
-        'group relative overflow-hidden rounded-lg border transition-all duration-200',
+        'group relative shrink-0 overflow-hidden rounded-lg border transition-all duration-200',
         isDisabled
           ? 'cursor-default'
           : isSelected

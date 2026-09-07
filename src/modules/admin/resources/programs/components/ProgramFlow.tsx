@@ -831,17 +831,29 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
       const pos = { x: Math.round(node.position.x), y: Math.round(node.position.y) };
 
       if (stepType === 'module' && moduleId && onModuleMove) {
-        onModuleMove(moduleId, pos).catch(() => {});
+        onModuleMove(moduleId, pos).catch((err) => {
+          toast.error(getApiErrorMessage(err, "Impossible d'enregistrer la position du module."));
+        });
       } else if (
         (stepType === 'evaluation-intermediate' || stepType === 'evaluation-final') &&
         evaluationId &&
         onEvalMove
       ) {
-        onEvalMove(evaluationId, pos).catch(() => {});
+        onEvalMove(evaluationId, pos).catch((err) => {
+          toast.error(
+            getApiErrorMessage(err, "Impossible d'enregistrer la position de l'évaluation."),
+          );
+        });
       } else if (stepType === 'email' && onMailTemplateMove) {
-        onMailTemplateMove(pos).catch(() => {});
+        onMailTemplateMove(pos).catch((err) => {
+          toast.error(getApiErrorMessage(err, "Impossible d'enregistrer la position de l'email."));
+        });
       } else if (stepType === 'attestation' && onCertificateMove) {
-        onCertificateMove(pos).catch(() => {});
+        onCertificateMove(pos).catch((err) => {
+          toast.error(
+            getApiErrorMessage(err, "Impossible d'enregistrer la position de l'attestation."),
+          );
+        });
       }
     },
     [onModuleMove, onEvalMove, onMailTemplateMove, onCertificateMove],

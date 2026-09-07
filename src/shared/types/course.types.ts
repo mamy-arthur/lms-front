@@ -8,6 +8,7 @@ export interface ApiCourse {
   short_name: string;
   id_number: string | null;
   category_id: string | null;
+  category_name?: string | null;
   visibility: CourseVisibility;
   description: string | null;
   created_at: string;

@@ -58,6 +58,7 @@ export const learningPathCategoryKeys = {
 export const learningPathKeys = {
   all: ['learning-paths'] as const,
   lists: () => [...learningPathKeys.all, 'list'] as const,
+  list: (filters: object) => [...learningPathKeys.lists(), filters] as const,
   detail: (id: string) => [...learningPathKeys.all, 'detail', id] as const,
 };
 
@@ -157,4 +158,11 @@ export const progressionRuleKeys = {
   all: ['progression-rules'] as const,
   listByLearningPath: (learningPathId: string) =>
     [...progressionRuleKeys.all, 'list', learningPathId] as const,
+};
+
+export const competencyKeys = {
+  all: ['admin', 'modules'] as const,
+  lists: () => [...competencyKeys.all, 'list'] as const,
+  list: (filters: object) => [...competencyKeys.lists(), filters] as const,
+  detail: (id: string) => [...competencyKeys.all, 'detail', id] as const,
 };

@@ -61,6 +61,7 @@ export interface ApiLearningPath {
   description: string | null;
   idnumber: string | null;
   category_id: string | null;
+  category_name?: string | null;
   price: number | null;
   currency: string | null;
   image: ApiLearningPathImage | null;
@@ -73,7 +74,8 @@ export interface ApiLearningPath {
   is_sellable: boolean;
   /** Durée estimée du parcours en minutes */
   duration: number | null;
-  competencies: ApiLearningPathCompetency[];
+  competencies?: ApiLearningPathCompetency[];
+  competencies_count?: number;
   /** Only present in detail endpoint responses — absent from list/shop endpoints */
   evaluations?: ApiLearningPathEvaluation[];
   /** Mail template attached as the first node of the LP — id + name only, null if none attached yet. Present in both list and detail responses. */

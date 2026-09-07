@@ -8,12 +8,44 @@ import type {
   UpdateQuizItemPayload,
 } from '@/shared/types/question-bank.types';
 
+export interface QuestionBankListParams {
+  learning_path_id?: string;
+  competency_id?: string;
+  q?: string;
+  sort_by?: string;
+  sort_dir?: 'asc' | 'desc';
+  sort_order?: 'asc' | 'desc';
+  page?: number;
+  per_page?: number;
+}
+
+export interface QuizListParams {
+  types?: string;
+  competency_ids?: string;
+  q?: string;
+  sort_by?: string;
+  sort_dir?: 'asc' | 'desc';
+  sort_order?: 'asc' | 'desc';
+  page?: number;
+  per_page?: number;
+}
+
 export const questionBanksApi = {
-  list: (params?: { learning_path_id?: string }) =>
-    apiGet<{ data: ApiQuestionBank[] }>(
-      'platform/question-banks',
-      params as Record<string, unknown>,
-    ),
+  list: (params?: QuestionBankListParams) => {
+    const p: Record<string, unknown> = {};
+    if (params?.learning_path_id) p.learning_path_id = params.learning_path_id;
+    if (params?.competency_id) p.competency_id = params.competency_id;
+    if (params?.page !== undefined) p.page = params.page;
+    if (params?.per_page !== undefined) p.per_page = params.per_page;
+    if (params?.q) p.q = params.q;
+    if (params?.sort_by) p.sort_by = params.sort_by;
+    if (params?.sort_dir ?? params?.sort_order) p.sort_dir = params?.sort_dir ?? params?.sort_order;
+    const hasParams = Object.keys(p).length > 0;
+    return apiGet<{
+      data: ApiQuestionBank[];
+      meta?: { total?: number; current_page?: number; per_page?: number };
+    }>('platform/question-banks', hasParams ? p : undefined);
+  },
 
   getById: (id: string) => apiGet<ApiQuestionBank>(`platform/question-banks/${id}`),
 
@@ -25,11 +57,28 @@ export const questionBanksApi = {
 
   deactivate: (id: string) => apiPatch<ApiQuestionBank>(`platform/question-banks/${id}/deactivate`),
 
-  listQuizzes: (questionBankId: string, params?: { type?: string }) =>
-    apiGet<{ data: ApiQuizItem[] }>(
+  listQuizzes: (questionBankId: string, params?: QuizListParams) => {
+    const p: Record<string, unknown> = {};
+    if (params?.types) p.types = params.types;
+    if (params?.competency_ids) p.competency_ids = params.competency_ids;
+    if (params?.q) p.q = params.q;
+    if (params?.sort_by) p.sort_by = params.sort_by;
+    if (params?.sort_dir ?? params?.sort_order) p.sort_dir = params?.sort_dir ?? params?.sort_order;
+    if (params?.page !== undefined) p.page = params.page;
+    if (params?.per_page !== undefined) p.per_page = params.per_page;
+    return apiGet<{
+      data: ApiQuizItem[];
+      meta?: {
+        total?: number;
+        current_page?: number;
+        per_page?: number;
+        competency_ids?: string[];
+      };
+    }>(
       `platform/question-banks/${questionBankId}/quizzes`,
-      params as Record<string, unknown>,
-    ),
+      Object.keys(p).length > 0 ? p : undefined,
+    );
+  },
 
   createQuizItem: (questionBankId: string, data: CreateQuizItemPayload) =>
     apiPost<ApiQuizItem>(`platform/question-banks/${questionBankId}/quizzes`, data),

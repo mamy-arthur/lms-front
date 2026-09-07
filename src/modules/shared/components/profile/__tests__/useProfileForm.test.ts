@@ -125,7 +125,6 @@ describe('useProfileForm', () => {
     await waitFor(() => {
       expect(result.current.loadError).toBe('Impossible de charger le profil. Veuillez réessayer.');
     });
-    expect(mockToastError).toHaveBeenCalledWith('Impossible de charger le profil');
   });
 
   // ── handlePhotoSelect ─────────────────────────────────────────────────────

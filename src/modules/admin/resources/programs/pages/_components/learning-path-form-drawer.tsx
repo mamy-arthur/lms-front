@@ -85,6 +85,7 @@ import type {
 } from '@/shared/types/progression-rule.types';
 import {
   DURATION_UNITS,
+  VALIDITY_UNITS,
   durationToMinutes,
   minutesToDuration,
   type DurationUnit,
@@ -106,7 +107,7 @@ const schema = z
     show_in_shop: z.boolean().optional(),
     duration_value: z.number().min(0).nullable().optional(),
     duration_unit: durationUnitSchema.optional(),
-    validity_value: z.number().min(1).nullable().optional(),
+    validity_value: z.number().min(0.1).nullable().optional(),
     validity_unit: durationUnitSchema.optional(),
   })
   .refine(
@@ -711,6 +712,13 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
   const watchedCategoryId = watch('category_id');
   const watchedShowInShop = watch('show_in_shop');
 
+  const validityEquivalentDays = useMemo(() => {
+    if (watchedValidityValue === null || watchedValidityValue === undefined) return null;
+    const totalMinutes = toApiDuration(watchedValidityValue, watchedValidityUnit);
+    if (totalMinutes === null) return null;
+    return Math.round((totalMinutes / 1_440) * 10) / 10;
+  }, [watchedValidityValue, watchedValidityUnit]);
+
   // Sync form state when drawer opens — only once per open, not on every refetch
   useEffect(() => {
     if (!open) {
@@ -1173,14 +1181,14 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
                     <Input
                       id="lp-validity"
                       type="number"
-                      min={1}
-                      step={1}
-                      placeholder="Ex: 3"
+                      min={0.1}
+                      step={0.1}
+                      placeholder="Ex: 1.5"
                       className="h-8 text-sm"
                       value={watchedValidityValue ?? ''}
                       onChange={(e) => {
                         const val = e.target.value;
-                        setValue('validity_value', val === '' ? null : Math.round(Number(val)));
+                        setValue('validity_value', val === '' ? null : parseFloat(val));
                       }}
                     />
                     <Select
@@ -1191,7 +1199,7 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {DURATION_UNITS.map((u) => (
+                        {VALIDITY_UNITS.map((u) => (
                           <SelectItem key={u.value} value={u.value}>
                             {u.label}
                           </SelectItem>
@@ -1199,6 +1207,11 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
                       </SelectContent>
                     </Select>
                   </div>
+                  {validityEquivalentDays !== null && watchedValidityUnit !== 'days' && (
+                    <p className="text-[11px] text-muted-foreground">
+                      ≈ {validityEquivalentDays} jour{validityEquivalentDays > 1 ? 's' : ''}
+                    </p>
+                  )}
                   {errors.validity_value && (
                     <p className="text-xs text-destructive">{errors.validity_value.message}</p>
                   )}

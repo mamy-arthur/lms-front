@@ -29,6 +29,7 @@ export function mapApiCourse(api: ApiCourse): Course {
     fullName: api.full_name,
     shortName: api.short_name,
     categoryId: api.category_id,
+    categoryName: api.category_name ?? null,
     identifier: api.id_number,
     visible: api.visibility === 'PUBLISHED',
     visibility: api.visibility,

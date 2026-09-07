@@ -1,23 +1,27 @@
 'use client';
 
-import { MoreHorizontal, Pencil, Plus, Search, Settings2, MapIcon } from 'lucide-react';
-import { memo, useCallback, useMemo, useState } from 'react';
+import { MoreHorizontal, Pencil, Plus, Settings2, MapIcon, ChevronDown, X } from 'lucide-react';
+import { memo, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  // DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import { DataTable, type DataTableColumn } from '@/shared/components/ui/DataTable';
+import {
+  DataTable,
+  type DataTableColumn,
+  type DataTableSort,
+} from '@/shared/components/ui/DataTable';
+import { ModuleSearch } from '@modules/shared/components/modules';
 import { formatDate } from '@/shared/lib/date';
 import { formatDuration } from '../../lib/duration';
 import type { LearningPath, LearningPathCategory } from '../../types';
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function PriceBadge({ path }: { path: LearningPath }) {
   if (path.price === null || path.price === undefined) {
@@ -48,41 +52,51 @@ function StatusBadge({ isPublished }: { isPublished: boolean }) {
   );
 }
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
 type Props = {
   learningPaths: LearningPath[];
   categories: LearningPathCategory[];
   isLoading: boolean;
+  hasQuery: boolean;
+  page: number;
+  pageSize: number;
+  total: number;
+  sort: DataTableSort;
+  draftSearch: string;
+  onDraftSearchChange: (v: string) => void;
+  onSearch: () => void;
+  selectedCategories: string[];
+  onCategoryChange: (value: string) => void;
+  onSort: (column: string) => void;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (size: number) => void;
   onNew?: () => void;
   onEdit?: (path: LearningPath) => void;
   onDelete?: (id: string) => void;
   onManageCategories?: () => void;
 };
 
-// ─── Component ────────────────────────────────────────────────────────────────
-
 function LearningPathsTableBase({
   learningPaths,
   categories,
   isLoading,
+  hasQuery,
+  page,
+  pageSize,
+  total,
+  sort,
+  draftSearch,
+  onDraftSearchChange,
+  onSearch,
+  selectedCategories,
+  onCategoryChange,
+  onSort,
+  onPageChange,
+  onPageSizeChange,
   onNew,
   onEdit,
   onDelete,
   onManageCategories,
 }: Props) {
-  const [search, setSearch] = useState('');
-
-  const categoryById = useMemo(
-    () => Object.fromEntries(categories.map((c) => [c.id, c.name])),
-    [categories],
-  );
-
-  const filtered = useMemo(() => {
-    if (!search.trim()) return learningPaths;
-    return learningPaths.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()));
-  }, [learningPaths, search]);
-
   const ActionMenu = useCallback(
     function ActionMenu({ item }: { item: LearningPath }) {
       return (
@@ -103,14 +117,6 @@ function LearningPathsTableBase({
                 <Pencil className="mr-2 size-3.5 text-muted-foreground" />
                 Modifier
               </DropdownMenuItem>
-              {/* <DropdownMenuSeparator /> */}
-              {/* <DropdownMenuItem
-                className="text-destructive focus:text-destructive"
-                onClick={() => onDelete?.(item.id)}
-              >
-                <Trash2 className="mr-2 size-3.5" />
-                Supprimer
-              </DropdownMenuItem> */}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -147,13 +153,11 @@ function LearningPathsTableBase({
         ),
       },
       {
-        key: 'category',
+        key: 'category_name',
         label: 'Catégorie',
         sortable: true,
         render: (row) => (
-          <span className="text-xs text-muted-foreground">
-            {row.categoryId ? (categoryById[row.categoryId] ?? '—') : '—'}
-          </span>
+          <span className="text-xs text-muted-foreground">{row.categoryName ?? '—'}</span>
         ),
         skeleton: <Skeleton className="h-4 w-24" />,
       },
@@ -167,7 +171,7 @@ function LearningPathsTableBase({
       {
         key: 'duration',
         label: 'Durée',
-        sortable: true,
+        sortable: false,
         render: (row) => (
           <span className="text-xs text-muted-foreground tabular-nums">
             {formatDuration(row.duration)}
@@ -176,14 +180,25 @@ function LearningPathsTableBase({
         skeleton: <Skeleton className="h-4 w-20" />,
       },
       {
+        key: 'validity',
+        label: 'Validité',
+        sortable: false,
+        render: (row) => (
+          <span className="text-xs text-muted-foreground tabular-nums">
+            {formatDuration(row.validity)}
+          </span>
+        ),
+        skeleton: <Skeleton className="h-4 w-20" />,
+      },
+      {
         key: 'isPublished',
         label: 'Statut',
-        sortable: true,
-        render: (row) => <StatusBadge isPublished={row.showInShop} />,
+        sortable: false,
+        render: (row) => <StatusBadge isPublished={row.isPublished} />,
         skeleton: <Skeleton className="h-5 w-16 rounded-full" />,
       },
       {
-        key: 'publishedAt',
+        key: 'published_at',
         label: 'Date de publication',
         sortable: true,
         render: (row) => (
@@ -200,22 +215,49 @@ function LearningPathsTableBase({
         render: (row) => <ActionMenu item={row} />,
       },
     ],
-    [ActionMenu, categoryById],
+    [ActionMenu],
   );
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center gap-3">
-        <div className="relative flex-1 max-w-xs">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Rechercher un parcours..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 h-8 text-sm"
-          />
-        </div>
-        <div className="flex gap-2">
+      <div className="flex justify-between items-center gap-3 flex-wrap">
+        <ModuleSearch value={draftSearch} onChange={onDraftSearchChange} onSearch={onSearch} />
+        <div className="flex gap-2 flex-wrap items-center">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="w-auto justify-between text-xs font-normal">
+                {selectedCategories.length === 0
+                  ? 'Toutes les catégories'
+                  : `${selectedCategories.length} catégorie${selectedCategories.length > 1 ? 's' : ''}`}
+                <ChevronDown className="ml-1 size-3.5 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-60 p-2" align="end">
+              <div className="space-y-0.5">
+                {categories.map((cat) => (
+                  <label
+                    key={cat.id}
+                    className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 hover:bg-muted text-xs"
+                  >
+                    <Checkbox
+                      checked={selectedCategories.includes(cat.id)}
+                      onCheckedChange={() => onCategoryChange(cat.id)}
+                      className="mt-0.5 data-[state=checked]:bg-(--color-primary) data-[state=checked]:border-(--color-primary)"
+                    />
+                    {cat.name}
+                  </label>
+                ))}
+              </div>
+              {selectedCategories.length > 0 && (
+                <button
+                  className="mt-1.5 w-full rounded px-2 py-1 text-center text-xs text-muted-foreground hover:bg-muted"
+                  onClick={() => onCategoryChange('all')}
+                >
+                  Effacer le filtre
+                </button>
+              )}
+            </PopoverContent>
+          </Popover>
           <Button variant="outline" onClick={onManageCategories} className="gap-1.5">
             <Settings2 />
             Gérer les catégories
@@ -229,11 +271,36 @@ function LearningPathsTableBase({
           </Button>
         </div>
       </div>
+
+      {selectedCategories.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {selectedCategories.map((id) => {
+            const cat = categories.find((c) => c.id === id);
+            return (
+              <Badge
+                key={id}
+                variant="outline"
+                className="h-6 gap-1 px-2 text-xs font-normal bg-(--color-primary) text-white"
+              >
+                {cat?.name ?? id}
+                <button
+                  onClick={() => onCategoryChange(id)}
+                  className="ml-0.5 rounded-sm opacity-60 hover:opacity-100"
+                  aria-label="Retirer ce filtre"
+                >
+                  <X className="size-3" />
+                </button>
+              </Badge>
+            );
+          })}
+        </div>
+      )}
+
       <DataTable
-        data={filtered}
+        data={learningPaths}
         columns={columns}
         isLoading={isLoading}
-        hasQuery={search.trim().length > 0}
+        hasQuery={hasQuery}
         onRowClick={onEdit}
         emptyState={{
           icon: <MapIcon className="size-6 text-muted-foreground" />,
@@ -242,12 +309,13 @@ function LearningPathsTableBase({
           filteredTitle: 'Aucun résultat',
           filteredDescription: 'Aucun parcours ne correspond à votre recherche.',
         }}
-        page={1}
-        pageSize={25}
-        total={filtered.length}
-        onPageChange={() => {}}
-        onPageSizeChange={() => {}}
-        hidePaginationWhenSinglePage
+        page={page}
+        pageSize={pageSize}
+        total={total}
+        sort={sort}
+        onSort={onSort}
+        onPageChange={onPageChange}
+        onPageSizeChange={onPageSizeChange}
       />
     </div>
   );

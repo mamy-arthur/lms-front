@@ -29,8 +29,28 @@ export const learningPathCategoriesApi = {
   remove: (id: string) => apiDelete(`platform/learning-path-categories/${id}`),
 };
 
+export interface LearningPathListParams {
+  page?: number;
+  per_page?: number;
+  q?: string;
+  category_ids?: string;
+  sort_by?: string;
+  sort_dir?: 'asc' | 'desc';
+}
+
 export const learningPathsApi = {
-  list: () => apiGet<{ data: ApiLearningPath[] }>('platform/learning-paths'),
+  list: (params: LearningPathListParams = {}) =>
+    apiGet<{
+      data: ApiLearningPath[];
+      meta?: { total?: number; current_page?: number; per_page?: number };
+    }>('platform/learning-paths', {
+      page: params.page ?? 1,
+      per_page: params.per_page ?? 25,
+      q: params.q,
+      category_ids: params.category_ids,
+      sort_by: params.sort_by,
+      sort_dir: params.sort_dir,
+    }),
 
   get: (id: string) => apiGet<{ data: ApiLearningPath }>(`platform/learning-paths/${id}`),
 

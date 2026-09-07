@@ -3,7 +3,6 @@
 import { memo, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { Loader2, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -27,13 +26,7 @@ import { extractApiError } from '@/shared/utils/api-error';
 import { useCreateQuiz } from '../hooks/useCreateQuiz';
 import { useUpdateQuiz } from '../hooks/useUpdateQuiz';
 import type { Quiz } from '../types';
-
-const schema = z.object({
-  title: z.string().min(1, 'Titre requis').max(255),
-  description: z.string().nullable().optional(),
-});
-
-type FormValues = z.infer<typeof schema>;
+import { quizSchema, type QuizFormValues } from '../validation';
 
 export interface AdminQuizFormDrawerProps {
   open: boolean;
@@ -58,8 +51,8 @@ function AdminQuizFormDrawerBase({
   const updateMutation = useUpdateQuiz();
   const mutation = isEdit ? updateMutation : createMutation;
 
-  const form = useForm<FormValues>({
-    resolver: zodResolver(schema),
+  const form = useForm<QuizFormValues>({
+    resolver: zodResolver(quizSchema),
     defaultValues: { title: '', description: null },
   });
 
@@ -72,7 +65,7 @@ function AdminQuizFormDrawerBase({
     }
   }, [open, source, form]);
 
-  const onSubmit = async (values: FormValues) => {
+  const onSubmit = async (values: QuizFormValues) => {
     try {
       if (isEdit && quiz) {
         await updateMutation.mutateAsync({

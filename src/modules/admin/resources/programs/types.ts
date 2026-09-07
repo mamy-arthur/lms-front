@@ -1,38 +1,3 @@
-import type { Edge, Node } from '@xyflow/react';
-import type { StepNodeData, EdgeRuleData } from './components/ProgramFlow';
-
-// ─── Legacy form values (formerly in ProgramFormPanel) ───────────────────────
-
-export type ProgramFormValues = {
-  name: string;
-  description: string;
-  visible: boolean;
-  deadline: Date | null | undefined;
-  category: string;
-  image: string | null;
-  publishedAt: Date | null | undefined;
-  author: string;
-  cost: string;
-  currency: string;
-};
-
-// ─── Legacy flow types (ProgramFlow) ─────────────────────────────────────────
-
-export type StoredFlowData = {
-  nodes: Node<StepNodeData, 'programStep'>[];
-  edges: Edge<EdgeRuleData>[];
-  nodeOrder: string[];
-};
-
-export type StoredProgram = {
-  id: string;
-  status: 'Publié' | 'Brouillon' | 'Archivé';
-  formValues: ProgramFormValues;
-  flow: StoredFlowData;
-  createdAt: string;
-  updatedAt: string;
-};
-
 // ─── Learning Path domain types ───────────────────────────────────────────────
 
 export type {
@@ -82,6 +47,7 @@ export interface LearningPath {
   description: string | null;
   idnumber: string | null;
   categoryId: string | null;
+  categoryName?: string | null;
   price: number | null;
   currency: string | null;
   image: LearningPathImage | null;
@@ -133,6 +99,7 @@ export function normalizeLearningPath(api: ApiLearningPath): LearningPath {
     description: api.description,
     idnumber: api.idnumber,
     categoryId: api.category_id,
+    categoryName: api.category_name ?? null,
     price: api.price,
     currency: api.currency,
     image: api.image
@@ -145,7 +112,7 @@ export function normalizeLearningPath(api: ApiLearningPath): LearningPath {
     isSellable: api.is_sellable,
     duration: api.duration ?? null,
     validity: api.validity ?? null,
-    competencies: api.competencies.map((c) => ({
+    competencies: (api.competencies ?? []).map((c) => ({
       competencyId: c.competency_id,
       position: c.position,
       locationX: c.location_x ?? null,

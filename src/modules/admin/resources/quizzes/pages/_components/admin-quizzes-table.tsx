@@ -155,7 +155,7 @@ function AdminQuizzesTableBase({
       //   ),
       // },
       {
-        key: 'updatedAt',
+        key: 'updated_at',
         label: 'Dernière modification',
         sortable: true,
         render: (quiz) => (

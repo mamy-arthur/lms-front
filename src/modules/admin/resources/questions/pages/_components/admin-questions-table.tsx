@@ -36,6 +36,7 @@ export type SortConfig = DataTableSort;
 
 interface AdminQuestionsTableProps {
   questions: Question[];
+  moduleNameById?: Map<string, string>;
   isLoading?: boolean;
   hasQuery?: boolean;
   page: number;
@@ -51,6 +52,7 @@ interface AdminQuestionsTableProps {
 
 function AdminQuestionsTableBase({
   questions,
+  moduleNameById,
   isLoading = false,
   hasQuery = false,
   page,
@@ -102,7 +104,7 @@ function AdminQuestionsTableBase({
   const columns: DataTableColumn<Question>[] = useMemo(
     () => [
       {
-        key: 'referenceNumber',
+        key: 'idnumber',
         label: 'Référence',
         sortable: true,
         render: (q) => (
@@ -123,6 +125,16 @@ function AdminQuestionsTableBase({
         ),
       },
       {
+        key: 'competencyId',
+        label: 'Module',
+        sortable: false,
+        render: (q) => (
+          <span className="text-xs text-muted-foreground">
+            {q.competencyId ? (moduleNameById?.get(q.competencyId) ?? '—') : '—'}
+          </span>
+        ),
+      },
+      {
         key: 'text',
         label: 'Question',
         sortable: false,
@@ -133,7 +145,7 @@ function AdminQuestionsTableBase({
         ),
       },
       {
-        key: 'updatedAt',
+        key: 'updated_at',
         label: 'Dernière modification',
         sortable: true,
         render: (q) => (
@@ -149,7 +161,7 @@ function AdminQuestionsTableBase({
         render: (q) => <ActionMenu item={q} />,
       },
     ],
-    [onEdit, onDelete],
+    [onEdit, onDelete, moduleNameById],
   );
 
   return (

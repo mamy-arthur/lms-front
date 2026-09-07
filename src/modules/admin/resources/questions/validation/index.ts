@@ -140,12 +140,12 @@ export function buildQuestionPayload(values: FormValues, questionBankId: string)
       ...(o.id ? { id: o.id } : {}),
       label: o.label,
       isCorrect: o.isCorrect,
-      ...(values.type === 'multiple_choice' ? { weight_percentage: o.weightPercentage ?? 0 } : {}),
+      ...(values.type === 'multiple_choice' ? { weightPercentage: o.weightPercentage ?? 0 } : {}),
     })),
     pairs: values.pairs.map((p) => ({
       left: p.left,
       right: p.right,
-      weight_percentage: Math.round(100 / values.pairs.length),
+      weightPercentage: Math.round(100 / values.pairs.length),
     })),
   };
 }

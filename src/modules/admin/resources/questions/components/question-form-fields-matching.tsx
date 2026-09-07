@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { FieldContent, FieldError, FieldGroup, FieldLabel, FieldRoot } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import type { FormValues } from './question-form-data';
+import type { FormValues } from '../validation';
 
 interface MatchingFieldsProps {
   form: UseFormReturn<FormValues>;

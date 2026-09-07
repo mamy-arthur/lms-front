@@ -1,5 +1,19 @@
-import type { Module } from '@/modules/shared/lib/normalizers';
-export type { Module };
+export interface Module {
+  id: string;
+  shortname: string;
+  idnumber: string;
+  description: string;
+  /** Competency category id (backend field `category_id`). */
+  category_id: string | null;
+  /** Resolved category name from the list endpoint JOIN. */
+  category_name: string | null;
+  tenantId: string;
+  courseIds: string[];
+  /** Total linked courses — from `courses_count` (list endpoint doesn't return full course ids/objects). */
+  coursesCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export interface ModulePayload {
   shortname: string;
@@ -16,7 +30,7 @@ export type UpdateModulePayload = ModulePayload;
 
 export interface ModuleSearchParams {
   q?: string;
-  /** Frontend-only — not sent to the API (pour l'instant). */
+  /** Comma-separated category ids — sent to the API as `category_ids`. */
   category?: string;
   sort_by?: string;
   sort_dir?: 'asc' | 'desc';
@@ -43,6 +57,8 @@ export interface CompetencyApiResponse {
   description?: string | null;
   tenant_id?: string | null;
   category_id?: string | null;
+  category_name?: string | null;
+  courses_count?: number;
   /** Course objects on detail/duplicate endpoints */
   courses?: Array<{ id: string }>;
   /** Course UUID array on list/create/update endpoints */
@@ -110,8 +126,10 @@ export function normalizeModule(raw: CompetencyApiResponse): Module {
     idnumber: raw.idnumber ?? '',
     description: raw.description ?? '',
     category_id: raw.category_id ?? null,
+    category_name: raw.category_name ?? null,
     tenantId: raw.tenant_id ?? '',
     courseIds,
+    coursesCount: raw.courses_count ?? courseIds.length,
     createdAt: raw.created_at ?? '',
     updatedAt: raw.updated_at ?? '',
   };
