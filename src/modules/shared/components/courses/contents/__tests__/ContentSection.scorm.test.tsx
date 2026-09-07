@@ -86,6 +86,7 @@ function makeEntry(overrides: Partial<ApiContentEntry> = {}): ApiContentEntry {
     id: 'entry-1',
     content_type_id: 'ct-scorm',
     course_section_id: 'section-1',
+    rank: 0,
     content_type_version: 1,
     data: {},
     is_published: false,
