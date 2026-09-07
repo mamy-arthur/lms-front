@@ -29,6 +29,7 @@ export const ROUTES = {
     certificate: '/admin/certificates',
     mailTemplates: '/admin/mail-templates',
     contentTypes: '/admin/content-types',
+    twoFactor: '/admin/two-factor',
     clientEvaluationNotes: '/admin/evaluation-notes',
   },
   portal: {

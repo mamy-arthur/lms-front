@@ -1,6 +1,6 @@
 'use client';
 
-import { Ban, CheckCircle, Eye, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { Ban, CheckCircle, Eye, MoreHorizontal, Pencil, ShieldOff, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -17,6 +17,8 @@ export interface UserActionsProps {
   onEdit?: () => void;
   onToggleActive?: () => void;
   onDelete?: () => void;
+  /** Réservé au SuperAdmin : omettre la prop masque l'entrée. */
+  onResetTwoFactor?: () => void;
 }
 
 export function UserActions({
@@ -26,6 +28,7 @@ export function UserActions({
   onEdit,
   onToggleActive,
   onDelete,
+  onResetTwoFactor,
 }: UserActionsProps) {
   return (
     <DropdownMenu>
@@ -72,6 +75,12 @@ export function UserActions({
               {isActive ? 'Désactiver' : 'Activer'}
             </DropdownMenuItem>
           </>
+        )}
+        {onResetTwoFactor && (
+          <DropdownMenuItem onClick={onResetTwoFactor}>
+            <ShieldOff className="mr-2 size-3.5 text-muted-foreground" />
+            Réinitialiser le 2FA
+          </DropdownMenuItem>
         )}
         {onDelete && (
           <DropdownMenuItem onClick={onDelete} className="text-destructive focus:text-destructive">
