@@ -105,7 +105,10 @@ export default function FormationPlayer({ enrollmentId }: Props) {
         >
           <Menu className="size-4 text-slate-500" />
         </button>
-        <main className="min-h-[85vh] max-h-[85vh]">
+        {/* Cadre de hauteur fixe, mais conteneur flex : c'est FormationContentView
+            qui place la zone scrollable, de sorte que sa barre d'action reste
+            visible sous le contenu au lieu d'être poussée hors du cadre. */}
+        <main className="flex h-[85vh] flex-col overflow-hidden">
           <FormationContentView
             formation={formation}
             resolved={resolved}
