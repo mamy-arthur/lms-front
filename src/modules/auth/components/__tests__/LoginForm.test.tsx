@@ -234,6 +234,7 @@ describe('LoginForm', () => {
         challenge_token: 'chal-123',
         expires_in: 600,
         code_length: 6,
+        resend_cooldown_seconds: 0,
       },
     };
 
@@ -308,6 +309,20 @@ describe('LoginForm', () => {
           expect.objectContaining({ trust_device: true }),
         );
       });
+    });
+
+    it('desactive le renvoi tant que le cooldown du dernier envoi court', async () => {
+      const user = userEvent.setup();
+      mockResolveLogin.mockResolvedValue({
+        ...CHALLENGE,
+        challenge: { ...CHALLENGE.challenge, resend_cooldown_seconds: 45 },
+      });
+      render(<LoginForm />);
+
+      await fillAndSubmit(user, VALID_CREDENTIALS.email, VALID_CREDENTIALS.password);
+      await screen.findByText(/vérification en deux étapes/i);
+
+      expect(screen.getByRole('button', { name: /renvoyer dans 45s/i })).toBeDisabled();
     });
 
     it('revient à la saisie du mot de passe via « Retour à la connexion »', async () => {

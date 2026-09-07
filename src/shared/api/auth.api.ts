@@ -30,6 +30,8 @@ export interface TwoFactorChallenge {
   expires_in: number;
   /** Nombre de chiffres attendus, configurable de 6 à 10 côté backend. */
   code_length: number;
+  /** Délai avant qu'un renvoi soit accepté, décompté depuis le dernier envoi. */
+  resend_cooldown_seconds: number;
 }
 
 /**

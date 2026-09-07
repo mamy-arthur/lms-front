@@ -133,6 +133,7 @@ describe('authApi', () => {
       challenge_token: 'chal-123',
       expires_in: 600,
       code_length: 6,
+      resend_cooldown_seconds: 30,
     };
 
     it('login retourne un challenge sans tenter de mapper user', async () => {

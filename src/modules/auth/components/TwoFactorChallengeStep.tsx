@@ -34,7 +34,8 @@ export function TwoFactorChallengeStep({
   const [isVerifying, setIsVerifying] = React.useState(false);
   const [isResending, setIsResending] = React.useState(false);
   const [expiresIn, setExpiresIn] = React.useState(challenge.expires_in);
-  const [cooldown, setCooldown] = React.useState(0);
+  // Le backend décompte le cooldown depuis le dernier envoi, envoi initial compris.
+  const [cooldown, setCooldown] = React.useState(challenge.resend_cooldown_seconds);
 
   useCountdown(expiresIn, setExpiresIn);
   useCountdown(cooldown, setCooldown);
@@ -76,6 +77,7 @@ export function TwoFactorChallengeStep({
       const next = await onResend();
       setCurrent(next);
       setExpiresIn(next.expires_in);
+      setCooldown(next.resend_cooldown_seconds);
       setCode('');
     } catch (err) {
       const mapped = mapTwoFactorError(err);
