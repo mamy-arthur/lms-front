@@ -1,7 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { AlertCircle, Loader2, Trash } from 'lucide-react';
+import { AlertCircle, Check, Loader2, Trash, type LucideIcon } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { FileUploadField } from '@/modules/shared/components/input-upload/FileUploadField';
 import type { ScormPackageStatus } from '@/shared/api/scorm.api';
@@ -17,11 +18,65 @@ import {
 } from '@/shared/hooks/useScormPackageChannel';
 import { extractErrorMessage, formatFileSize } from './media-utils';
 
-const PROCESSING_LABELS: Record<string, string> = {
-  pending: 'En attente de traitement…',
-  extracting: 'Extraction du package…',
-  extracted: 'Analyse du manifeste…',
+/**
+ * Présentation du statut sous forme de badge.
+ *
+ * Le statut était rendu en gris `text-muted-foreground`, à la même taille que la
+ * taille du fichier juste en dessous : il se lisait comme une métadonnée parmi
+ * d'autres. Or c'est l'information qui décide si le contenu est publiable ou non
+ * — d'où un badge coloré, avec une icône qui tourne tant que le traitement dure.
+ */
+const STATUS_BADGE: Record<
+  ScormPackageStatus,
+  { label: string; icon: LucideIcon; spin?: boolean; className: string }
+> = {
+  pending: {
+    label: 'En attente',
+    icon: Loader2,
+    spin: true,
+    className: 'bg-slate-100 text-slate-600',
+  },
+  extracting: {
+    label: 'Extraction…',
+    icon: Loader2,
+    spin: true,
+    className: 'bg-blue-100 text-blue-700',
+  },
+  extracted: {
+    label: 'Analyse du manifeste…',
+    icon: Loader2,
+    spin: true,
+    className: 'bg-blue-100 text-blue-700',
+  },
+  ready: {
+    label: 'Prêt',
+    icon: Check,
+    className: 'bg-emerald-100 text-emerald-700',
+  },
+  failed: {
+    label: 'Échec',
+    icon: AlertCircle,
+    className: 'bg-destructive/10 text-destructive',
+  },
 };
+
+function ScormStatusBadge({
+  status,
+  version,
+}: {
+  status: ScormPackageStatus;
+  version: string | null;
+}) {
+  const { label, icon: Icon, spin, className } = STATUS_BADGE[status];
+
+  return (
+    <Badge className={className}>
+      <Icon className={spin ? 'animate-spin' : undefined} />
+      {label}
+      {status === 'ready' && version && ` · v${version}`}
+    </Badge>
+  );
+}
 
 export interface ScormPackageFieldState {
   packageId: string | null;
@@ -133,12 +188,12 @@ export function ScormPackageField({ attachedPackageId, onStateChange }: ScormPac
 
           <div className="flex-1 min-w-0 pr-7">
             <span className="block truncate text-xs font-medium">{pkg.original_filename}</span>
-            <span className="block truncate text-xs text-muted-foreground">
-              {status === 'ready'
-                ? `Prêt · v${pkg.version ?? '—'}`
-                : (PROCESSING_LABELS[status ?? ''] ?? 'Traitement en cours…')}
-            </span>
             <span className="text-xs text-muted-foreground">{formatFileSize(pkg.size_bytes)}</span>
+            {status && (
+              <div className="mt-1.5">
+                <ScormStatusBadge status={status} version={pkg.version} />
+              </div>
+            )}
           </div>
         </div>
       ) : (

@@ -105,7 +105,8 @@ describe('ScormPackageField — upload', () => {
     await waitFor(() => {
       expect(screen.getByText('package.zip')).toBeInTheDocument();
     });
-    expect(screen.getByText(/en attente de traitement/i)).toBeInTheDocument();
+    // Le statut est rendu en badge : libellé court, pas la phrase complète.
+    expect(screen.getByText(/en attente/i)).toBeInTheDocument();
     expect(onStateChange).toHaveBeenCalledWith({ packageId: 'pkg-1', status: 'pending' });
   });
 
