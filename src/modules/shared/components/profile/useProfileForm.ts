@@ -95,10 +95,6 @@ export function useProfileForm({
     }
   }, [dataUpdatedAt, form]);
 
-  useEffect(() => {
-    if (isProfileError) toast.error('Impossible de charger le profil');
-  }, [isProfileError]);
-
   const loadError = isProfileError ? 'Impossible de charger le profil. Veuillez réessayer.' : null;
 
   const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
