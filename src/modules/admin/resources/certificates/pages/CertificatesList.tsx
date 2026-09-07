@@ -5,12 +5,11 @@ import {
   CertificateSearch,
 } from '@modules/shared/components/certificates';
 import { ChevronDown, Plus, X } from 'lucide-react';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { useAllTenantsQuery } from '@/modules/shared/hooks/useAllTenantsQuery';
 import { ConfirmDialog } from '@/shared/components/confirm-dialog/ConfirmDialog';
 import { useCertificatesQuery } from '../hooks/useCertificatesQuery';
 import { useDeleteCertificate } from '../hooks/useDeleteCertificate';
@@ -30,26 +29,19 @@ export function CertificatesList() {
     sort_by: 'name',
     sort_dir: 'asc',
   });
+  const [draftSearch, setDraftSearch] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string | undefined>();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingCert, setEditingCert] = useState<Certificate | undefined>();
   const [previewCert, setPreviewCert] = useState<Certificate | null>(null);
   const [deletingItem, setDeletingItem] = useState<Certificate | null>(null);
 
-  const { data: tenantsData } = useAllTenantsQuery();
-  const tenants = tenantsData?.data ?? [];
   const { data, isLoading } = useCertificatesQuery(params);
   const deleteMutation = useDeleteCertificate();
 
-  const tenantNames = useMemo(() => {
-    const map: Record<string, string> = {};
-    for (const t of tenants) map[String(t.id)] = t.name;
-    return map;
-  }, [tenants]);
-
   const handleSearch = useCallback(() => {
-    setParams((prev) => ({ ...prev, q: params.q, page: 0 }));
-  }, [params.q]);
+    setParams((prev) => ({ ...prev, q: draftSearch || undefined, page: 0 }));
+  }, [draftSearch]);
 
   const handleStatusChange = useCallback(
     (value: string) => {
@@ -99,11 +91,7 @@ export function CertificatesList() {
       </header>
 
       <div className="mb-2 flex flex-col sm:flex-row items-start sm:items-center gap-2">
-        <CertificateSearch
-          value={params.q ?? ''}
-          onChange={(v) => setParams((prev) => ({ ...prev, q: v || undefined, page: 0 }))}
-          onSearch={handleSearch}
-        />
+        <CertificateSearch value={draftSearch} onChange={setDraftSearch} onSearch={handleSearch} />
         <div className="flex items-center gap-2 sm:ml-auto">
           <Popover>
             <PopoverTrigger asChild>
@@ -193,7 +181,6 @@ export function CertificatesList() {
         }}
         onDelete={(cert) => setDeletingItem(cert)}
         onPreview={setPreviewCert}
-        tenantNames={tenantNames}
       />
 
       <AdminCertificateFormDrawer

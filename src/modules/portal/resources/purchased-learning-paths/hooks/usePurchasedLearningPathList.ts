@@ -100,11 +100,8 @@ export function usePurchasedLearningPathList() {
   };
 
   const handleCategoryToggle = (id: string) => {
-    setCategoryIds((prev) => {
-      const next = prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id];
-      setPage(0);
-      return next;
-    });
+    setCategoryIds((prev) => (prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]));
+    setPage(0);
   };
 
   const handleSort = (column: string) => {

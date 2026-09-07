@@ -300,7 +300,7 @@ export function StorePage() {
                 disabled={shopQuery.isFetching}
                 className="text-xs"
               >
-                Voir plus({total - items.length} restantes)
+                Voir plus ({total - items.length} restantes)
               </Button>
             </div>
           )}

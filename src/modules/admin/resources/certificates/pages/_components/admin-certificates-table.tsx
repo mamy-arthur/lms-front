@@ -28,7 +28,6 @@ interface AdminCertificatesTableProps {
   onEdit: (certificate: Certificate) => void;
   onDelete?: (certificate: Certificate) => void;
   onPreview: (certificate: Certificate) => void;
-  tenantNames: Record<string, string>;
 }
 
 export function AdminCertificatesTable({

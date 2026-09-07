@@ -72,19 +72,19 @@ describe('adminUsersApi', () => {
 
     it('transmet le paramètre roles (un seul)', async () => {
       mockApiGet.mockResolvedValue({ data: [], total: 0 });
-      await adminUsersApi.list({ roles: [Role.TRAINEE] });
+      await adminUsersApi.list({ roles: Role.TRAINEE });
       expect(mockApiGet).toHaveBeenCalledWith(
         'platform/users',
-        expect.objectContaining({ roles: [Role.TRAINEE] }),
+        expect.objectContaining({ roles: Role.TRAINEE }),
       );
     });
 
-    it('transmet le paramètre roles (plusieurs)', async () => {
+    it('transmet le paramètre roles (plusieurs, CSV)', async () => {
       mockApiGet.mockResolvedValue({ data: [], total: 0 });
-      await adminUsersApi.list({ roles: [Role.TRAINEE, Role.EDITOR] });
+      await adminUsersApi.list({ roles: `${Role.TRAINEE},${Role.EDITOR}` });
       expect(mockApiGet).toHaveBeenCalledWith(
         'platform/users',
-        expect.objectContaining({ roles: [Role.TRAINEE, Role.EDITOR] }),
+        expect.objectContaining({ roles: `${Role.TRAINEE},${Role.EDITOR}` }),
       );
     });
 

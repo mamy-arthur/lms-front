@@ -28,7 +28,6 @@ interface AdminMailTemplatesTableProps {
   onEdit: (template: MailTemplate) => void;
   onDelete?: (template: MailTemplate) => void;
   onPreview: (template: MailTemplate) => void;
-  tenantNames: Record<string, string>;
 }
 
 export function AdminMailTemplatesTable({

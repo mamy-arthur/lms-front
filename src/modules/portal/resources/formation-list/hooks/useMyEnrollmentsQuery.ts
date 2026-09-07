@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { meApi } from '@/shared/api/portal.api';
+import { portalMyEnrollmentsKeys } from '@/shared/queries/keys';
 import type { ApiMeEnrollment } from '@/shared/types/enrollment.types';
 import type {
   TraineeFormation,
@@ -15,8 +16,6 @@ export interface MyEnrollmentsQueryParams {
   sort_dir?: 'asc' | 'desc';
   category_id?: string;
 }
-
-export const MY_ENROLLMENTS_QUERY_KEY = ['portal', 'me', 'enrollments'] as const;
 
 function formatRelativeDate(isoDate: string): string {
   const diffDays = Math.floor((Date.now() - new Date(isoDate).getTime()) / (1000 * 60 * 60 * 24));
@@ -66,7 +65,7 @@ function normalizeEnrollment(api: ApiMeEnrollment): TraineeFormation {
 
 export function useMyEnrollmentsQuery(params: MyEnrollmentsQueryParams = {}) {
   return useQuery({
-    queryKey: [...MY_ENROLLMENTS_QUERY_KEY, params],
+    queryKey: [...portalMyEnrollmentsKeys.all, params],
     queryFn: async () => {
       const response = await meApi.enrollments(params);
       return {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { ChevronDown, Plus, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,6 @@ import {
   MailTemplateSearch,
   MailTemplatePreviewDialog,
 } from '@modules/shared/components/mail-templates';
-import { useAllTenantsQuery } from '@/modules/shared/hooks/useAllTenantsQuery';
 import { useMailTemplatesQuery } from '../hooks/useMailTemplatesQuery';
 import { useDeleteMailTemplate } from '../hooks/useDeleteMailTemplate';
 import type { MailTemplate, MailTemplateSearchParams } from '../types';
@@ -30,26 +29,19 @@ export function MailTemplatesList() {
     sort_by: 'name',
     sort_dir: 'asc',
   });
+  const [draftSearch, setDraftSearch] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string | undefined>();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<MailTemplate | undefined>();
   const [previewTemplate, setPreviewTemplate] = useState<MailTemplate | null>(null);
   const [deletingItem, setDeletingItem] = useState<MailTemplate | null>(null);
 
-  const { data: tenantsData } = useAllTenantsQuery();
-  const tenants = tenantsData?.data ?? [];
   const { data, isLoading } = useMailTemplatesQuery(params);
   const { mutate: deleteTemplate } = useDeleteMailTemplate();
 
-  const tenantNames = useMemo(() => {
-    const map: Record<string, string> = {};
-    for (const t of tenants) map[String(t.id)] = t.name;
-    return map;
-  }, [tenants]);
-
   const handleSearch = useCallback(() => {
-    setParams((prev) => ({ ...prev, q: params.q, page: 0 }));
-  }, [params.q]);
+    setParams((prev) => ({ ...prev, q: draftSearch || undefined, page: 0 }));
+  }, [draftSearch]);
 
   const handleStatusChange = useCallback(
     (value: string) => {
@@ -99,11 +91,7 @@ export function MailTemplatesList() {
       </header>
 
       <div className="mb-2 flex flex-col sm:flex-row items-start sm:items-center gap-2">
-        <MailTemplateSearch
-          value={params.q ?? ''}
-          onChange={(v) => setParams((prev) => ({ ...prev, q: v || undefined, page: 0 }))}
-          onSearch={handleSearch}
-        />
+        <MailTemplateSearch value={draftSearch} onChange={setDraftSearch} onSearch={handleSearch} />
         <div className="flex items-center gap-2 sm:ml-auto">
           <Popover>
             <PopoverTrigger asChild>
@@ -120,9 +108,11 @@ export function MailTemplatesList() {
                 {STATUS_OPTIONS.map((opt) => (
                   <label
                     key={opt.value}
+                    htmlFor={`mail-status-${opt.value}`}
                     className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 hover:bg-muted text-xs"
                   >
                     <Checkbox
+                      id={`mail-status-${opt.value}`}
                       checked={selectedStatus === opt.value}
                       onCheckedChange={() => handleStatusChange(opt.value)}
                       className="mt-0.5 data-[state=checked]:bg-(--color-primary) data-[state=checked]:border-(--color-primary)"
@@ -189,7 +179,6 @@ export function MailTemplatesList() {
         }}
         onDelete={(tpl) => setDeletingItem(tpl)}
         onPreview={setPreviewTemplate}
-        tenantNames={tenantNames}
       />
 
       <AdminMailTemplateFormDrawer
