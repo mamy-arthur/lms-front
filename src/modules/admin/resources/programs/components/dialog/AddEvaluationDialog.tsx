@@ -184,7 +184,6 @@ export function AddEvaluationDialog({
         ),
       };
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [poolData]);
 
   const filteredBanks = useMemo(() => {
