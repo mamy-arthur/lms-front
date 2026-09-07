@@ -152,6 +152,8 @@ export const evaluationKeys = {
   listByLearningPath: (learningPathId: string) =>
     [...evaluationKeys.lists(), learningPathId] as const,
   detail: (id: string) => [...evaluationKeys.all, 'detail', id] as const,
+  poolCheck: (learningPathId: string, bankIds: string[], competencyIds: string[]) =>
+    [...evaluationKeys.all, 'pool-check', learningPathId, bankIds, competencyIds] as const,
 };
 
 export const progressionRuleKeys = {
