@@ -105,7 +105,7 @@ export default function FormationPlayer({ enrollmentId }: Props) {
         >
           <Menu className="size-4 text-slate-500" />
         </button>
-        <main className="h-[88vh] overflow-y-auto">
+        <main className="min-h-[85vh] max-h-[85vh]">
           <FormationContentView
             formation={formation}
             resolved={resolved}
@@ -120,7 +120,7 @@ export default function FormationPlayer({ enrollmentId }: Props) {
         </main>
       </div>
       <aside
-        className={`hidden shrink-0  bg-white xl:flex xl:flex-col sticky top-0 overflow-auto h-[88vh] transition-all duration-300 ${sidebarCollapsed ? 'w-12' : 'w-96 2xl:w-md'}`}
+        className={`hidden shrink-0  bg-white xl:flex xl:flex-col sticky top-0 overflow-auto h-[88vh] transition-all duration-300 ${sidebarCollapsed ? 'w-12' : 'w-114 2xl:w-lg'}`}
       >
         <FormationSidebar
           formation={formation}
