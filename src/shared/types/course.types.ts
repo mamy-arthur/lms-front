@@ -41,6 +41,8 @@ export interface ApiContentEntry {
   id: string;
   content_type_id: string;
   course_section_id: string;
+  /** Position within the section, 0-based. Returned by the API; drives list ordering. */
+  rank: number;
   content_type_version: number;
   data: Record<string, unknown>;
   is_published: boolean;
@@ -95,4 +97,11 @@ export interface CreateContentEntryPayload {
 export interface UpdateContentEntryPayload {
   data?: Record<string, unknown>;
   is_published?: boolean;
+}
+
+export interface MoveContentEntryPayload {
+  /** Destination section — the same id as the current one when reordering in place. */
+  course_section_id: string;
+  /** Target 0-based index in the destination section, after the move. */
+  position: number;
 }

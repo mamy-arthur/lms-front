@@ -39,6 +39,7 @@ const MOCK_ENTRY: ApiContentEntry = {
   id: ENTRY_ID,
   course_section_id: SECTION_ID,
   content_type_id: 'ct-1',
+  rank: 0,
   content_type_version: 1,
   is_published: false,
   data: { titre: 'Mon titre', corps: 'Corps du texte' },
@@ -169,6 +170,43 @@ describe('contentEntriesApi', () => {
     it('propage les erreurs API', async () => {
       mockApiPut.mockRejectedValue(new Error('Not Found'));
       await expect(contentEntriesApi.update(ENTRY_ID, {})).rejects.toThrow('Not Found');
+    });
+  });
+
+  // ── move ───────────────────────────────────────────────────────────────────
+
+  describe('move(entryId, payload)', () => {
+    it('appelle POST platform/entries/{id}/move avec la section et la position', async () => {
+      mockApiPost.mockResolvedValue(undefined);
+
+      await contentEntriesApi.move(ENTRY_ID, {
+        course_section_id: SECTION_ID,
+        position: 2,
+      });
+
+      expect(mockApiPost).toHaveBeenCalledWith(`platform/entries/${ENTRY_ID}/move`, {
+        course_section_id: SECTION_ID,
+        position: 2,
+      });
+    });
+
+    it('accepte la position 0 (déplacement en tête de section)', async () => {
+      mockApiPost.mockResolvedValue(undefined);
+
+      await contentEntriesApi.move(ENTRY_ID, { course_section_id: SECTION_ID, position: 0 });
+
+      expect(mockApiPost).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({ position: 0 }),
+      );
+    });
+
+    it('propage les erreurs API pour permettre au appelant de restaurer l’ordre', async () => {
+      mockApiPost.mockRejectedValue(new Error('Server error'));
+
+      await expect(
+        contentEntriesApi.move(ENTRY_ID, { course_section_id: SECTION_ID, position: 1 }),
+      ).rejects.toThrow('Server error');
     });
   });
 
