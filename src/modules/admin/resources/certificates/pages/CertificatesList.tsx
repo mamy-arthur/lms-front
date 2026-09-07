@@ -211,7 +211,7 @@ export function CertificatesList() {
         title="Supprimer l'attestation"
         description={
           deletingItem
-            ? `Êtes-vous sûr de vouloir supprimer «${deletingItem.name}»? Cette action est irréversible.`
+            ? `Êtes-vous sûr de vouloir supprimer «${deletingItem.name}» ? Cette action est irréversible.`
             : undefined
         }
         confirmLabel="Supprimer"
