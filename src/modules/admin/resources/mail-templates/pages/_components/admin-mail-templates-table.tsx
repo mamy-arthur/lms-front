@@ -8,6 +8,7 @@ import {
   type DataTableColumn,
   type DataTableSort,
 } from '@/shared/components/ui/DataTable';
+import { formatDate } from '@/shared/lib/date';
 import { useDuplicateMailTemplate } from '../../hooks/useDuplicateMailTemplate';
 import type { MailTemplate } from '../../types';
 
@@ -27,7 +28,6 @@ interface AdminMailTemplatesTableProps {
   onEdit: (template: MailTemplate) => void;
   onDelete?: (template: MailTemplate) => void;
   onPreview: (template: MailTemplate) => void;
-  tenantNames: Record<string, string>;
 }
 
 export function AdminMailTemplatesTable({
@@ -44,7 +44,6 @@ export function AdminMailTemplatesTable({
   onEdit,
   onDelete,
   onPreview,
-  tenantNames,
 }: AdminMailTemplatesTableProps) {
   const duplicateMutation = useDuplicateMailTemplate();
   const columns: DataTableColumn<MailTemplate>[] = [
@@ -62,23 +61,13 @@ export function AdminMailTemplatesTable({
     {
       key: 'subject',
       label: 'Sujet',
-      sortable: false,
+      sortable: true,
       headerClassName: 'text-center',
       cellClassName: 'text-center',
       render: (tpl) => (
         <div className="text-wrap">
           <span className="text-xs text-muted-foreground wrap-break-word">{tpl.subject}</span>
         </div>
-      ),
-    },
-    {
-      key: 'tenantId',
-      label: 'Tenant',
-      sortable: false,
-      render: (tpl) => (
-        <span className="text-xs text-muted-foreground">
-          {tenantNames[tpl.tenantId] ?? tpl.tenantId}
-        </span>
       ),
     },
     {
@@ -102,6 +91,16 @@ export function AdminMailTemplatesTable({
             Inactif
           </Badge>
         ),
+    },
+    {
+      key: 'updatedAt',
+      label: 'Mis à jour',
+      sortable: true,
+      render: (tpl) => (
+        <span className="text-xs text-muted-foreground tabular-nums">
+          {formatDate(tpl.updatedAt)}
+        </span>
+      ),
     },
     {
       key: 'id',

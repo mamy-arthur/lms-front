@@ -2,6 +2,7 @@
 
 import { GraduationCap, LayoutGrid, List } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { useDebounce } from '@/shared/hooks/useDebounce';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -28,8 +29,10 @@ export function EvaluationNotesList() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [view, setView] = useState<'card' | 'table'>('table');
 
+  const debouncedSearch = useDebounce(search, 400);
+
   const { data, isLoading, isError } = useEvaluationNotesQuery({
-    q: search || undefined,
+    q: debouncedSearch || undefined,
     tenant_id: clientFilter !== 'all' ? clientFilter : undefined,
   });
 
@@ -41,7 +44,7 @@ export function EvaluationNotesList() {
 
   const formations = data?.data ?? [];
   const clientOptions = data?.clients ?? [];
-  const hasQuery = Boolean(search || clientFilter !== 'all');
+  const hasQuery = Boolean(debouncedSearch || clientFilter !== 'all');
 
   function openDrawer(formation: FormationSummary) {
     setSelectedFormation(formation);

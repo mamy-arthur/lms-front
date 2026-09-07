@@ -10,7 +10,7 @@ export const adminUsersApi = {
   list: (params?: UserSearchParams) => {
     const query: Record<string, unknown> = {};
     if (params?.q) query.q = params.q;
-    if (params?.role) query.role = params.role;
+    if (params?.roles?.length) query.roles = params.roles;
     if (params?.is_active !== undefined) query.is_active = params.is_active;
     if (params?.tenant_id) query.tenant_id = params.tenant_id;
     if (params?.sort_by) query.sort_by = params.sort_by;

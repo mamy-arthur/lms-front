@@ -8,13 +8,13 @@ import type {
 function buildPurchasedLearningPathStats(plp: PurchasedLearningPath): PurchasedLearningPathStats {
   return {
     cumulative:
-      plp.enrollmentsNotStartedCount +
-      plp.enrollmentsInProgressCount +
-      plp.enrollmentsCompletedCount +
-      plp.enrollmentsExpiredCount,
-    inProgress: plp.enrollmentsInProgressCount,
-    notStarted: plp.enrollmentsNotStartedCount,
-    availableCredits: plp.creditsAvailable,
+      Number(plp.enrollmentsNotStartedCount) +
+      Number(plp.enrollmentsInProgressCount) +
+      Number(plp.enrollmentsCompletedCount) +
+      Number(plp.enrollmentsExpiredCount),
+    inProgress: Number(plp.enrollmentsInProgressCount),
+    notStarted: Number(plp.enrollmentsNotStartedCount),
+    availableCredits: Number(plp.creditsAvailable),
   };
 }
 

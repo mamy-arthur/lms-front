@@ -1,15 +1,33 @@
 'use client';
 
 import { Search } from 'lucide-react';
+import { useEffect, useRef } from 'react';
 import { Input } from '@/components/ui/input';
 
 export interface QuizSearchProps {
   value: string;
   onChange: (value: string) => void;
   onSearch: () => void;
+  debounceMs?: number;
 }
 
-export function QuizSearch({ value, onChange, onSearch }: QuizSearchProps) {
+export function QuizSearch({ value, onChange, onSearch, debounceMs = 400 }: QuizSearchProps) {
+  const onSearchRef = useRef(onSearch);
+  onSearchRef.current = onSearch;
+  const isMounted = useRef(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (!isMounted.current) {
+      isMounted.current = true;
+      return;
+    }
+    timerRef.current = setTimeout(() => onSearchRef.current(), debounceMs);
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, [value, debounceMs]);
+
   return (
     <div className="relative w-full sm:max-w-sm">
       <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -19,7 +37,10 @@ export function QuizSearch({ value, onChange, onSearch }: QuizSearchProps) {
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={(e) => {
-          if (e.key === 'Enter') onSearch();
+          if (e.key === 'Enter') {
+            if (timerRef.current) clearTimeout(timerRef.current);
+            onSearch();
+          }
         }}
         className="pl-9"
       />

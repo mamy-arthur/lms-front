@@ -40,13 +40,13 @@ export function FormationCard({ formation }: FormationCardProps) {
             <ImageIcon className="size-12" strokeWidth={1} />
           </div>
         )}
-        <div className="absolute bottom-2 left-2 flex items-center gap-1.5">
-          {formation.category && (
+        {formation.category && (
+          <div className="absolute bottom-2 left-2 flex items-center gap-1.5">
             <Badge variant="secondary" className="rounded-sm bg-background/90 text-xs">
               {formation.category}
             </Badge>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       <CardHeader>

@@ -11,6 +11,7 @@ export interface TraineeFormation {
   completedModules: number;
   totalModules: number;
   status: FormationStatus;
+  enrolledAt: string;
   lastActivity: string;
   completedDate?: string;
   hasAttestation?: boolean;

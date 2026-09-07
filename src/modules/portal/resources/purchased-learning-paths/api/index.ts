@@ -22,6 +22,10 @@ export const purchasedLearningPathsManagementApi = {
     const response = await purchasedLearningPathsApi.list({
       page: params.page,
       per_page: params.perPage,
+      q: params.q,
+      sort_by: params.sortBy,
+      sort_dir: params.sortDir,
+      category_ids: params.categoryIds,
     });
 
     return {
