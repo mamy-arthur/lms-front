@@ -216,8 +216,8 @@ export function AddEvaluationDialog({
         <DialogHeader>
           <DialogTitle>
             {config.stepType === 'evaluation-intermediate'
-              ? `Configurer l'évaluation pour ce module${precedingModuleName ? ` ${precedingModuleName}` : ''}`
-              : "Configurer l'évaluation pour les modules sélectionnés"}
+              ? `Configurer l’évaluation du module «${precedingModuleName ? ` ${precedingModuleName}` : ''}»`
+              : 'Configurer l’évaluation de tous les modules du nœud'}
           </DialogTitle>
           <DialogDescription>
             Définissez les paramètres de l'évaluation à ajouter au parcours

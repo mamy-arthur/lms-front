@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { Quiz } from '@/modules/quizzes';
 import { normalizeQuestion } from '@/modules/shared/lib/question-types';
 import { evaluationAttemptsApi } from '@/shared/api/portal.api';
+import { getApiErrorMessage } from '@/shared/lib/errors';
 import type { ApiEvaluationAttempt } from '@/shared/types/evaluation-attempt.types';
 import type { TraineeAnswer } from '@/modules/quizzes/types';
 import type { Question } from '@/modules/shared/lib/question-types';
@@ -30,11 +31,21 @@ export default function EvaluationRunner({ evaluation, onComplete }: Props) {
   const typLabel = evaluation.evaluationType === 'intermediate' ? 'Intermédiaire' : 'Finale';
   const evalDescription = `Évaluation ${typLabel} · Score requis : ${evaluation.passingScore}%`;
 
-  const { data: evalInfo } = usePortalLearnerEvaluationQuery(
+  const {
+    data: evalInfo,
+    isPending: isEvalInfoPending,
+    isError: isEvalInfoError,
+    refetch: refetchEvalInfo,
+  } = usePortalLearnerEvaluationQuery(
     isRealMode ? evaluation.formationId : undefined,
     evaluation.id,
   );
   const invalidateLearnerEvaluation = useInvalidateLearnerEvaluation();
+
+  // Gates the splash CTA. `isPending` (not `isLoading`) so a background refetch
+  // that has no data yet also counts as "unknown" — the quota must never be
+  // presented as available while it is still being resolved.
+  const isCheckingAttempts = isRealMode && isEvalInfoPending && !isEvalInfoError;
 
   // ── Mock mode state ──────────────────────────────────────────────────────
   const [mockStarted, setMockStarted] = useState(false);
@@ -58,14 +69,28 @@ export default function EvaluationRunner({ evaluation, onComplete }: Props) {
   );
 
   async function handleRealStart() {
+    // Defensive: the splash hides the CTA while the quota is unknown, but a stale
+    // render or a keyboard activation must not slip a start request through.
+    if (isCheckingAttempts) return;
+
     setIsStarting(true);
     try {
       // evaluation.formationId is set to the learning path id in summary-mapper
       const res = await evaluationAttemptsApi.start(evaluation.formationId, evaluation.id);
       setAttempt(res.data);
       setPhase('quiz');
-    } catch {
-      toast.error("Impossible de démarrer l'évaluation. Réessayez.");
+    } catch (err) {
+      // 409 = RetakeLimitReachedException. Telling the learner to "réessayer"
+      // here is wrong: no retry can ever succeed. Refresh the quota instead so
+      // the splash flips to its "tentatives épuisées" state.
+      if ((err as { status?: number }).status === 409) {
+        invalidateLearnerEvaluation(evaluation.formationId);
+        toast.error("Vous n'avez plus de tentative disponible pour cette évaluation.");
+      } else {
+        toast.error(
+          getApiErrorMessage(err, "Impossible de démarrer l'évaluation. Veuillez réessayer."),
+        );
+      }
     } finally {
       setIsStarting(false);
     }
@@ -171,6 +196,9 @@ export default function EvaluationRunner({ evaluation, onComplete }: Props) {
       evaluationType={evaluation.evaluationType}
       onStart={handleRealStart}
       isLoading={isStarting}
+      isCheckingAttempts={isCheckingAttempts}
+      hasAttemptsError={isEvalInfoError}
+      onRetryAttempts={() => void refetchEvalInfo()}
       maxAttempts={evalInfo?.max_attempts}
       attemptsUsed={evalInfo?.attempts_used}
       attemptsRemaining={evalInfo?.attempts_remaining}

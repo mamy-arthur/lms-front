@@ -21,6 +21,5 @@ export function useContentTypeQuery(id: string | undefined) {
     queryFn: () => contentTypeApi.get(id!),
     select: (res) => res.data,
     enabled: !!id,
-    staleTime: 0, // always refetch so the form has the current schema
   });
 }

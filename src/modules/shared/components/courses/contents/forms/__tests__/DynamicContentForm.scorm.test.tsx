@@ -46,8 +46,10 @@ jest.mock('@/shared/api/media.api', () => ({
 // ─── Imports ──────────────────────────────────────────────────────────────────
 
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+// Les champs media passent désormais par des hooks TanStack Query : il leur faut un provider.
+import { renderWithQueryClient as render } from '@/shared/lib/test-utils';
 import { DynamicContentForm } from '../DynamicContentForm';
 import type { ContentTypeResource } from '@/shared/types/content-type.types';
 

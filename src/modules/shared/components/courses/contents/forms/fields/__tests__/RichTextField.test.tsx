@@ -141,8 +141,10 @@ jest.mock('@/shared/api/media.api', () => ({
 // ─── Imports ──────────────────────────────────────────────────────────────────
 
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+// Le champ upload passe désormais par un hook TanStack Query : il lui faut un provider.
+import { renderWithQueryClient as render } from '@/shared/lib/test-utils';
 import { RichTextField } from '../RichTextField';
 import { mediaApi } from '@/shared/api/media.api';
 

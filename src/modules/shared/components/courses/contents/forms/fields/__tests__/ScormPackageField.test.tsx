@@ -40,8 +40,10 @@ jest.mock('@/modules/shared/components/input-upload/FileUploadField', () => ({
 // ─── Imports ──────────────────────────────────────────────────────────────────
 
 import React from 'react';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+// Le champ passe désormais par des hooks TanStack Query : il lui faut un provider.
+import { renderWithQueryClient as render } from '@/shared/lib/test-utils';
 import { ScormPackageField } from '../ScormPackageField';
 import { scormApi, type ApiScormPackage } from '@/shared/api/scorm.api';
 
@@ -103,7 +105,8 @@ describe('ScormPackageField — upload', () => {
     await waitFor(() => {
       expect(screen.getByText('package.zip')).toBeInTheDocument();
     });
-    expect(screen.getByText(/en attente de traitement/i)).toBeInTheDocument();
+    // Le statut est rendu en badge : libellé court, pas la phrase complète.
+    expect(screen.getByText(/en attente/i)).toBeInTheDocument();
     expect(onStateChange).toHaveBeenCalledWith({ packageId: 'pkg-1', status: 'pending' });
   });
 
@@ -229,5 +232,76 @@ describe('ScormPackageField — suppression', () => {
 
     expect(screen.getByText('Choisir un fichier')).toBeInTheDocument();
     expect(onStateChange).toHaveBeenLastCalledWith({ packageId: null, status: null });
+  });
+});
+
+describe('ScormPackageField — abonnement temps réel', () => {
+  /** Dernier packageId passé au hook de channel : `null` = désabonné. */
+  const subscribedPackageId = () => mockUseScormPackageChannel.mock.calls.at(-1)?.[0];
+
+  it('reste abonné tant que le package est en cours de traitement', async () => {
+    mockScormApi.get.mockResolvedValue({ data: makePackage({ status: 'extracting' }) });
+
+    render(<ScormPackageField attachedPackageId="pkg-1" />);
+
+    await waitFor(() => expect(subscribedPackageId()).toBe('pkg-1'));
+  });
+
+  it('se désabonne quand le package attaché est déjà "ready"', async () => {
+    mockScormApi.get.mockResolvedValue({
+      data: makePackage({ status: 'ready', version: '1.2' }),
+    });
+
+    render(<ScormPackageField attachedPackageId="pkg-1" />);
+
+    // Aucun event ne peut plus arriver : garder le channel ouvert ne servait qu'à
+    // déclencher une requête d'authentification broadcasting inutile.
+    await waitFor(() => expect(subscribedPackageId()).toBeNull());
+  });
+
+  it('se désabonne quand le package attaché est déjà "failed"', async () => {
+    mockScormApi.get.mockResolvedValue({
+      data: makePackage({ status: 'failed', failure_reason: 'Manifeste absent.' }),
+    });
+
+    render(<ScormPackageField attachedPackageId="pkg-1" />);
+
+    await waitFor(() => expect(subscribedPackageId()).toBeNull());
+  });
+
+  it('se désabonne dès que le statut devient terminal en cours de suivi', async () => {
+    mockScormApi.get.mockResolvedValue({ data: makePackage({ status: 'extracted' }) });
+
+    render(<ScormPackageField attachedPackageId="pkg-1" />);
+    await waitFor(() => expect(subscribedPackageId()).toBe('pkg-1'));
+
+    mockScormApi.get.mockResolvedValue({
+      data: makePackage({ status: 'ready', version: '1.2' }),
+    });
+    act(() => {
+      getStatusHandler()({ packageId: 'pkg-1', status: 'ready', errorMessage: null });
+    });
+
+    await waitFor(() => expect(subscribedPackageId()).toBeNull());
+  });
+});
+
+describe('ScormPackageField — cache', () => {
+  // Le partage du cache entre montages est couvert dans les tests du hook
+  // (shared/hooks/__tests__/useScormPackage.test.tsx), où le QueryClient peut
+  // être réutilisé d'un rendu à l'autre.
+
+  it("l'upload alimente le cache : la carte s'affiche sans état de chargement", async () => {
+    const user = userEvent.setup();
+    const created = makePackage({ status: 'pending' });
+    mockScormApi.upload.mockResolvedValue({ data: created });
+    mockScormApi.get.mockResolvedValue({ data: created });
+
+    render(<ScormPackageField attachedPackageId={null} />);
+    await user.click(screen.getByText('Choisir un fichier'));
+
+    await waitFor(() => expect(screen.getByText('package.zip')).toBeInTheDocument());
+    // Le package venant du cache, l'écran de vérification du statut est sauté.
+    expect(screen.queryByText(/vérification du statut/i)).not.toBeInTheDocument();
   });
 });

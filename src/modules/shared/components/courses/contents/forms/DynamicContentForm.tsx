@@ -8,7 +8,7 @@ import { MainBlock } from './SharedBlocks';
 import { DynamicField } from './DynamicField';
 import { ScormPackageField, type ScormPackageFieldState } from './fields/ScormPackageField';
 import { extractMediaId } from './fields/media-utils';
-import { mediaApi } from '@/shared/api/media.api';
+import { useDeleteMediaBatch } from '@/shared/hooks/useMedia';
 import { buildContentSchema } from './content-schema';
 import type { ContentTypeResource } from '@/shared/types/content-type.types';
 
@@ -54,6 +54,7 @@ export function DynamicContentForm({
   );
   // IDs of removed media files — deleted server-side only on form submit
   const pendingDeleteIds = useRef<string[]>([]);
+  const deleteMediaBatch = useDeleteMediaBatch();
 
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [scormState, setScormState] = useState<ScormPackageFieldState>({
@@ -97,7 +98,9 @@ export function DynamicContentForm({
       return;
     }
     if (pendingDeleteIds.current.length) {
-      await Promise.allSettled(pendingDeleteIds.current.map((id) => mediaApi.delete(id)));
+      // Also evicts each id from the media cache, so a deleted file can never be
+      // served back from it on a later mount.
+      await deleteMediaBatch(pendingDeleteIds.current);
       pendingDeleteIds.current = [];
     }
     onSubmit(result.data as Record<string, unknown>);
