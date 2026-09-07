@@ -15,7 +15,6 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import { cn } from '@/shared/lib/cn';
 import { Separator } from '@/components/ui/separator';
 import { useQuizzesQuery } from '@/modules/admin/resources/quizzes/hooks/useQuizzesQuery';
