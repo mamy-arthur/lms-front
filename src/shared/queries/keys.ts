@@ -49,6 +49,21 @@ export const contentTypeKeys = {
   detail: (id: string) => [...contentTypeKeys.all, 'detail', id] as const,
 };
 
+/**
+ * Media records are cached per id, never as a list: the same file can be
+ * referenced by several fields and several entries, and a per-id key is what
+ * lets those share one cache entry instead of refetching each time.
+ */
+export const mediaKeys = {
+  all: ['media'] as const,
+  detail: (id: string) => [...mediaKeys.all, 'detail', id] as const,
+};
+
+export const scormPackageKeys = {
+  all: ['scorm-packages'] as const,
+  detail: (id: string) => [...scormPackageKeys.all, 'detail', id] as const,
+};
+
 export const learningPathCategoryKeys = {
   all: ['learning-path-categories'] as const,
   lists: () => [...learningPathCategoryKeys.all, 'list'] as const,
