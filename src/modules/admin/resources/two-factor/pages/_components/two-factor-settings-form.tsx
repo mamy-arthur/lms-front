@@ -121,9 +121,7 @@ export function TwoFactorSettingsForm({
           className="flex gap-3 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-800"
         >
           <TriangleAlert className="mt-0.5 size-4 shrink-0" />
-          <p>
-            Tous les utilisateurs concernés devront saisir un code à chaque connexion.
-          </p>
+          <p>Tous les utilisateurs concernés devront saisir un code à chaque connexion.</p>
         </div>
       )}
 
@@ -163,9 +161,7 @@ export function TwoFactorSettingsForm({
                   className="w-24"
                   disabled={field.inherited}
                   value={field.inherited ? settings.effective[key] : field.value}
-                  onChange={(event) =>
-                    updateField(key, { value: Number(event.target.value) })
-                  }
+                  onChange={(event) => updateField(key, { value: Number(event.target.value) })}
                   aria-invalid={errors[key] !== undefined || undefined}
                 />
 
@@ -196,9 +192,7 @@ export function TwoFactorSettingsForm({
 
           <Select
             value={templateMailId ?? NO_TEMPLATE}
-            onValueChange={(value) =>
-              setTemplateMailId(value === NO_TEMPLATE ? null : value)
-            }
+            onValueChange={(value) => setTemplateMailId(value === NO_TEMPLATE ? null : value)}
           >
             <SelectTrigger id="template-mail" className="w-full sm:w-96">
               <SelectValue placeholder="Modèle par défaut" />

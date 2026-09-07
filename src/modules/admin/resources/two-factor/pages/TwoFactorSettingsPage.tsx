@@ -40,8 +40,8 @@ export function TwoFactorSettingsPage() {
       <header className="mb-8">
         <h1 className="text-2xl font-bold tracking-tight">Vérification en deux étapes</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Réglez l’envoi des codes de connexion pour l’ensemble de la plateforme ou pour un
-          tenant en particulier.
+          Réglez l’envoi des codes de connexion pour l’ensemble de la plateforme ou pour un tenant
+          en particulier.
         </p>
       </header>
 

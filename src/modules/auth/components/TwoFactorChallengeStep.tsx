@@ -7,6 +7,7 @@ import { OtpInput } from '@/components/ui/otp-input';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
 import { mapTwoFactorError, type TwoFactorError } from '@/modules/auth/lib/twoFactorErrors';
 import type { TwoFactorChallenge } from '@/shared/api/auth.api';
 
@@ -99,15 +100,15 @@ export function TwoFactorChallengeStep({
   }
 
   return (
-    <form onSubmit={handleVerify} className="mt-8 space-y-5">
+    <form onSubmit={handleVerify} className="mt-8 space-y-6">
       <div className="space-y-1">
         <h2 className="text-lg font-semibold">Vérification en deux étapes</h2>
         <p className="text-sm text-muted-foreground">
-          Un code à {current.code_length} chiffres vient de vous être envoyé par e-mail.
+          Saisissez le code à {current.code_length} chiffres reçu par e-mail.
         </p>
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-3">
         <OtpInput
           length={current.code_length}
           value={code}
@@ -118,27 +119,43 @@ export function TwoFactorChallengeStep({
           aria-describedby={error ? 'otp-error' : 'otp-countdown'}
         />
 
-        <p id="otp-countdown" className="text-xs text-muted-foreground">
-          {isExpired
-            ? 'Ce code a expiré. Demandez-en un nouveau.'
-            : `Le code expire dans ${formatCountdown(expiresIn)}.`}
-        </p>
+        <div className="flex items-center justify-between gap-3">
+          <p
+            id="otp-countdown"
+            className={cn('text-xs', isExpired ? 'text-destructive' : 'text-muted-foreground')}
+          >
+            {isExpired ? 'Code expiré' : `Expire dans ${formatCountdown(expiresIn)}`}
+          </p>
+
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={handleResend}
+            disabled={cooldown > 0 || isResending || isVerifying}
+            className="h-auto px-0 text-xs"
+          >
+            <RefreshCw className={cn('mr-1 h-3 w-3', isResending && 'animate-spin')} />
+            {cooldown > 0 ? `Renvoyer dans ${cooldown}s` : 'Renvoyer le code'}
+          </Button>
+        </div>
 
         {error && (
-          <p id="otp-error" role="alert" className="text-sm text-red-500">
+          <p id="otp-error" role="alert" className="text-sm text-destructive">
             {error.message}
           </p>
         )}
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-start gap-3">
         <Checkbox
           id="trust-device"
           checked={trustDevice}
           onCheckedChange={(checked) => setTrustDevice(checked === true)}
           disabled={isVerifying}
+          className="mt-0.5"
         />
-        <Label htmlFor="trust-device" className="cursor-pointer font-normal">
+        <Label htmlFor="trust-device" className="cursor-pointer text-sm leading-snug font-normal">
           Ne plus demander de code sur cet appareil pendant 30 jours
         </Label>
       </div>
@@ -158,27 +175,17 @@ export function TwoFactorChallengeStep({
         )}
       </Button>
 
-      <div className="flex items-center justify-between">
+      <div className="flex justify-center">
         <Button
           type="button"
           variant="ghost"
+          size="sm"
           onClick={() => onAbandon()}
           disabled={isVerifying}
-          className="px-0 text-xs"
+          className="h-auto text-xs text-muted-foreground"
         >
           <ArrowLeft className="mr-1 h-3 w-3" />
           Retour à la connexion
-        </Button>
-
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={handleResend}
-          disabled={cooldown > 0 || isResending || isVerifying}
-          className="px-0 text-xs"
-        >
-          <RefreshCw className="mr-1 h-3 w-3" />
-          {cooldown > 0 ? `Renvoyer dans ${cooldown}s` : 'Renvoyer le code'}
         </Button>
       </div>
     </form>

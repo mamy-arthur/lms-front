@@ -111,7 +111,9 @@ export function OtpInput({
       role="group"
       aria-label="Code de vérification"
       aria-describedby={ariaDescribedBy}
-      className="flex items-center gap-2"
+      // Les cases se partagent la largeur disponible : un code de 10 chiffres
+      // deborderait la carte avec une largeur fixe.
+      className={cn('flex w-full items-center', length > 8 ? 'gap-1.5' : 'gap-2')}
     >
       {Array.from({ length }, (_, index) => (
         <input
@@ -135,7 +137,8 @@ export function OtpInput({
           onPaste={(event) => handlePaste(index, event)}
           onFocus={(event) => event.target.select()}
           className={cn(
-            'h-12 w-10 rounded-md border border-input bg-input/20 text-center text-lg font-semibold transition-colors outline-none',
+            'h-12 min-w-0 flex-1 rounded-md border border-input bg-input/20 p-0 text-center font-semibold transition-colors outline-none',
+            length > 8 ? 'text-base' : 'text-lg',
             'focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30',
             'disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50',
             'dark:bg-input/30',

@@ -22,9 +22,7 @@ describe('UserActions — réinitialisation 2FA', () => {
   it('affiche et déclenche l’action quand le handler est fourni', async () => {
     const user = userEvent.setup();
     const onResetTwoFactor = jest.fn();
-    render(
-      <UserActions {...baseProps} onEdit={jest.fn()} onResetTwoFactor={onResetTwoFactor} />,
-    );
+    render(<UserActions {...baseProps} onEdit={jest.fn()} onResetTwoFactor={onResetTwoFactor} />);
 
     await openMenu(user);
     await user.click(screen.getByText(/réinitialiser le 2fa/i));

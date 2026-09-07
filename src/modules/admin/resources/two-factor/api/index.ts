@@ -1,9 +1,5 @@
 import { apiGet, apiPut } from '@/shared/lib/apiClient';
-import type {
-  TenantTemplateMail,
-  TwoFactorSettings,
-  TwoFactorSettingsPayload,
-} from '../types';
+import type { TenantTemplateMail, TwoFactorSettings, TwoFactorSettingsPayload } from '../types';
 
 export const twoFactorApi = {
   getGlobal: () => apiGet<{ data: TwoFactorSettings }>('platform/two-factor-settings'),

@@ -82,7 +82,9 @@ describe('TwoFactorSettingsForm — héritage', () => {
       />,
     );
 
-    await user.click(screen.getByLabelText('Valeur par défaut', { selector: '#inherit-ttl_minutes' }));
+    await user.click(
+      screen.getByLabelText('Valeur par défaut', { selector: '#inherit-ttl_minutes' }),
+    );
 
     fireEvent.change(screen.getByLabelText('Durée de validité'), { target: { value: '25' } });
     await user.click(save());
@@ -105,7 +107,9 @@ describe('TwoFactorSettingsForm — validation des bornes', () => {
       />,
     );
 
-    await user.click(screen.getByLabelText('Valeur par défaut', { selector: '#inherit-code_length' }));
+    await user.click(
+      screen.getByLabelText('Valeur par défaut', { selector: '#inherit-code_length' }),
+    );
 
     fireEvent.change(screen.getByLabelText('Longueur du code'), { target: { value: '99' } });
     await user.click(save());
@@ -135,7 +139,13 @@ describe('TwoFactorSettingsForm — portée', () => {
         settings={INHERITED_SETTINGS}
         scope="tenant"
         templateMails={[
-          { id: 't-1', reference: 'TM-1', name: 'Code de connexion', subject: 'Code', status: true },
+          {
+            id: 't-1',
+            reference: 'TM-1',
+            name: 'Code de connexion',
+            subject: 'Code',
+            status: true,
+          },
         ]}
         isSaving={false}
         onSubmit={jest.fn()}
