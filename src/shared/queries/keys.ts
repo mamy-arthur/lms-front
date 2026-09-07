@@ -59,6 +59,11 @@ export const mediaKeys = {
   detail: (id: string) => [...mediaKeys.all, 'detail', id] as const,
 };
 
+export const scormPackageKeys = {
+  all: ['scorm-packages'] as const,
+  detail: (id: string) => [...scormPackageKeys.all, 'detail', id] as const,
+};
+
 export const learningPathCategoryKeys = {
   all: ['learning-path-categories'] as const,
   lists: () => [...learningPathCategoryKeys.all, 'list'] as const,
