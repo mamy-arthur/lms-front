@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Loader2, TriangleAlert } from 'lucide-react';
+import { Loader2, Save, TriangleAlert } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -112,7 +112,12 @@ export function TwoFactorSettingsForm({
             Un code est envoyé par e-mail à chaque connexion.
           </p>
         </div>
-        <Switch id="two-factor-enabled" checked={enabled} onCheckedChange={setEnabled} />
+        <Switch
+          id="two-factor-enabled"
+          checked={enabled}
+          onCheckedChange={setEnabled}
+          className="data-checked:bg-(--color-primary)"
+        />
       </div>
 
       {willEnable && (
@@ -168,6 +173,7 @@ export function TwoFactorSettingsForm({
                 <div className="flex items-center gap-2">
                   <Switch
                     id={`inherit-${key}`}
+                    className="data-checked:bg-(--color-primary)"
                     checked={field.inherited}
                     onCheckedChange={(checked) =>
                       updateField(key, {
@@ -214,15 +220,13 @@ export function TwoFactorSettingsForm({
         </div>
       )}
 
-      <Button type="submit" disabled={isSaving}>
-        {isSaving ? (
-          <>
-            <Loader2 className="mr-2 size-4 animate-spin" />
-            Enregistrement...
-          </>
-        ) : (
-          'Enregistrer'
-        )}
+      <Button
+        type="submit"
+        disabled={isSaving}
+        className="bg-(--color-primary) hover:bg-(--color-primary)/80"
+      >
+        {isSaving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+        Enregistrer
       </Button>
     </form>
   );
