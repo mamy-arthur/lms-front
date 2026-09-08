@@ -6,6 +6,7 @@ import { useAuthStore } from '@/shared/stores/auth.store';
 import { queryClient } from '@/shared/lib/query-client';
 import { resolveLoginPath } from '@/shared/lib/apiClient';
 import { useSessionRevocation } from '@/shared/hooks/useSessionRevocation';
+import { useSessionRevalidation } from '@/shared/hooks/useSessionRevalidation';
 
 /**
  * Thin client wrapper that runs useSessionRevocation inside a server layout.
@@ -15,6 +16,7 @@ import { useSessionRevocation } from '@/shared/hooks/useSessionRevocation';
  */
 export function SessionRevocationListener() {
   useSessionRevocation();
+  useSessionRevalidation();
 
   const router = useRouter();
   const pathname = usePathname();

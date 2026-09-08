@@ -1,4 +1,4 @@
-import { apiPost } from '@/shared/lib/apiClient';
+import { apiGet, apiPost } from '@/shared/lib/apiClient';
 import type { AuthUser } from '@/shared/types/auth.types';
 import { Role } from '@/shared/constants/roles';
 
@@ -42,6 +42,11 @@ interface SessionConflictApiResponse {
 
 interface MessageApiResponse {
   message: string;
+}
+
+interface MeApiResponse {
+  user: BackendUser;
+  session_id: string | null;
 }
 
 export interface ResetPasswordPayload {
@@ -127,11 +132,18 @@ async function performReplacement(
   return { user: toAuthUser(res.user), sessionId: res.session_id };
 }
 
+async function performMe(endpoint: string): Promise<{ user: AuthUser; sessionId: string | null }> {
+  const res = await apiGet<MeApiResponse>(endpoint);
+  return { user: toAuthUser(res.user), sessionId: res.session_id };
+}
+
 export const authApi = {
   login: (email: string, password: string): Promise<LoginResult> =>
     performLogin('auth/login', email, password),
 
   logout: (): Promise<MessageApiResponse> => apiPost<MessageApiResponse>('auth/logout'),
+
+  me: (): Promise<{ user: AuthUser; sessionId: string | null }> => performMe('auth/me'),
 
   forgotPassword: (email: string): Promise<MessageApiResponse> =>
     apiPost<MessageApiResponse>('auth/forgot-password', { email }),
@@ -147,6 +159,9 @@ export const authApi = {
 
   platformLogout: (): Promise<MessageApiResponse> =>
     apiPost<MessageApiResponse>('platform/auth/logout'),
+
+  platformMe: (): Promise<{ user: AuthUser; sessionId: string | null }> =>
+    performMe('platform/auth/me'),
 
   platformForgotPassword: (email: string): Promise<MessageApiResponse> =>
     apiPost<MessageApiResponse>('platform/auth/forgot-password', { email }),
