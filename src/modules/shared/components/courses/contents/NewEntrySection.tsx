@@ -1,9 +1,11 @@
 'use client';
 
+import { useState } from 'react';
 import { useAddEntry } from '../hooks/useCourseContentApi';
 import type { ApiContentEntry } from '../hooks/useCourseContentApi';
 import type { ContentTypeResource } from '@/shared/types/content-type.types';
 import { DynamicContentForm } from './forms/DynamicContentForm';
+import type { ScormPackageFieldState } from './forms/fields/ScormPackageField';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
@@ -28,10 +30,20 @@ export function NewEntrySection({
   onCancel: () => void;
 }) {
   const addEntry = useAddEntry(sectionId);
+  const [scormState, setScormState] = useState<ScormPackageFieldState>({
+    packageId: null,
+    status: null,
+  });
 
   const handleSave = async (data: Record<string, unknown>) => {
     try {
-      const { data: entry } = await addEntry.mutateAsync({ contentTypeId: contentType.id, data });
+      // The SCORM package may still be `pending`/processing — attaching it right
+      // away (instead of waiting) is explicitly supported by the create endpoint.
+      const { data: entry } = await addEntry.mutateAsync({
+        contentTypeId: contentType.id,
+        data,
+        scormPackageId: scormState.packageId ?? undefined,
+      });
       toast.success('Contenu créé');
       onCreated(entry);
     } catch {
@@ -56,12 +68,13 @@ export function NewEntrySection({
         </div>
       </div>
       <Separator />
-      <main className="mt-5">
+      <main className="mt-5 space-y-4">
         <DynamicContentForm
           contentType={contentType}
           onCancel={onCancel}
           onSubmit={handleSave}
           isSubmitting={addEntry.isPending}
+          onScormStateChange={setScormState}
         />
       </main>
     </div>

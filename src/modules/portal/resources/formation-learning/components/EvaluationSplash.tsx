@@ -11,17 +11,18 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-// import EvalStats from './EvalStats';
 
 interface EvaluationSplashProps {
   title: string;
   evaluationType: 'intermediate' | 'final';
-  passingScore: number;
-  questionCount: number;
-  withTimerCount: number;
-  typeCount: number;
   onStart: () => void;
+  /** The start request itself is in flight. */
   isLoading?: boolean;
+  /** The remaining-attempts data is still being fetched — nothing is decidable yet. */
+  isCheckingAttempts?: boolean;
+  /** The remaining-attempts data could not be fetched. */
+  hasAttemptsError?: boolean;
+  onRetryAttempts?: () => void;
   maxAttempts?: number | null;
   attemptsUsed?: number;
   attemptsRemaining?: number | null;
@@ -30,18 +31,29 @@ interface EvaluationSplashProps {
 export default function EvaluationSplash({
   title,
   evaluationType,
-  // passingScore,
-  // questionCount,
-  // withTimerCount,
-  // typeCount,
   onStart,
   isLoading = false,
+  isCheckingAttempts = false,
+  hasAttemptsError = false,
+  onRetryAttempts,
   maxAttempts,
   attemptsRemaining,
 }: EvaluationSplashProps) {
   const typLabel = evaluationType === 'intermediate' ? 'Intermédiaire' : 'Finale';
+
+  // Only decidable once the data has settled. Treating `undefined` as "attempts
+  // remain" made this fail *open*: the CTA rendered enabled while the quota was
+  // still unknown, so learners clicked Commencer on an already-exhausted
+  // evaluation and got a generic error back.
+  const attemptsKnown = !isCheckingAttempts && !hasAttemptsError;
   const exhausted =
-    attemptsRemaining !== undefined && attemptsRemaining !== null && attemptsRemaining <= 0;
+    attemptsKnown &&
+    attemptsRemaining !== undefined &&
+    attemptsRemaining !== null &&
+    attemptsRemaining <= 0;
+
+  // The button is only offered once we know it can actually succeed.
+  const canStart = attemptsKnown && !exhausted;
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col px-4 py-10">
@@ -62,7 +74,13 @@ export default function EvaluationSplash({
           évaluation.
         </p>
 
-        {maxAttempts != null && !exhausted && (attemptsRemaining ?? 0) > 0 && (
+        {/* Skeleton rather than nothing: an empty slot made the splash look settled
+            while the quota was still unknown. */}
+        {isCheckingAttempts && (
+          <div className="mt-4 h-9 w-full animate-pulse rounded-md bg-slate-100" />
+        )}
+
+        {attemptsKnown && maxAttempts != null && !exhausted && (attemptsRemaining ?? 0) > 0 && (
           <div className="mt-4 w-full">
             <Alert>
               <RotateCcw className="size-3.5" />
@@ -125,7 +143,7 @@ export default function EvaluationSplash({
 
       {/* Warning */}
       <div className="mb-4">
-        <Alert className="border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-50">
+        <Alert className="border-amber-200 text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-50">
           <AlertTriangleIcon />
           <AlertTitle>Attention</AlertTitle>
           <AlertDescription>
@@ -137,8 +155,38 @@ export default function EvaluationSplash({
 
       {/* CTA */}
       <div className="flex flex-col items-center gap-3">
-        {exhausted ? (
-          <Alert variant="destructive">
+        {isCheckingAttempts ? (
+          // Placeholder occupying the CTA slot. Deliberately NOT a disabled button:
+          // there is no action here, only a status. A button would sit in the
+          // accessibility tree as a control that never becomes usable, and would
+          // invite the very click this state exists to prevent.
+          <span
+            role="status"
+            aria-live="polite"
+            className="flex h-10 w-full max-w-sm items-center justify-center gap-2 rounded-md bg-slate-100 px-10 text-xs font-medium text-slate-500"
+          >
+            <Loader2 className="size-5 animate-spin" />
+            Vérification de vos tentatives…
+          </span>
+        ) : hasAttemptsError ? (
+          <Alert variant="destructive" className="border-red-200">
+            <AlertCircleIcon />
+            <AlertTitle>Impossible de vérifier vos tentatives</AlertTitle>
+            <AlertDescription className="flex flex-col items-start gap-2">
+              <span>
+                Nous n'avons pas pu récupérer le nombre de tentatives restantes. Démarrer maintenant
+                pourrait échouer.
+              </span>
+              {onRetryAttempts && (
+                <Button variant="outline" size="sm" onClick={onRetryAttempts}>
+                  <RotateCcw className="size-3" />
+                  Réessayer
+                </Button>
+              )}
+            </AlertDescription>
+          </Alert>
+        ) : exhausted ? (
+          <Alert variant="destructive" className="border-red-200">
             <AlertCircleIcon />
             <AlertTitle>Tentatives épuisées</AlertTitle>
             <AlertDescription>
@@ -149,19 +197,19 @@ export default function EvaluationSplash({
           <Button
             onClick={onStart}
             disabled={isLoading}
-            className="h-10 w-full max-w-sm gap-2 px-10 bg-(--color-primary) text-white hover:bg-(--color-primary)/90"
+            aria-busy={isLoading}
+            className="h-10 w-full max-w-sm gap-2 px-10 bg-(--color-primary) text-white hover:bg-(--color-primary)/90 disabled:opacity-100"
           >
             {isLoading ? (
               <Loader2 className="size-5 animate-spin" />
             ) : (
               <PlayCircle className="size-5" />
             )}
-
-            {isLoading ? 'Chargement…' : "Commencer l'évaluation"}
+            {isLoading ? 'Démarrage…' : "Commencer l'évaluation"}
           </Button>
         )}
 
-        {!exhausted && (
+        {canStart && (
           <p className="text-xs text-muted-foreground">
             Vous pourrez commencer lorsque vous serez prêt.
           </p>

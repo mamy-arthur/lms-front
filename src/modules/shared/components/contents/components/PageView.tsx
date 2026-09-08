@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import ReactMarkdown from 'react-markdown';
+import { RichTextRenderer } from '@/shared/components/RichTextRenderer';
 import { Separator } from '@/components/ui/separator';
 import { CONTENT_TYPE_META } from '@/modules/shared/components/courses/types';
 import { Badge } from '@/components/ui/badge';
@@ -28,9 +28,7 @@ export function PageContentView({ title, description, contenu }: PageContentView
           <div className="rounded-lg border bg-muted/20 p-2">
             <p className="mb-3 text-xs font-medium">Description</p>
 
-            <div className="react-markdown prose prose-sm dark:prose-invert max-w-none">
-              <ReactMarkdown>{description}</ReactMarkdown>
-            </div>
+            <RichTextRenderer content={description} />
           </div>
         )}
 
@@ -38,9 +36,7 @@ export function PageContentView({ title, description, contenu }: PageContentView
           <div className="rounded-lg border p-2">
             <p className="mb-3 text-xs font-medium">Contenu pédagogique</p>
 
-            <div className="react-markdown prose prose-sm dark:prose-invert max-w-none">
-              <ReactMarkdown>{contenu}</ReactMarkdown>
-            </div>
+            <RichTextRenderer content={contenu} />
           </div>
         )}
       </CardContent>

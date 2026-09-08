@@ -1,11 +1,11 @@
 import { apiGet, apiPost } from '@/shared/lib/apiClient';
-import type {
-  ApiPortalLearningPathSummary,
-  ApiPortalContentEntry,
-  ApiLearnerEvaluation,
-} from '@/shared/types/portal.types';
 import type { ApiMeEnrollmentsResponse } from '@/shared/types/enrollment.types';
 import type { ApiEvaluationAttempt } from '@/shared/types/evaluation-attempt.types';
+import type {
+  ApiLearnerEvaluation,
+  ApiPortalContentEntry,
+  ApiPortalLearningPathSummary,
+} from '@/shared/types/portal.types';
 
 export const portalLearningPathsApi = {
   summary: (enrollmentId: string) =>
@@ -20,6 +20,9 @@ export const portalContentEntriesApi = {
     apiGet<{ data: ApiPortalContentEntry }>(
       `enrollments/${enrollmentId}/courses/${courseId}/entries/${entryId}`,
     ),
+
+  markComplete: (enrollmentId: string, courseId: string, entryId: string): Promise<void> =>
+    apiPost<void>(`enrollments/${enrollmentId}/courses/${courseId}/entries/${entryId}/complete`),
 };
 
 export const evaluationAttemptsApi = {
@@ -36,6 +39,13 @@ export const evaluationAttemptsApi = {
 };
 
 export const meApi = {
-  enrollments: (params?: { page?: number; per_page?: number }) =>
-    apiGet<ApiMeEnrollmentsResponse>('me/enrollments', params as Record<string, unknown>),
+  enrollments: (params?: {
+    page?: number;
+    per_page?: number;
+    q?: string;
+    status?: string;
+    sort_by?: string;
+    sort_dir?: 'asc' | 'desc';
+    category_id?: string;
+  }) => apiGet<ApiMeEnrollmentsResponse>('me/enrollments', params as Record<string, unknown>),
 };

@@ -1,7 +1,7 @@
-import { normalizeQuestion } from '@/modules/shared/lib/normalizers';
+import { normalizeQuestion } from '@/modules/shared/lib/question-types';
 import type { ApiAttemptQuiz } from '@/shared/types/evaluation-attempt.types';
 import type { MatchingAnswer, MultipleChoiceAnswer, TraineeAnswer } from '@/modules/quizzes/types';
-import type { Question } from '@/modules/shared/lib/normalizers';
+import type { Question } from '@/modules/shared/lib/question-types';
 
 export function makeSessionId() {
   return 'EV-' + Math.random().toString(16).slice(2, 6).toUpperCase() + '-2026';

@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useMemo, useState } from 'react';
 import { Loader2, AlertCircle, Trash } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { MultiFileUploadField } from '@/modules/shared/components/input-upload/MultiFileUploadField';
-import { mediaApi, type ApiMedia } from '@/shared/api/media.api';
+import { type ApiMedia } from '@/shared/api/media.api';
+import { useMediaListQuery, useUploadMediaMutation } from '@/shared/hooks/useMedia';
 import type { ContentTypeField } from '@/shared/types/content-type.types';
 import {
   extractMediaId,
@@ -31,11 +32,22 @@ export function MediaMultiField({
   contentTypeId,
   onPendingDelete,
 }: MediaMultiFieldProps) {
-  const [mediaList, setMediaList] = useState<ApiMedia[]>([]);
-  const [isLoadingMedia, setIsLoadingMedia] = useState(false);
   const [uploadProgresses, setUploadProgresses] = useState<{ name: string; pct: number }[]>([]);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [previewMedia, setPreviewMedia] = useState<ApiMedia | null>(null);
+
+  // Derived from the form value, not mirrored into state. Each id is cached
+  // separately, so ids already resolved elsewhere cost no request at all and
+  // only genuinely new ones are fetched — the previous code fired N requests on
+  // every mount, unconditionally.
+  const mediaIds = useMemo(
+    () =>
+      (Array.isArray(value) ? value : []).map(extractMediaId).filter((id): id is string => !!id),
+    [value],
+  );
+  const { data: mediaList, isLoading: isLoadingMedia } = useMediaListQuery(mediaIds);
+
+  const uploadMedia = useUploadMediaMutation();
 
   const handleItemClick = (media: ApiMedia) => {
     if (isPreviewable(media.mime_type)) {
@@ -45,35 +57,27 @@ export function MediaMultiField({
     }
   };
 
-  useEffect(() => {
-    const ids = (Array.isArray(value) ? value : [])
-      .map(extractMediaId)
-      .filter((id): id is string => !!id);
-    if (!ids.length) return;
-    setIsLoadingMedia(true);
-    Promise.all(ids.map((id) => mediaApi.get(id)))
-      .then((rs) => setMediaList(rs.map((r) => r.data)))
-      .catch(() => {})
-      .finally(() => setIsLoadingMedia(false));
-  }, []);
-
   const uploadMultiple = async (newFiles: File[]) => {
     if (!newFiles.length) return;
     setUploadError(null);
     setUploadProgresses(newFiles.map((f) => ({ name: f.name, pct: 0 })));
     try {
-      const results = await Promise.all(
+      const uploaded = await Promise.all(
         newFiles.map((f, i) =>
-          mediaApi.uploadWithProgress(f, contentTypeId, field.field_id, (pct) => {
-            setUploadProgresses((prev) =>
-              prev.map((item, j) => (j === i ? { ...item, pct } : item)),
-            );
+          uploadMedia.mutateAsync({
+            file: f,
+            contentTypeId,
+            fieldId: field.field_id,
+            onProgress: (pct) =>
+              setUploadProgresses((prev) =>
+                prev.map((item, j) => (j === i ? { ...item, pct } : item)),
+              ),
           }),
         ),
       );
-      const updated = [...mediaList, ...results.map((r) => r.data)];
-      setMediaList(updated);
-      onChange(updated.map((m) => m.id));
+      // Appending ids is enough: each upload seeded the cache, so the list
+      // re-renders from cache without a single extra request.
+      onChange([...mediaIds, ...uploaded.map((m) => m.id)]);
     } catch (err) {
       setUploadError(extractErrorMessage(err));
     } finally {
@@ -83,24 +87,24 @@ export function MediaMultiField({
 
   const removeFromList = (id: string) => {
     onPendingDelete?.(id);
-    const updated = mediaList.filter((m) => m.id !== id);
-    setMediaList(updated);
-    onChange(updated.length ? updated.map((m) => m.id) : null);
+    const remaining = mediaIds.filter((mediaId) => mediaId !== id);
+    onChange(remaining.length ? remaining : null);
   };
 
   return (
     <div className="space-y-2">
-      {isLoadingMedia && (
-        <p className="flex items-center gap-1 text-xs text-muted-foreground">
-          <Loader2 className="size-3 animate-spin" /> Chargement…
-        </p>
-      )}
       <MultiFileUploadField
         files={[]}
         accept={field.accept.join(',')}
         hint={field.accept.join(', ')}
         onFilesChange={uploadMultiple}
       />
+
+      {isLoadingMedia && (
+        <p className="flex items-center gap-1 text-xs text-muted-foreground">
+          <Loader2 className="size-3 animate-spin" /> Chargement…
+        </p>
+      )}
 
       <div className="grid grid-cols-3 gap-4">
         {mediaList.map((media) => (
@@ -110,7 +114,7 @@ export function MediaMultiField({
             tabIndex={0}
             onClick={() => handleItemClick(media)}
             onKeyDown={(e) => e.key === 'Enter' && handleItemClick(media)}
-            className="relative flex flex-col gap-3 w-full rounded-sm cursor-pointer hover:bg-muted/50 transition-colors"
+            className="relative flex flex-col gap-3 w-full rounded-sm cursor-pointer transition-colors"
           >
             <Button
               type="button"

@@ -4,7 +4,7 @@ import { useMemo, useRef, useState } from 'react';
 import { BookOpenCheck, Clock, ListChecks, PlayCircle, CircleHelp } from 'lucide-react';
 import { Quiz } from '@/modules/quizzes';
 import { MOCK_QUESTIONS } from '@modules/shared/components/questions/mocks/questions.mock';
-import { normalizeQuestion } from '@/modules/shared/lib/normalizers';
+import { normalizeQuestion } from '@/modules/shared/lib/question-types';
 import { Button } from '@/components/ui/button';
 
 const QUIZ_TITLE = 'Quiz de démonstration';

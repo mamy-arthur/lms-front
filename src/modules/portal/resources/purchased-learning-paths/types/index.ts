@@ -19,6 +19,8 @@ export interface PurchasedLearningPath {
   learningPathId: string;
   name: string;
   imageUrl?: string | null;
+  categoryId: string | null;
+  categoryName: string | null;
   creditsTotal: number;
   creditsUsed: number;
   creditsAvailable: number;
@@ -66,6 +68,10 @@ export interface PurchasedLearningPathRow extends PurchasedLearningPath {
 export interface PurchasedLearningPathQueryParams {
   page?: number;
   perPage?: number;
+  q?: string;
+  sortBy?: string;
+  sortDir?: 'asc' | 'desc';
+  categoryIds?: string;
 }
 
 export interface PurchasedLearningPathListMeta {

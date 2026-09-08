@@ -4,6 +4,8 @@ import { useCallback, useState } from 'react';
 
 export interface QuestionSearchParams {
   q?: string;
+  types?: string;
+  competency_ids?: string;
   quiz_id?: string;
   sort_by?: string;
   sort_dir?: 'asc' | 'desc';
@@ -18,7 +20,11 @@ export type UseQuestionListControllerOptions = {
 };
 
 export function useQuestionListController<TQuestion>(opts?: UseQuestionListControllerOptions) {
-  const { defaultSortBy = 'name', defaultSortDir = 'asc', defaultPageSize = 25 } = opts ?? {};
+  const {
+    defaultSortBy = 'updated_at',
+    defaultSortDir = 'desc',
+    defaultPageSize = 25,
+  } = opts ?? {};
 
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<TQuestion | undefined>();
@@ -39,6 +45,34 @@ export function useQuestionListController<TQuestion>(opts?: UseQuestionListContr
       page: 0,
     }));
   }, [draftSearch]);
+
+  const handleTypeToggle = useCallback((value: string) => {
+    setParams((prev) => {
+      const current = prev.types ? prev.types.split(',') : [];
+      const next = current.includes(value)
+        ? current.filter((t) => t !== value)
+        : [...current, value];
+      return { ...prev, types: next.length > 0 ? next.join(',') : undefined, page: 0 };
+    });
+  }, []);
+
+  const handleClearTypes = useCallback(() => {
+    setParams((prev) => ({ ...prev, types: undefined, page: 0 }));
+  }, []);
+
+  const handleCompetencyToggle = useCallback((value: string) => {
+    setParams((prev) => {
+      const current = prev.competency_ids ? prev.competency_ids.split(',') : [];
+      const next = current.includes(value)
+        ? current.filter((c) => c !== value)
+        : [...current, value];
+      return { ...prev, competency_ids: next.length > 0 ? next.join(',') : undefined, page: 0 };
+    });
+  }, []);
+
+  const handleClearCompetencies = useCallback(() => {
+    setParams((prev) => ({ ...prev, competency_ids: undefined, page: 0 }));
+  }, []);
 
   const handleSort = useCallback((column: string) => {
     setParams((prev) => ({
@@ -84,7 +118,7 @@ export function useQuestionListController<TQuestion>(opts?: UseQuestionListContr
     column: params.sort_by ?? defaultSortBy,
     direction: (params.sort_dir as 'asc' | 'desc') ?? defaultSortDir,
   };
-  const hasQuery = !!draftSearch;
+  const hasQuery = !!(draftSearch || params.types || params.competency_ids);
 
   return {
     isDrawerOpen,
@@ -94,6 +128,10 @@ export function useQuestionListController<TQuestion>(opts?: UseQuestionListContr
     params,
     handleSearch,
     handleSort,
+    handleTypeToggle,
+    handleClearTypes,
+    handleCompetencyToggle,
+    handleClearCompetencies,
     handleOpenCreate,
     handleCloseDrawer,
     handleSuccess,

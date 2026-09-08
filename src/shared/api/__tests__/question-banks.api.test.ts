@@ -123,6 +123,17 @@ describe('questionBanksApi', () => {
       expect(result.data[0].id).toBe('bank-1');
     });
 
+    it('envoie le bon paramètre de direction de tri côté backend', async () => {
+      mockApiGet.mockResolvedValue({ data: [MOCK_BANK] });
+
+      await questionBanksApi.list({ sort_by: 'title', sort_dir: 'desc' });
+
+      expect(mockApiGet).toHaveBeenCalledWith('platform/question-banks', {
+        sort_by: 'title',
+        sort_dir: 'desc',
+      });
+    });
+
     it('retourne une liste vide si aucune banque', async () => {
       mockApiGet.mockResolvedValue({ data: [] });
 
@@ -252,10 +263,10 @@ describe('questionBanksApi', () => {
     it('transmet le filtre type si fourni', async () => {
       mockApiGet.mockResolvedValue({ data: [] });
 
-      await questionBanksApi.listQuizzes('bank-1', { type: 'multiple_choice' });
+      await questionBanksApi.listQuizzes('bank-1', { types: 'multiple_choice' });
 
       expect(mockApiGet).toHaveBeenCalledWith('platform/question-banks/bank-1/quizzes', {
-        type: 'multiple_choice',
+        types: 'multiple_choice',
       });
     });
 

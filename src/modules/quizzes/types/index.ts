@@ -4,7 +4,7 @@ export type {
   QuestionOption,
   MatchingPair,
   Duration,
-} from '@/modules/shared/lib/normalizers';
+} from '@/modules/shared/lib/question-types';
 
 // ─── Trainee answer types ─────────────────────────────────────────────────────
 

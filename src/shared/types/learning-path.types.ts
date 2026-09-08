@@ -61,6 +61,7 @@ export interface ApiLearningPath {
   description: string | null;
   idnumber: string | null;
   category_id: string | null;
+  category_name?: string | null;
   price: number | null;
   currency: string | null;
   image: ApiLearningPathImage | null;
@@ -73,7 +74,8 @@ export interface ApiLearningPath {
   is_sellable: boolean;
   /** Durée estimée du parcours en minutes */
   duration: number | null;
-  competencies: ApiLearningPathCompetency[];
+  competencies?: ApiLearningPathCompetency[];
+  competencies_count?: number;
   /** Only present in detail endpoint responses — absent from list/shop endpoints */
   evaluations?: ApiLearningPathEvaluation[];
   /** Mail template attached as the first node of the LP — id + name only, null if none attached yet. Present in both list and detail responses. */
@@ -90,6 +92,8 @@ export interface ApiLearningPath {
     location_x: number | null;
     location_y: number | null;
   } | null;
+  /** Present only in detail responses — true when at least one purchase exists, meaning the flow is locked. */
+  is_locked?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -170,11 +174,16 @@ export interface LinkCompetencyPayload {
   location_y?: number | null;
   // ── Shop (boutique) ───────────────────────────────────────────────────────────
 }
+export type ShopLearningPathSort = 'newest' | 'oldest' | 'name_asc' | 'name_desc';
+
 export interface ShopLearningPathParams {
   page?: number;
   per_page?: number;
   q?: string;
   category_id?: string;
+  sort?: ShopLearningPathSort;
+  price_min?: number;
+  price_max?: number;
 }
 
 export interface ApiShopLearningPathsResponse {

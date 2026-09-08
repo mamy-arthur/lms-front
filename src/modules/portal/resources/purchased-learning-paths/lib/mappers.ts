@@ -18,6 +18,8 @@ export function mapToPurchasedLearningPath(api: ApiPurchasedLearningPath): Purch
     learningPathId: api.learning_path.id,
     name: api.learning_path.name,
     imageUrl: api.learning_path.image?.url ?? null,
+    categoryId: api.learning_path.category_id ?? null,
+    categoryName: api.learning_path.category_name ?? null,
     creditsTotal: api.purchased,
     creditsUsed: api.used,
     creditsAvailable: api.credits_available,

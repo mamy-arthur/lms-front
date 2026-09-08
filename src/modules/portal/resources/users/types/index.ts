@@ -56,7 +56,7 @@ export const TENANT_USER_ROLES: readonly Role[] = TENANT_ROLES;
 
 export interface ClientUserSearchParams {
   q?: string;
-  role?: string;
+  roles?: string;
   is_active?: boolean;
   sort_by?: string;
   sort_dir?: 'asc' | 'desc';

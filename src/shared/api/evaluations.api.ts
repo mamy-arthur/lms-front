@@ -57,4 +57,14 @@ export const evaluationsApi = {
     ),
 
   delete: (id: string) => apiDelete(`platform/evaluations/${id}`),
+
+  poolCheck: (learningPathId: string, questionBankIds: string[], competencyIds: string[]) =>
+    apiGet<{
+      total: number;
+      available: number;
+      by_bank: Record<string, { total: number; available: number }>;
+    }>(`platform/learning-paths/${learningPathId}/evaluations/pool-check`, {
+      question_bank_ids: questionBankIds.join(','),
+      competency_ids: competencyIds.join(','),
+    }),
 };

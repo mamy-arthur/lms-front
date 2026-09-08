@@ -268,7 +268,7 @@ function mockDefaults({
   detachCertificateMutateAsync?: jest.Mock;
 } = {}) {
   mockUseLearningPathsQuery.mockReturnValue({
-    data: paths,
+    data: { data: paths, total: paths.length },
     isLoading,
   } as unknown as ReturnType<typeof useLearningPathsQuery>);
 
@@ -371,6 +371,43 @@ describe('ProgramsList', () => {
 
       expect(screen.getByText('Parcours Chef de projet')).toBeInTheDocument();
       expect(screen.getByText('Parcours Data Science')).toBeInTheDocument();
+    });
+
+    it('affiche une liste paginée sans propriété competencies dans le payload API', () => {
+      mockUseLearningPathsQuery.mockReturnValue({
+        data: {
+          data: [
+            {
+              id: 'lp-list-1',
+              tenantId: 'tenant-1',
+              name: 'Development web',
+              description: null,
+              idnumber: 'PARC-02092026-0001',
+              categoryId: 'cat-1',
+              categoryName: 'dev',
+              price: 10,
+              currency: 'EUR',
+              image: null,
+              publishedAt: '2026-08-31T21:00:00+00:00',
+              authorId: null,
+              showInShop: false,
+              isPublished: true,
+              isSellable: false,
+              duration: 518400,
+              validity: 1051200,
+              evaluations: [],
+              createdAt: '2026-09-02T09:10:12+00:00',
+              updatedAt: '2026-09-02T09:10:12+00:00',
+            },
+          ],
+          total: 1,
+        },
+        isLoading: false,
+      } as never);
+
+      render(<ProgramsList />, { wrapper: createWrapper() });
+
+      expect(screen.getByText('Development web')).toBeInTheDocument();
     });
 
     it("affiche un état vide si aucun parcours n'est renvoyé", () => {
@@ -963,6 +1000,55 @@ describe('ProgramsList', () => {
 
       // Sans ID de parcours, l'API ne doit pas être appelée
       expect(deleteEvaluationMutateAsync).not.toHaveBeenCalled();
+    });
+  });
+
+  // ── Verrouillage du parcours vendu ────────────────────────────────────────
+
+  describe('verrouillage du parcours vendu', () => {
+    const MOCK_PATH_LOCKED: LearningPath = {
+      ...MOCK_PATH_1,
+      id: 'lp-locked',
+      name: 'Formation déjà vendue',
+      isLocked: true,
+    };
+
+    it('passe isLocked={true} au ProgramFlow quand le parcours est vendu', async () => {
+      mockDefaults({ paths: [MOCK_PATH_LOCKED] });
+
+      let capturedIsLocked: boolean | undefined = undefined;
+      MockProgramFlow.mockImplementation((props: ProgramFlowProps) => {
+        capturedIsLocked = props.isLocked;
+        return null;
+      });
+
+      const user = userEvent.setup();
+      render(<ProgramsList />, { wrapper: createWrapper() });
+
+      await user.click(
+        screen.getByRole('button', { name: `Actions pour ${MOCK_PATH_LOCKED.name}` }),
+      );
+      await user.click(screen.getByRole('menuitem', { name: /modifier/i }));
+
+      await waitFor(() => expect(capturedIsLocked).toBe(true));
+    });
+
+    it("passe isLocked={false} au ProgramFlow quand le parcours n'est pas vendu", async () => {
+      mockDefaults({ paths: [MOCK_PATH_1] });
+
+      let capturedIsLocked: boolean | undefined = undefined;
+      MockProgramFlow.mockImplementation((props: ProgramFlowProps) => {
+        capturedIsLocked = props.isLocked;
+        return null;
+      });
+
+      const user = userEvent.setup();
+      render(<ProgramsList />, { wrapper: createWrapper() });
+
+      await user.click(screen.getByRole('button', { name: `Actions pour ${MOCK_PATH_1.name}` }));
+      await user.click(screen.getByRole('menuitem', { name: /modifier/i }));
+
+      await waitFor(() => expect(capturedIsLocked).toBeFalsy());
     });
   });
 });

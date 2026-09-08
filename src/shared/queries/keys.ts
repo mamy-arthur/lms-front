@@ -49,6 +49,21 @@ export const contentTypeKeys = {
   detail: (id: string) => [...contentTypeKeys.all, 'detail', id] as const,
 };
 
+/**
+ * Media records are cached per id, never as a list: the same file can be
+ * referenced by several fields and several entries, and a per-id key is what
+ * lets those share one cache entry instead of refetching each time.
+ */
+export const mediaKeys = {
+  all: ['media'] as const,
+  detail: (id: string) => [...mediaKeys.all, 'detail', id] as const,
+};
+
+export const scormPackageKeys = {
+  all: ['scorm-packages'] as const,
+  detail: (id: string) => [...scormPackageKeys.all, 'detail', id] as const,
+};
+
 export const learningPathCategoryKeys = {
   all: ['learning-path-categories'] as const,
   lists: () => [...learningPathCategoryKeys.all, 'list'] as const,
@@ -58,6 +73,7 @@ export const learningPathCategoryKeys = {
 export const learningPathKeys = {
   all: ['learning-paths'] as const,
   lists: () => [...learningPathKeys.all, 'list'] as const,
+  list: (filters: object) => [...learningPathKeys.lists(), filters] as const,
   detail: (id: string) => [...learningPathKeys.all, 'detail', id] as const,
 };
 
@@ -103,6 +119,10 @@ export const learningPathCompetencyAssociationKeys = {
   lists: () => [...learningPathCompetencyAssociationKeys.all, 'list'] as const,
 };
 
+export const portalMyEnrollmentsKeys = {
+  all: ['portal', 'me', 'enrollments'] as const,
+};
+
 export const portalLearningPathKeys = {
   all: ['portal', 'learning-paths'] as const,
   summary: (enrollmentId: string) =>
@@ -118,6 +138,12 @@ export const portalContentEntryKeys = {
 export const portalLearnerEvaluationKeys = {
   all: ['portal', 'learner-evaluations'] as const,
   list: (learningPathId: string) => [...portalLearnerEvaluationKeys.all, learningPathId] as const,
+};
+
+export const portalScormLaunchKeys = {
+  all: ['portal', 'scorm-launch'] as const,
+  detail: (enrollmentId: string, courseId: string, entryId: string) =>
+    [...portalScormLaunchKeys.all, enrollmentId, courseId, entryId] as const,
 };
 
 export const questionBankKeys = {
@@ -141,10 +167,19 @@ export const evaluationKeys = {
   listByLearningPath: (learningPathId: string) =>
     [...evaluationKeys.lists(), learningPathId] as const,
   detail: (id: string) => [...evaluationKeys.all, 'detail', id] as const,
+  poolCheck: (learningPathId: string, bankIds: string[], competencyIds: string[]) =>
+    [...evaluationKeys.all, 'pool-check', learningPathId, bankIds, competencyIds] as const,
 };
 
 export const progressionRuleKeys = {
   all: ['progression-rules'] as const,
   listByLearningPath: (learningPathId: string) =>
     [...progressionRuleKeys.all, 'list', learningPathId] as const,
+};
+
+export const competencyKeys = {
+  all: ['admin', 'modules'] as const,
+  lists: () => [...competencyKeys.all, 'list'] as const,
+  list: (filters: object) => [...competencyKeys.lists(), filters] as const,
+  detail: (id: string) => [...competencyKeys.all, 'detail', id] as const,
 };

@@ -1,10 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Loader2, AlertCircle, Trash } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { FileUploadField } from '@/modules/shared/components/input-upload/FileUploadField';
-import { mediaApi, type ApiMedia } from '@/shared/api/media.api';
+import { type ApiMedia } from '@/shared/api/media.api';
+import {
+  useDeleteMediaMutation,
+  useMediaQuery,
+  useUploadMediaMutation,
+} from '@/shared/hooks/useMedia';
 import type { ContentTypeField } from '@/shared/types/content-type.types';
 import {
   extractMediaId,
@@ -31,22 +36,19 @@ export function MediaSingleField({
   contentTypeId,
   onPendingDelete,
 }: MediaSingleFieldProps) {
-  const [mediaInfo, setMediaInfo] = useState<ApiMedia | null>(null);
-  const [isLoadingMedia, setIsLoadingMedia] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [previewMedia, setPreviewMedia] = useState<ApiMedia | null>(null);
 
-  useEffect(() => {
-    const id = extractMediaId(value);
-    if (!id) return;
-    setIsLoadingMedia(true);
-    mediaApi
-      .get(id)
-      .then((r) => setMediaInfo(r.data))
-      .catch(() => {})
-      .finally(() => setIsLoadingMedia(false));
-  }, []);
+  // Derived from the form value rather than mirrored into local state: the cache
+  // is the single source of truth, so a remount (switching entries and back)
+  // resolves instantly instead of refetching. The previous `useEffect(…, [])`
+  // also never reacted to `value` changing after mount.
+  const mediaId = extractMediaId(value);
+  const { data: mediaInfo, isLoading: isLoadingMedia } = useMediaQuery(mediaId);
+
+  const uploadMedia = useUploadMediaMutation();
+  const deleteMedia = useDeleteMediaMutation();
 
   const handleCardClick = (media: ApiMedia) => {
     if (isPreviewable(media.mime_type)) {
@@ -61,18 +63,18 @@ export function MediaSingleField({
     setUploadError(null);
     try {
       if (mediaInfo) {
-        await mediaApi.delete(mediaInfo.id);
-        setMediaInfo(null);
+        await deleteMedia.mutateAsync(mediaInfo.id);
         onChange(null); // clear value immediately so a failed upload doesn't leave a stale UUID
       }
-      const res = await mediaApi.uploadWithProgress(
+      // The mutation seeds the cache, so the re-render triggered by onChange
+      // below reads the new media from cache instead of fetching it back.
+      const media = await uploadMedia.mutateAsync({
         file,
         contentTypeId,
-        field.field_id,
-        setUploadProgress,
-      );
-      setMediaInfo(res.data);
-      onChange(res.data.id);
+        fieldId: field.field_id,
+        onProgress: setUploadProgress,
+      });
+      onChange(media.id);
     } catch (err) {
       setUploadError(extractErrorMessage(err));
     } finally {
@@ -82,7 +84,6 @@ export function MediaSingleField({
 
   const handleRemove = () => {
     if (mediaInfo) onPendingDelete?.(mediaInfo.id);
-    setMediaInfo(null);
     onChange(null);
   };
 

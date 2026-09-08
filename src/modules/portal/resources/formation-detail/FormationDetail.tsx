@@ -2,192 +2,279 @@
 
 import { useRouter } from 'next/navigation';
 import {
-  Play,
-  Clock,
-  BookOpen,
-  Timer,
-  History,
+  Award,
   ClipboardCheck,
-  FileText,
-  Loader2,
+  Clock,
+  GraduationCap,
+  History,
+  ImageIcon,
+  Layers,
+  Play,
 } from 'lucide-react';
 import type { FormationDetailData } from './lib/types';
 import { ProgressVariant } from '@/shared/components/ui/progress/Progress';
-import { Button } from '@/shared/components/ui/Button/Button';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Accordion } from '@/components/ui/accordion';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useFormationSummaryQuery } from '../formation-learning/hooks/useFormationSummaryQuery';
-import type { FormationModule, FormationEvaluation } from '../formation-learning/lib/types';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/ui/accordion';
+import type { FormationEvaluation, FormationModule } from '../formation-learning/lib/types';
+import { formatDuration } from '@/shared/lib/duration';
+import CurriculumModule from './components/CurriculumModule';
 
 interface FormationDetailProps {
   formation: FormationDetailData;
 }
 
+const STATUS_BADGE: Record<FormationDetailData['status'], { label: string; className: string }> = {
+  completed: { label: 'Terminée', className: 'bg-emerald-100 text-emerald-700' },
+  in_progress: { label: 'En cours', className: 'bg-(--color-primary)/10 text-(--color-primary)' },
+  not_started: { label: 'Non commencée', className: 'bg-slate-100 text-slate-600' },
+};
+
 export default function FormationDetail({ formation }: FormationDetailProps) {
   const router = useRouter();
   const summaryQuery = useFormationSummaryQuery(formation.enrollmentId);
 
-  const totalDurationH = Math.floor(formation.totalDurationMin / 60);
-  const totalDurationM = formation.totalDurationMin % 60;
-  const durationLabel =
-    totalDurationM > 0 ? `${totalDurationH}h ${totalDurationM}m` : `${totalDurationH}h`;
+  const nodes = summaryQuery.data?.nodes ?? [];
+  const modules = nodes.filter((n): n is FormationModule => n.type === 'module');
+  const evaluations = nodes.filter((n): n is FormationEvaluation => n.type === 'evaluation');
+
+  const completedModules = summaryQuery.data
+    ? modules.filter((m) => m.progress === 100).length
+    : formation.completedModules;
+  const totalModules = summaryQuery.data ? modules.length : formation.totalModules;
+
+  const progress = summaryQuery.data?.progress ?? formation.progress;
+  const status = STATUS_BADGE[formation.status];
+  const hasStarted = progress > 0;
 
   return (
-    <div>
-      <div className="mx-auto w-full space-y-6">
-        <div className="grid grid-cols-1 gap-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="h-52 sm:h-72 md:h-100 w-full shrink-0 overflow-hidden">
-              <img
-                src={formation.coverImage}
-                alt={formation.title}
-                className="h-full w-full object-cover rounded-sm"
-              />
-            </div>
-            <div className="flex flex-1 flex-col gap-3">
-              <div className="flex flex-col gap-5">
-                <div className="space-y-1 w-full">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h1 className="text-2xl font-semibold text-slate-900">{formation.title}</h1>
-                  </div>
-                  <p className="text-sm text-muted-foreground">{formation.description}</p>
-                </div>
-                <div className="space-y-5">
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                      <div className="rounded-sm bg-muted/40 p-4">
-                        <div className="mb-2 flex items-center gap-2">
-                          <BookOpen className="h-4 w-4" />
-                          <span className="text-xs font-medium">Modules</span>
-                        </div>
-                        <p className="text-lg font-semibold">
-                          {formation.completedModules}
-                          <span className="text-sm font-normal"> / {formation.totalModules}</span>
-                        </p>
-                        <p className="text-xs">complétés</p>
-                      </div>
-                      <div className="rounded-sm bg-muted/40 p-4">
-                        <div className="mb-2 flex items-center gap-2">
-                          <Clock className="h-4 w-4" />
-                          <span className="text-xs font-medium">Temps passé</span>
-                        </div>
-                        <p className="text-lg font-semibold">{durationLabel}</p>
-                        <p className="text-xs">sur la formation</p>
-                      </div>
-                      <div className="rounded-sm bg-muted/40 p-4">
-                        <div className="mb-2 flex items-center gap-2">
-                          <Timer className="h-4 w-4" />
-                          <span className="text-xs font-medium">Durée totale</span>
-                        </div>
-                        <p className="text-lg font-semibold">{formation.totalDurationMin} min</p>
-                        <p className="text-xs">de contenu</p>
-                      </div>
-                      <div className="rounded-sm bg-muted/40 p-4">
-                        <div className="mb-2 flex items-center gap-2">
-                          <History className="h-4 w-4" />
-                          <span className="text-xs font-medium">Dernière activité</span>
-                        </div>
-                        <p className="text-lg font-semibold">{formation.lastActivity}</p>
-                        <p className="text-xs">progression</p>
-                      </div>
-                    </div>
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between text-xs text-slate-500">
-                        <span>Progression</span>
-                        <span className="font-semibold text-slate-800">{formation.progress}%</span>
-                      </div>
-                      <ProgressVariant value={formation.progress} className="h-2" />
-                    </div>
-                  </div>
-                </div>
-                <Button
-                  onClick={() => router.push(`/my-learning-paths/${formation.enrollmentId}/learn`)}
-                  className="flex w-fit items-center gap-1 rounded-sm bg-(--color-primary)  text-xs font-semibold text-white shadow-sm hover:opacity-90 transition-all"
-                >
-                  <span>Accéder au cours</span>
-                  <Play className="h-3 w-4 fill-white" />
-                </Button>
+    <div className="pb-10">
+      {/* ── En-tête + statistiques ─────────────────────────────────────────
+          Une seule carte délimitée par un trait, sans aplat de fond : le hero et
+          la bande de repères sont séparés par un simple filet horizontal, ce qui
+          garde la continuité qu'apportait le bandeau sombre sans en avoir le
+          poids visuel. */}
+      <div className="mb-8 overflow-hidden rounded-xl border border-slate-200">
+        <section className="px-6 py-8 sm:px-8">
+          <div className="grid items-center gap-8 lg:grid-cols-[1fr_minmax(0,340px)]">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge className={status.className}>{status.label}</Badge>
+                {formation.category && (
+                  <Badge className="bg-slate-100 text-slate-600">{formation.category}</Badge>
+                )}
               </div>
-            </div>
-          </div>
-          <div className="mt-2">
-            <div>
-              <div className="mb-3 flex flex-col">
-                <p className="">Contenu de la formation</p>
-                <span className="text-muted-foreground text-xs">
-                  Voici la structure de la formation que vous allez suivre.
-                </span>
-              </div>
-              {summaryQuery.isLoading ? (
-                <div className="flex items-center gap-2 text-xs text-slate-400">
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  Chargement…
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {summaryQuery.isError && (
-                    <p className="text-xs text-red-500">
-                      Impossible de charger le contenu de la formation.
-                    </p>
-                  )}
-                  {(summaryQuery.data?.nodes ?? []).map((node) => {
-                    if (node.type === 'module') {
-                      const mod = node as FormationModule;
-                      return (
-                        <Accordion
-                          key={mod.id}
-                          type="single"
-                          collapsible
-                          className="rounded-sm border"
-                        >
-                          <AccordionItem value={mod.id} className="border-none">
-                            <AccordionTrigger className="px-4 py-3 hover:no-underline">
-                              <div className="flex items-center gap-2">
-                                <BookOpen className="h-3.5 w-3.5 shrink-0" />
-                                <span className="text-xs">{mod.title}</span>
-                              </div>
-                            </AccordionTrigger>
-                            <AccordionContent className="px-4 pb-3">
-                              <ul className="ml-5 space-y-2">
-                                {mod.courses.map((course) => (
-                                  <li key={course.id} className="flex items-center gap-1.5 text-sm">
-                                    <FileText className="h-3 w-3 shrink-0" />
-                                    {course.title}
-                                  </li>
-                                ))}
-                              </ul>
-                            </AccordionContent>
-                          </AccordionItem>
-                        </Accordion>
-                      );
-                    }
-                    const ev = node as FormationEvaluation;
-                    return (
-                      <div
-                        key={ev.id}
-                        className="flex items-center gap-2 rounded-sm border px-4 py-3"
-                      >
-                        <ClipboardCheck className="h-3.5 w-3.5 shrink-0" />
-                        <div>
-                          <span className="text-sm font-medium">{ev.title}</span>
-                          <span className="ml-2 text-xs">
-                            {ev.evaluationType === 'final' ? 'Finale' : 'Intermédiaire'} · Score
-                            requis : {ev.passingScore}%
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+
+              {/* Titre volontairement large : sur Coursera c'est l'élément qui
+                  domine l'écran, avant même l'illustration. */}
+              <h1 className="mt-3 text-3xl font-bold leading-tight tracking-tight text-slate-900 sm:text-4xl">
+                {formation.title}
+              </h1>
+
+              {formation.description && (
+                <p className="mt-3 max-w-2xl text-sm leading-relaxed text-slate-600 sm:text-base">
+                  {formation.description}
+                </p>
               )}
+
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+                <Button
+                  size="lg"
+                  onClick={() => router.push(`/my-learning-paths/${formation.enrollmentId}/learn`)}
+                  className="h-11 gap-2 bg-(--color-primary) px-6 text-sm font-semibold hover:bg-(--color-primary)/90"
+                >
+                  <Play className="size-4 fill-current" />
+                  {hasStarted ? 'Reprendre la formation' : 'Commencer la formation'}
+                </Button>
+
+                {hasStarted && (
+                  <span className="text-xs text-slate-500">
+                    Vous avez terminé {progress}% de cette formation
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Cadre de l'image en trait plutôt qu'en ombre portée : sans fond
+                sombre derrière, une ombre flotterait dans le vide. */}
+            <div className="overflow-hidden rounded-lg border border-slate-200">
+              <div className="relative aspect-video">
+                {formation.coverImage ? (
+                  <img
+                    src={formation.coverImage}
+                    alt={formation.title}
+                    className="absolute inset-0 size-full object-cover"
+                  />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center text-slate-300">
+                    <ImageIcon className="size-14" strokeWidth={1} />
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        </div>
+        </section>
+
+        {/* ── Bande de statistiques ────────────────────────────────────────
+            Le bandeau chiffré que Coursera place juste sous son hero : des repères
+            séparés par des filets verticaux, à la place des quatre encarts gris de
+            poids égal dont l'un était vide. */}
+        <section className="border-t border-slate-200 px-6 py-4 sm:px-8">
+          <dl className="grid grid-cols-2 gap-x-6 gap-y-4 sm:flex sm:flex-wrap sm:items-center sm:gap-0">
+            <div className="sm:pr-8">
+              <dt className="flex items-center gap-1.5 text-xs text-slate-500">
+                <Layers className="size-3.5" />
+                Programme
+              </dt>
+              <dd className="mt-0.5 text-sm font-semibold text-slate-900">
+                {totalModules} module{totalModules > 1 ? 's' : ''}
+              </dd>
+            </div>
+
+            {formation.totalDurationMin > 0 && (
+              <div className="sm:border-l sm:border-slate-200 sm:px-8">
+                <dt className="flex items-center gap-1.5 text-xs text-slate-500">
+                  <Clock className="size-3.5" />
+                  Durée
+                </dt>
+                <dd className="mt-0.5 text-sm font-semibold text-slate-900">
+                  {formatDuration(formation.totalDurationMin)}
+                </dd>
+              </div>
+            )}
+
+            {formation.level && (
+              <div className="sm:border-l sm:border-slate-200 sm:px-8">
+                <dt className="flex items-center gap-1.5 text-xs text-slate-500">
+                  <GraduationCap className="size-3.5" />
+                  Niveau
+                </dt>
+                <dd className="mt-0.5 text-sm font-semibold text-slate-900">{formation.level}</dd>
+              </div>
+            )}
+
+            {formation.lastActivity && (
+              <div className="sm:border-l sm:border-slate-200 sm:px-8">
+                <dt className="flex items-center gap-1.5 text-xs text-slate-500">
+                  <History className="size-3.5" />
+                  Dernière activité
+                </dt>
+                <dd className="mt-0.5 text-sm font-semibold text-slate-900">
+                  {formation.lastActivity}
+                </dd>
+              </div>
+            )}
+
+            {formation.hasCertificate && (
+              <div className="sm:border-l sm:border-slate-200 sm:px-8">
+                <dt className="flex items-center gap-1.5 text-xs text-slate-500">
+                  <Award className="size-3.5" />À la clé
+                </dt>
+                <dd className="mt-0.5 text-sm font-semibold text-emerald-700">Attestation</dd>
+              </div>
+            )}
+
+            {/* Progression rattachée à la même bande, avec sa barre : c'est la
+              donnée qui change, contrairement aux repères ci-dessus. */}
+            <div className="col-span-2 sm:ml-auto sm:min-w-56 sm:border-l sm:border-slate-200 sm:pl-8">
+              <dt className="flex items-center justify-between text-xs text-slate-500">
+                <span>Votre progression</span>
+                <span className="font-semibold tabular-nums text-slate-900">{progress}%</span>
+              </dt>
+              <dd className="mt-1.5">
+                <ProgressVariant value={progress} className="h-1.5" />
+                <p className="mt-1 text-[11px] text-slate-500">
+                  {completedModules} sur {totalModules} module{totalModules > 1 ? 's' : ''} terminé
+                  {completedModules > 1 ? 's' : ''}
+                </p>
+              </dd>
+            </div>
+          </dl>
+        </section>
       </div>
+
+      {/* ── Programme ─────────────────────────────────────────────────────── */}
+      <section>
+        <div className="mb-4">
+          <h2 className="text-xl font-bold tracking-tight text-slate-900">
+            Contenu de la formation
+          </h2>
+          <p className="mt-1 text-sm text-slate-500">
+            {totalModules} module{totalModules > 1 ? 's' : ''}
+            {evaluations.length > 0 &&
+              ` · ${evaluations.length} évaluation${evaluations.length > 1 ? 's' : ''}`}
+            {formation.totalDurationMin > 0 &&
+              ` · ${formatDuration(formation.totalDurationMin)} pour terminer`}
+          </p>
+        </div>
+
+        {summaryQuery.isLoading ? (
+          <div className="space-y-2">
+            {[0, 1, 2].map((i) => (
+              <Skeleton key={i} className="h-16 w-full rounded-lg" />
+            ))}
+          </div>
+        ) : summaryQuery.isError ? (
+          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            Impossible de charger le contenu de la formation.
+          </div>
+        ) : nodes.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-slate-300 px-4 py-8 text-center text-sm text-muted-foreground">
+            Le programme de cette formation n'est pas encore disponible.
+          </div>
+        ) : (
+          // `type="multiple"` sur un seul Accordion : chaque module était
+          // auparavant son propre Accordion racine, ce qui empêchait tout
+          // comportement d'ensemble et dupliquait la structure ARIA.
+          // La racine Accordion porte `border rounded-md overflow-hidden` par
+          // défaut : neutralisé ici, sinon une bordure englobante se superpose à
+          // celle de chaque module.
+          <Accordion
+            type="multiple"
+            className="gap-2 rounded-none border-none bg-transparent overflow-visible"
+          >
+            {(() => {
+              let moduleIndex = 0;
+
+              return nodes.map((node) => {
+                if (node.type === 'module') {
+                  moduleIndex += 1;
+                  return (
+                    <CurriculumModule
+                      key={node.id}
+                      module={node as FormationModule}
+                      index={moduleIndex}
+                    />
+                  );
+                }
+
+                const ev = node as FormationEvaluation;
+                return (
+                  <div
+                    key={ev.id}
+                    className="flex items-center gap-3 rounded-lg border border-dashed border-slate-300 bg-white px-4 py-3"
+                  >
+                    <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-amber-100 text-amber-700">
+                      <ClipboardCheck className="size-3.5" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-slate-900">{ev.title}</p>
+                      <p className="mt-0.5 text-xs text-slate-500">
+                        Évaluation {ev.evaluationType === 'final' ? 'finale' : 'intermédiaire'}
+                      </p>
+                    </div>
+                    <Badge className="shrink-0 bg-slate-100 text-slate-600">
+                      Score requis {ev.passingScore}%
+                    </Badge>
+                  </div>
+                );
+              });
+            })()}
+          </Accordion>
+        )}
+      </section>
     </div>
   );
 }

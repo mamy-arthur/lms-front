@@ -39,6 +39,7 @@ export function DynamicField({
           onChange={(e) => onChange(e.target.value)}
           placeholder={field.label}
           required={field.required}
+          className="max-h-40"
         />
       );
 

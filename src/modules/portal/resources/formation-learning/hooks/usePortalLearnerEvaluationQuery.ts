@@ -7,14 +7,15 @@ export function usePortalLearnerEvaluationQuery(
   learningPathId: string | undefined,
   evaluationId: string,
 ) {
-  return useQuery<ApiLearnerEvaluation | null>({
+  return useQuery<ApiLearnerEvaluation[], unknown, ApiLearnerEvaluation | null>({
     queryKey: portalLearnerEvaluationKeys.list(learningPathId ?? ''),
     queryFn: async () => {
       const res = await portalLearningPathsApi.learnerEvaluations(learningPathId!);
-      return res.data.find((e) => e.id === evaluationId) ?? null;
+      return res.data;
     },
+    select: (data) => data.find((e) => e.id === evaluationId) ?? null,
     enabled: !!learningPathId,
-    staleTime: 0, // always fresh — attempt count changes after each submission
+    staleTime: 0,
   });
 }
 

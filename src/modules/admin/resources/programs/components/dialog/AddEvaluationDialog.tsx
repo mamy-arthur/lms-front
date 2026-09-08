@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useEvaluationQuery } from '../../hooks/useEvaluationQuery';
-import { Award, Check, ClipboardCheck, Loader2, Plus, Search } from 'lucide-react';
+import { useQuestionPoolCheck } from '../../hooks/useQuestionPoolCheck';
+import { AlertTriangle, Award, Check, ClipboardCheck, Loader2, Plus, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -14,7 +15,6 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import { cn } from '@/shared/lib/cn';
 import { Separator } from '@/components/ui/separator';
 import { useQuizzesQuery } from '@/modules/admin/resources/quizzes/hooks/useQuizzesQuery';
@@ -63,6 +63,12 @@ type Props = {
   initialConfig?: EvaluationConfig;
   evaluationId?: string;
   alreadyUsedBankIds?: string[];
+  learningPathId: string;
+  /** competency_id of the module just before the node — for intermediate evaluations */
+  precedingModuleId?: string;
+  /** competency_ids of all modules already present in the learning path — for final evaluations */
+  allModuleIds: string[];
+  moduleNameById: Record<string, string>;
   onConfirm: (config: EvaluationConfig) => void;
 };
 
@@ -74,6 +80,10 @@ export function AddEvaluationDialog({
   initialConfig,
   evaluationId,
   alreadyUsedBankIds = [],
+  learningPathId,
+  precedingModuleId,
+  allModuleIds,
+  moduleNameById,
   onConfirm,
 }: Props) {
   const [config, setConfig] = useState<EvaluationConfig>(initialConfig ?? DEFAULT_CONFIG);
@@ -122,27 +132,99 @@ export function AddEvaluationDialog({
   const set = <K extends keyof EvaluationConfig>(key: K, val: EvaluationConfig[K]) =>
     setConfig((c) => ({ ...c, [key]: val }));
 
-  const filteredBanks = useMemo(
-    () => questionBanks.filter((b) => b.name.toLowerCase().includes(bankSearch.toLowerCase())),
-    [questionBanks, bankSearch],
+  const allBankIds = useMemo(() => questionBanks.map((b) => b.id), [questionBanks]);
+
+  // For edit mode, preceding module comes from the stored evaluation data
+  const effectivePrecedingModuleId = evaluationId
+    ? (evalDetail?.data.preceding_competency_id ?? undefined)
+    : precedingModuleId;
+
+  const effectiveModuleIds = useMemo(() => {
+    if (config.stepType === 'evaluation-intermediate') {
+      return effectivePrecedingModuleId ? [effectivePrecedingModuleId] : [];
+    }
+    return allModuleIds;
+  }, [config.stepType, effectivePrecedingModuleId, allModuleIds]);
+
+  const precedingModuleName = effectivePrecedingModuleId
+    ? moduleNameById[effectivePrecedingModuleId]
+    : undefined;
+
+  const moduleScopeLabel =
+    config.stepType === 'evaluation-intermediate'
+      ? 'pour ce module'
+      : 'pour les modules sélectionnés';
+
+  const {
+    data: poolData,
+    isLoading: isLoadingPool,
+    isError: isErrorPool,
+  } = useQuestionPoolCheck(learningPathId, allBankIds, effectiveModuleIds);
+
+  const bankCounts = poolData?.by_bank ?? {};
+  const poolChecked = effectiveModuleIds.length > 0 && !isLoadingPool && poolData !== undefined;
+
+  // When pool data updates, auto-deselect any bank that no longer has available questions
+  useEffect(() => {
+    if (!poolChecked) return;
+    const availableIds = new Set(
+      Object.entries(poolData.by_bank)
+        .filter(([, counts]) => counts.available > 0)
+        .map(([bankId]) => bankId),
+    );
+    setConfig((c) => {
+      const validIds = c.questionBankIds.filter((id) => availableIds.has(id));
+      if (validIds.length === c.questionBankIds.length) return c;
+      return {
+        ...c,
+        questionBankIds: validIds,
+        questionBankNames: c.questionBankNames.filter((_, i) =>
+          availableIds.has(c.questionBankIds[i]),
+        ),
+      };
+    });
+  }, [poolData]);
+
+  const filteredBanks = useMemo(() => {
+    const bySearch = questionBanks.filter((b) =>
+      b.name.toLowerCase().includes(bankSearch.toLowerCase()),
+    );
+    // Once pool data arrives, only surface banks with at least one available question
+    if (poolChecked) {
+      return bySearch.filter((b) => (bankCounts[b.id]?.available ?? 0) > 0);
+    }
+    return bySearch;
+  }, [questionBanks, bankSearch, poolChecked, bankCounts]);
+
+  const selectedAvailable = config.questionBankIds.reduce(
+    (sum, id) => sum + (bankCounts[id]?.available ?? 0),
+    0,
   );
+  // Le pool doit couvrir le nombre de questions configuré, pas seulement être non-nul
+  const poolInsufficient =
+    config.questionBankIds.length > 0 && poolChecked && selectedAvailable < config.questionCount;
 
   const canSubmit =
     config.title.trim() !== '' &&
     config.questionBankIds.length > 0 &&
-    !(hasPartialForLastModule && config.stepType === 'evaluation-intermediate');
+    !(hasPartialForLastModule && config.stepType === 'evaluation-intermediate') &&
+    !poolInsufficient;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl">
+      <DialogContent className="flex max-h-[80vh] flex-col sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Configurer l'évaluation</DialogTitle>
+          <DialogTitle>
+            {config.stepType === 'evaluation-intermediate'
+              ? `Configurer l’évaluation du module «${precedingModuleName ? ` ${precedingModuleName}` : ''}»`
+              : 'Configurer l’évaluation de tous les modules du nœud'}
+          </DialogTitle>
           <DialogDescription>
             Définissez les paramètres de l'évaluation à ajouter au parcours
           </DialogDescription>
         </DialogHeader>
         <Separator />
-        <div className="space-y-5">
+        <div className="flex-1 min-h-0 space-y-5 overflow-y-auto overflow-x-hidden pr-1">
           {/* ── Title ── */}
           <div className="flex flex-col space-y-2">
             <Label htmlFor="eval-title">
@@ -209,7 +291,7 @@ export function AddEvaluationDialog({
           </div>
 
           {/* ── Duration ── */}
-          <div className="space-y-2">
+          {/*<div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label htmlFor="sw-duration">Activer la durée</Label>
               <Switch
@@ -219,7 +301,7 @@ export function AddEvaluationDialog({
                 className="data-[state=checked]:bg-(--color-primary)"
               />
             </div>
-            {config.durationEnabled && (
+             {config.durationEnabled && (
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-1.5">
                   <Input
@@ -245,7 +327,7 @@ export function AddEvaluationDialog({
                 </div>
               </div>
             )}
-          </div>
+          </div> */}
 
           {/* ── Params ── */}
           <div className="grid grid-cols-2 gap-3">
@@ -293,8 +375,16 @@ export function AddEvaluationDialog({
                 className="pl-9"
               />
             </div>
-            <div className="flex max-h-44 flex-col gap-1.5 overflow-y-auto pr-1">
+            <div className="flex max-h-44 flex-col gap-1.5 overflow-y-auto overflow-x-hidden pr-1">
               {isLoadingBanks || isLoadingDetail ? (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="size-4 animate-spin text-muted-foreground" />
+                </div>
+              ) : isErrorPool ? (
+                <p className="py-4 text-center text-xs text-destructive">
+                  Impossible de vérifier les questions disponibles. Réessayez.
+                </p>
+              ) : isLoadingPool && effectiveModuleIds.length > 0 ? (
                 <div className="flex items-center justify-center py-4">
                   <Loader2 className="size-4 animate-spin text-muted-foreground" />
                 </div>
@@ -302,11 +392,14 @@ export function AddEvaluationDialog({
                 <p className="py-4 text-center text-xs text-muted-foreground">
                   {questionBanks.length === 0
                     ? 'Aucune banque de questions disponible.'
-                    : 'Aucune banque ne correspond à votre recherche.'}
+                    : poolChecked
+                      ? 'Aucune banque ne contient de questions pour les modules concernés.'
+                      : 'Aucune banque ne correspond à votre recherche.'}
                 </p>
               ) : (
                 filteredBanks.map((bank) => {
                   const isSelected = config.questionBankIds.includes(bank.id);
+                  const counts = bankCounts[bank.id];
                   return (
                     <button
                       key={bank.id}
@@ -343,6 +436,18 @@ export function AddEvaluationDialog({
                             {bank.description}
                           </p>
                         )}
+                        {counts !== undefined && (
+                          <div className="mt-1.5 flex gap-3">
+                            <span className="text-[10px] text-muted-foreground">
+                              Existantes :{' '}
+                              <strong className="text-foreground">{counts.total}</strong>
+                            </span>
+                            <span className="text-[10px] text-muted-foreground">
+                              Disponibles {moduleScopeLabel} :{' '}
+                              <strong className="text-foreground">{counts.available}</strong>
+                            </span>
+                          </div>
+                        )}
                       </div>
                       {!isSelected && alreadyUsedBankIds.includes(bank.id) && (
                         <span className="ml-2 shrink-0 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">
@@ -355,6 +460,20 @@ export function AddEvaluationDialog({
                 })
               )}
             </div>
+
+            {/* ── No-questions warning for selected banks ── */}
+            {poolInsufficient && (
+              <div className="mt-1 flex items-start gap-1.5 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-[11px] text-destructive">
+                <AlertTriangle className="mt-0.5 size-3 shrink-0" />
+                <span>
+                  {selectedAvailable} question{selectedAvailable !== 1 ? 's' : ''} disponible
+                  {selectedAvailable !== 1 ? 's' : ''} pour les modules concernés dans les banques
+                  sélectionnées, pour {config.questionCount} demandée
+                  {config.questionCount !== 1 ? 's' : ''}. Réduisez le nombre de questions ou
+                  sélectionnez d'autres banques.
+                </span>
+              </div>
+            )}
           </div>
         </div>
 

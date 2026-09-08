@@ -1,4 +1,4 @@
-import ReactMarkdown from 'react-markdown';
+import { RichTextRenderer } from '@/shared/components/RichTextRenderer';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -24,17 +24,7 @@ export function TextContentView({ title, text }: TextContentViewProps) {
       <Separator />
       <CardContent>
         {text ? (
-          <div
-            className="
-                        react-markdown
-                            prose
-                            prose-sm
-                            dark:prose-invert
-                            max-w-none
-                        "
-          >
-            <ReactMarkdown>{text}</ReactMarkdown>
-          </div>
+          <RichTextRenderer content={text} />
         ) : (
           <p className="text-muted-foreground text-sm italic">Aucun contenu renseigné.</p>
         )}

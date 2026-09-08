@@ -1,11 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { Loader2, AlertCircle } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
+import { Loader2, AlertCircle, Menu } from 'lucide-react';
 import { MOCK_FORMATION } from './lib/course-data';
 import { getDefaultActiveId, resolveActive } from './lib/course-utils';
 import { useFormationSummaryQuery } from './hooks/useFormationSummaryQuery';
 import { usePortalContentEntryQuery } from './hooks/usePortalContentEntryQuery';
+import { useMarkContentCompleteMutation } from './hooks/useMarkContentCompleteMutation';
+import { portalLearningPathKeys } from '@/shared/queries/keys';
 import FormationSidebar from './components/FormationSidebar';
 import FormationContentView from './components/FormationContentView';
 import FormationMobileSidebar from './components/FormationMobileSidebar';
@@ -16,6 +19,7 @@ interface Props {
 }
 
 export default function FormationPlayer({ enrollmentId }: Props) {
+  const queryClient = useQueryClient();
   const summaryQuery = useFormationSummaryQuery(enrollmentId);
 
   const isRealMode = !!enrollmentId;
@@ -30,9 +34,9 @@ export default function FormationPlayer({ enrollmentId }: Props) {
 
   const resolved = formation ? resolveActive(formation, effectiveActiveId) : null;
 
-  // For real mode: derive courseId from the resolved content (sectionId === courseId in the mapper).
+  // For real mode: derive courseId from the resolved content.
   const activeCourseId =
-    isRealMode && resolved?.kind === 'content' ? resolved.content.sectionId : null;
+    isRealMode && resolved?.kind === 'content' ? resolved.content.courseId : null;
   const activeEntryId = isRealMode && resolved?.kind === 'content' ? resolved.content.id : null;
 
   const entryQuery = usePortalContentEntryQuery(
@@ -40,6 +44,15 @@ export default function FormationPlayer({ enrollmentId }: Props) {
     activeCourseId,
     activeEntryId,
   );
+
+  const { mutate: markComplete, isPending: isCompleting } = useMarkContentCompleteMutation(
+    enrollmentId ?? '',
+  );
+
+  function handleMarkComplete(onDone?: () => void) {
+    if (!enrollmentId || !activeCourseId || !activeEntryId) return;
+    markComplete({ courseId: activeCourseId, entryId: activeEntryId }, { onSuccess: onDone });
+  }
 
   function handleSelect(id: string) {
     setActiveId(id);
@@ -50,8 +63,10 @@ export default function FormationPlayer({ enrollmentId }: Props) {
     if (id) setActiveId(id);
   }
 
-  function handleEvaluationComplete(score: number, passed: boolean) {
-    console.log('Evaluation completed', score, passed);
+  function handleEvaluationComplete() {
+    if (enrollmentId) {
+      queryClient.invalidateQueries({ queryKey: portalLearningPathKeys.summary(enrollmentId) });
+    }
   }
 
   if (isRealMode && summaryQuery.isLoading) {
@@ -82,20 +97,33 @@ export default function FormationPlayer({ enrollmentId }: Props) {
   return (
     <div className="flex flex-1  -mx-4 -mt-2 -mb-4 overflow-hidden bg-white">
       <div className="flex-1 flex flex-col min-w-0">
-        <main className="h-[88vh] overflow-y-auto">
+        <button
+          type="button"
+          onClick={() => setSidebarOpen(true)}
+          className="flex size-8 items-center justify-center rounded-lg hover:bg-slate-100 xl:hidden m-2"
+          aria-label="Ouvrir la navigation"
+        >
+          <Menu className="size-4 text-slate-500" />
+        </button>
+        {/* Cadre de hauteur fixe, mais conteneur flex : c'est FormationContentView
+            qui place la zone scrollable, de sorte que sa barre d'action reste
+            visible sous le contenu au lieu d'être poussée hors du cadre. */}
+        <main className="flex h-[85vh] flex-col overflow-hidden">
           <FormationContentView
             formation={formation}
             resolved={resolved}
             onNavigate={handleNavigate}
             onEvaluationComplete={handleEvaluationComplete}
             portalEntry={isRealMode ? (entryQuery.data ?? null) : undefined}
-            portalEntryLoading={isRealMode ? entryQuery.isFetching : undefined}
+            portalEntryLoading={isRealMode ? entryQuery.isLoading : undefined}
+            onMarkComplete={isRealMode ? handleMarkComplete : undefined}
+            isCompleting={isRealMode ? isCompleting : undefined}
+            enrollmentId={isRealMode ? enrollmentId : undefined}
           />
         </main>
       </div>
-
       <aside
-        className={`hidden shrink-0 border-l border-slate-100 bg-white xl:flex xl:flex-col sticky top-0 overflow-hidden transition-all duration-300 ${sidebarCollapsed ? 'w-12' : 'w-88 2xl:w-104'}`}
+        className={`hidden shrink-0  bg-white xl:flex xl:flex-col sticky top-0 overflow-auto h-[88vh] transition-all duration-300 ${sidebarCollapsed ? 'w-12' : 'w-114 2xl:w-lg'}`}
       >
         <FormationSidebar
           formation={formation}

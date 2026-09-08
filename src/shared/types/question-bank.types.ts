@@ -74,11 +74,12 @@ interface CreateQuizItemPayloadBase {
   question: string;
   comment_if_correct?: string | null;
   comment_if_incorrect?: string | null;
+  competency_id?: string | null;
 }
 
 export interface CreateQuizItemChoicesPayload extends CreateQuizItemPayloadBase {
   type: 'multiple_choice' | 'single_choice';
-  options: { label: string; is_correct: boolean; id?: string }[];
+  options: { label: string; is_correct: boolean; id?: string; weight_percentage?: number }[];
 }
 
 export interface CreateQuizItemTrueFalsePayload extends CreateQuizItemPayloadBase {
@@ -97,9 +98,10 @@ export type CreateQuizItemPayload =
 export interface UpdateQuizItemChoicesPayload {
   type?: 'multiple_choice' | 'single_choice';
   question?: string;
-  options?: { id?: string; label: string; is_correct: boolean }[];
+  options?: { id?: string; label: string; is_correct: boolean; weight_percentage?: number }[];
   comment_if_correct?: string | null;
   comment_if_incorrect?: string | null;
+  competency_id?: string | null;
 }
 
 export interface UpdateQuizItemTrueFalsePayload {
@@ -108,6 +110,7 @@ export interface UpdateQuizItemTrueFalsePayload {
   correct_answer?: boolean;
   comment_if_correct?: string | null;
   comment_if_incorrect?: string | null;
+  competency_id?: string | null;
 }
 
 export interface UpdateQuizItemMatchingPayload {
@@ -116,6 +119,7 @@ export interface UpdateQuizItemMatchingPayload {
   pairs?: { left: string; right: string }[];
   comment_if_correct?: string | null;
   comment_if_incorrect?: string | null;
+  competency_id?: string | null;
 }
 
 export type UpdateQuizItemPayload =

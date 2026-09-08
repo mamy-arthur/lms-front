@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { competencyKeys } from '@/shared/queries/keys';
 import { adminModulesApi } from '../api';
-import { ADMIN_MODULES_QUERY_KEY } from './useModules';
 import { moduleQueryKey } from './useModule';
 
 export function useDeleteModule() {
@@ -9,7 +9,7 @@ export function useDeleteModule() {
   return useMutation({
     mutationFn: ({ id }: { id: string; idnumber: string }) => adminModulesApi.remove(id),
     onSuccess: (_data, { idnumber }) => {
-      queryClient.invalidateQueries({ queryKey: ADMIN_MODULES_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: competencyKeys.lists() });
       queryClient.removeQueries({ queryKey: moduleQueryKey(idnumber) });
     },
   });

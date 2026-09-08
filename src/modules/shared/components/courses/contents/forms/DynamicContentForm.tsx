@@ -6,8 +6,9 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { MainBlock } from './SharedBlocks';
 import { DynamicField } from './DynamicField';
+import { ScormPackageField, type ScormPackageFieldState } from './fields/ScormPackageField';
 import { extractMediaId } from './fields/media-utils';
-import { mediaApi } from '@/shared/api/media.api';
+import { useDeleteMediaBatch } from '@/shared/hooks/useMedia';
 import { buildContentSchema } from './content-schema';
 import type { ContentTypeResource } from '@/shared/types/content-type.types';
 
@@ -17,6 +18,11 @@ interface DynamicContentFormProps {
   onSubmit: (data: Record<string, unknown>) => void;
   onCancel: () => void;
   isSubmitting?: boolean;
+  /** Package déjà attaché à l'entrée (édition), absent pour une entrée pas encore créée. */
+  attachedScormPackageId?: string | null;
+  /** Notifié en continu (upload + statut temps réel) pour le rattachement au clic Enregistrer
+   *  et le gating de la publication côté parent. */
+  onScormStateChange?: (state: ScormPackageFieldState) => void;
 }
 
 export function DynamicContentForm({
@@ -25,8 +31,11 @@ export function DynamicContentForm({
   onSubmit,
   onCancel,
   isSubmitting = false,
+  attachedScormPackageId,
+  onScormStateChange,
 }: DynamicContentFormProps) {
   const activeFields = contentType.fields.filter((f) => !f.is_archived);
+  const isScorm = contentType.module_type === 'scorm';
 
   // Normalise media field values from the API's read format { id, url, … }
   // back to plain UUID strings that the SchemaValidator accepts on write.
@@ -45,8 +54,21 @@ export function DynamicContentForm({
   );
   // IDs of removed media files — deleted server-side only on form submit
   const pendingDeleteIds = useRef<string[]>([]);
+  const deleteMediaBatch = useDeleteMediaBatch();
 
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [scormState, setScormState] = useState<ScormPackageFieldState>({
+    packageId: attachedScormPackageId ?? null,
+    status: null,
+  });
+  const [showScormRequiredError, setShowScormRequiredError] = useState(false);
+  const scormPackageMissing = isScorm && !scormState.packageId;
+
+  const handleScormStateChange = (state: ScormPackageFieldState) => {
+    setScormState(state);
+    if (state.packageId) setShowScormRequiredError(false);
+    onScormStateChange?.(state);
+  };
 
   const handleFieldChange = (name: string, val: unknown) => {
     setFieldValues((prev) => ({ ...prev, [name]: val }));
@@ -60,6 +82,10 @@ export function DynamicContentForm({
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (scormPackageMissing) {
+      setShowScormRequiredError(true);
+      return;
+    }
     const schema = buildContentSchema(activeFields);
     const result = schema.safeParse(fieldValues);
     if (!result.success) {
@@ -72,7 +98,9 @@ export function DynamicContentForm({
       return;
     }
     if (pendingDeleteIds.current.length) {
-      await Promise.allSettled(pendingDeleteIds.current.map((id) => mediaApi.delete(id)));
+      // Also evicts each id from the media cache, so a deleted file can never be
+      // served back from it on a later mount.
+      await deleteMediaBatch(pendingDeleteIds.current);
       pendingDeleteIds.current = [];
     }
     onSubmit(result.data as Record<string, unknown>);
@@ -104,7 +132,17 @@ export function DynamicContentForm({
           </div>
         ))}
       </MainBlock>
-
+      {isScorm && (
+        <ScormPackageField
+          attachedPackageId={attachedScormPackageId ?? null}
+          onStateChange={handleScormStateChange}
+        />
+      )}
+      {showScormRequiredError && (
+        <p className="text-xs text-destructive">
+          Un package SCORM doit être uploadé avant de pouvoir enregistrer.
+        </p>
+      )}
       <div className="flex justify-end gap-2">
         <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
           Annuler

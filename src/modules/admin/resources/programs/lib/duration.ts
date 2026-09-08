@@ -9,6 +9,15 @@ export const DURATION_UNITS: { value: DurationUnit; label: string }[] = [
   { value: 'years', label: 'Années' },
 ];
 
+/** Unités proposées pour la validité d'accès. */
+export const VALIDITY_UNITS: { value: DurationUnit; label: string }[] = [
+  { value: 'minutes', label: 'Minutes' },
+  { value: 'hours', label: 'Heures' },
+  { value: 'days', label: 'Jours' },
+  { value: 'months', label: 'Mois (30 j)' },
+  { value: 'years', label: 'Années (365 j)' },
+];
+
 const UNIT_TO_MINUTES: Record<DurationUnit, number> = {
   minutes: 1,
   hours: 60,
@@ -36,7 +45,9 @@ function pluralLabel(value: number, unit: DurationUnit): string {
 
 /** Convertit une valeur + unité UI en minutes (stockage API). */
 export function durationToMinutes(value: number, unit: DurationUnit): number {
-  return Math.round(value * UNIT_TO_MINUTES[unit]);
+  const minutes = Math.round(value * UNIT_TO_MINUTES[unit]);
+  // Une valeur strictement positive ne doit jamais s'arrondir à 0 minute (ex: 0.2 "Minutes").
+  return value > 0 ? Math.max(1, minutes) : minutes;
 }
 
 /**

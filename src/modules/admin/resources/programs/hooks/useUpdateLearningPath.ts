@@ -3,6 +3,7 @@ import { learningPathsApi } from '../api';
 import { learningPathKeys, shopLearningPathKeys } from '@/shared/queries/keys';
 import type { UpdateLearningPathPayload } from '../types';
 
+// Feedback utilisateur (toast) géré par l'appelant (learning-path-form-drawer.tsx), pas ici.
 export function useUpdateLearningPath() {
   const queryClient = useQueryClient();
 

@@ -13,7 +13,8 @@ interface Props {
 
 export default function FormationDetailPage({ params }: Props) {
   const { slug } = use(params);
-  const { data: formations = [], isLoading } = useMyEnrollmentsQuery();
+  const { data, isLoading } = useMyEnrollmentsQuery();
+  const formations = data?.data ?? [];
 
   if (isLoading) {
     return (
@@ -36,10 +37,10 @@ export default function FormationDetailPage({ params }: Props) {
     level: 'Tous niveaux',
     description: trainee.description ?? '',
     coverImage: trainee.coverImage,
-    progress: 0,
+    progress: trainee.progress,
     completedModules: 0,
     totalModules: trainee.totalModules,
-    totalDurationMin: 0,
+    totalDurationMin: trainee.totalDurationMin,
     lastActivity: trainee.lastActivity,
     hasCertificate: trainee.hasAttestation ?? false,
     modules: [],

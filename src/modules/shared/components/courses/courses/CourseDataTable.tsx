@@ -10,8 +10,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { DataTable, type DataTableColumn } from '@/shared/components/ui/DataTable';
-import { getCategoryPath } from '../lib/course-store';
+import {
+  DataTable,
+  type DataTableColumn,
+  type DataTableSort,
+} from '@/shared/components/ui/DataTable';
 import type { Category, Course } from '../types/index';
 
 interface CourseDataTableProps {
@@ -20,6 +23,13 @@ interface CourseDataTableProps {
   isLoading?: boolean;
   hasQuery?: boolean;
   basePath: string;
+  page: number;
+  pageSize: number;
+  total: number;
+  sort?: DataTableSort;
+  onSort?: (column: string) => void;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (pageSize: number) => void;
   onEdit: (course: Course) => void;
   onDelete: (course: Course) => void;
   onToggleVisibility: (course: Course) => void;
@@ -27,10 +37,17 @@ interface CourseDataTableProps {
 
 function CourseDataTableBase({
   courses,
-  categories,
+  categories: _categories,
   isLoading = false,
   hasQuery = false,
   basePath,
+  page,
+  pageSize,
+  total,
+  sort,
+  onSort,
+  onPageChange,
+  onPageSizeChange,
   onEdit,
   onDelete,
   onToggleVisibility,
@@ -88,33 +105,33 @@ function CourseDataTableBase({
   const columns: DataTableColumn<Course>[] = useMemo(
     () => [
       {
-        key: 'identifier',
-        label: 'Identifiant',
-        sortable: false,
-        render: (row) => <span className="text-xs font-medium">{row.identifier}</span>,
-      },
-      {
-        key: 'fullName',
+        key: 'full_name',
         label: 'Nom',
-        sortable: false,
-        render: (row) => <span className="text-xs">{row.fullName}</span>,
+        sortable: true,
+        render: (row) => <span className="text-xs font-medium">{row.fullName}</span>,
       },
       {
-        key: 'shortName',
+        key: 'short_name',
         label: 'Nom court',
-        sortable: false,
+        sortable: true,
         render: (row) => (
           <code className="rounded bg-muted px-1.5 py-0.5 text-xs">{row.shortName}</code>
         ),
       },
       {
-        key: 'categoryId',
+        key: 'category_name',
         label: 'Catégorie',
-        sortable: false,
+        sortable: true,
         render: (row) => (
-          <span className="text-xs text-muted-foreground">
-            {getCategoryPath(categories, row.categoryId) || '—'}
-          </span>
+          <span className="text-xs text-muted-foreground">{row.categoryName ?? '—'}</span>
+        ),
+      },
+      {
+        key: 'id_number',
+        label: 'Identifiant',
+        sortable: true,
+        render: (row) => (
+          <code className="rounded bg-muted px-1.5 py-0.5 text-xs">{row.identifier}</code>
         ),
       },
       {
@@ -145,7 +162,7 @@ function CourseDataTableBase({
         render: (row) => <ActionMenu item={row} />,
       },
     ],
-    [categories, ActionMenu],
+    [_categories, ActionMenu],
   );
 
   return (
@@ -154,11 +171,13 @@ function CourseDataTableBase({
       columns={columns}
       isLoading={isLoading}
       hasQuery={hasQuery}
-      page={1}
-      pageSize={courses.length || 1}
-      total={courses.length}
-      onPageChange={() => {}}
-      onPageSizeChange={() => {}}
+      page={page}
+      pageSize={pageSize}
+      total={total}
+      sort={sort}
+      onSort={onSort}
+      onPageChange={onPageChange}
+      onPageSizeChange={onPageSizeChange}
       onRowClick={(course) => router.push(`${basePath}/${course.id}`)}
       emptyState={{
         title: 'Aucun cours trouvé',

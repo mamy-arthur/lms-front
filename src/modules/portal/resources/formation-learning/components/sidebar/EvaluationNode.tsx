@@ -1,4 +1,4 @@
-import { Check, FileQuestion, Lock } from 'lucide-react';
+import { Check, ClipboardCheck, Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { FormationEvaluation } from '../../lib/types';
 
@@ -8,8 +8,16 @@ interface Props {
   onSelect: () => void;
 }
 
+/**
+ * Niveau 1 (variante) — Évaluation. A sibling of ModuleNode in the formation tree.
+ *
+ * Rendered as a card of the same weight so the top level stays consistent, but
+ * with a dashed border and its own icon: it is a checkpoint between modules, not
+ * a module, and must not be mistaken for one.
+ */
 export default function EvaluationNode({ node, active, onSelect }: Props) {
   const isLocked = node.status === 'locked';
+  const isDone = node.status === 'completed';
   const typeLabel = node.evaluationType === 'intermediate' ? 'Intermédiaire' : 'Finale';
 
   return (
@@ -17,36 +25,58 @@ export default function EvaluationNode({ node, active, onSelect }: Props) {
       type="button"
       onClick={isLocked ? undefined : onSelect}
       disabled={isLocked}
+      aria-current={active ? 'page' : undefined}
       className={cn(
-        'flex w-full items-center gap-2 rounded-sm px-3 py-1.5 text-sm transition-colors',
-        active ? 'font-semibold' : '',
-        isLocked
-          ? 'cursor-not-allowed opacity-40 text-slate-400'
-          : 'hover:bg-gray-50 cursor-pointer',
+        'flex w-full items-center gap-2.5 rounded-sm border px-2.5 py-2.5 text-left transition-colors',
+        active ? 'border-(--color-primary)/50' : 'border-slate-300',
+        isLocked ? 'cursor-not-allowed bg-slate-50/50' : 'hover:bg-slate-50',
       )}
       style={
         active
-          ? {
-              color: 'var(--color-primary)',
-              background: 'color-mix(in srgb, var(--color-primary) 8%, transparent)',
-            }
+          ? { background: 'color-mix(in srgb, var(--color-primary) 7%, transparent)' }
           : undefined
       }
     >
-      <FileQuestion className="h-3.5 w-3.5" />
-      <span>{node.title}</span>
-      <span className={`text-xs  ${typeLabel === 'Finale' ? 'text-red-500' : 'text-slate-400'}`}>
-        ({typeLabel})
+      <span
+        className={cn(
+          'flex size-6 shrink-0 items-center justify-center rounded-full',
+          isLocked && 'bg-slate-100 text-slate-400',
+          !isLocked && isDone && 'bg-emerald-400 text-white',
+          !isLocked && !isDone && 'bg-amber-50 text-amber-600',
+        )}
+      >
+        {isLocked ? (
+          <Lock className="size-3" />
+        ) : isDone ? (
+          <Check className="size-2.5" strokeWidth={3} />
+        ) : (
+          <ClipboardCheck className="size-3.5" />
+        )}
       </span>
-      {node.status === 'completed' && !active && <Check className="h-3.5 w-3.5 text-emerald-500" />}
-      {isLocked && <Lock className="h-3.5 w-3.5 text-slate-300" />}
+
+      <span className="min-w-0 flex-1">
+        <span className="block text-[10.5px] font-semibold uppercase text-slate-400">
+          Évaluation {typeLabel}
+        </span>
+        <span
+          className={cn(
+            'block truncate text-sm',
+            isLocked && 'text-slate-400',
+            !isLocked && active && 'text-(--color-primary)',
+            !isLocked && !active && 'text-slate-900',
+          )}
+        >
+          {node.title}
+        </span>
+      </span>
+
       {node.attempt && (
         <span
           className={cn(
-            'text-[10px] font-semibold px-1.5 py-0.5 rounded-full border',
+            'shrink-0 rounded-full border px-1.5 py-0.5 text-[10px] font-semibold tabular-nums',
             node.attempt.passed
-              ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
-              : 'bg-red-50 border-red-200 text-red-600',
+              ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+              : 'border-red-200 bg-red-50 text-red-600',
           )}
         >
           {node.attempt.score}%

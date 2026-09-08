@@ -27,7 +27,7 @@ export function AddContentModal({ open, onOpenChange, onContentTypeSelected }: P
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Choisir un type de contenu</DialogTitle>
           <DialogDescription>

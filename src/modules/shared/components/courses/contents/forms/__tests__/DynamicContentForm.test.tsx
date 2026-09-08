@@ -106,8 +106,10 @@ jest.mock('@/modules/shared/components/input-upload/MultiFileUploadField', () =>
 // ─── Imports ──────────────────────────────────────────────────────────────────
 
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+// Les champs media passent désormais par des hooks TanStack Query : il leur faut un provider.
+import { renderWithQueryClient as render } from '@/shared/lib/test-utils';
 import { DynamicContentForm } from '../DynamicContentForm';
 import { mediaApi } from '@/shared/api/media.api';
 import type { ContentTypeResource } from '@/shared/types/content-type.types';

@@ -1,4 +1,4 @@
-import ReactMarkdown from 'react-markdown';
+import { RichTextRenderer } from '@/shared/components/RichTextRenderer';
 import { ClipboardList } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -40,11 +40,7 @@ export function SurveyContentView({ title, surveyType, description }: SurveyCont
             {SURVEY_TYPES[surveyType as keyof typeof SURVEY_TYPES]}
           </Badge>
         </div>
-        {description && (
-          <div className="react-markdown prose prose-sm dark:prose-invert max-w-none">
-            <ReactMarkdown>{description}</ReactMarkdown>
-          </div>
-        )}
+        {description && <RichTextRenderer content={description} />}
         <div className="rounded-lg border bg-gray-100/20 p-2">
           <p className="text-xs text-muted-foreground">
             Les participants pourront répondre à ce sondage.

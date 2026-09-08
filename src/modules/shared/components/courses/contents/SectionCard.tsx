@@ -31,7 +31,22 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { toast } from 'sonner';
-import { useSortable } from '@dnd-kit/sortable';
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  arrayMove,
+  useSortable,
+} from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
 import type { ApiCourseSection, ApiContentEntry } from '../hooks/useCourseContentApi';
@@ -41,8 +56,10 @@ import {
   useRemoveSection,
   useEntries,
   useRemoveEntry,
+  useMoveEntry,
 } from '../hooks/useCourseContentApi';
 import { AddContentModal } from './AddContentModal';
+import { SortableEntryItem } from './SortableEntryItem';
 
 /** A pending (unsaved) entry shown locally before the user clicks "Enregistrer". */
 export interface PendingEntryInfo {
@@ -90,10 +107,54 @@ export function SectionCard({
   const removeSection = useRemoveSection(courseId);
   const { data: entries = [] } = useEntries(section.id);
   const removeEntry = useRemoveEntry(section.id);
+  const moveEntry = useMoveEntry(section.id);
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: section.id,
   });
+
+  // The API returns entries in rank order, but an optimistic reorder rewrites ranks
+  // locally — sorting here keeps the list authoritative in both cases.
+  const sortedEntries = entries.slice().sort((a, b) => a.rank - b.rank);
+
+  // Own sensors: this list is nested inside the course page's section DndContext,
+  // and each context needs its own. Same activation distance so a click on a row
+  // still selects the entry instead of starting a drag.
+  const entrySensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  const handleEntryDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = sortedEntries.findIndex((e) => e.id === active.id);
+    const newIndex = sortedEntries.findIndex((e) => e.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const orderedIds = arrayMove(sortedEntries, oldIndex, newIndex).map((e) => e.id);
+
+    try {
+      // The hook applies the new order immediately and rolls it back on failure.
+      await moveEntry.mutateAsync({
+        entryId: String(active.id),
+        orderedIds,
+        position: newIndex,
+      });
+    } catch {
+      toast.error('Erreur lors du réordonnancement du contenu');
+    }
+  };
+
+  const handleDeleteEntry = async (entryId: string) => {
+    try {
+      await removeEntry.mutateAsync(entryId);
+      onEntryDeleted?.(entryId);
+    } catch {
+      toast.error('Erreur lors de la suppression');
+    }
+  };
 
   const save = async () => {
     try {
@@ -121,13 +182,22 @@ export function SectionCard({
       style={{ transform: CSS.Transform.toString(transform), transition }}
       className={isDragging ? 'opacity-50' : undefined}
     >
-      <Collapsible open={isOpen} onOpenChange={setIsOpen} className="rounded-sm border bg-card">
+      {/* `group/section` (nommé) et non `group` : les lignes d'entrées imbriquées
+          utilisent le groupe anonyme pour leurs propres poignées — un groupe
+          anonyme ici les déclencherait aussi au survol de la section. */}
+      <Collapsible
+        open={isOpen}
+        onOpenChange={setIsOpen}
+        className="group/section rounded-sm border bg-card"
+      >
         <div className="flex items-center justify-between p-3">
           <button
             {...attributes}
             {...listeners}
             type="button"
-            className="mr-1 cursor-grab touch-none text-muted-foreground/40 hover:text-muted-foreground active:cursor-grabbing"
+            className={`mr-1 cursor-grab touch-none text-muted-foreground/40 transition-opacity hover:text-muted-foreground focus-visible:opacity-100 group-hover/section:opacity-100 active:cursor-grabbing ${
+              isDragging ? 'opacity-100' : 'opacity-0'
+            }`}
             aria-label="Réordonner la section"
           >
             <GripVertical className="size-4" />
@@ -170,48 +240,29 @@ export function SectionCard({
 
         <CollapsibleContent>
           <div className="space-y-1 px-2 pb-2">
-            {/* Saved entries */}
-            {entries.map((entry) => {
-              const isSelected = selectedEntryId === entry.id;
-              const label =
-                typeof entry.data?.title === 'string'
-                  ? entry.data.title
-                  : `Contenu ${entry.content_type_id.slice(0, 6)}`;
-
-              return (
-                <div
-                  key={entry.id}
-                  onClick={() => onSelectEntry(entry)}
-                  className={`group flex w-full cursor-pointer items-center gap-2 rounded-sm px-3 py-2 text-sm transition-colors
-    ${isSelected ? 'bg-(--color-primary)/80 text-white' : 'hover:bg-muted'}`}
-                >
-                  <div className="flex min-w-0 flex-1 items-center gap-2">
-                    <BookOpen className="size-3 shrink-0" />
-                    <span className="truncate text-xs">{label || 'Nouveau contenu'}</span>
-                  </div>
-
-                  <button
-                    onClick={async (e) => {
-                      e.stopPropagation(); // Empêche de sélectionner lors de la suppression
-                      try {
-                        await removeEntry.mutateAsync(entry.id);
-                        onEntryDeleted?.(entry.id);
-                      } catch {
-                        toast.error('Erreur lors de la suppression');
-                      }
-                    }}
-                    className={`shrink-0 cursor-pointer rounded p-0.5 opacity-0 transition-opacity group-hover:opacity-100
-      ${
-        isSelected
-          ? 'hover:bg-destructive/70 text-white'
-          : 'hover:bg-destructive/10 text-destructive'
-      }`}
-                  >
-                    <Trash2 className="size-3" />
-                  </button>
-                </div>
-              );
-            })}
+            {/* Saved entries — reorderable */}
+            <DndContext
+              sensors={entrySensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleEntryDragEnd}
+            >
+              <SortableContext
+                items={sortedEntries.map((e) => e.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                {sortedEntries.map((entry) => (
+                  <SortableEntryItem
+                    key={entry.id}
+                    entry={entry}
+                    isSelected={selectedEntryId === entry.id}
+                    isReordering={moveEntry.isPending}
+                    onSelect={() => onSelectEntry(entry)}
+                    onDelete={() => handleDeleteEntry(entry.id)}
+                    isDeleting={removeEntry.isPending && removeEntry.variables === entry.id}
+                  />
+                ))}
+              </SortableContext>
+            </DndContext>
 
             {/* Pending (unsaved) entry — local state only */}
             {pendingEntry && (

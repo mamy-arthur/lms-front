@@ -91,6 +91,7 @@ export interface ApiMeEnrollmentLearningPath {
 export interface ApiMeEnrollment {
   id: string;
   status: EnrollmentStatus;
+  progress_percent: number;
   enrolled_at: string;
   started_at: string | null;
   completed_at: string | null;

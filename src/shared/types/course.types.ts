@@ -8,6 +8,7 @@ export interface ApiCourse {
   short_name: string;
   id_number: string | null;
   category_id: string | null;
+  category_name?: string | null;
   visibility: CourseVisibility;
   description: string | null;
   created_at: string;
@@ -40,6 +41,8 @@ export interface ApiContentEntry {
   id: string;
   content_type_id: string;
   course_section_id: string;
+  /** Position within the section, 0-based. Returned by the API; drives list ordering. */
+  rank: number;
   content_type_version: number;
   data: Record<string, unknown>;
   is_published: boolean;
@@ -87,9 +90,18 @@ export interface UpdateCourseCategoryPayload {
 export interface CreateContentEntryPayload {
   content_type_id: string;
   data: Record<string, unknown>;
+  /** Attaches an already-uploaded SCORM package atomically (may still be `pending`). */
+  scorm_package_id?: string;
 }
 
 export interface UpdateContentEntryPayload {
   data?: Record<string, unknown>;
   is_published?: boolean;
+}
+
+export interface MoveContentEntryPayload {
+  /** Destination section — the same id as the current one when reordering in place. */
+  course_section_id: string;
+  /** Target 0-based index in the destination section, after the move. */
+  position: number;
 }

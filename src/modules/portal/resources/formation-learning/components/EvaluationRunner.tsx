@@ -4,11 +4,12 @@ import { useMemo, useRef, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Quiz } from '@/modules/quizzes';
-import { normalizeQuestion } from '@/modules/shared/lib/normalizers';
+import { normalizeQuestion } from '@/modules/shared/lib/question-types';
 import { evaluationAttemptsApi } from '@/shared/api/portal.api';
+import { getApiErrorMessage } from '@/shared/lib/errors';
 import type { ApiEvaluationAttempt } from '@/shared/types/evaluation-attempt.types';
 import type { TraineeAnswer } from '@/modules/quizzes/types';
-import type { Question } from '@/modules/shared/lib/normalizers';
+import type { Question } from '@/modules/shared/lib/question-types';
 import EvaluationSplash from './EvaluationSplash';
 import EvaluationResult from './EvaluationResult';
 import type { FormationEvaluation } from '../lib/types';
@@ -30,11 +31,21 @@ export default function EvaluationRunner({ evaluation, onComplete }: Props) {
   const typLabel = evaluation.evaluationType === 'intermediate' ? 'Intermédiaire' : 'Finale';
   const evalDescription = `Évaluation ${typLabel} · Score requis : ${evaluation.passingScore}%`;
 
-  const { data: evalInfo } = usePortalLearnerEvaluationQuery(
+  const {
+    data: evalInfo,
+    isPending: isEvalInfoPending,
+    isError: isEvalInfoError,
+    refetch: refetchEvalInfo,
+  } = usePortalLearnerEvaluationQuery(
     isRealMode ? evaluation.formationId : undefined,
     evaluation.id,
   );
   const invalidateLearnerEvaluation = useInvalidateLearnerEvaluation();
+
+  // Gates the splash CTA. `isPending` (not `isLoading`) so a background refetch
+  // that has no data yet also counts as "unknown" — the quota must never be
+  // presented as available while it is still being resolved.
+  const isCheckingAttempts = isRealMode && isEvalInfoPending && !isEvalInfoError;
 
   // ── Mock mode state ──────────────────────────────────────────────────────
   const [mockStarted, setMockStarted] = useState(false);
@@ -44,13 +55,6 @@ export default function EvaluationRunner({ evaluation, onComplete }: Props) {
     () => evaluation.questions.map(normalizeQuestion),
     [evaluation.questions],
   );
-  const mockStats = useMemo(() => {
-    const types = mockQuestions.reduce<Record<string, number>>((acc, q) => {
-      acc[q.type] = (acc[q.type] ?? 0) + 1;
-      return acc;
-    }, {});
-    return { types, hasDuration: mockQuestions.filter((q) => q.duration !== null).length };
-  }, [mockQuestions]);
 
   // ── Real mode state ──────────────────────────────────────────────────────
   const [attempt, setAttempt] = useState<ApiEvaluationAttempt | null>(null);
@@ -65,14 +69,28 @@ export default function EvaluationRunner({ evaluation, onComplete }: Props) {
   );
 
   async function handleRealStart() {
+    // Defensive: the splash hides the CTA while the quota is unknown, but a stale
+    // render or a keyboard activation must not slip a start request through.
+    if (isCheckingAttempts) return;
+
     setIsStarting(true);
     try {
       // evaluation.formationId is set to the learning path id in summary-mapper
       const res = await evaluationAttemptsApi.start(evaluation.formationId, evaluation.id);
       setAttempt(res.data);
       setPhase('quiz');
-    } catch {
-      toast.error("Impossible de démarrer l'évaluation. Réessayez.");
+    } catch (err) {
+      // 409 = RetakeLimitReachedException. Telling the learner to "réessayer"
+      // here is wrong: no retry can ever succeed. Refresh the quota instead so
+      // the splash flips to its "tentatives épuisées" state.
+      if ((err as { status?: number }).status === 409) {
+        invalidateLearnerEvaluation(evaluation.formationId);
+        toast.error("Vous n'avez plus de tentative disponible pour cette évaluation.");
+      } else {
+        toast.error(
+          getApiErrorMessage(err, "Impossible de démarrer l'évaluation. Veuillez réessayer."),
+        );
+      }
     } finally {
       setIsStarting(false);
     }
@@ -82,12 +100,17 @@ export default function EvaluationRunner({ evaluation, onComplete }: Props) {
     if (!attempt) return;
     setIsSubmitting(true);
     try {
-      // Send each answer individually
-      for (const [attemptQuizId, answer] of Object.entries(answers)) {
-        const quiz = attempt.quizzes.find((q) => q.id === attemptQuizId);
-        if (!quiz || answer === null || answer === undefined) continue;
-        await evaluationAttemptsApi.answer(attempt.id, attemptQuizId, toApiPayload(quiz, answer));
-      }
+      await Promise.all(
+        Object.entries(answers).map(([attemptQuizId, answer]) => {
+          const quiz = attempt.quizzes.find((q) => q.id === attemptQuizId);
+          if (!quiz || answer === null || answer === undefined) return Promise.resolve();
+          return evaluationAttemptsApi.answer(
+            attempt.id,
+            attemptQuizId,
+            toApiPayload(quiz, answer),
+          );
+        }),
+      );
       // Finalize
       const res = await evaluationAttemptsApi.submit(attempt.id);
       const score = res.data.score ?? 0;
@@ -96,7 +119,7 @@ export default function EvaluationRunner({ evaluation, onComplete }: Props) {
       onComplete(score, score >= evaluation.passingScore);
       invalidateLearnerEvaluation(evaluation.formationId);
     } catch {
-      toast.error('Erreur lors de la soumission. Vos réponses ont été sauvegardées.');
+      toast.error('Erreur lors de la soumission. Veuillez réessayer.');
     } finally {
       setIsSubmitting(false);
     }
@@ -121,10 +144,6 @@ export default function EvaluationRunner({ evaluation, onComplete }: Props) {
       <EvaluationSplash
         title={evaluation.title}
         evaluationType={evaluation.evaluationType}
-        passingScore={evaluation.passingScore}
-        questionCount={mockQuestions.length}
-        withTimerCount={mockStats.hasDuration}
-        typeCount={Object.keys(mockStats.types).length}
         onStart={() => setMockStarted(true)}
       />
     );
@@ -140,6 +159,11 @@ export default function EvaluationRunner({ evaluation, onComplete }: Props) {
         maxAttempts={evalInfo?.max_attempts}
         attemptsUsed={evalInfo?.attempts_used}
         attemptsRemaining={evalInfo?.attempts_remaining}
+        onRetry={() => {
+          setAttempt(null);
+          setFinalScore(null);
+          setPhase('splash');
+        }}
       />
     );
   }
@@ -170,12 +194,11 @@ export default function EvaluationRunner({ evaluation, onComplete }: Props) {
     <EvaluationSplash
       title={evaluation.title}
       evaluationType={evaluation.evaluationType}
-      passingScore={evaluation.passingScore}
-      questionCount={attempt?.quizzes.length ?? evaluation.questions.length}
-      withTimerCount={0}
-      typeCount={0}
       onStart={handleRealStart}
       isLoading={isStarting}
+      isCheckingAttempts={isCheckingAttempts}
+      hasAttemptsError={isEvalInfoError}
+      onRetryAttempts={() => void refetchEvalInfo()}
       maxAttempts={evalInfo?.max_attempts}
       attemptsUsed={evalInfo?.attempts_used}
       attemptsRemaining={evalInfo?.attempts_remaining}

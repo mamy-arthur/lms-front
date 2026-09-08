@@ -5,11 +5,14 @@
 export interface ApiPortalEvalSummary {
   id: string;
   title: string;
+  accessible: boolean;
+  completed: boolean;
 }
 
 export interface ApiPortalSummaryEntry {
   id: string;
   title: string | null;
+  completed: boolean;
 }
 
 export interface ApiPortalSummarySection {
@@ -27,13 +30,22 @@ export interface ApiPortalSummaryCourse {
 export interface ApiPortalSummaryModule {
   id: string;
   name: string;
+  accessible: boolean;
+  progress: ApiProgressCounts;
   courses: ApiPortalSummaryCourse[];
   evaluation: ApiPortalEvalSummary | null;
+}
+
+export interface ApiProgressCounts {
+  percent: number;
+  completed: number;
+  total: number;
 }
 
 export interface ApiPortalLearningPathSummary {
   id: string;
   name: string;
+  progress: ApiProgressCounts;
   modules: ApiPortalSummaryModule[];
   final_evaluation: ApiPortalEvalSummary | null;
 }

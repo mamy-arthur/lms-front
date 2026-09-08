@@ -149,8 +149,10 @@ const MOCK_MODULE: Module = {
   idnumber: 'DW-001',
   description: '<p>Description existante</p>',
   category_id: 'formation',
+  category_name: null,
   tenantId: '1',
   courseIds: [],
+  coursesCount: 0,
   createdAt: '2025-01-01T00:00:00Z',
   updatedAt: '2025-01-01T00:00:00Z',
 };

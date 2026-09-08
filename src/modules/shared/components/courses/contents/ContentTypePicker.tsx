@@ -62,7 +62,7 @@ export function ContentTypePicker({
   }
 
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-2">
       {contentTypes.map((ct) => {
         const Icon = MODULE_TYPE_ICON[ct.module_type] ?? MODULE_TYPE_FALLBACK_ICON;
         const bgColor = MODULE_TYPE_COLOR[ct.module_type] ?? MODULE_TYPE_FALLBACK_COLOR;
@@ -72,7 +72,7 @@ export function ContentTypePicker({
             type="button"
             onClick={() => onSelect(ct)}
             disabled={disabled}
-            className="group flex flex-col items-start gap-2 rounded-xl border border-border p-4 text-left transition-all hover:border-gray-600/50 hover:shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer bg-card disabled:opacity-50 disabled:cursor-not-allowed"
+            className="group flex flex-col items-start gap-2 rounded-sm border border-border p-4 text-left transition-all hover:border-gray-600/50 hover:shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer bg-card disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <div
               className={`flex h-10 w-10 items-center justify-center rounded-lg text-white ${bgColor}`}

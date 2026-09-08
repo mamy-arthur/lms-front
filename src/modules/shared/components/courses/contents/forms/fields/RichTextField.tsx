@@ -9,7 +9,7 @@ import {
   ImageInsertDialog,
   type ImageConfirmAttrs,
 } from '@/modules/shared/components/tiptap/ImageInsertDialog';
-import { mediaApi } from '@/shared/api/media.api';
+import { useUploadInlineMediaMutation } from '@/shared/hooks/useMedia';
 
 interface RichtextImageToolbarExtraProps {
   editor: Editor;
@@ -23,10 +23,11 @@ function RichtextImageToolbarExtra({
   fieldId,
 }: RichtextImageToolbarExtraProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const uploadInlineMedia = useUploadInlineMediaMutation();
 
   const uploadImage = async (file: File): Promise<{ mediaId: string; src: string }> => {
-    const res = await mediaApi.uploadInline(file, contentTypeId, fieldId);
-    return { mediaId: res.data.id, src: res.data.url };
+    const media = await uploadInlineMedia.mutateAsync({ file, contentTypeId, fieldId });
+    return { mediaId: media.id, src: media.url };
   };
 
   const handleConfirm = ({ src, alt, width, height, align, mediaId }: ImageConfirmAttrs) => {
@@ -82,6 +83,7 @@ export function RichTextField({
       value={(value as string) ?? ''}
       onChange={onChange}
       placeholder={label}
+      outputFormat="tiptap-html"
       toolbarExtras={(editor) => (
         <RichtextImageToolbarExtra
           editor={editor}

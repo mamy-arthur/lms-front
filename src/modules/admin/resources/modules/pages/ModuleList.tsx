@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,16 +36,7 @@ function ModuleListInner() {
   const [duplicateShortname, setDuplicateShortname] = useState('');
   const [manageCategoriesOpen, setManageCategoriesOpen] = useState(false);
 
-  const categoryFilter = ctrl.draftCategory[0] ?? 'all';
-
-  const modulesAll = data?.data ?? [];
-  const filteredModules = useMemo(
-    () =>
-      categoryFilter === 'all'
-        ? modulesAll
-        : modulesAll.filter((m) => m.category_id === categoryFilter),
-    [modulesAll, categoryFilter],
-  );
+  const selectedCategories = ctrl.draftCategory.filter((c) => c !== 'all');
 
   return (
     <div className="bg-background">
@@ -63,17 +54,15 @@ function ModuleListInner() {
           draftSearch={ctrl.draftSearch}
           onDraftSearchChange={ctrl.setDraftSearch}
           onSearch={ctrl.handleSearch}
-          categoryFilter={categoryFilter}
+          selectedCategories={selectedCategories}
           filterCategories={filterCategories}
-          onCategoryFilterChange={(value) => {
-            ctrl.setDraftCategory([value]);
-          }}
+          onCategoryFilterChange={ctrl.handleCategoryChange}
           onManageCategories={() => setManageCategoriesOpen(true)}
           onCreateModule={ctrl.handleOpenCreate}
         />
 
         <AdminModulesTable
-          modules={filteredModules}
+          modules={data?.data ?? []}
           isLoading={isLoading}
           hasQuery={ctrl.hasQuery}
           page={ctrl.page}

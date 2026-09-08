@@ -1,5 +1,6 @@
-import { CheckCircle, XCircle } from 'lucide-react';
+import { CheckCircle, RotateCcw, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 
 interface Props {
   score: number;
@@ -7,6 +8,7 @@ interface Props {
   maxAttempts?: number | null;
   attemptsUsed?: number;
   attemptsRemaining?: number | null;
+  onRetry?: () => void;
 }
 
 export default function EvaluationResult({
@@ -15,6 +17,7 @@ export default function EvaluationResult({
   maxAttempts,
   attemptsUsed,
   attemptsRemaining,
+  onRetry,
 }: Props) {
   const passed = score >= passingScore;
 
@@ -130,6 +133,20 @@ export default function EvaluationResult({
           </div>
         </div>
       </div>
+
+      {!passed &&
+        onRetry &&
+        (attemptsRemaining === undefined ||
+          attemptsRemaining === null ||
+          attemptsRemaining > 0) && (
+          <Button
+            onClick={onRetry}
+            className="mt-6 flex items-center gap-2 bg-(--color-primary) text-white hover:bg-(--color-primary)/90"
+          >
+            <RotateCcw className="size-4" />
+            Réessayer
+          </Button>
+        )}
     </div>
   );
 }

@@ -3,8 +3,17 @@ import type {
   ApiQuizItemChoices,
   ApiQuizItemTrueFalse,
   ApiQuizItemMatching,
+  CreateQuizItemPayload,
+  UpdateQuizItemPayload,
 } from '@/shared/types/question-bank.types';
-import type { Question, QuestionType } from '@/modules/shared/lib/normalizers';
+
+import type {
+  Question,
+  QuestionType,
+  QuestionOption,
+  MatchingPair,
+  Duration,
+} from '@/modules/shared/lib/question-types';
 
 export type {
   Question,
@@ -12,7 +21,9 @@ export type {
   QuestionOption,
   MatchingPair,
   Duration,
-} from '@/modules/shared/lib/normalizers';
+  CreateQuizItemPayload,
+  UpdateQuizItemPayload,
+};
 
 /**
  * Maps a Quiz item from the platform API (module 10) to the shared Question type
@@ -80,17 +91,90 @@ export interface QuestionPayload {
   commentIfCorrect: string | null;
   commentIfIncorrect: string | null;
   correctAnswer: boolean;
-  options: { id?: string; label: string; isCorrect: boolean; weight_percentage?: number }[];
-  pairs: { left: string; right: string; weight_percentage: number }[];
+  options: { id?: string; label: string; isCorrect: boolean; weightPercentage?: number }[];
+  pairs: { left: string; right: string; weightPercentage: number }[];
 }
 
 export type UpdateQuestionPayload = Omit<QuestionPayload, 'questionBankId' | 'type'>;
 
 export interface QuestionSearchParams {
   q?: string;
-  type?: string;
+  types?: string;
+  competency_ids?: string;
   sort_by?: string;
   sort_dir?: 'asc' | 'desc';
   page?: number;
   page_size?: number;
+}
+
+type BasePayload = Pick<
+  QuestionPayload,
+  'question' | 'commentIfCorrect' | 'commentIfIncorrect' | 'competency_id'
+>;
+
+function buildBaseApiBody(payload: BasePayload) {
+  return {
+    question: payload.question,
+    comment_if_correct: payload.commentIfCorrect,
+    comment_if_incorrect: payload.commentIfIncorrect,
+    competency_id: payload.competency_id,
+  };
+}
+
+/** Transforms a QuestionPayload into the body expected by the create API endpoint. */
+export function toApiCreateBody(payload: QuestionPayload): CreateQuizItemPayload {
+  const base = buildBaseApiBody(payload);
+  const { type, options, pairs, correctAnswer } = payload;
+  if (type === 'multiple_choice' || type === 'single_choice') {
+    return {
+      ...base,
+      type,
+      options: options.map((o) => ({
+        ...(o.id ? { id: o.id } : {}),
+        label: o.label,
+        is_correct: o.isCorrect,
+        ...(type === 'multiple_choice' ? { weight_percentage: o.weightPercentage ?? 0 } : {}),
+      })),
+    };
+  }
+  if (type === 'true_false') {
+    return { ...base, type, correct_answer: correctAnswer };
+  }
+  return {
+    ...base,
+    type: 'matching',
+    pairs: pairs.map((p) => ({
+      left: p.left,
+      right: p.right,
+    })),
+  };
+}
+
+/** Transforms an UpdateQuestionPayload into the body expected by the update API endpoint. */
+export function toApiUpdateBody(
+  data: UpdateQuestionPayload & { type?: string },
+): UpdateQuizItemPayload {
+  const base = buildBaseApiBody(data);
+  const { type, options, pairs, correctAnswer } = data;
+  if (!type || type === 'multiple_choice' || type === 'single_choice') {
+    return {
+      ...base,
+      options: options.map((o) => ({
+        ...(o.id ? { id: o.id } : {}),
+        label: o.label,
+        is_correct: o.isCorrect,
+        ...(type === 'multiple_choice' ? { weight_percentage: o.weightPercentage ?? 0 } : {}),
+      })),
+    };
+  }
+  if (type === 'true_false') {
+    return { ...base, correct_answer: correctAnswer };
+  }
+  return {
+    ...base,
+    pairs: pairs.map((p) => ({
+      left: p.left,
+      right: p.right,
+    })),
+  };
 }

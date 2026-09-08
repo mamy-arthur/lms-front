@@ -4,7 +4,7 @@ import { Check } from 'lucide-react';
 import type { UseFormReturn } from 'react-hook-form';
 import { FieldContent, FieldError, FieldGroup, FieldLabel, FieldRoot } from '@/components/ui/field';
 import { cn } from '@/lib/utils';
-import type { FormValues } from './question-form-data';
+import type { FormValues } from '../validation';
 
 interface TrueFalseFieldsProps {
   form: UseFormReturn<FormValues>;
