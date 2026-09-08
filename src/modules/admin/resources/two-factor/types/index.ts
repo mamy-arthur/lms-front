@@ -1,4 +1,4 @@
-/** Champs surchargeables des paramètres 2FA, hors interrupteur maître. */
+/** Champs surchargeables des paramètres 2FA, interrupteur d'activation compris. */
 export interface TwoFactorSettingsFields {
   enabled: boolean;
   code_length: number;
