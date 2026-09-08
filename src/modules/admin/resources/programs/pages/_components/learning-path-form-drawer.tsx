@@ -159,8 +159,19 @@ function DatePickerField({
   const [open, setOpen] = useState(false);
   const date = value ? new Date(value) : undefined;
 
+  // Évite que le popover ne se rouvre tout seul si `disabled` redevient false alors qu'il était ouvert.
+  useEffect(() => {
+    if (disabled) setOpen(false);
+  }, [disabled]);
+
   return (
-    <Popover open={disabled ? false : open} onOpenChange={setOpen}>
+    <Popover
+      open={disabled ? false : open}
+      onOpenChange={(next) => {
+        if (disabled) return;
+        setOpen(next);
+      }}
+    >
       <PopoverTrigger asChild>
         <Button
           type="button"
@@ -738,11 +749,27 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
     if (hasAutoUnpublishedRef.current) return;
     hasAutoUnpublishedRef.current = true;
 
-    const wasPublished = getValues('show_in_shop') || !!getValues('published_at');
+    // La date de publication est conservée : seule la visibilité boutique est désactivée,
+    // pour ne pas faire perdre à l'utilisateur une date déjà saisie.
+    const wasShownInShop = getValues('show_in_shop');
     setValue('show_in_shop', false);
-    setValue('published_at', null);
-    if (wasPublished && currentLpId) {
-      updateMutation.mutate({ id: currentLpId, show_in_shop: false, published_at: null });
+    if (wasShownInShop && currentLpId) {
+      const pushShopRemoval = () =>
+        updateMutation.mutate(
+          { id: currentLpId, show_in_shop: false },
+          {
+            onError: (err) => {
+              toast.error(
+                getApiErrorMessage(
+                  err,
+                  'Impossible de retirer automatiquement ce parcours de la boutique.',
+                ),
+                { action: { label: 'Réessayer', onClick: pushShopRemoval } },
+              );
+            },
+          },
+        );
+      pushShopRemoval();
     }
   }, [canPublish, currentLpId, getValues, setValue, updateMutation]);
 
@@ -988,6 +1015,7 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
                 onCertificateMove={handleCertificateMove}
                 learningPathId={currentLpId ?? undefined}
                 isLocked={learningPath?.isLocked}
+                isShopVisible={watchedShowInShop ?? false}
                 onProgressionRuleCreate={handleProgressionRuleCreate}
                 onProgressionRuleUpdate={handleProgressionRuleUpdate}
                 onProgressionRuleDeactivate={handleProgressionRuleDeactivate}

@@ -6,10 +6,13 @@ export const FlowActionsContext = createContext<{
   onEditNode: (id: string) => void;
   isLocked: boolean;
   lastNodeId: string | null;
+  /** True when the deletable (last) node is the sole remaining module of a shop-visible LP. */
+  warnShopRemovalOnDelete: boolean;
 }>({
   onDeleteNode: () => {},
   onConfigureEdge: () => {},
   onEditNode: () => {},
   isLocked: false,
   lastNodeId: null,
+  warnShopRemovalOnDelete: false,
 });

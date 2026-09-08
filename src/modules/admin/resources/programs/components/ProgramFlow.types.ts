@@ -146,6 +146,8 @@ export type ProgramFlowProps = {
   learningPathId?: string;
   /** When true the flow is read-only (the learning path has already been sold). */
   isLocked?: boolean;
+  /** When true, the LP is currently visible in the shop — used to warn before removing the last module. */
+  isShopVisible?: boolean;
   onProgressionRuleCreate?: (
     learningPathId: string,
     payload: CreateProgressionRulePayload,

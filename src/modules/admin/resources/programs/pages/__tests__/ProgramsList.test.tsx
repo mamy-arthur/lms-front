@@ -674,12 +674,104 @@ describe('ProgramsList', () => {
       act(() => capturedOnModulesChange?.(false));
 
       await waitFor(() => {
-        expect(updateMutate).toHaveBeenCalledWith({
-          id: 'lp-orphelin',
-          show_in_shop: false,
-          published_at: null,
-        });
+        expect(updateMutate).toHaveBeenCalledWith(
+          { id: 'lp-orphelin', show_in_shop: false },
+          expect.objectContaining({ onError: expect.any(Function) }),
+        );
       });
+      // La date de publication déjà saisie doit rester affichée (non réinitialisée)
+      expect(screen.queryByText(/non définie/i)).not.toBeInTheDocument();
+    });
+
+    it('affiche un toast réessayable si la désactivation automatique échoue côté serveur', async () => {
+      const updateMutate = jest.fn(
+        (_vars: unknown, options?: { onError?: (err: unknown) => void }) => {
+          options?.onError?.(new Error('Erreur serveur'));
+        },
+      );
+      mockDefaults({
+        paths: [
+          {
+            ...MOCK_PATH_1,
+            id: 'lp-orphelin',
+            name: 'Parcours sans module',
+            publishedAt: '2024-01-01T00:00:00Z',
+            showInShop: true,
+          },
+        ],
+        updateMutate,
+      });
+
+      let capturedOnModulesChange: ((v: boolean) => void) | undefined;
+      MockProgramFlow.mockImplementation((props: ProgramFlowProps) => {
+        capturedOnModulesChange = props.onModulesChange;
+        return null;
+      });
+
+      const user = userEvent.setup();
+      render(<ProgramsList />, { wrapper: createWrapper() });
+
+      await user.click(screen.getByRole('button', { name: 'Actions pour Parcours sans module' }));
+      await user.click(screen.getByRole('menuitem', { name: /modifier/i }));
+      await screen.findByRole('switch', { name: /visible en boutique/i });
+
+      act(() => capturedOnModulesChange?.(true));
+      act(() => capturedOnModulesChange?.(false));
+
+      await waitFor(() => {
+        expect(mockToast.error).toHaveBeenCalledWith(
+          'Erreur serveur',
+          expect.objectContaining({
+            action: expect.objectContaining({ label: 'Réessayer' }),
+          }),
+        );
+      });
+
+      // Le bouton « Réessayer » du toast relance le même appel
+      updateMutate.mockClear();
+      const [, toastOptions] = mockToast.error.mock.calls.at(-1)!;
+      const action = (toastOptions as unknown as { action: { onClick: () => void } }).action;
+      action.onClick();
+
+      expect(updateMutate).toHaveBeenCalledWith(
+        { id: 'lp-orphelin', show_in_shop: false },
+        expect.objectContaining({ onError: expect.any(Function) }),
+      );
+    });
+  });
+
+  // ── Date de publication (DatePickerField) ─────────────────────────────────
+
+  describe('date de publication', () => {
+    it('ne se rouvre pas automatiquement après avoir été désactivée puis réactivée', async () => {
+      let capturedOnModulesChange: ((v: boolean) => void) | undefined;
+      MockProgramFlow.mockImplementation((props: ProgramFlowProps) => {
+        capturedOnModulesChange = props.onModulesChange;
+        return null;
+      });
+
+      const user = userEvent.setup();
+      render(<ProgramsList />, { wrapper: createWrapper() });
+
+      await user.click(screen.getByRole('button', { name: /nouveau parcours/i }));
+
+      // Un module rend le champ de date utilisable
+      act(() => capturedOnModulesChange?.(true));
+      const dateButton = await screen.findByRole('button', { name: /non définie/i });
+      expect(dateButton).not.toBeDisabled();
+
+      await user.click(dateButton);
+      expect(document.querySelector('[data-slot="calendar"]')).toBeInTheDocument();
+
+      // Le dernier module est retiré : le champ est désactivé et le calendrier forcé fermé
+      act(() => capturedOnModulesChange?.(false));
+      await waitFor(() => expect(dateButton).toBeDisabled());
+      expect(document.querySelector('[data-slot="calendar"]')).not.toBeInTheDocument();
+
+      // Un module est rajouté : le champ redevient utilisable mais ne doit PAS se rouvrir seul
+      act(() => capturedOnModulesChange?.(true));
+      await waitFor(() => expect(dateButton).not.toBeDisabled());
+      expect(document.querySelector('[data-slot="calendar"]')).not.toBeInTheDocument();
     });
   });
 
