@@ -101,6 +101,7 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
     onCertificateMove,
     learningPathId,
     isLocked = false,
+    isShopVisible = false,
     onProgressionRuleCreate,
     onProgressionRuleUpdate,
     onProgressionRuleDeactivate,
@@ -142,6 +143,8 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
     hasModule,
     hasPartialForLastModule,
     lastNodeIsEvaluation,
+    lastNodeIsModule,
+    moduleCount,
     hasEmailConfigured,
     lastModuleId,
   } = useMemo(() => {
@@ -164,6 +167,8 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
       hasPartialForLastModule: partialAfterLastModule,
       lastNodeIsEvaluation:
         lastNodeStepType === 'evaluation-intermediate' || lastNodeStepType === 'evaluation-final',
+      lastNodeIsModule: lastNodeStepType === 'module',
+      moduleCount: nodes.filter((n) => n.data.stepType === 'module').length,
       hasEmailConfigured: nodes.some(
         (n) => n.data.stepType === 'email' && !!n.data.emailTemplateId,
       ),
@@ -1031,6 +1036,10 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
     [],
   );
 
+  // Deleting the only remaining module of an LP still visible in the shop would silently
+  // unpublish it — warn in the delete confirmation instead of a generic "Supprimer ?".
+  const warnShopRemovalOnDelete = isShopVisible && lastNodeIsModule && moduleCount === 1;
+
   const flowActions = useMemo(
     () => ({
       onDeleteNode,
@@ -1038,8 +1047,9 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
       onEditNode,
       isLocked,
       lastNodeId: nodeOrder.at(-1) ?? null,
+      warnShopRemovalOnDelete,
     }),
-    [onDeleteNode, onConfigureEdge, onEditNode, isLocked, nodeOrder],
+    [onDeleteNode, onConfigureEdge, onEditNode, isLocked, nodeOrder, warnShopRemovalOnDelete],
   );
 
   return (
