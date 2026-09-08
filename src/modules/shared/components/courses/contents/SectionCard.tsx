@@ -182,13 +182,22 @@ export function SectionCard({
       style={{ transform: CSS.Transform.toString(transform), transition }}
       className={isDragging ? 'opacity-50' : undefined}
     >
-      <Collapsible open={isOpen} onOpenChange={setIsOpen} className="rounded-sm border bg-card">
+      {/* `group/section` (nommé) et non `group` : les lignes d'entrées imbriquées
+          utilisent le groupe anonyme pour leurs propres poignées — un groupe
+          anonyme ici les déclencherait aussi au survol de la section. */}
+      <Collapsible
+        open={isOpen}
+        onOpenChange={setIsOpen}
+        className="group/section rounded-sm border bg-card"
+      >
         <div className="flex items-center justify-between p-3">
           <button
             {...attributes}
             {...listeners}
             type="button"
-            className="mr-1 cursor-grab touch-none text-muted-foreground/40 hover:text-muted-foreground active:cursor-grabbing"
+            className={`mr-1 cursor-grab touch-none text-muted-foreground/40 transition-opacity hover:text-muted-foreground focus-visible:opacity-100 group-hover/section:opacity-100 active:cursor-grabbing ${
+              isDragging ? 'opacity-100' : 'opacity-0'
+            }`}
             aria-label="Réordonner la section"
           >
             <GripVertical className="size-4" />
