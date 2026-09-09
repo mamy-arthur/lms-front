@@ -193,12 +193,18 @@ export function ModuleForm({
                 <FieldLabel className="text-xs">Identifiant</FieldLabel>
                 <FieldContent>
                   <div className="flex gap-2">
-                    <Input aria-label="Identifiant" className="text-xs" {...field} />
+                    <Input
+                      aria-label="Identifiant"
+                      className="text-xs"
+                      {...field}
+                      disabled={isEdit}
+                    />
                     <Button
                       type="button"
                       variant="outline"
                       size="xs"
                       className="h-7"
+                      disabled={isEdit}
                       onClick={() =>
                         form.setValue('idnumber', genIdentifierFn(shortname), {
                           shouldValidate: true,
