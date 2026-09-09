@@ -23,12 +23,6 @@ interface LoginSuccessApiResponse {
   session_id: string;
 }
 
-interface TwoFactorApiResponse {
-  two_factor_required: true;
-  challenge_token: string;
-  expires_in: number;
-}
-
 interface SessionConflictApiResponse {
   code: 'SESSION_ALREADY_ACTIVE';
   message: string;
@@ -38,6 +32,24 @@ interface SessionConflictApiResponse {
     browser: string | null;
     last_activity_at: string;
   };
+}
+
+/** Challenge émis par l'API quand le 2FA est actif et qu'aucun appareil de confiance n'est présenté. */
+export interface TwoFactorChallenge {
+  two_factor_required: true;
+  challenge_token: string;
+  /** Durée de validité du code, en secondes. */
+  expires_in: number;
+  /** Nombre de chiffres attendus, configurable de 6 à 10 côté backend. */
+  code_length: number;
+  /** Délai avant qu'un renvoi soit accepté, décompté depuis le dernier envoi. */
+  resend_cooldown_seconds: number;
+}
+
+export interface TwoFactorChallengePayload {
+  challenge_token: string;
+  code: string;
+  trust_device?: boolean;
 }
 
 interface MessageApiResponse {
@@ -62,10 +74,20 @@ export interface ExistingSessionInfo {
   lastActivityAt: string;
 }
 
-export type LoginResult =
+/**
+ * Issue de tout appel qui tente d'ouvrir une session : le backend la refuse (409)
+ * tant qu'une autre session est active, et fournit alors un jeton de remplacement.
+ */
+export type SessionResult =
   | { outcome: 'authenticated'; user: AuthUser; sessionId: string }
-  | { outcome: 'two_factor_required'; challengeToken: string; expiresIn: number }
   | { outcome: 'session_conflict'; existingSession: ExistingSessionInfo; replacementToken: string };
+
+/**
+ * Le login ajoute un troisième cas : le mot de passe est valide mais le 2FA exige
+ * un code avant qu'une session soit ouverte.
+ */
+export type LoginResult =
+  SessionResult | { outcome: 'two_factor_required'; challenge: TwoFactorChallenge };
 
 function toAuthUser(raw: BackendUser): AuthUser {
   return {
@@ -86,40 +108,51 @@ function isApiError(err: unknown): err is { status: number; json: unknown } {
   );
 }
 
-async function performLogin(
-  endpoint: string,
-  email: string,
-  password: string,
-): Promise<LoginResult> {
+function toAuthenticated(res: LoginSuccessApiResponse): SessionResult {
+  return { outcome: 'authenticated', user: toAuthUser(res.user), sessionId: res.session_id };
+}
+
+/** Convertit le 409 SESSION_ALREADY_ACTIVE en résultat métier ; toute autre erreur remonte. */
+async function withSessionConflict<T>(request: () => Promise<T>): Promise<T | SessionResult> {
   try {
-    const res = await apiPost<LoginSuccessApiResponse | TwoFactorApiResponse>(endpoint, {
+    return await request();
+  } catch (err) {
+    if (!isApiError(err) || err.status !== 409) throw err;
+
+    const body = err.json as SessionConflictApiResponse;
+
+    return {
+      outcome: 'session_conflict',
+      existingSession: {
+        deviceName: body.active_session.device_name,
+        browser: body.active_session.browser,
+        lastActivityAt: body.active_session.last_activity_at,
+      },
+      replacementToken: body.replacement_token,
+    };
+  }
+}
+
+function performLogin(endpoint: string, email: string, password: string): Promise<LoginResult> {
+  return withSessionConflict<LoginResult>(async () => {
+    const res = await apiPost<LoginSuccessApiResponse | TwoFactorChallenge>(endpoint, {
       email,
       password,
     });
-    if ('two_factor_required' in res) {
-      return {
-        outcome: 'two_factor_required',
-        challengeToken: res.challenge_token,
-        expiresIn: res.expires_in,
-      };
-    }
-    const r = res as LoginSuccessApiResponse;
-    return { outcome: 'authenticated', user: toAuthUser(r.user), sessionId: r.session_id };
-  } catch (err) {
-    if (isApiError(err) && err.status === 409) {
-      const body = err.json as SessionConflictApiResponse;
-      return {
-        outcome: 'session_conflict',
-        existingSession: {
-          deviceName: body.active_session.device_name,
-          browser: body.active_session.browser,
-          lastActivityAt: body.active_session.last_activity_at,
-        },
-        replacementToken: body.replacement_token,
-      };
-    }
-    throw err;
-  }
+
+    return 'two_factor_required' in res
+      ? { outcome: 'two_factor_required', challenge: res }
+      : toAuthenticated(res);
+  });
+}
+
+function performTwoFactorChallenge(
+  endpoint: string,
+  payload: TwoFactorChallengePayload,
+): Promise<SessionResult> {
+  return withSessionConflict<SessionResult>(async () =>
+    toAuthenticated(await apiPost<LoginSuccessApiResponse>(endpoint, payload)),
+  );
 }
 
 async function performReplacement(
@@ -141,6 +174,16 @@ export const authApi = {
   login: (email: string, password: string): Promise<LoginResult> =>
     performLogin('auth/login', email, password),
 
+  /** Valide le code OTP et délivre la session. */
+  twoFactorChallenge: (payload: TwoFactorChallengePayload): Promise<SessionResult> =>
+    performTwoFactorChallenge('auth/two-factor-challenge', payload),
+
+  /** Réémet un code pour le même challenge ; le challenge_token reste identique. */
+  twoFactorResend: (challengeToken: string): Promise<TwoFactorChallenge> =>
+    apiPost<TwoFactorChallenge>('auth/two-factor-resend', {
+      challenge_token: challengeToken,
+    }),
+
   logout: (): Promise<MessageApiResponse> => apiPost<MessageApiResponse>('auth/logout'),
 
   me: (): Promise<{ user: AuthUser; sessionId: string | null }> => performMe('auth/me'),
@@ -156,6 +199,14 @@ export const authApi = {
 
   platformLogin: (email: string, password: string): Promise<LoginResult> =>
     performLogin('platform/auth/login', email, password),
+
+  platformTwoFactorChallenge: (payload: TwoFactorChallengePayload): Promise<SessionResult> =>
+    performTwoFactorChallenge('platform/auth/two-factor-challenge', payload),
+
+  platformTwoFactorResend: (challengeToken: string): Promise<TwoFactorChallenge> =>
+    apiPost<TwoFactorChallenge>('platform/auth/two-factor-resend', {
+      challenge_token: challengeToken,
+    }),
 
   platformLogout: (): Promise<MessageApiResponse> =>
     apiPost<MessageApiResponse>('platform/auth/logout'),

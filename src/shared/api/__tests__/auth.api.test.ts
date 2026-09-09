@@ -83,8 +83,7 @@ describe('authApi', () => {
         user: { ...BACKEND_USER, full_name: 'Bob Martin' },
       });
       const result = await authApi.login('bob@example.com', 'pass');
-      expect(result.outcome).toBe('authenticated');
-      if (result.outcome === 'authenticated') expect(result.user.name).toBe('Bob Martin');
+      expect(result).toMatchObject({ outcome: 'authenticated', user: { name: 'Bob Martin' } });
     });
 
     it('mappe le rôle SUPER_ADMIN', async () => {
@@ -93,7 +92,7 @@ describe('authApi', () => {
         user: { ...BACKEND_USER, role: Role.SUPER_ADMIN },
       });
       const result = await authApi.login('admin@example.com', 'pass');
-      if (result.outcome === 'authenticated') expect(result.user.role).toBe(Role.SUPER_ADMIN);
+      expect(result).toMatchObject({ outcome: 'authenticated', user: { role: Role.SUPER_ADMIN } });
     });
 
     it('retourne session_conflict sur une réponse 409', async () => {
@@ -121,20 +120,6 @@ describe('authApi', () => {
           lastActivityAt: '2026-08-25T10:00:00Z',
         },
         replacementToken: 'replace-token-abc',
-      });
-    });
-
-    it('retourne two_factor_required sur une réponse 2FA', async () => {
-      mockApiPost.mockResolvedValue({
-        two_factor_required: true,
-        challenge_token: 'challenge-xyz',
-        expires_in: 300,
-      });
-      const result = await authApi.login('alice@example.com', 'secret');
-      expect(result).toStrictEqual<LoginResult>({
-        outcome: 'two_factor_required',
-        challengeToken: 'challenge-xyz',
-        expiresIn: 300,
       });
     });
 
@@ -169,6 +154,120 @@ describe('authApi', () => {
     it("propage l'exception sur 403", async () => {
       mockApiPost.mockRejectedValue(Object.assign(new Error('Forbidden'), { status: 403 }));
       await expect(authApi.platformLogin('x@x.com', 'bad')).rejects.toMatchObject({ status: 403 });
+    });
+  });
+
+  // ── 2FA ────────────────────────────────────────────────────────────────────
+
+  describe('challenge 2FA', () => {
+    const CHALLENGE = {
+      two_factor_required: true as const,
+      challenge_token: 'chal-123',
+      expires_in: 600,
+      code_length: 6,
+      resend_cooldown_seconds: 30,
+    };
+
+    it('login retourne un challenge sans tenter de mapper user', async () => {
+      mockApiPost.mockResolvedValue(CHALLENGE);
+
+      const result = await authApi.login('alice@example.com', 'secret');
+
+      expect(result).toStrictEqual<LoginResult>({
+        outcome: 'two_factor_required',
+        challenge: CHALLENGE,
+      });
+    });
+
+    it('platformLogin retourne également un challenge', async () => {
+      mockApiPost.mockResolvedValue(CHALLENGE);
+
+      const result = await authApi.platformLogin('admin@example.com', 'secret');
+
+      expect(result).toStrictEqual<LoginResult>({
+        outcome: 'two_factor_required',
+        challenge: CHALLENGE,
+      });
+    });
+
+    it('twoFactorChallenge poste le code et retourne la session', async () => {
+      mockApiPost.mockResolvedValue(LOGIN_RESPONSE);
+
+      const result = await authApi.twoFactorChallenge({
+        challenge_token: 'chal-123',
+        code: '123456',
+        trust_device: true,
+      });
+
+      expect(mockApiPost).toHaveBeenCalledWith('auth/two-factor-challenge', {
+        challenge_token: 'chal-123',
+        code: '123456',
+        trust_device: true,
+      });
+      expect(result).toStrictEqual<LoginResult>({
+        outcome: 'authenticated',
+        user: EXPECTED_AUTH_USER,
+        sessionId: 'session-uuid-001',
+      });
+    });
+
+    it('twoFactorChallenge remonte le conflit de session sur une réponse 409', async () => {
+      mockApiPost.mockRejectedValue(
+        Object.assign(new Error('Conflict'), {
+          status: 409,
+          json: {
+            code: 'SESSION_ALREADY_ACTIVE',
+            message: 'Session active.',
+            replacement_token: 'replace-token-abc',
+            active_session: {
+              device_name: 'PC (Windows)',
+              browser: 'Chrome',
+              last_activity_at: '2026-08-25T10:00:00Z',
+            },
+          },
+        }),
+      );
+
+      const result = await authApi.twoFactorChallenge({
+        challenge_token: 'chal-123',
+        code: '123456',
+      });
+
+      expect(result).toStrictEqual<LoginResult>({
+        outcome: 'session_conflict',
+        existingSession: {
+          deviceName: 'PC (Windows)',
+          browser: 'Chrome',
+          lastActivityAt: '2026-08-25T10:00:00Z',
+        },
+        replacementToken: 'replace-token-abc',
+      });
+    });
+
+    it('twoFactorResend poste le challenge_token', async () => {
+      mockApiPost.mockResolvedValue(CHALLENGE);
+
+      await authApi.twoFactorResend('chal-123');
+
+      expect(mockApiPost).toHaveBeenCalledWith('auth/two-factor-resend', {
+        challenge_token: 'chal-123',
+      });
+    });
+
+    it('les routes plateforme ciblent le préfixe platform', async () => {
+      mockApiPost.mockResolvedValue(LOGIN_RESPONSE);
+      await authApi.platformTwoFactorChallenge({ challenge_token: 'c', code: '1' });
+      expect(mockApiPost).toHaveBeenCalledWith(
+        'platform/auth/two-factor-challenge',
+        expect.anything(),
+      );
+
+      mockApiPost.mockResolvedValue(CHALLENGE);
+      await authApi.platformTwoFactorResend('c');
+      expect(mockApiPost).toHaveBeenCalledWith(
+        'platform/auth/two-factor-resend',
+        expect.anything(),
+      );
     });
   });
 

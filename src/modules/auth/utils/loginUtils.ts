@@ -4,6 +4,10 @@ import { ROUTES } from '@/shared/constants/routes';
 import type { AuthUser } from '@/shared/types/auth.types';
 import { queryClient } from '@/shared/lib/query-client';
 
+/**
+ * Login via the tenant endpoint (POST /auth/login).
+ * Used by /login — accepts all roles, no platform fallback.
+ */
 export async function resolveLogin(email: string, password: string): Promise<LoginResult> {
   return authApi.login(email, password);
 }

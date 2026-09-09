@@ -22,6 +22,7 @@ interface AdminUsersTableProps {
   onEdit: (user: User) => void;
   onToggleActive: (user: User) => void;
   onDelete: (user: User) => void;
+  onResetTwoFactor?: (user: User) => void;
 }
 
 export function AdminUsersTable({
@@ -39,6 +40,7 @@ export function AdminUsersTable({
   onEdit,
   onToggleActive,
   onDelete,
+  onResetTwoFactor,
 }: AdminUsersTableProps) {
   return (
     <UsersContentTable
@@ -56,6 +58,7 @@ export function AdminUsersTable({
       onEdit={onEdit}
       onToggleActive={onToggleActive}
       onDelete={onDelete}
+      onResetTwoFactor={onResetTwoFactor}
       isActiveSortable={true}
     />
   );

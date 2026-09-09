@@ -16,8 +16,15 @@ import {
   resolveRedirectPath,
   clearSessionCache,
 } from '@/modules/auth/utils/loginUtils';
-import { authApi, type ExistingSessionInfo } from '@/shared/api/auth.api';
 import { SessionConflictModal } from '@/modules/auth/components/SessionConflictModal';
+import { TwoFactorChallengeStep } from '@/modules/auth/components/TwoFactorChallengeStep';
+import {
+  authApi,
+  type ExistingSessionInfo,
+  type SessionResult,
+  type TwoFactorChallenge,
+} from '@/shared/api/auth.api';
+import type { AuthUser } from '@/shared/types/auth.types';
 
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -30,6 +37,7 @@ export function LoginForm() {
 
   const [showPassword, setShowPassword] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
+  const [challenge, setChallenge] = useState<TwoFactorChallenge | null>(null);
   const [sessionConflict, setSessionConflict] = useState<{
     existingSession: ExistingSessionInfo;
     replacementToken: string;
@@ -55,31 +63,43 @@ export function LoginForm() {
     defaultValues: { email: '', password: '' },
   });
 
+  const enterSession = (user: AuthUser, sessionId: string) => {
+    const hasTenant = !!useTenantStore.getState().tenant;
+
+    clearSessionCache();
+    setAuth(user, sessionId);
+
+    router.replace(resolveRedirectPath(user, hasTenant));
+  };
+
+  /** Ouvre la session, ou bascule sur la modale de conflit si une autre est déjà active. */
+  const applySessionResult = (result: SessionResult) => {
+    if (result.outcome === 'session_conflict') {
+      setChallenge(null);
+      setSessionConflict({
+        existingSession: result.existingSession,
+        replacementToken: result.replacementToken,
+      });
+
+      return;
+    }
+
+    enterSession(result.user, result.sessionId);
+  };
+
   const onSubmit = async (data: LoginSchema) => {
     setServerError(null);
 
     try {
-      const hasTenant = !!useTenantStore.getState().tenant;
       const result = await resolveLogin(data.email, data.password);
 
       if (result.outcome === 'two_factor_required') {
-        setServerError(
-          'Authentification à deux facteurs requise. Veuillez utiliser votre application 2FA.',
-        );
+        setChallenge(result.challenge);
+
         return;
       }
 
-      if (result.outcome === 'session_conflict') {
-        setSessionConflict({
-          existingSession: result.existingSession,
-          replacementToken: result.replacementToken,
-        });
-        return;
-      }
-      clearSessionCache();
-
-      setAuth(result.user, result.sessionId);
-      router.replace(resolveRedirectPath(result.user, hasTenant));
+      applySessionResult(result);
     } catch {
       setServerError('Email ou mot de passe incorrect.');
     }
@@ -87,11 +107,9 @@ export function LoginForm() {
 
   const handleReplaceSession = async (token: string) => {
     try {
-      const hasTenant = !!useTenantStore.getState().tenant;
       const result = await authApi.replaceSession(token);
-      setAuth(result.user, result.sessionId);
       setSessionConflict(null);
-      router.replace(resolveRedirectPath(result.user, hasTenant));
+      enterSession(result.user, result.sessionId);
     } catch {
       setServerError('La tentative de connexion a échoué. Veuillez réessayer.');
       setSessionConflict(null);
@@ -122,84 +140,106 @@ export function LoginForm() {
             </p>
           </div>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="mt-8 space-y-5">
-            {/* EMAIL */}
-            <div className="space-y-2">
-              <Label htmlFor="email">Adresse email</Label>
+          {challenge ? (
+            <TwoFactorChallengeStep
+              challenge={challenge}
+              onVerify={async ({ code, trustDevice }) => {
+                applySessionResult(
+                  await authApi.twoFactorChallenge({
+                    challenge_token: challenge.challenge_token,
+                    code,
+                    trust_device: trustDevice,
+                  }),
+                );
+              }}
+              onResend={() => authApi.twoFactorResend(challenge.challenge_token)}
+              onAbandon={(reason) => {
+                setChallenge(null);
+                setServerError(reason ?? null);
+              }}
+            />
+          ) : (
+            <form onSubmit={handleSubmit(onSubmit)} className="mt-8 space-y-5">
+              {/* EMAIL */}
+              <div className="space-y-2">
+                <Label htmlFor="email">Adresse email</Label>
 
-              <Input id="email" placeholder="vous@exemple.com" {...register('email')} />
-            </div>
-
-            {/* PASSWORD */}
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <Label htmlFor="password">Mot de passe</Label>
-
-                <Link href="/forgot-password" className="text-xs text-primary hover:underline">
-                  Mot de passe oublié ?
-                </Link>
+                <Input id="email" placeholder="vous@exemple.com" {...register('email')} />
               </div>
 
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="••••••••"
-                  {...register('password')}
-                />
+              {/* PASSWORD */}
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <Label htmlFor="password">Mot de passe</Label>
 
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-                >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
+                  <Link href="/forgot-password" className="text-xs text-primary hover:underline">
+                    Mot de passe oublié ?
+                  </Link>
+                </div>
+
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="••••••••"
+                    {...register('password')}
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+
+                {errors.password && (
+                  <p className="text-sm text-red-500">{errors.password.message}</p>
+                )}
               </div>
 
-              {errors.password && <p className="text-sm text-red-500">{errors.password.message}</p>}
-            </div>
+              {/* REMEMBER */}
+              <div className="flex items-center gap-3">
+                <Checkbox id="remember" />
 
-            {/* REMEMBER */}
-            <div className="flex items-center gap-3">
-              <Checkbox id="remember" />
-
-              <Label htmlFor="remember" className="cursor-pointer font-normal">
-                Rester connecté
-              </Label>
-            </div>
-
-            {revocationMessage && (
-              <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-700">
-                {revocationMessage}
+                <Label htmlFor="remember" className="cursor-pointer font-normal">
+                  Rester connecté
+                </Label>
               </div>
-            )}
 
-            {serverError && (
-              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-600">
-                {serverError}
-              </div>
-            )}
-
-            {/* SUBMIT */}
-            <Button
-              type="submit"
-              disabled={isSubmitting}
-              className="h-12 w-full bg-(--color-primary) hover:bg-(--color-primary)/80"
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Connexion...
-                </>
-              ) : (
-                <>
-                  Se connecter
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </>
+              {revocationMessage && (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-700">
+                  {revocationMessage}
+                </div>
               )}
-            </Button>
-          </form>
+
+              {serverError && (
+                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-600">
+                  {serverError}
+                </div>
+              )}
+
+              {/* SUBMIT */}
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                className="h-12 w-full bg-(--color-primary) hover:bg-(--color-primary)/80"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Connexion...
+                  </>
+                ) : (
+                  <>
+                    Se connecter
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </>
+                )}
+              </Button>
+            </form>
+          )}
 
           <p className="mt-8 text-center text-xs text-muted-foreground">
             Pas encore de compte ?{' '}

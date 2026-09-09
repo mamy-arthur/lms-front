@@ -54,6 +54,7 @@ export interface UsersContentTableProps<T extends UsersContentRow = UsersContent
   onEdit?: (user: T) => void;
   onToggleActive?: (user: T) => void;
   onDelete?: (user: T) => void;
+  onResetTwoFactor?: (user: T) => void;
   tenantNames?: Record<string, string>;
   isActiveSortable?: boolean;
   rowTestId?: string;
@@ -74,6 +75,7 @@ export function UsersContentTable<T extends UsersContentRow = UsersContentRow>({
   onEdit,
   onToggleActive,
   onDelete,
+  onResetTwoFactor,
   tenantNames,
   isActiveSortable = true,
   rowTestId,
@@ -153,6 +155,7 @@ export function UsersContentTable<T extends UsersContentRow = UsersContentRow>({
             onEdit={() => onEdit?.(user)}
             onToggleActive={() => onToggleActive?.(user)}
             onDelete={() => onDelete?.(user)}
+            onResetTwoFactor={onResetTwoFactor ? () => onResetTwoFactor(user) : undefined}
           />
         </div>
       ),

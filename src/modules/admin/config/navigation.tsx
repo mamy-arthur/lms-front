@@ -9,6 +9,7 @@ import {
   Store,
   LayoutTemplate,
   Layers,
+  ShieldCheck,
   // Wallet,
 } from 'lucide-react';
 import { ROUTES } from '@/shared/constants/routes';
@@ -101,6 +102,13 @@ export const ADMIN_NAV: AdminNavItem[] = [
     title: 'Types de contenu',
     icon: Layers,
     access: ACCESS.contentTypes,
+    items: [],
+  },
+  {
+    url: ROUTES.admin.twoFactor,
+    title: 'Double authentification',
+    icon: ShieldCheck,
+    access: ACCESS.twoFactor,
     items: [],
   },
 ];

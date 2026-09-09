@@ -6,11 +6,18 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { loginSchema, type LoginSchema } from '@/shared/schemas/auth.schema';
-import { authApi, type ExistingSessionInfo } from '@/shared/api/auth.api';
+import {
+  authApi,
+  type ExistingSessionInfo,
+  type SessionResult,
+  type TwoFactorChallenge,
+} from '@/shared/api/auth.api';
 import { useAuthStore } from '@/shared/stores/auth.store';
 import { useTenantStore } from '@/shared/stores/tenant.store';
 import { SessionConflictModal } from '@/modules/auth/components/SessionConflictModal';
 import { resolveRedirectPath, clearSessionCache } from '@/modules/auth/utils/loginUtils';
+import { TwoFactorChallengeStep } from '@/modules/auth/components/TwoFactorChallengeStep';
+import type { AuthUser } from '@/shared/types/auth.types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,6 +28,7 @@ export function PlatformLoginForm() {
 
   const [serverError, setServerError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [challenge, setChallenge] = useState<TwoFactorChallenge | null>(null);
   const [sessionConflict, setSessionConflict] = useState<{
     existingSession: ExistingSessionInfo;
     replacementToken: string;
@@ -42,31 +50,43 @@ export function PlatformLoginForm() {
     defaultValues: { email: '', password: '' },
   });
 
+  const enterSession = (user: AuthUser, sessionId: string) => {
+    const hasTenant = !!useTenantStore.getState().tenant;
+
+    clearSessionCache();
+    setAuth(user, sessionId);
+
+    router.replace(resolveRedirectPath(user, hasTenant));
+  };
+
+  /** Ouvre la session, ou bascule sur la modale de conflit si une autre est déjà active. */
+  const applySessionResult = (result: SessionResult) => {
+    if (result.outcome === 'session_conflict') {
+      setChallenge(null);
+      setSessionConflict({
+        existingSession: result.existingSession,
+        replacementToken: result.replacementToken,
+      });
+
+      return;
+    }
+
+    enterSession(result.user, result.sessionId);
+  };
+
   const onSubmit = async (data: LoginSchema) => {
     setServerError(null);
 
     try {
-      const hasTenant = !!useTenantStore.getState().tenant;
       const result = await authApi.platformLogin(data.email, data.password);
 
       if (result.outcome === 'two_factor_required') {
-        setServerError(
-          'Authentification à deux facteurs requise. Veuillez utiliser votre application 2FA.',
-        );
+        setChallenge(result.challenge);
+
         return;
       }
 
-      if (result.outcome === 'session_conflict') {
-        setSessionConflict({
-          existingSession: result.existingSession,
-          replacementToken: result.replacementToken,
-        });
-        return;
-      }
-      clearSessionCache();
-
-      setAuth(result.user, result.sessionId);
-      router.replace(resolveRedirectPath(result.user, hasTenant));
+      applySessionResult(result);
     } catch {
       setServerError('Email ou mot de passe incorrect.');
     }
@@ -74,16 +94,36 @@ export function PlatformLoginForm() {
 
   const handleReplaceSession = async (token: string) => {
     try {
-      const hasTenant = !!useTenantStore.getState().tenant;
       const result = await authApi.platformReplaceSession(token);
-      setAuth(result.user, result.sessionId);
       setSessionConflict(null);
-      router.replace(resolveRedirectPath(result.user, hasTenant));
+      enterSession(result.user, result.sessionId);
     } catch {
       setServerError('La tentative de connexion a échoué. Veuillez réessayer.');
       setSessionConflict(null);
     }
   };
+
+  if (challenge) {
+    return (
+      <TwoFactorChallengeStep
+        challenge={challenge}
+        onVerify={async ({ code, trustDevice }) => {
+          applySessionResult(
+            await authApi.platformTwoFactorChallenge({
+              challenge_token: challenge.challenge_token,
+              code,
+              trust_device: trustDevice,
+            }),
+          );
+        }}
+        onResend={() => authApi.platformTwoFactorResend(challenge.challenge_token)}
+        onAbandon={(reason) => {
+          setChallenge(null);
+          setServerError(reason ?? null);
+        }}
+      />
+    );
+  }
 
   return (
     <>
