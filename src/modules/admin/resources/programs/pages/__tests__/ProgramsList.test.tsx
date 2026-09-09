@@ -468,6 +468,39 @@ describe('ProgramsList', () => {
       });
     });
 
+    it.each([
+      { value: '1.5', duration: 90, validity: 2160 },
+      { value: '1.25', duration: 75, validity: 1800 },
+      { value: '1.234', duration: 74, validity: 1777 },
+    ])(
+      'convertit les durées décimales $value en minutes entières',
+      async ({ value, duration, validity }) => {
+        const createMutateAsync = jest.fn().mockResolvedValue({ data: { id: 'new-lp' } });
+        mockDefaults({ createMutateAsync });
+        const user = userEvent.setup();
+        render(<ProgramsList />, { wrapper: createWrapper() });
+
+        await user.click(screen.getByRole('button', { name: /nouveau parcours/i }));
+        await user.type(screen.getByLabelText(/nom du parcours/i), 'Parcours à durées décimales');
+        const durationInput = screen.getByRole('spinbutton', { name: /durée de formation/i });
+        const validityInput = screen.getByRole('spinbutton', { name: /durée de validité/i });
+        await user.type(durationInput, value);
+        await user.type(validityInput, value);
+
+        expect(durationInput).toHaveValue(Number(value));
+        expect(validityInput).toHaveValue(Number(value));
+        expect(durationInput).toBeValid();
+        expect(validityInput).toBeValid();
+        await user.click(screen.getByRole('button', { name: /enregistrer/i }));
+
+        await waitFor(() => {
+          expect(createMutateAsync).toHaveBeenCalledWith(
+            expect.objectContaining({ duration, validity }),
+          );
+        });
+      },
+    );
+
     it('affiche un toast de succès après la création', async () => {
       const user = userEvent.setup();
       render(<ProgramsList />, { wrapper: createWrapper() });
@@ -509,6 +542,78 @@ describe('ProgramsList', () => {
   // ── Modification ──────────────────────────────────────────────────────────
 
   describe("modification d'un parcours", () => {
+    it.each([
+      { minutes: 30, value: 30, unit: 'Minutes' },
+      { minutes: 90, value: 1.5, unit: 'Heures' },
+      { minutes: 2160, value: 1.5, unit: 'Jours' },
+      { minutes: 43200, value: 30, unit: 'Jours' },
+      { minutes: 12 * 43200, value: 360, unit: 'Jours' },
+      { minutes: 4 * 525600, value: 4, unit: 'Années (365 j)' },
+      { minutes: 400 * 1440, value: 1.0959, unit: 'Années (365 j)' },
+      { minutes: 4 * 525600 + 1, value: 4, unit: 'Années (365 j)' },
+      { minutes: 1440 + 2 * 60 + 30, value: 1.1042, unit: 'Jours' },
+    ])(
+      'recharge et conserve exactement les durées de $minutes minutes',
+      async ({ minutes, value, unit }) => {
+        const updateMutateAsync = jest.fn().mockResolvedValue(undefined);
+        mockDefaults({
+          paths: [{ ...MOCK_PATH_1, duration: minutes, validity: minutes }],
+          updateMutateAsync,
+        });
+        const user = userEvent.setup();
+        render(<ProgramsList />, { wrapper: createWrapper() });
+
+        await user.click(screen.getByRole('button', { name: `Actions pour ${MOCK_PATH_1.name}` }));
+        await user.click(screen.getByRole('menuitem', { name: /modifier/i }));
+
+        expect(screen.getByRole('spinbutton', { name: /durée de formation/i })).toHaveValue(value);
+        expect(screen.getByRole('spinbutton', { name: /durée de validité/i })).toHaveValue(value);
+        expect(
+          screen.getByRole('combobox', { name: 'Unité de durée de formation' }),
+        ).toHaveTextContent(unit);
+        expect(
+          screen.getByRole('combobox', { name: 'Unité de durée de validité' }),
+        ).toHaveTextContent(unit);
+        await user.click(screen.getByRole('button', { name: /enregistrer/i }));
+
+        await waitFor(() => {
+          expect(updateMutateAsync).toHaveBeenCalledWith(
+            expect.objectContaining({ id: MOCK_PATH_1.id, duration: minutes, validity: minutes }),
+          );
+        });
+      },
+    );
+
+    it.each([
+      { input: '2', expected: 2 * 525600 },
+      { input: '', expected: null },
+    ])(
+      'enregistre une durée arrondie modifiée ou effacée ($input)',
+      async ({ input, expected }) => {
+        const updateMutateAsync = jest.fn().mockResolvedValue(undefined);
+        mockDefaults({
+          paths: [{ ...MOCK_PATH_1, duration: 400 * 1440, validity: 400 * 1440 }],
+          updateMutateAsync,
+        });
+        const user = userEvent.setup();
+        render(<ProgramsList />, { wrapper: createWrapper() });
+        await user.click(screen.getByRole('button', { name: `Actions pour ${MOCK_PATH_1.name}` }));
+        await user.click(screen.getByRole('menuitem', { name: /modifier/i }));
+
+        for (const name of [/durée de formation/i, /durée de validité/i]) {
+          const field = screen.getByRole('spinbutton', { name });
+          await user.clear(field);
+          if (input) await user.type(field, input);
+        }
+        await user.click(screen.getByRole('button', { name: /enregistrer/i }));
+        await waitFor(() => {
+          expect(updateMutateAsync).toHaveBeenCalledWith(
+            expect.objectContaining({ duration: expected, validity: expected }),
+          );
+        });
+      },
+    );
+
     it('ouvre le drawer avec les données du parcours existant', async () => {
       const user = userEvent.setup();
       render(<ProgramsList />, { wrapper: createWrapper() });
