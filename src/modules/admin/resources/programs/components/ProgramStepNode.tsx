@@ -13,7 +13,8 @@ import { STEP_CONFIG } from './ProgramFlow.config';
 import type { StepNode } from './ProgramFlow.types';
 
 function ProgramStepNode({ id, data, isConnectable }: NodeProps<StepNode>) {
-  const { onDeleteNode, onEditNode, isLocked, lastNodeId } = useContext(FlowActionsContext);
+  const { onDeleteNode, onEditNode, isLocked, lastNodeId, warnShopRemovalOnDelete } =
+    useContext(FlowActionsContext);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const cfg = STEP_CONFIG[data.stepType];
   const { Icon } = cfg;
@@ -68,11 +69,20 @@ function ProgramStepNode({ id, data, isConnectable }: NodeProps<StepNode>) {
             </PopoverTrigger>
             <PopoverContent
               side="top"
-              className="w-52 p-3"
+              className={cn('p-3', warnShopRemovalOnDelete ? 'w-64' : 'w-52')}
               onPointerDown={(e) => e.stopPropagation()}
               onClick={(e) => e.stopPropagation()}
             >
-              <p className="text-xs font-medium">Supprimer cette étape ?</p>
+              <p
+                className={cn(
+                  'mb-2 text-xs font-medium',
+                  warnShopRemovalOnDelete && 'text-amber-700',
+                )}
+              >
+                {warnShopRemovalOnDelete
+                  ? 'Attention : ce dernier module sera supprimé et le parcours automatiquement retiré de la boutique.'
+                  : 'Supprimer cette étape ?'}
+              </p>
               <div className="flex justify-end gap-2">
                 <Button
                   size="sm"
