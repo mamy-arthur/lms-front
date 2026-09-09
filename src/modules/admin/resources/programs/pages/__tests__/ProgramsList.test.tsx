@@ -246,6 +246,7 @@ function mockDefaults({
   deleteMutateAsync = jest.fn().mockResolvedValue(undefined),
   createMutateAsync = jest.fn().mockResolvedValue({ data: { id: 'new-lp' } }),
   updateMutateAsync = jest.fn().mockResolvedValue(undefined),
+  updateMutate = jest.fn(),
   linkMutateAsync = jest.fn().mockResolvedValue(undefined),
   unlinkMutateAsync = jest.fn().mockResolvedValue(undefined),
   createEvaluationMutateAsync = jest.fn().mockResolvedValue({ id: 'eval-new' }),
@@ -259,6 +260,7 @@ function mockDefaults({
   deleteMutateAsync?: jest.Mock;
   createMutateAsync?: jest.Mock;
   updateMutateAsync?: jest.Mock;
+  updateMutate?: jest.Mock;
   linkMutateAsync?: jest.Mock;
   unlinkMutateAsync?: jest.Mock;
   createEvaluationMutateAsync?: jest.Mock;
@@ -289,6 +291,7 @@ function mockDefaults({
 
   mockUseUpdateLearningPath.mockReturnValue({
     mutateAsync: updateMutateAsync,
+    mutate: updateMutate,
     isPending: false,
   } as unknown as ReturnType<typeof useUpdateLearningPath>);
 
@@ -594,7 +597,7 @@ describe('ProgramsList', () => {
       expect(toggle).toBeDisabled();
     });
 
-    it("le switch s'active dès qu'un module est ajouté dans le flow", async () => {
+    it("le switch reste désactivé sans date de publication, même après l'ajout d'un module", async () => {
       let capturedOnModulesChange: ((v: boolean) => void) | undefined;
       MockProgramFlow.mockImplementation((props: ProgramFlowProps) => {
         capturedOnModulesChange = props.onModulesChange;
@@ -610,16 +613,19 @@ describe('ProgramsList', () => {
       const toggle = await screen.findByRole('switch', { name: /visible en boutique/i });
       expect(toggle).toBeDisabled();
 
-      // Le flow signal un module présent
+      // Le flow signale un module présent, mais aucune date de publication n'est définie
       act(() => capturedOnModulesChange?.(true));
 
       await waitFor(() => {
-        expect(screen.getByRole('switch', { name: /visible en boutique/i })).not.toBeDisabled();
+        expect(screen.getByText(/définissez une date de publication/i)).toBeInTheDocument();
       });
+      expect(screen.getByRole('switch', { name: /visible en boutique/i })).toBeDisabled();
     });
 
-    it('le switch est actif si le parcours a déjà des compétences sauvegardées', async () => {
-      mockDefaults({ paths: [MOCK_PATH_WITH_COMPETENCY] });
+    it('le switch est actif si le parcours a des compétences et une date de publication déjà sauvegardées', async () => {
+      mockDefaults({
+        paths: [{ ...MOCK_PATH_WITH_COMPETENCY, publishedAt: '2024-01-01T00:00:00Z' }],
+      });
 
       const user = userEvent.setup();
       render(<ProgramsList />, { wrapper: createWrapper() });
@@ -631,6 +637,141 @@ describe('ProgramsList', () => {
 
       const toggle = await screen.findByRole('switch', { name: /visible en boutique/i });
       expect(toggle).not.toBeDisabled();
+    });
+
+    it('désactive automatiquement la publication côté serveur quand le dernier module est retiré du flow', async () => {
+      const updateMutate = jest.fn();
+      // Le parcours est déjà publié/visible en boutique (aucune compétence sauvegardée : la
+      // présence du module ne vient que du flow, comme juste après un rechargement de page).
+      mockDefaults({
+        paths: [
+          {
+            ...MOCK_PATH_1,
+            id: 'lp-orphelin',
+            name: 'Parcours sans module',
+            publishedAt: '2024-01-01T00:00:00Z',
+            showInShop: true,
+          },
+        ],
+        updateMutate,
+      });
+
+      let capturedOnModulesChange: ((v: boolean) => void) | undefined;
+      MockProgramFlow.mockImplementation((props: ProgramFlowProps) => {
+        capturedOnModulesChange = props.onModulesChange;
+        return null;
+      });
+
+      const user = userEvent.setup();
+      render(<ProgramsList />, { wrapper: createWrapper() });
+
+      await user.click(screen.getByRole('button', { name: 'Actions pour Parcours sans module' }));
+      await user.click(screen.getByRole('menuitem', { name: /modifier/i }));
+      await screen.findByRole('switch', { name: /visible en boutique/i });
+
+      // Le flow signale d'abord un module présent, puis sa suppression (dernier module retiré)
+      act(() => capturedOnModulesChange?.(true));
+      act(() => capturedOnModulesChange?.(false));
+
+      await waitFor(() => {
+        expect(updateMutate).toHaveBeenCalledWith(
+          { id: 'lp-orphelin', show_in_shop: false },
+          expect.objectContaining({ onError: expect.any(Function) }),
+        );
+      });
+      // La date de publication déjà saisie doit rester affichée (non réinitialisée)
+      expect(screen.queryByText(/non définie/i)).not.toBeInTheDocument();
+    });
+
+    it('affiche un toast réessayable si la désactivation automatique échoue côté serveur', async () => {
+      const updateMutate = jest.fn(
+        (_vars: unknown, options?: { onError?: (err: unknown) => void }) => {
+          options?.onError?.(new Error('Erreur serveur'));
+        },
+      );
+      mockDefaults({
+        paths: [
+          {
+            ...MOCK_PATH_1,
+            id: 'lp-orphelin',
+            name: 'Parcours sans module',
+            publishedAt: '2024-01-01T00:00:00Z',
+            showInShop: true,
+          },
+        ],
+        updateMutate,
+      });
+
+      let capturedOnModulesChange: ((v: boolean) => void) | undefined;
+      MockProgramFlow.mockImplementation((props: ProgramFlowProps) => {
+        capturedOnModulesChange = props.onModulesChange;
+        return null;
+      });
+
+      const user = userEvent.setup();
+      render(<ProgramsList />, { wrapper: createWrapper() });
+
+      await user.click(screen.getByRole('button', { name: 'Actions pour Parcours sans module' }));
+      await user.click(screen.getByRole('menuitem', { name: /modifier/i }));
+      await screen.findByRole('switch', { name: /visible en boutique/i });
+
+      act(() => capturedOnModulesChange?.(true));
+      act(() => capturedOnModulesChange?.(false));
+
+      await waitFor(() => {
+        expect(mockToast.error).toHaveBeenCalledWith(
+          'Erreur serveur',
+          expect.objectContaining({
+            action: expect.objectContaining({ label: 'Réessayer' }),
+          }),
+        );
+      });
+
+      // Le bouton « Réessayer » du toast relance le même appel
+      updateMutate.mockClear();
+      const [, toastOptions] = mockToast.error.mock.calls.at(-1)!;
+      const action = (toastOptions as unknown as { action: { onClick: () => void } }).action;
+      action.onClick();
+
+      expect(updateMutate).toHaveBeenCalledWith(
+        { id: 'lp-orphelin', show_in_shop: false },
+        expect.objectContaining({ onError: expect.any(Function) }),
+      );
+    });
+  });
+
+  // ── Date de publication (DatePickerField) ─────────────────────────────────
+
+  describe('date de publication', () => {
+    it('ne se rouvre pas automatiquement après avoir été désactivée puis réactivée', async () => {
+      let capturedOnModulesChange: ((v: boolean) => void) | undefined;
+      MockProgramFlow.mockImplementation((props: ProgramFlowProps) => {
+        capturedOnModulesChange = props.onModulesChange;
+        return null;
+      });
+
+      const user = userEvent.setup();
+      render(<ProgramsList />, { wrapper: createWrapper() });
+
+      await user.click(screen.getByRole('button', { name: /nouveau parcours/i }));
+
+      // Un module rend le champ de date utilisable
+      act(() => capturedOnModulesChange?.(true));
+      const dateButton = await screen.findByRole('button', { name: /non définie/i });
+      expect(dateButton).not.toBeDisabled();
+
+      await user.click(dateButton);
+      expect(document.querySelector('[data-slot="calendar"]')).toBeInTheDocument();
+
+      // Le dernier module est retiré : le champ est désactivé et le calendrier forcé fermé
+      act(() => capturedOnModulesChange?.(false));
+      await waitFor(() => expect(dateButton).toBeDisabled());
+      expect(document.querySelector('[data-slot="calendar"]')).not.toBeInTheDocument();
+
+      // Un module est rajouté : le champ redevient utilisable mais ne doit PAS se rouvrir seul
+      act(() => capturedOnModulesChange?.(true));
+      await waitFor(() => expect(dateButton).not.toBeDisabled());
+      expect(document.querySelector('[data-slot="calendar"]')).not.toBeInTheDocument();
     });
   });
 

@@ -208,7 +208,10 @@ export function ScormPackageField({ attachedPackageId, onStateChange }: ScormPac
         )
       )}
 
-      {isPendingAttachment && status === 'ready' && (
+      {/* Le rattachement ne dépend pas du traitement : le parent lie le package à
+          l'entrée dès qu'il en connaît l'id (seule la publication attend `ready`).
+          L'invite reste donc affichée pendant l'extraction. */}
+      {isPendingAttachment && (
         <p className="text-xs text-muted-foreground">
           Cliquez sur « Enregistrer » pour rattacher ce package à ce contenu.
         </p>

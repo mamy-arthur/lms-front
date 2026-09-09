@@ -29,6 +29,15 @@ ENV NEXT_PUBLIC_BASE_DOMAIN=$NEXT_PUBLIC_BASE_DOMAIN
 ARG NEXT_PUBLIC_LOCATIONIQ_API_KEY
 ENV NEXT_PUBLIC_LOCATIONIQ_API_KEY=$NEXT_PUBLIC_LOCATIONIQ_API_KEY
 
+# Clé publique de l'app Reverb — doit être inlinée dans le bundle client.
+# Le host/port ne sont volontairement PAS injectés : Echo (src/shared/lib/echo.ts)
+# retombe sur window.location.hostname + 443, et Caddy proxifie /app/* vers Reverb.
+ARG NEXT_PUBLIC_REVERB_APP_KEY
+ENV NEXT_PUBLIC_REVERB_APP_KEY=$NEXT_PUBLIC_REVERB_APP_KEY
+
+ARG NEXT_PUBLIC_REVERB_SCHEME=https
+ENV NEXT_PUBLIC_REVERB_SCHEME=$NEXT_PUBLIC_REVERB_SCHEME
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build

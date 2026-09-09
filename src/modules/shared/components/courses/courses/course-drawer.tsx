@@ -31,6 +31,7 @@ import { courseSectionsApi } from '@/shared/api/courses.api';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
+import { genShortName } from './course-drawer-utils';
 
 const schema = z.object({
   fullName: z.string().min(2, 'Nom requis (min 2 caractères)'),
@@ -77,6 +78,7 @@ export function CourseDrawer({ open, onOpenChange, course }: Props) {
 
   const categoryId = form.watch('categoryId');
   const visible = form.watch('visible');
+  const fullName = form.watch('fullName');
 
   const selectedCategory = categories.find((c) => c.id === categoryId);
 
@@ -127,7 +129,18 @@ export function CourseDrawer({ open, onOpenChange, course }: Props) {
 
             <div className="space-y-2">
               <Label htmlFor="shortName">Nom abrégé</Label>
-              <Input id="shortName" placeholder="REACT19" {...form.register('shortName')} />
+              <div className="flex gap-2">
+                <Input id="shortName" placeholder="REACT19" {...form.register('shortName')} />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() =>
+                    form.setValue('shortName', genShortName(fullName), { shouldValidate: true })
+                  }
+                >
+                  Auto
+                </Button>
+              </div>
               {form.formState.errors.shortName && (
                 <p className="text-xs text-destructive">
                   {form.formState.errors.shortName.message}

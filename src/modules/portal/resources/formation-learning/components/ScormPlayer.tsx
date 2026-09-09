@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { AlertCircle, Loader2 } from 'lucide-react';
+import { AlertCircle, Loader2, Maximize2, Minimize2 } from 'lucide-react';
 import { portalScormApi } from '@/shared/api/portal-scorm.api';
 import { portalScormLaunchKeys } from '@/shared/queries/keys';
 import { ScormSession, bindScormWindowApi } from '../lib/scormRuntime';
@@ -12,6 +12,24 @@ interface Props {
   courseId: string;
   entryId: string;
   onCompleted?: () => void;
+}
+
+/**
+ * Safari (iPadOS included) still only exposes the prefixed Fullscreen API, and
+ * iPhone Safari exposes none at all on arbitrary elements — hence the fallback
+ * overlay in the player below.
+ */
+interface PrefixedFullscreenElement extends HTMLElement {
+  webkitRequestFullscreen?: () => Promise<void> | void;
+}
+interface PrefixedFullscreenDocument extends Document {
+  webkitFullscreenElement?: Element | null;
+  webkitExitFullscreen?: () => Promise<void> | void;
+}
+
+function fullscreenElement(): Element | null {
+  const doc = document as PrefixedFullscreenDocument;
+  return doc.fullscreenElement ?? doc.webkitFullscreenElement ?? null;
 }
 
 /**
@@ -28,7 +46,58 @@ export default function ScormPlayer({ enrollmentId, courseId, entryId, onComplet
 
   const [isReady, setIsReady] = useState(false);
 
+  const containerRef = useRef<HTMLDivElement>(null);
+  // Two distinct ways of being expanded: the real Fullscreen API, and a fixed
+  // overlay used only when the API refuses (iPhone Safari, a restrictive
+  // Permissions-Policy upstream). `expanded` is what the layout keys off.
+  const [nativeFullscreen, setNativeFullscreen] = useState(false);
+  const [overlay, setOverlay] = useState(false);
+  const expanded = nativeFullscreen || overlay;
+
   const launch = launchQuery.data;
+
+  // The SCORM content can request fullscreen on itself, in which case the
+  // fullscreen element is the iframe, not our container — only our own container
+  // should drive the layout switch, so compare identities rather than truthiness.
+  useEffect(() => {
+    const sync = () => setNativeFullscreen(fullscreenElement() === containerRef.current);
+    document.addEventListener('fullscreenchange', sync);
+    document.addEventListener('webkitfullscreenchange', sync);
+    return () => {
+      document.removeEventListener('fullscreenchange', sync);
+      document.removeEventListener('webkitfullscreenchange', sync);
+    };
+  }, []);
+
+  // Escape is handled by the browser in native fullscreen, but not by the overlay
+  // fallback. It only fires while focus is outside the iframe; the toggle button
+  // stays visible precisely because that is not guaranteed.
+  useEffect(() => {
+    if (!overlay) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOverlay(false);
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [overlay]);
+
+  const toggleFullscreen = useCallback(async () => {
+    const element = containerRef.current as PrefixedFullscreenElement | null;
+    if (!element) return;
+
+    if (expanded) {
+      const doc = document as PrefixedFullscreenDocument;
+      if (nativeFullscreen) await (doc.exitFullscreen?.() ?? doc.webkitExitFullscreen?.());
+      setOverlay(false);
+      return;
+    }
+
+    try {
+      await (element.requestFullscreen?.() ?? element.webkitRequestFullscreen?.());
+    } catch {
+      setOverlay(true);
+    }
+  }, [expanded, nativeFullscreen]);
 
   useEffect(() => {
     if (!launch) return;
@@ -76,7 +145,27 @@ export default function ScormPlayer({ enrollmentId, courseId, entryId, onComplet
   }
 
   return (
-    <div className="flex flex-col gap-2">
+    // `fixed inset-0` is what makes the overlay fallback work; in native
+    // fullscreen the element is already promoted to the top layer, where those
+    // same classes are harmless.
+    <div
+      ref={containerRef}
+      className={`relative flex flex-col gap-2 ${
+        expanded ? 'fixed inset-0 z-50 gap-0 bg-white' : ''
+      }`}
+    >
+      {isReady && (
+        <button
+          type="button"
+          onClick={toggleFullscreen}
+          aria-label={expanded ? 'Quitter le plein écran' : 'Afficher en plein écran'}
+          className={`rounded-md p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 ${
+            expanded ? 'absolute right-3 top-3 z-10 bg-white/90 shadow-sm' : 'self-end'
+          }`}
+        >
+          {expanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+        </button>
+      )}
       {!isReady && (
         <div className="flex h-40 items-center justify-center text-slate-400">
           <Loader2 className="h-5 w-5 animate-spin" />
@@ -100,7 +189,9 @@ export default function ScormPlayer({ enrollmentId, courseId, entryId, onComplet
         sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals allow-downloads allow-presentation allow-pointer-lock allow-orientation-lock allow-top-navigation-by-user-activation"
         allow="fullscreen; autoplay; encrypted-media; picture-in-picture; clipboard-write"
         allowFullScreen
-        className={`w-full h-[70vh] rounded-lg border border-slate-200 bg-white ${isReady ? '' : 'hidden'}`}
+        className={`w-full bg-white ${
+          expanded ? 'h-full border-0' : 'h-[70vh] rounded-lg border border-slate-200'
+        } ${isReady ? '' : 'hidden'}`}
       />
     </div>
   );
