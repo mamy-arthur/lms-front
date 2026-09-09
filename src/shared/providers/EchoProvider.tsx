@@ -2,7 +2,6 @@
 
 import { createContext, useContext, useEffect, useState } from 'react';
 import type Echo from 'laravel-echo';
-import type { ChannelAuthorizationCallback } from 'pusher-js';
 
 const EchoContext = createContext<Echo<'reverb'> | null>(null);
 
@@ -10,63 +9,30 @@ export function useEcho(): Echo<'reverb'> | null {
   return useContext(EchoContext);
 }
 
-async function createEchoInstance(): Promise<Echo<'reverb'>> {
-  const [{ default: EchoClass }, { default: Pusher }] = await Promise.all([
-    import('laravel-echo'),
-    import('pusher-js'),
-  ]);
-
-  // Make Pusher available globally as required by laravel-echo
-  (window as typeof window & { Pusher: typeof Pusher }).Pusher = Pusher;
-
-  const wsHost = window.location.hostname;
-  const wsPort = Number(window.location.port || (window.location.protocol === 'https:' ? 443 : 80));
-
-  return new EchoClass({
-    broadcaster: 'reverb',
-    key: process.env.NEXT_PUBLIC_REVERB_APP_KEY,
-    wsHost,
-    wsPort,
-    wssPort: wsPort,
-    forceTLS: window.location.protocol === 'https:',
-    enabledTransports: ['ws', 'wss'],
-    // Private channel auth uses credentials: 'include' so the Sanctum cookie is sent
-    authorizer: (channel: { name: string }) => ({
-      authorize: (socketId: string, callback: ChannelAuthorizationCallback) => {
-        fetch('/broadcasting/auth', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ socket_id: socketId, channel_name: channel.name }),
-        })
-          .then((res) => res.json())
-          .then((data) => callback(null, data))
-          .catch((err: Error) => callback(err, null));
-      },
-    }),
-  });
-}
-
 interface Props {
   children: React.ReactNode;
 }
 
+/**
+ * Expose le singleton Echo aux composants clients. L'import est dynamique pour
+ * garder laravel-echo/pusher-js hors du bundle initial des layouts.
+ */
 export function EchoProvider({ children }: Props) {
   const [echo, setEcho] = useState<Echo<'reverb'> | null>(null);
 
   useEffect(() => {
-    let instance: Echo<'reverb'> | null = null;
+    let cancelled = false;
 
-    createEchoInstance()
-      .then((e) => {
-        instance = e;
-        setEcho(e);
+    import('@/shared/lib/echo')
+      .then(({ getEcho }) => {
+        if (!cancelled) setEcho(getEcho());
       })
       .catch((err: unknown) => console.error('[EchoProvider] Failed to initialize Echo:', err));
 
+    // L'instance est partagée (useScormPackageChannel l'utilise aussi) : on ne la
+    // déconnecte pas ici, chaque hook quitte son propre channel.
     return () => {
-      instance?.disconnect();
-      setEcho(null);
+      cancelled = true;
     };
   }, []);
 

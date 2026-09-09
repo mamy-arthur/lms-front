@@ -84,7 +84,14 @@ export function TwoFactorSettingsForm({
 
     if (Object.keys(nextErrors).length > 0) return;
 
-    const payload: TwoFactorSettingsPayload = { enabled };
+    // En portée tenant, renvoyer `enabled` alors qu'il était hérité créerait une
+    // surcharge implicite qui figerait le tenant sur la valeur globale du moment.
+    const keepsInheritedEnabled =
+      scope === 'tenant' &&
+      settings.overrides.enabled === null &&
+      enabled === settings.effective.enabled;
+
+    const payload: TwoFactorSettingsPayload = { enabled: keepsInheritedEnabled ? null : enabled };
 
     for (const { key } of NUMERIC_FIELDS) {
       payload[key] = fields[key].inherited ? null : fields[key].value;
