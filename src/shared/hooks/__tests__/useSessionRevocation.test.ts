@@ -16,6 +16,7 @@ jest.mock('next/navigation', () => ({
 jest.mock('@/shared/lib/apiClient', () => ({
   resolveLoginPath: jest.fn((p: string) => (p.startsWith('/admin') ? '/admin/login' : '/login')),
 }));
+jest.mock('@/shared/lib/echo', () => ({ resetEcho: jest.fn() }));
 
 const mockRouterReplace = jest.fn();
 
@@ -23,10 +24,12 @@ import { renderHook } from '@testing-library/react';
 import { useSessionRevocation } from '../useSessionRevocation';
 import { useEcho } from '@/shared/providers/EchoProvider';
 import { queryClient } from '@/shared/lib/query-client';
+import { resetEcho } from '@/shared/lib/echo';
 import { useAuthStore } from '@/shared/stores/auth.store';
 
 const mockUseEcho = jest.mocked(useEcho);
 const mockClear = jest.mocked(queryClient.clear);
+const mockResetEcho = jest.mocked(resetEcho);
 
 function makeEchoMock() {
   const stopListening = jest.fn();
@@ -101,7 +104,7 @@ describe('useSessionRevocation', () => {
 
     listenCallbacks['.SessionRevoked']?.({ reason: 'NEW_LOGIN' });
 
-    expect(echoMock.disconnect).toHaveBeenCalled();
+    expect(mockResetEcho).toHaveBeenCalled();
     expect(mockClear).toHaveBeenCalled();
     expect(sessionStorage.getItem('revocation_reason')).toBe('NEW_LOGIN');
     expect(mockRouterReplace).toHaveBeenCalledWith('/login');

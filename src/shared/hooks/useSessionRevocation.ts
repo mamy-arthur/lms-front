@@ -5,6 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/shared/stores/auth.store';
 import { queryClient } from '@/shared/lib/query-client';
 import { resolveLoginPath } from '@/shared/lib/apiClient';
+import { resetEcho } from '@/shared/lib/echo';
 import { useEcho } from '@/shared/providers/EchoProvider';
 
 /**
@@ -41,7 +42,7 @@ export function useSessionRevocation() {
     channel.listen('.SessionRevoked', (event: { reason: string }) => {
       if (event.reason !== 'NEW_LOGIN') return;
 
-      echo.disconnect();
+      resetEcho();
       useAuthStore.getState().clearAuth();
       queryClient.clear();
       sessionStorage.setItem('revocation_reason', 'NEW_LOGIN');
