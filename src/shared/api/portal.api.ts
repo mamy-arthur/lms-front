@@ -1,4 +1,4 @@
-import { apiGet, apiPost } from '@/shared/lib/apiClient';
+import { apiGet, apiPost, httpClient } from '@/shared/lib/apiClient';
 import type { ApiMeEnrollmentsResponse } from '@/shared/types/enrollment.types';
 import type { ApiEvaluationAttempt } from '@/shared/types/evaluation-attempt.types';
 import type {
@@ -23,6 +23,45 @@ export const portalContentEntriesApi = {
 
   markComplete: (enrollmentId: string, courseId: string, entryId: string): Promise<void> =>
     apiPost<void>(`enrollments/${enrollmentId}/courses/${courseId}/entries/${entryId}/complete`),
+};
+
+export interface ContentTimeSessionPayload {
+  /** ISO 8601. */
+  started_at: string;
+  /** ISO 8601. */
+  ended_at: string;
+  /** Temps réellement actif, en secondes. Plafonné côté serveur à ended_at - started_at. */
+  time_spent: number;
+}
+
+export const portalContentTimeApi = {
+  /**
+   * Enregistre une période de consultation. Idempotent sur `sessionId` : le même
+   * identifiant est réémis à chaque sauvegarde périodique, et le serveur met la
+   * ligne à jour plutôt que d'en créer une nouvelle.
+   *
+   * Passe par `httpClient` et non `apiPut` pour pouvoir poser `keepalive`, dont
+   * l'envoi final a besoin quand la page est en train de se fermer. On n'utilise
+   * pas `navigator.sendBeacon` : il ne permet pas de poser l'en-tête `X-Tenant-ID`
+   * que le client HTTP injecte sur chaque requête.
+   */
+  record: async (
+    enrollmentId: string,
+    courseId: string,
+    entryId: string,
+    sessionId: string,
+    payload: ContentTimeSessionPayload,
+    options?: { keepalive?: boolean },
+  ): Promise<void> => {
+    await httpClient(
+      `enrollments/${enrollmentId}/courses/${courseId}/entries/${entryId}/time-sessions/${sessionId}`,
+      {
+        method: 'PUT',
+        body: JSON.stringify(payload),
+        keepalive: options?.keepalive ?? false,
+      },
+    );
+  },
 };
 
 export const evaluationAttemptsApi = {

@@ -8,6 +8,7 @@ import { getDefaultActiveId, resolveActive } from './lib/course-utils';
 import { useFormationSummaryQuery } from './hooks/useFormationSummaryQuery';
 import { usePortalContentEntryQuery } from './hooks/usePortalContentEntryQuery';
 import { useMarkContentCompleteMutation } from './hooks/useMarkContentCompleteMutation';
+import { useContentTimeTracker } from './hooks/useContentTimeTracker';
 import { portalLearningPathKeys } from '@/shared/queries/keys';
 import FormationSidebar from './components/FormationSidebar';
 import FormationContentView from './components/FormationContentView';
@@ -48,6 +49,27 @@ export default function FormationPlayer({ enrollmentId }: Props) {
   const { mutate: markComplete, isPending: isCompleting } = useMarkContentCompleteMutation(
     enrollmentId ?? '',
   );
+
+  // Le temps n'est plus mesuré une fois le contenu terminé : la révision d'un
+  // module déjà validé n'est pas comptabilisée.
+  //
+  // Passer `entryId: null` suffit à l'obtenir, et c'est important que ce soit
+  // par ce biais : le cleanup de l'effet SAUVEGARDE la période en cours avant de
+  // la clore. Quand l'apprenant valide le module alors qu'il est encore dessus,
+  // le temps accumulé jusqu'à la validation est donc bien enregistré — seul le
+  // temps qui suit est ignoré.
+  const trackedEntryId =
+    resolved?.kind === 'content' && resolved.content.completed ? null : activeEntryId;
+
+  // Le SCORM s'affiche dans une iframe : nos écouteurs d'activité ne voient pas
+  // ce qui s'y passe, donc la détection d'inactivité y ferait des faux positifs.
+  // Pour ces contenus, seule la visibilité de l'onglet pilote le chrono.
+  useContentTimeTracker({
+    enrollmentId: isRealMode ? (enrollmentId ?? null) : null,
+    courseId: activeCourseId,
+    entryId: trackedEntryId,
+    idleDetection: entryQuery.data?.module_type !== 'scorm',
+  });
 
   function handleMarkComplete(onDone?: () => void) {
     if (!enrollmentId || !activeCourseId || !activeEntryId) return;
