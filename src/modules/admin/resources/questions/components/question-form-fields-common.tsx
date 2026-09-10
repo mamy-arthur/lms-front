@@ -1,7 +1,7 @@
 'use client';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import type { UseFormReturn } from 'react-hook-form';
+import { useWatch, type UseFormReturn } from 'react-hook-form';
 import { FieldContent, FieldError, FieldGroup, FieldLabel, FieldRoot } from '@/components/ui/field';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -48,7 +48,7 @@ export function QuestionFormFieldsCommon({ form }: CommonFieldsProps) {
     if (!pickerOpen) setSearch('');
   }, [pickerOpen]);
 
-  const selectedId = form.watch('competencyId');
+  const selectedId = useWatch({ control: form.control, name: 'competencyId' });
   // Label cache: populated from picker selections or from the detail fetch below
   const [labelCache, setLabelCache] = useState<Record<string, string>>({});
 

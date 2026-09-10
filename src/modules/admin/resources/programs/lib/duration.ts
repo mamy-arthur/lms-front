@@ -1,12 +1,11 @@
 /** Unités de durée affichées / saisies côté UI (stockage API = minutes). */
-export type DurationUnit = 'minutes' | 'hours' | 'days' | 'months' | 'years';
+export type DurationUnit = 'minutes' | 'hours' | 'days' | 'years';
 
 export const DURATION_UNITS: { value: DurationUnit; label: string }[] = [
   { value: 'minutes', label: 'Minutes' },
   { value: 'hours', label: 'Heures' },
   { value: 'days', label: 'Jours' },
-  { value: 'months', label: 'Mois' },
-  { value: 'years', label: 'Années' },
+  { value: 'years', label: 'Années (365 j)' },
 ];
 
 /** Unités proposées pour la validité d'accès. */
@@ -14,7 +13,6 @@ export const VALIDITY_UNITS: { value: DurationUnit; label: string }[] = [
   { value: 'minutes', label: 'Minutes' },
   { value: 'hours', label: 'Heures' },
   { value: 'days', label: 'Jours' },
-  { value: 'months', label: 'Mois (30 j)' },
   { value: 'years', label: 'Années (365 j)' },
 ];
 
@@ -22,24 +20,22 @@ const UNIT_TO_MINUTES: Record<DurationUnit, number> = {
   minutes: 1,
   hours: 60,
   days: 1_440, // 24 h
-  months: 43_200, // 30 jours
   years: 525_600, // 365 jours
 };
 
-const UNIT_ORDER: DurationUnit[] = ['years', 'months', 'days', 'hours', 'minutes'];
+const UNIT_ORDER: DurationUnit[] = ['years', 'days', 'hours', 'minutes'];
 
 function pluralLabel(value: number, unit: DurationUnit): string {
+  const singular = value === 1;
   switch (unit) {
     case 'minutes':
-      return value === 1 ? 'minute' : 'minutes';
+      return singular ? 'minute' : 'minutes';
     case 'hours':
-      return value === 1 ? 'heure' : 'heures';
+      return singular ? 'heure' : 'heures';
     case 'days':
-      return value === 1 ? 'jour' : 'jours';
-    case 'months':
-      return 'mois';
+      return singular ? 'jour' : 'jours';
     case 'years':
-      return value === 1 ? 'année' : 'années';
+      return singular ? 'an' : 'ans';
   }
 }
 
@@ -52,7 +48,7 @@ export function durationToMinutes(value: number, unit: DurationUnit): number {
 
 /**
  * Décompose des minutes en valeur + unité lisible.
- * Choisit la plus grande unité qui divise exactement la valeur.
+ * Choisit la plus grande unité atteinte, avec quatre décimales maximum.
  */
 export function minutesToDuration(minutes: number): { value: number; unit: DurationUnit } {
   if (!Number.isFinite(minutes) || minutes < 0) {
@@ -60,16 +56,29 @@ export function minutesToDuration(minutes: number): { value: number; unit: Durat
   }
   for (const unit of UNIT_ORDER) {
     const factor = UNIT_TO_MINUTES[unit];
-    if (minutes >= factor && minutes % factor === 0) {
-      return { value: minutes / factor, unit };
+    if (minutes >= factor) {
+      return { value: Number((minutes / factor).toFixed(4)), unit };
     }
   }
   return { value: minutes, unit: 'minutes' };
 }
 
-/** Libellé français pour affichage tableau (ex. "2 heures"). */
+/** Deux unités non nulles, sans mois (an = 365 jours) ; reste omis. */
 export function formatDuration(minutes: number | null | undefined): string {
   if (minutes === null || minutes === undefined) return '—';
-  const { value, unit } = minutesToDuration(minutes);
-  return `${value} ${pluralLabel(value, unit)}`;
+  if (!Number.isFinite(minutes) || minutes < 0) return '0 minutes';
+
+  let remaining = Math.round(minutes);
+  const parts: string[] = [];
+  for (const unit of UNIT_ORDER) {
+    const factor = UNIT_TO_MINUTES[unit];
+    const value = Math.floor(remaining / factor);
+    remaining %= factor;
+    if (value > 0) {
+      parts.push(`${value.toLocaleString('fr-FR')} ${pluralLabel(value, unit)}`);
+      if (parts.length === 2) break;
+    }
+  }
+  if (parts.length === 0) return '0 minutes';
+  return parts.join(' et ');
 }

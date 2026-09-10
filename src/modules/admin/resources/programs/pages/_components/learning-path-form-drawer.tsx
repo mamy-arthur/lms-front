@@ -94,7 +94,7 @@ import type { LearningPathCategory } from '../../types';
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
 
-const durationUnitSchema = z.enum(['minutes', 'hours', 'days', 'months', 'years']);
+const durationUnitSchema = z.enum(['minutes', 'hours', 'days', 'years']);
 
 const schema = z
   .object({
@@ -138,8 +138,14 @@ const NODE_GAP = 150;
 function toApiDuration(
   value: number | null | undefined,
   unit: DurationUnit | undefined,
+  originalMinutes?: number | null,
 ): number | null {
   if (value === null || value === undefined || Number.isNaN(value)) return null;
+  // Preserve the exact saved duration when its rounded form value is unchanged.
+  if (originalMinutes !== null && originalMinutes !== undefined) {
+    const original = minutesToDuration(originalMinutes);
+    if (value === original.value && unit === original.unit) return originalMinutes;
+  }
   return durationToMinutes(value, unit ?? 'minutes');
 }
 
@@ -881,8 +887,16 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
         image: finalImageId,
         published_at: values.published_at ?? null,
         show_in_shop: values.show_in_shop ?? false,
-        duration: toApiDuration(values.duration_value, values.duration_unit),
-        validity: toApiDuration(values.validity_value, values.validity_unit),
+        duration: toApiDuration(
+          values.duration_value,
+          values.duration_unit,
+          learningPath?.duration,
+        ),
+        validity: toApiDuration(
+          values.validity_value,
+          values.validity_unit,
+          learningPath?.validity,
+        ),
       };
 
       if (currentLpId) {
@@ -1197,14 +1211,14 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
                 </div>
                 {/* Durée de formation */}
                 <div className="space-y-1.5">
-                  <Label>Durée de formation</Label>
+                  <Label htmlFor="lp-duration">Durée de formation</Label>
                   <div className="grid grid-cols-2 gap-3">
                     <Input
                       id="lp-duration"
                       type="number"
                       min={0}
-                      step={1}
-                      placeholder="Ex: 2"
+                      step="any"
+                      placeholder="Ex: 1.5"
                       className="text-sm"
                       value={watchedDurationValue ?? ''}
                       onChange={(e) => {
@@ -1216,7 +1230,10 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
                       value={watchedDurationUnit ?? 'hours'}
                       onValueChange={(v) => setValue('duration_unit', v as DurationUnit)}
                     >
-                      <SelectTrigger className="h-8 text-xs w-full">
+                      <SelectTrigger
+                        aria-label="Unité de durée de formation"
+                        className="h-8 text-xs w-full"
+                      >
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -1234,7 +1251,7 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
                 </div>
                 {/* Durée de validité */}
                 <div className="space-y-1.5">
-                  <Label>Durée de validité</Label>
+                  <Label htmlFor="lp-validity">Durée de validité</Label>
                   <p className="text-[11px] text-muted-foreground -mt-1">
                     Temps accordé à l'apprenant pour terminer la formation après enrollment.
                   </p>
@@ -1243,7 +1260,7 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
                       id="lp-validity"
                       type="number"
                       min={0.1}
-                      step={0.1}
+                      step="any"
                       placeholder="Ex: 1.5"
                       className="h-8 text-sm"
                       value={watchedValidityValue ?? ''}
@@ -1256,7 +1273,10 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
                       value={watchedValidityUnit ?? 'days'}
                       onValueChange={(v) => setValue('validity_unit', v as DurationUnit)}
                     >
-                      <SelectTrigger className="h-8 text-xs w-full">
+                      <SelectTrigger
+                        aria-label="Unité de durée de validité"
+                        className="h-8 text-xs w-full"
+                      >
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
