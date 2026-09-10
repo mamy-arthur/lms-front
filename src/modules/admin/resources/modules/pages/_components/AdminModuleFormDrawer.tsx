@@ -9,7 +9,6 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { ModuleForm } from './module-form';
-import { genIdentifier } from './module-form-utils';
 import { useModuleFormDrawer } from './use-module-form-drawer';
 import { useCreateModule } from '../../hooks/useCreateModule';
 import { useUpdateModule } from '../../hooks/useUpdateModule';
@@ -46,7 +45,6 @@ function AdminModuleFormDrawerBase({
     if (module) {
       return {
         shortname: module.shortname,
-        idnumber: module.idnumber,
         // Prefer detail data (full description + courseIds); fall back to list data
         description: detailedModule?.description ?? module.description,
         category_id: detailedModule?.category_id ?? module.category_id ?? '',
@@ -68,7 +66,6 @@ function AdminModuleFormDrawerBase({
     createDefaults: MODULE_FORM_DEFAULTS,
     buildCreatePayload: (values): ModulePayload => ({
       shortname: values.shortname,
-      idnumber: values.idnumber,
       description: values.description ?? '',
       category_id: values.category_id,
       course_ids: values.courseIds,
@@ -77,7 +74,6 @@ function AdminModuleFormDrawerBase({
       id,
       data: {
         shortname: values.shortname,
-        idnumber: values.idnumber,
         description: values.description ?? '',
         category_id: values.category_id,
         course_ids: values.courseIds,
@@ -114,8 +110,6 @@ function AdminModuleFormDrawerBase({
           addCourseIds={formState.addCourseIds}
           availableCourses={formState.availableCourses}
           isLoadingCourses={formState.isLoadingCourses}
-          shortname={formState.shortname}
-          genIdentifierFn={genIdentifier}
         />
       </SheetContent>
     </Sheet>

@@ -35,7 +35,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import type { MutationLike } from '@/shared/types/mutation';
 import { extractApiError } from '@/shared/utils/api-error';
-import type { genIdentifier } from './module-form-utils';
 import { CompetencyCategorySelect } from '../../components/categories/CompetencyCategorySelect';
 import { SelectCoursesDialog } from './SelectCoursesDialog';
 import type { AvailableCourse } from '../../types';
@@ -51,8 +50,6 @@ export interface ModuleFormProps {
   addCourseIds: (newIds: string[]) => void;
   availableCourses: AvailableCourse[];
   isLoadingCourses: boolean;
-  shortname: string;
-  genIdentifierFn: typeof genIdentifier;
 }
 
 function SortableCourseItem({
@@ -122,8 +119,6 @@ export function ModuleForm({
   addCourseIds,
   availableCourses,
   isLoadingCourses,
-  shortname,
-  genIdentifierFn,
 }: ModuleFormProps) {
   const [coursesDialogOpen, setCoursesDialogOpen] = useState(false);
 
@@ -179,41 +174,6 @@ export function ModuleForm({
                 <FieldLabel className="text-xs">Nom</FieldLabel>
                 <FieldContent>
                   <Input autoFocus aria-label="Nom" className="text-xs" {...field} />
-                </FieldContent>
-                <FieldError />
-              </FieldGroup>
-            )}
-          />
-
-          <FieldRoot
-            control={form.control}
-            name="idnumber"
-            render={({ field }) => (
-              <FieldGroup>
-                <FieldLabel className="text-xs">Identifiant</FieldLabel>
-                <FieldContent>
-                  <div className="flex gap-2">
-                    <Input
-                      aria-label="Identifiant"
-                      className="text-xs"
-                      {...field}
-                      disabled={isEdit}
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="xs"
-                      className="h-7"
-                      disabled={isEdit}
-                      onClick={() =>
-                        form.setValue('idnumber', genIdentifierFn(shortname), {
-                          shouldValidate: true,
-                        })
-                      }
-                    >
-                      Auto
-                    </Button>
-                  </div>
                 </FieldContent>
                 <FieldError />
               </FieldGroup>

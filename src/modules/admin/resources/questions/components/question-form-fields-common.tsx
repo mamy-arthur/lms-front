@@ -83,6 +83,33 @@ export function QuestionFormFieldsCommon({ form }: CommonFieldsProps) {
     if (el.scrollHeight - el.scrollTop - el.clientHeight < 60) fetchNextPage();
   }, [isFetchingNextPage, hasNextPage, fetchNextPage]);
 
+  // Keep the manual scrolling workaround for the portalled picker inside a Sheet.
+  // React's onWheel is passive: use a native listener to cancel native scrolling.
+  const attachListRef = useCallback((el: HTMLDivElement | null) => {
+    listRef.current = el;
+    if (!el) return;
+
+    const handleWheel = (event: WheelEvent) => {
+      if (event.ctrlKey) return; // Preserve browser zoom / trackpad pinch gestures.
+      event.preventDefault();
+
+      let delta = event.deltaY;
+      if (event.deltaMode === WheelEvent.DOM_DELTA_LINE) {
+        const lineHeight = Number.parseFloat(getComputedStyle(el).lineHeight) || 16;
+        delta *= lineHeight;
+      } else if (event.deltaMode === WheelEvent.DOM_DELTA_PAGE) {
+        delta *= el.clientHeight;
+      }
+      el.scrollTop += delta;
+    };
+
+    el.addEventListener('wheel', handleWheel, { passive: false });
+    return () => {
+      el.removeEventListener('wheel', handleWheel);
+      listRef.current = null;
+    };
+  }, []);
+
   return (
     <div className="flex h-full min-h-0 flex-col">
       <section className="flex flex-col gap-4 ">
@@ -118,7 +145,11 @@ export function QuestionFormFieldsCommon({ form }: CommonFieldsProps) {
                         autoFocus
                       />
                     </div>
-                    <div ref={listRef} onScroll={handleScroll} className="max-h-60 overflow-y-auto">
+                    <div
+                      ref={attachListRef}
+                      onScroll={handleScroll}
+                      className="max-h-60 overflow-y-auto"
+                    >
                       {isLoading ? (
                         <div className="flex items-center justify-center py-6">
                           <Loader2 className="size-4 animate-spin text-muted-foreground" />
