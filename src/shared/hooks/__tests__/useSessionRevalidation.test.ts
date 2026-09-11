@@ -23,7 +23,7 @@ jest.mock('@/shared/lib/apiClient', () => ({
 const mockRouterReplace = jest.fn();
 let mockPathname = '/dashboard';
 
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { useSessionRevalidation } from '../useSessionRevalidation';
 import { authApi } from '@/shared/api/auth.api';
 import { queryClient } from '@/shared/lib/query-client';
@@ -148,9 +148,13 @@ describe('useSessionRevalidation', () => {
 
     // Déconnexion pendant que la requête est en vol.
     state.user = null;
-    resolveProbe({ user: USER, sessionId: 'session-1' });
 
-    await waitFor(() => expect(mockMe).toHaveBeenCalledTimes(1));
+    // act(async) vide la file de microtâches : sans cela, l'assertion passerait
+    // avant même que le `.then` de la sonde n'ait eu la main.
+    await act(async () => {
+      resolveProbe({ user: USER, sessionId: 'session-1' });
+    });
+
     // Sans le garde `user === null`, la sonde ressusciterait la session.
     expect(mockSetAuth).not.toHaveBeenCalled();
     expect(mockClearAuth).not.toHaveBeenCalled();
@@ -172,13 +176,15 @@ describe('useSessionRevalidation', () => {
 
   it('sonde à nouveau une fois la minute écoulée', async () => {
     mockStore({ sessionId: 'session-local' });
+    // Une valeur réaliste, pas 0 : `lastProbeAt` démarre à 0, et Date.now() = 0
+    // ferait passer la sonde de montage elle-même pour un doublon.
     const nowSpy = jest.spyOn(Date, 'now');
-    nowSpy.mockReturnValue(0);
+    nowSpy.mockReturnValue(1_000_000);
 
     renderHook(() => useSessionRevalidation());
     await waitFor(() => expect(mockMe).toHaveBeenCalledTimes(1));
 
-    nowSpy.mockReturnValue(60_001);
+    nowSpy.mockReturnValue(1_060_001);
     fireVisible();
 
     await waitFor(() => expect(mockMe).toHaveBeenCalledTimes(2));

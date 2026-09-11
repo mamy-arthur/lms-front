@@ -69,8 +69,13 @@ function makeEndpoints(overrides: Partial<LoginFlowEndpoints> = {}): LoginFlowEn
   };
 }
 
+/**
+ * Erreur telle que la produit `httpClient`. Le message est vide à dessein :
+ * `getApiErrorMessage` préfère `err.message` au repli dès qu'il est renseigné,
+ * or ce sont bien les messages de `getLoginErrorMessage` que l'on vérifie ici.
+ */
 function apiError(status: number, json: unknown = {}): Error & { status: number; json: unknown } {
-  return Object.assign(new Error('api'), { status, json });
+  return Object.assign(new Error(''), { status, json });
 }
 
 describe('useLoginFlow', () => {
@@ -151,6 +156,21 @@ describe('useLoginFlow', () => {
 
     expect(result.current.serverError).toContain('bloqué');
     expect(result.current.serverError).not.toContain('Email ou mot de passe incorrect');
+  });
+
+  it('préfère le message de l’API à son propre repli', async () => {
+    const endpoints = makeEndpoints({
+      login: jest
+        .fn()
+        .mockRejectedValue(apiError(423, { message: 'Compte suspendu jusqu’à demain.' })),
+    });
+    const { result } = renderHook(() => useLoginFlow(endpoints));
+
+    await act(async () => {
+      await result.current.submit({ email: 'a@b.c', password: 'x' });
+    });
+
+    expect(result.current.serverError).toBe('Compte suspendu jusqu’à demain.');
   });
 
   it('présente un 401 comme des identifiants incorrects', async () => {
