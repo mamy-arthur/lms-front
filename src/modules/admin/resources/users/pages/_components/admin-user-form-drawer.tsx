@@ -93,6 +93,7 @@ const updateSchema = z
     password: passwordSchema.optional().or(z.literal('')),
     role: z.nativeEnum(Role),
     tenant_id: z.string().uuid().nullable().optional(),
+    client_id: z.string().uuid().nullable().optional(),
     is_active: z.boolean(),
   })
   .merge(profileFieldsSchema);
@@ -134,6 +135,10 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
   const { user: authUser } = useAuthStore();
   const isSuperAdmin = authUser?.role === Role.SUPER_ADMIN;
 
+  // Le backend reserve la reaffectation a ces deux roles : un responsable
+  // pourrait sinon deplacer ses apprenants hors de son perimetre.
+  const canReassignClient = isSuperAdmin || authUser?.role === Role.EDITOR;
+
   const createMutation = useCreateUser();
   const updateMutation = useUpdateUser();
   const pendingPhotoRef = useRef<File | null>(null);
@@ -145,9 +150,9 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
     enabled: isSuperAdmin && open,
   });
 
-  // Le rattachement client ne concerne que la creation : le backend n'expose pas
-  // encore le changement de client sur PATCH.
-  const { data: clients } = useClientsQuery(open && !isEdit);
+  // En creation, le client est toujours demande ; en edition, seuls les roles
+  // autorises a reaffecter ont besoin de la liste.
+  const { data: clients } = useClientsQuery(open && (!isEdit || canReassignClient));
 
   const schema = isEdit ? updateSchema : createSchema;
 
@@ -160,6 +165,7 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
         password: '',
         role: u.role,
         tenant_id: u.tenant_id ?? null,
+        client_id: u.client_id ?? null,
         is_active: u.is_active,
         address: u.address ?? null,
         zip_code: u.zip_code ?? null,
@@ -216,6 +222,12 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
         email: values.email,
         role: values.role,
         tenant_id: values.tenant_id ?? null,
+        // Envoye uniquement si l'admin l'a reellement change : le backend
+        // traite « client_id present » comme un acte delibere et refuserait
+        // une edition anodine sur un compte anterieur au cloisonnement.
+        ...(canReassignClient && (values.client_id ?? null) !== (user?.client_id ?? null)
+          ? { client_id: (values.client_id as string | null) ?? null }
+          : {}),
         is_active: values.is_active,
         address: values.address ?? null,
         zip_code: values.zip_code ?? null,
@@ -370,61 +382,68 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
   // rejoint un client existant, les autres roles n'en ont pas.
   const selectedRole = formState.form.watch('role');
 
-  const clientField =
-    isEdit || !selectedRole ? null : selectedRole === Role.CLIENT_MANAGER ? (
-      <FieldRoot
-        control={formState.form.control}
-        name="client_name"
-        render={({ field }) => (
-          <FieldGroup>
-            <FieldLabel className="text-xs">Nom du client</FieldLabel>
+  const roleNeedsClient = selectedRole === Role.TRAINEE || selectedRole === Role.CLIENT_MANAGER;
+
+  // En edition on ne propose que des clients existants : creer un client depuis
+  // un formulaire d'edition ferait naitre un client fantome sur une faute de frappe.
+  const showClientSelect = isEdit
+    ? canReassignClient && roleNeedsClient
+    : selectedRole === Role.TRAINEE;
+
+  const clientField = !selectedRole ? null : !isEdit && selectedRole === Role.CLIENT_MANAGER ? (
+    <FieldRoot
+      control={formState.form.control}
+      name="client_name"
+      render={({ field }) => (
+        <FieldGroup>
+          <FieldLabel className="text-xs">Nom du client</FieldLabel>
+          <FieldContent>
+            <Input
+              placeholder="Ex : Globex Corporation"
+              className="text-xs"
+              value={field.value ?? ''}
+              onChange={(e) => field.onChange(e.target.value || null)}
+              aria-label="Nom du client"
+            />
+          </FieldContent>
+          <p className="text-[11px] text-muted-foreground">
+            Le client est créé s’il n’existe pas encore dans ce tenant.
+          </p>
+          <FieldError />
+        </FieldGroup>
+      )}
+    />
+  ) : showClientSelect ? (
+    <FieldRoot
+      control={formState.form.control}
+      name="client_id"
+      render={({ field }) => (
+        <FieldGroup>
+          <FieldLabel className="text-xs">Client</FieldLabel>
+          <Select onValueChange={field.onChange} value={field.value ?? undefined}>
             <FieldContent>
-              <Input
-                placeholder="Ex : Globex Corporation"
-                className="text-xs"
-                value={field.value ?? ''}
-                onChange={(e) => field.onChange(e.target.value || null)}
-                aria-label="Nom du client"
-              />
+              <SelectTrigger size="default" aria-label="Client" className="w-full">
+                <SelectValue placeholder="Sélectionner un client" />
+              </SelectTrigger>
             </FieldContent>
+            <SelectContent>
+              {(clients ?? []).map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {clients?.length === 0 ? (
             <p className="text-[11px] text-muted-foreground">
-              Le client est créé s’il n’existe pas encore dans ce tenant.
+              Aucun client dans ce tenant. Créez d’abord un responsable.
             </p>
-            <FieldError />
-          </FieldGroup>
-        )}
-      />
-    ) : selectedRole === Role.TRAINEE ? (
-      <FieldRoot
-        control={formState.form.control}
-        name="client_id"
-        render={({ field }) => (
-          <FieldGroup>
-            <FieldLabel className="text-xs">Client</FieldLabel>
-            <Select onValueChange={field.onChange} value={field.value ?? undefined}>
-              <FieldContent>
-                <SelectTrigger size="default" aria-label="Client" className="w-full">
-                  <SelectValue placeholder="Sélectionner un client" />
-                </SelectTrigger>
-              </FieldContent>
-              <SelectContent>
-                {(clients ?? []).map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {clients?.length === 0 ? (
-              <p className="text-[11px] text-muted-foreground">
-                Aucun client dans ce tenant. Créez d’abord un responsable.
-              </p>
-            ) : null}
-            <FieldError />
-          </FieldGroup>
-        )}
-      />
-    ) : null;
+          ) : null}
+          <FieldError />
+        </FieldGroup>
+      )}
+    />
+  ) : null;
 
   return (
     <Sheet open={open} onOpenChange={(nextOpen) => !nextOpen && formState.handleClose()}>
