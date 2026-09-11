@@ -61,6 +61,10 @@ export default function FormationPlayer({ enrollmentId }: Props) {
   const trackedEntryId =
     resolved?.kind === 'content' && resolved.content.completed ? null : activeEntryId;
 
+  // `resolveActive` remonte déjà le module portant le contenu : aucune plomberie
+  // supplémentaire n'est nécessaire pour l'obtenir.
+  const activeCompetencyId = resolved?.kind === 'content' ? resolved.node.id : null;
+
   // Le SCORM s'affiche dans une iframe : nos écouteurs d'activité ne voient pas
   // ce qui s'y passe, donc la détection d'inactivité y ferait des faux positifs.
   // Pour ces contenus, seule la visibilité de l'onglet pilote le chrono.
@@ -68,6 +72,7 @@ export default function FormationPlayer({ enrollmentId }: Props) {
     enrollmentId: isRealMode ? (enrollmentId ?? null) : null,
     courseId: activeCourseId,
     entryId: trackedEntryId,
+    competencyId: activeCompetencyId,
     idleDetection: entryQuery.data?.module_type !== 'scorm',
   });
 

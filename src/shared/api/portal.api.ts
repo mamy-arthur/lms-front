@@ -31,6 +31,12 @@ export const portalContentEntriesApi = {
 };
 
 export interface ContentTimeSessionPayload {
+  /**
+   * Module (compétence) depuis lequel le contenu est consulté. Un même contenu
+   * pourra être atteint depuis plusieurs modules : le couple inscription +
+   * contenu ne suffit plus à situer la période.
+   */
+  competency_id: string;
   /** ISO 8601. */
   started_at: string;
   /** ISO 8601. */

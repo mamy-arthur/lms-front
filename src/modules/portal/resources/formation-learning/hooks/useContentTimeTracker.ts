@@ -36,6 +36,8 @@ interface Options {
   enrollmentId: string | null;
   courseId: string | null;
   entryId: string | null;
+  /** Module depuis lequel le contenu est consulté. */
+  competencyId: string | null;
   /**
    * `false` pour les contenus en iframe (SCORM) : nos écouteurs ne voient pas
    * les interactions à l'intérieur du cadre, donc la détection d'inactivité
@@ -61,7 +63,13 @@ interface Options {
  * de consultation, et tronquer à la dernière interaction pénaliserait
  * exactement les contenus qui se lisent.
  */
-export function useContentTimeTracker({ enrollmentId, courseId, entryId, idleDetection }: Options) {
+export function useContentTimeTracker({
+  enrollmentId,
+  courseId,
+  entryId,
+  competencyId,
+  idleDetection,
+}: Options) {
   // Tout est en refs : ce hook ne doit jamais provoquer de rendu.
   const sessionIdRef = useRef<string | null>(null);
   const startedAtRef = useRef<Date | null>(null);
@@ -73,7 +81,7 @@ export function useContentTimeTracker({ enrollmentId, courseId, entryId, idleDet
   const lastActiveAtRef = useRef<Date | null>(null);
 
   useEffect(() => {
-    if (!enrollmentId || !courseId || !entryId) return;
+    if (!enrollmentId || !courseId || !entryId || !competencyId) return;
 
     const openSession = () => {
       sessionIdRef.current = newSessionId();
@@ -127,6 +135,7 @@ export function useContentTimeTracker({ enrollmentId, courseId, entryId, idleDet
           entryId,
           sessionId,
           {
+            competency_id: competencyId,
             started_at: startedAt.toISOString(),
             ended_at: endedAt.toISOString(),
             time_spent: Math.floor(accumulatedMs / 1000),
@@ -195,5 +204,7 @@ export function useContentTimeTracker({ enrollmentId, courseId, entryId, idleDet
       pause();
       send(true, true);
     };
-  }, [enrollmentId, courseId, entryId, idleDetection]);
+    // `competencyId` fait partie des dépendances : changer de module change le
+    // contexte de la période, donc la période en cours doit être close.
+  }, [enrollmentId, courseId, entryId, competencyId, idleDetection]);
 }
