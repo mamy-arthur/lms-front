@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { portalContentTimeApi } from '@/shared/api/portal.api';
+import { type ContentTimeSessionPayload, portalContentTimeApi } from '@/shared/api/portal.api';
 
 /** Au-delà, on considère l'apprenant parti et le chrono se met en pause. */
 const IDLE_MS = 60_000;
@@ -9,6 +9,19 @@ const FLUSH_INTERVAL_MS = 30_000;
 const IDLE_CHECK_INTERVAL_MS = 5_000;
 /** En deçà, la période n'est pas envoyée : elle n'apprend rien et pollue les analyses. */
 const MIN_REPORTABLE_MS = 1_000;
+
+/** File des envois non acquittés, relue au montage suivant — y compris après un rechargement. */
+const PENDING_STORAGE_KEY = 'learneo:content-time:pending';
+/** Au-delà, une période non acquittée est abandonnée : elle n'a plus de valeur analytique. */
+const PENDING_MAX_AGE_MS = 24 * 60 * 60 * 1_000;
+/** Garde-fou : une file qui déborde signale un backend durablement indisponible. */
+const PENDING_MAX_ENTRIES = 20;
+/**
+ * En deçà, l'envoi est probablement encore en vol. Le rejouer immédiatement
+ * doublerait chaque changement de contenu, dont la clôture précède de quelques
+ * millisecondes le montage suivant.
+ */
+const PENDING_GRACE_MS = 5_000;
 
 const ACTIVITY_EVENTS = ['pointerdown', 'keydown', 'scroll', 'touchstart', 'wheel'] as const;
 
@@ -30,6 +43,134 @@ function newSessionId(): string {
   const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
 
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
+/** Une période prête à partir, conservée jusqu'à son acquittement par le serveur. */
+interface PendingRecord {
+  enrollmentId: string;
+  courseId: string;
+  entryId: string;
+  sessionId: string;
+  payload: ContentTimeSessionPayload;
+  /** `Date.now()` de la mise en file, pour l'âge et le délai de grâce. */
+  queuedAt: number;
+}
+
+function isPendingRecord(value: unknown): value is PendingRecord {
+  if (typeof value !== 'object' || value === null) return false;
+
+  const record = value as Record<string, unknown>;
+
+  return (
+    typeof record.enrollmentId === 'string' &&
+    typeof record.courseId === 'string' &&
+    typeof record.entryId === 'string' &&
+    typeof record.sessionId === 'string' &&
+    typeof record.queuedAt === 'number' &&
+    typeof record.payload === 'object' &&
+    record.payload !== null
+  );
+}
+
+/**
+ * Le stockage peut être indisponible (navigation privée, quota, cookies tiers
+ * bloqués). Le suivi du temps ne doit jamais faire échouer la consultation :
+ * toutes les lectures et écritures dégradent silencieusement vers « pas de file ».
+ */
+function readPending(): PendingRecord[] {
+  try {
+    const raw = window.localStorage.getItem(PENDING_STORAGE_KEY);
+    const parsed: unknown = raw === null ? [] : JSON.parse(raw);
+
+    return Array.isArray(parsed) ? parsed.filter(isPendingRecord) : [];
+  } catch {
+    return [];
+  }
+}
+
+function writePending(records: PendingRecord[]): void {
+  try {
+    if (records.length === 0) {
+      window.localStorage.removeItem(PENDING_STORAGE_KEY);
+      return;
+    }
+
+    window.localStorage.setItem(
+      PENDING_STORAGE_KEY,
+      JSON.stringify(records.slice(-PENDING_MAX_ENTRIES)),
+    );
+  } catch {
+    /* Stockage indisponible : la période ne survivra pas à la page, tant pis. */
+  }
+}
+
+/** Une même période n'a qu'une entrée : la dernière mesure remplace la précédente. */
+function rememberPending(record: Omit<PendingRecord, 'queuedAt'>): void {
+  const others = readPending().filter((pending) => pending.sessionId !== record.sessionId);
+
+  writePending([...others, { ...record, queuedAt: Date.now() }]);
+}
+
+function forgetPending(sessionId: string): void {
+  writePending(readPending().filter((pending) => pending.sessionId !== sessionId));
+}
+
+/**
+ * Une erreur 4xx ne deviendra jamais un succès : inscription supprimée, contenu
+ * sorti du parcours, période appartenant à un autre compte. La rejouer à chaque
+ * montage ferait grossir la file sans fin. 408 et 429 sont au contraire
+ * transitoires et méritent une nouvelle tentative.
+ */
+function isPermanentFailure(error: unknown): boolean {
+  const status = (error as { status?: unknown } | null)?.status;
+
+  return (
+    typeof status === 'number' && status >= 400 && status < 500 && status !== 408 && status !== 429
+  );
+}
+
+/**
+ * L'envoi n'est retiré de la file qu'une fois acquitté. C'est ce qui rend la
+ * clôture finale sûre : elle n'a par définition pas de sauvegarde suivante pour
+ * rattraper un échec réseau, et le hook a déjà remis ses compteurs à zéro quand
+ * la réponse arrive. Le rejeu est sans risque, la route est idempotente sur
+ * l'identifiant de période et le serveur ne retient que la valeur la plus haute.
+ */
+async function postRecord(record: PendingRecord, keepalive: boolean): Promise<void> {
+  try {
+    await portalContentTimeApi.record(
+      record.enrollmentId,
+      record.courseId,
+      record.entryId,
+      record.sessionId,
+      record.payload,
+      { keepalive },
+    );
+
+    forgetPending(record.sessionId);
+  } catch (error) {
+    if (isPermanentFailure(error)) forgetPending(record.sessionId);
+  }
+}
+
+/**
+ * Rejoue les périodes des contenus précédents restées sur le carreau. Appelée au
+ * montage et à chaque sauvegarde périodique, elle est le seul chemin de reprise
+ * après un échec réseau ou une page fermée avant l'acquittement.
+ */
+function retryPending(excludedSessionId: string | null): void {
+  const now = Date.now();
+  const pending = readPending();
+  const fresh = pending.filter((record) => now - record.queuedAt < PENDING_MAX_AGE_MS);
+
+  if (fresh.length !== pending.length) writePending(fresh);
+
+  fresh
+    .filter(
+      (record) =>
+        record.sessionId !== excludedSessionId && now - record.queuedAt > PENDING_GRACE_MS,
+    )
+    .forEach((record) => void postRecord(record, false));
 }
 
 interface Options {
@@ -128,24 +269,27 @@ export function useContentTimeTracker({
 
       if (!sessionId || !startedAt || !endedAt || accumulatedMs < MIN_REPORTABLE_MS) return;
 
-      void portalContentTimeApi
-        .record(
-          enrollmentId,
-          courseId,
-          entryId,
-          sessionId,
-          {
-            competency_id: competencyId,
-            started_at: startedAt.toISOString(),
-            ended_at: endedAt.toISOString(),
-            time_spent: Math.floor(accumulatedMs / 1000),
-          },
-          { keepalive },
-        )
-        // Le tracking ne doit jamais dégrader la consultation : un échec réseau
-        // est perdu silencieusement, la sauvegarde suivante rattrapera le total
-        // puisque le serveur conserve la valeur la plus élevée.
-        .catch(() => {});
+      const record: PendingRecord = {
+        enrollmentId,
+        courseId,
+        entryId,
+        sessionId,
+        payload: {
+          competency_id: competencyId,
+          started_at: startedAt.toISOString(),
+          ended_at: endedAt.toISOString(),
+          time_spent: Math.floor(accumulatedMs / 1000),
+        },
+        queuedAt: Date.now(),
+      };
+
+      // Mise en file AVANT l'envoi : si celui-ci échoue, ou si la page disparaît
+      // avant l'acquittement, la période est rejouée au montage suivant. Le
+      // tracking ne doit jamais dégrader la consultation, donc rien n'est
+      // remonté à l'appelant ici.
+      rememberPending(record);
+
+      void postRecord(record, keepalive);
     };
 
     const onActivity = () => {
@@ -170,18 +314,34 @@ export function useContentTimeTracker({
       send(false, true);
     };
 
+    const onPageShow = () => {
+      // Retour depuis le bfcache : `pagehide` a mis le chrono en pause et rien
+      // ne le relancerait. Ni `visibilitychange` ni les écouteurs d'activité ne
+      // se déclenchent à la restauration, et pour un contenu SCORM ces derniers
+      // ne sont même pas posés : tout le temps qui suit serait perdu.
+      lastActivityRef.current = performance.now();
+      if (document.visibilityState === 'visible') resume();
+    };
+
     lastActivityRef.current = performance.now();
     if (document.visibilityState === 'visible') resume();
 
+    // Les périodes des contenus précédents qui n'ont jamais été acquittées.
+    retryPending(sessionIdRef.current);
+
     document.addEventListener('visibilitychange', onVisibilityChange);
     window.addEventListener('pagehide', onPageHide);
+    window.addEventListener('pageshow', onPageShow);
     if (idleDetection) {
       ACTIVITY_EVENTS.forEach((event) =>
         window.addEventListener(event, onActivity, { passive: true }),
       );
     }
 
-    const flushTimer = window.setInterval(() => send(false, false), FLUSH_INTERVAL_MS);
+    const flushTimer = window.setInterval(() => {
+      retryPending(sessionIdRef.current);
+      send(false, false);
+    }, FLUSH_INTERVAL_MS);
 
     const idleTimer = idleDetection
       ? window.setInterval(() => {
@@ -192,6 +352,7 @@ export function useContentTimeTracker({
     return () => {
       document.removeEventListener('visibilitychange', onVisibilityChange);
       window.removeEventListener('pagehide', onPageHide);
+      window.removeEventListener('pageshow', onPageShow);
       if (idleDetection) {
         ACTIVITY_EVENTS.forEach((event) => window.removeEventListener(event, onActivity));
       }
