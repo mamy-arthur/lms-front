@@ -42,7 +42,6 @@ const MOCK_COMPETENCY: CompetencyApiResponse = {
 
 const CREATE_PAYLOAD: CreateModulePayload = {
   shortname: 'Développement Web',
-  idnumber: 'DW-001',
   description: '<p>Module de dev web</p>',
   category_id: 'cat-1',
   course_ids: ['c-001', 'c-002'],
@@ -170,7 +169,6 @@ describe('adminModulesApi', () => {
 
       await adminModulesApi.update('mod-uuid-001', {
         shortname: 'Nouveau nom',
-        idnumber: 'DW-001',
         category_id: 'cat-1',
         course_ids: [],
       });
@@ -186,7 +184,6 @@ describe('adminModulesApi', () => {
 
       await adminModulesApi.update('abc-999', {
         shortname: 'Test',
-        idnumber: 'T-001',
         category_id: 'cat-1',
         course_ids: [],
       });
@@ -200,7 +197,6 @@ describe('adminModulesApi', () => {
 
       const result = await adminModulesApi.update('mod-uuid-001', {
         shortname: 'Nouveau nom',
-        idnumber: 'DW-001',
         category_id: 'cat-1',
         course_ids: [],
       });
@@ -214,7 +210,6 @@ describe('adminModulesApi', () => {
       await expect(
         adminModulesApi.update('mod-uuid-001', {
           shortname: 'x',
-          idnumber: 'y',
           category_id: 'cat-1',
           course_ids: [],
         }),

@@ -17,7 +17,6 @@ export interface Module {
 
 export interface ModulePayload {
   shortname: string;
-  idnumber: string;
   description?: string;
   category_id: string;
   course_ids: string[];

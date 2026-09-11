@@ -85,11 +85,6 @@ export function useModuleFormDrawer({
     module?.id,
   );
 
-  const shortname = useWatch({
-    control: base.form.control,
-    name: 'shortname',
-  }) as unknown as string;
-
   return {
     ...base,
     selectedCourseIds,
@@ -97,6 +92,5 @@ export function useModuleFormDrawer({
     addCourseIds,
     availableCourses,
     isLoadingCourses,
-    shortname,
   };
 }

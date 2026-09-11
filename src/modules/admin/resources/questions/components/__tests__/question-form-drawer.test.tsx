@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { adminModulesApi } from '@/modules/admin/resources/modules/api';
 import { quizItemsApi } from '@/shared/api/question-banks.api';
@@ -123,4 +123,43 @@ describe('QuestionFormDrawer — module sélectionné', () => {
     drawer.open();
     await expectSelectedModule(MODULE_A.shortname);
   });
+
+  it.each([
+    ['pixels', WheelEvent.DOM_DELTA_PIXEL, 2],
+    ['lignes', WheelEvent.DOM_DELTA_LINE, 40],
+    ['pages', WheelEvent.DOM_DELTA_PAGE, 480],
+  ])(
+    'défile en %s sans scroll natif supplémentaire, même après réouverture',
+    async (_, deltaMode, delta) => {
+      const user = userEvent.setup();
+      const drawer = renderDrawer();
+      drawer.open();
+
+      for (let opening = 0; opening < 2; opening++) {
+        await user.click(await expectSelectedModule(MODULE_A.shortname));
+        const moduleButton = await screen.findByRole('button', { name: MODULE_A.shortname });
+        const list = moduleButton.parentElement!;
+        // jsdom has no layout engine: provide the rendered list's scroll metrics.
+        Object.defineProperty(list, 'clientHeight', { configurable: true, value: 240 });
+        Object.defineProperty(list, 'scrollHeight', { configurable: true, value: 2000 });
+        list.style.lineHeight = '20px';
+        list.scrollTop = 600;
+
+        for (const direction of [1, -1]) {
+          const before = list.scrollTop;
+          const event = new WheelEvent('wheel', {
+            bubbles: true,
+            cancelable: true,
+            deltaY: direction * 2,
+            deltaMode,
+          });
+          fireEvent(moduleButton, event);
+          expect(event.defaultPrevented).toBe(true);
+          expect(list.scrollTop).toBe(before + direction * delta);
+        }
+
+        await user.click(moduleButton);
+      }
+    },
+  );
 });

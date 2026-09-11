@@ -222,31 +222,12 @@ describe('AdminModuleFormDrawer', () => {
       });
     });
 
-    it("affiche une erreur si l'identifiant est vide à la soumission", async () => {
-      const user = userEvent.setup();
-      renderDrawer();
-
-      const shortnameInput = screen.getByRole('textbox', { name: /nom/i });
-      await user.type(shortnameInput, 'Mon module');
-
-      await waitFor(() => {
-        expect(screen.getByTestId('category-select')).toHaveAttribute('data-value', 'formation');
-      });
-
-      await user.click(screen.getByRole('button', { name: /enregistrer/i }));
-
-      await waitFor(() => {
-        expect(screen.getByText(/identifiant requis/i)).toBeInTheDocument();
-      });
-    });
-
     it("n'affiche pas d'erreur quand les champs obligatoires sont remplis", async () => {
       const user = userEvent.setup();
       renderDrawer();
       mockCreate.mockImplementation(() => {});
 
       await user.type(screen.getByRole('textbox', { name: /nom/i }), 'Mon module');
-      await user.type(screen.getByRole('textbox', { name: /identifiant/i }), 'MOD-001');
 
       await waitFor(() => {
         expect(screen.getByTestId('category-select')).toHaveAttribute('data-value', 'formation');
@@ -274,7 +255,6 @@ describe('AdminModuleFormDrawer', () => {
       mockCreate.mockImplementation(() => {});
 
       await user.type(screen.getByRole('textbox', { name: /nom/i }), 'Dev Web');
-      await user.type(screen.getByRole('textbox', { name: /identifiant/i }), 'DW-001');
 
       await waitFor(() => {
         expect(screen.getByTestId('category-select')).toHaveAttribute('data-value', 'formation');
@@ -284,7 +264,7 @@ describe('AdminModuleFormDrawer', () => {
 
       await waitFor(() => {
         expect(mockCreate).toHaveBeenCalledWith(
-          expect.objectContaining({ shortname: 'Dev Web', idnumber: 'DW-001' }),
+          expect.objectContaining({ shortname: 'Dev Web' }),
           expect.any(Object),
         );
       });
@@ -296,7 +276,6 @@ describe('AdminModuleFormDrawer', () => {
       mockCreate.mockImplementation(() => {});
 
       await user.type(screen.getByRole('textbox', { name: /nom/i }), 'Dev Web');
-      await user.type(screen.getByRole('textbox', { name: /identifiant/i }), 'DW-001');
 
       await waitFor(() => {
         expect(screen.getByTestId('category-select')).toHaveAttribute('data-value', 'formation');
@@ -320,11 +299,6 @@ describe('AdminModuleFormDrawer', () => {
     it('pré-remplit le nom avec la valeur existante', () => {
       renderDrawer({ module: MOCK_MODULE });
       expect(screen.getByDisplayValue('Développement Web')).toBeInTheDocument();
-    });
-
-    it("pré-remplit l'identifiant avec la valeur existante", () => {
-      renderDrawer({ module: MOCK_MODULE });
-      expect(screen.getByDisplayValue('DW-001')).toBeInTheDocument();
     });
 
     it('appelle updateMutation avec le bon payload', async () => {
@@ -376,23 +350,6 @@ describe('AdminModuleFormDrawer', () => {
       expect(onClose).toHaveBeenCalled();
       expect(mockCreate).not.toHaveBeenCalled();
       expect(mockUpdate).not.toHaveBeenCalled();
-    });
-  });
-
-  // ── Auto-identifiant ───────────────────────────────────────────────────────
-
-  describe('bouton Auto (identifiant)', () => {
-    it('génère un identifiant à partir du nom saisi', async () => {
-      const user = userEvent.setup();
-      renderDrawer();
-
-      await user.type(screen.getByRole('textbox', { name: /nom/i }), 'Dev Web');
-      await user.click(screen.getByRole('button', { name: /auto/i }));
-
-      await waitFor(() => {
-        const idInput = screen.getByRole('textbox', { name: /identifiant/i }) as HTMLInputElement;
-        expect(idInput.value).toMatch(/^DEV-WEB-\d{3}$/);
-      });
     });
   });
 
