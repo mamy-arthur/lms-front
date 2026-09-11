@@ -52,7 +52,7 @@ const profileFieldsSchema = z.object({
   preferred_language: z.string().nullable().optional(),
 });
 
-const createSchema = z
+const createSchemaShape = z
   .object({
     first_name: z.string().min(1, 'Prénom requis').max(120),
     last_name: z.string().min(1, 'Nom requis').max(120),
@@ -64,8 +64,16 @@ const createSchema = z
     client_name: z.string().max(255).nullable().optional(),
     is_active: z.boolean().default(true),
   })
-  .merge(profileFieldsSchema)
-  .superRefine((values, ctx) => {
+  .merge(profileFieldsSchema);
+
+// Un createur deja rattache a un client le transmet : il n'a aucun champ client
+// a remplir, et rien a choisir.
+const buildCreateSchema = (callerHasClient: boolean) =>
+  createSchemaShape.superRefine((values, ctx) => {
+    if (callerHasClient) {
+      return;
+    }
+
     // Un stagiaire rejoint un client existant ; un responsable en crée un ou
     // reprend celui du même nom.
     if (values.role === Role.TRAINEE && !values.client_id) {
@@ -105,7 +113,7 @@ const ROLE_LABELS: Record<string, string> = {
   [Role.TRAINEE]: 'Stagiaire',
 };
 
-const ROLE_DEFAULTS: z.infer<typeof createSchema> = {
+const ROLE_DEFAULTS: z.infer<typeof createSchemaShape> = {
   first_name: '',
   last_name: '',
   email: '',
@@ -150,9 +158,15 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
     enabled: isSuperAdmin && open,
   });
 
-  // En creation, le client est toujours demande ; en edition, seuls les roles
-  // autorises a reaffecter ont besoin de la liste.
-  const { data: clients } = useClientsQuery(open && (!isEdit || canReassignClient));
+  // Un createur rattache a un client transmet le sien : aucun champ a afficher.
+  const callerHasClient = authUser?.role === Role.CLIENT_MANAGER;
+
+  // La liste n'est utile qu'a ceux qui choisissent reellement un client.
+  const { data: clients } = useClientsQuery(
+    open && !callerHasClient && (!isEdit || canReassignClient),
+  );
+
+  const createSchema = useMemo(() => buildCreateSchema(callerHasClient), [callerHasClient]);
 
   const schema = isEdit ? updateSchema : createSchema;
 
@@ -386,11 +400,13 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
 
   // En edition on ne propose que des clients existants : creer un client depuis
   // un formulaire d'edition ferait naitre un client fantome sur une faute de frappe.
-  const showClientSelect = isEdit
-    ? canReassignClient && roleNeedsClient
-    : selectedRole === Role.TRAINEE;
+  const showClientSelect =
+    !callerHasClient &&
+    (isEdit ? canReassignClient && roleNeedsClient : selectedRole === Role.TRAINEE);
 
-  const clientField = !selectedRole ? null : !isEdit && selectedRole === Role.CLIENT_MANAGER ? (
+  const clientField = !selectedRole ? null : !isEdit &&
+    !callerHasClient &&
+    selectedRole === Role.CLIENT_MANAGER ? (
     <FieldRoot
       control={formState.form.control}
       name="client_name"
