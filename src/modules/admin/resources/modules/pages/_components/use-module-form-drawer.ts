@@ -1,10 +1,11 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { FieldValues } from 'react-hook-form';
 import { useWatch } from 'react-hook-form';
 import type { z } from 'zod';
 import type { MutationLike } from '@/shared/types/mutation';
 import { useFormDrawer as _useFormDrawer } from '@/shared/components/form-drawer/use-form-drawer';
-import { useAvailableCoursesQuery } from '../../hooks/useAvailableCoursesQuery';
+import { useCoursesByIds } from '@/modules/shared/components/courses/hooks/useCoursesByIds';
+import type { Course } from '@/modules/shared/components/courses/types';
 
 export type { MutationLike };
 
@@ -60,6 +61,12 @@ export function useModuleFormDrawer({
     name: 'courseIds',
   }) as unknown as string[];
 
+  const [pickedCourses, setPickedCourses] = useState<Course[]>([]);
+
+  useEffect(() => {
+    if (!open) setPickedCourses([]);
+  }, [open]);
+
   const toggleCourse = useCallback(
     (courseId: string) => {
       const current = base.form.getValues('courseIds') as unknown as string[];
@@ -71,26 +78,38 @@ export function useModuleFormDrawer({
     [base.form],
   );
 
-  const addCourseIds = useCallback(
-    (newIds: string[]) => {
+  const addCourses = useCallback(
+    (courses: Course[]) => {
       const current = base.form.getValues('courseIds') as unknown as string[];
-      const merged = [...current, ...newIds.filter((id) => !current.includes(id))];
-      base.form.setValue('courseIds', merged, { shouldValidate: true });
+      const added = courses.filter((course) => !current.includes(course.id));
+      setPickedCourses((prev) => [...prev, ...added]);
+      base.form.setValue('courseIds', [...current, ...added.map((c) => c.id)], {
+        shouldValidate: true,
+      });
     },
     [base.form],
   );
 
-  // In edit mode, pass the module ID so the backend marks its own courses as AVAILABLE.
-  const { data: availableCourses = [], isLoading: isLoadingCourses } = useAvailableCoursesQuery(
-    module?.id,
-  );
+  const { data: persistedCourses = [] } = useCoursesByIds(selectedCourseIds);
+
+  // Courses picked in the dialog are kept locally so their name shows up
+  // immediately, before the by-ids query has caught up with the new selection.
+  const selectedCourses = useMemo(() => {
+    const byId = new Map<string, Course>();
+    for (const course of [...pickedCourses, ...persistedCourses]) {
+      byId.set(course.id, course);
+    }
+    return selectedCourseIds.flatMap((id) => {
+      const course = byId.get(id);
+      return course ? [course] : [];
+    });
+  }, [pickedCourses, persistedCourses, selectedCourseIds]);
 
   return {
     ...base,
     selectedCourseIds,
     toggleCourse,
-    addCourseIds,
-    availableCourses,
-    isLoadingCourses,
+    addCourses,
+    selectedCourses,
   };
 }

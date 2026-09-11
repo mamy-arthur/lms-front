@@ -37,7 +37,7 @@ import type { MutationLike } from '@/shared/types/mutation';
 import { extractApiError } from '@/shared/utils/api-error';
 import { CompetencyCategorySelect } from '../../components/categories/CompetencyCategorySelect';
 import { SelectCoursesDialog } from './SelectCoursesDialog';
-import type { AvailableCourse } from '../../types';
+import type { Course } from '@/modules/shared/components/courses/types';
 
 export interface ModuleFormProps {
   form: UseFormReturn<any>;
@@ -47,9 +47,8 @@ export interface ModuleFormProps {
   onSubmit: (values: any) => void;
   selectedCourseIds: string[];
   toggleCourse: (courseId: string) => void;
-  addCourseIds: (newIds: string[]) => void;
-  availableCourses: AvailableCourse[];
-  isLoadingCourses: boolean;
+  addCourses: (courses: Course[]) => void;
+  selectedCourses: Course[];
 }
 
 function SortableCourseItem({
@@ -116,19 +115,18 @@ export function ModuleForm({
   onSubmit,
   selectedCourseIds,
   toggleCourse,
-  addCourseIds,
-  availableCourses,
-  isLoadingCourses,
+  addCourses,
+  selectedCourses,
 }: ModuleFormProps) {
   const [coursesDialogOpen, setCoursesDialogOpen] = useState(false);
 
   const courseMap = useMemo(() => {
     const map = new Map<string, { fullName: string; categoryName: string }>();
-    for (const course of availableCourses) {
-      map.set(course.id, { fullName: course.fullName, categoryName: course.categoryName });
+    for (const course of selectedCourses) {
+      map.set(course.id, { fullName: course.fullName, categoryName: course.categoryName ?? '' });
     }
     return map;
-  }, [availableCourses]);
+  }, [selectedCourses]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -277,10 +275,8 @@ export function ModuleForm({
         <SelectCoursesDialog
           open={coursesDialogOpen}
           onOpenChange={setCoursesDialogOpen}
-          availableCourses={availableCourses}
-          isLoading={isLoadingCourses}
           selectedCourseIds={selectedCourseIds}
-          onConfirm={addCourseIds}
+          onConfirm={addCourses}
         />
 
         <div className="flex shrink-0 flex-col-reverse items-stretch gap-2 border-t bg-background px-4 py-4 sm:flex-row sm:items-center sm:justify-end sm:gap-3 sm:px-6">

@@ -20,7 +20,6 @@ export function useCourseData() {
     mutationFn: (payload: Parameters<typeof coursesApi.create>[0]) => coursesApi.create(payload),
     onSuccess: () => {
       invalidateCourses();
-      queryClient.invalidateQueries({ queryKey: ['admin', 'modules', 'available-courses'] });
     },
   });
 

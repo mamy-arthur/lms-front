@@ -107,9 +107,8 @@ function AdminModuleFormDrawerBase({
           onSubmit={formState.onSubmit}
           selectedCourseIds={formState.selectedCourseIds}
           toggleCourse={formState.toggleCourse}
-          addCourseIds={formState.addCourseIds}
-          availableCourses={formState.availableCourses}
-          isLoadingCourses={formState.isLoadingCourses}
+          addCourses={formState.addCourses}
+          selectedCourses={formState.selectedCourses}
         />
       </SheetContent>
     </Sheet>

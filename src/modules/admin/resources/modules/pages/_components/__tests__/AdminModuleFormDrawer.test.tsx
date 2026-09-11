@@ -101,9 +101,13 @@ jest.mock('@/modules/admin/resources/modules/hooks/useModule', () => ({
   useModule: () => ({ data: undefined }),
 }));
 
-const mockUseAvailableCoursesQuery = jest.fn();
-jest.mock('@/modules/admin/resources/modules/hooks/useAvailableCoursesQuery', () => ({
-  useAvailableCoursesQuery: (...args: unknown[]) => mockUseAvailableCoursesQuery(...args),
+const mockUseCoursesInfinite = jest.fn();
+jest.mock('@/modules/shared/components/courses/hooks/useCoursesInfinite', () => ({
+  useCoursesInfinite: (...args: unknown[]) => mockUseCoursesInfinite(...args),
+}));
+
+jest.mock('@/shared/api/courses.api', () => ({
+  coursesApi: { list: jest.fn() },
 }));
 
 jest.mock('@/modules/shared/components/courses/hooks/useCategoryData', () => ({
@@ -141,6 +145,11 @@ import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AdminModuleFormDrawer } from '../AdminModuleFormDrawer';
 import type { Module } from '../../../types';
+import type { Course } from '@/modules/shared/components/courses/types';
+import { coursesApi } from '@/shared/api/courses.api';
+import type { ApiCourse } from '@/shared/types/course.types';
+
+const mockListCourses = jest.mocked(coursesApi.list);
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 const MOCK_MODULE: Module = {
@@ -157,29 +166,56 @@ const MOCK_MODULE: Module = {
   updatedAt: '2025-01-01T00:00:00Z',
 };
 
-const MOCK_AVAILABLE_COURSES = [
-  {
-    id: 'course-1',
-    fullName: 'Développement React',
-    categoryId: 'cat-1',
-    categoryName: 'Dev',
-    status: 'AVAILABLE' as const,
-  },
-  {
-    id: 'course-2',
-    fullName: 'Node.js Avancé',
-    categoryId: 'cat-1',
-    categoryName: 'Dev',
-    status: 'AVAILABLE' as const,
-  },
-  {
-    id: 'course-3',
-    fullName: 'DevOps CI/CD',
-    categoryId: 'cat-2',
-    categoryName: 'Ops',
-    status: 'ALREADY_LINKED' as const,
-  },
+function makeCourse(
+  id: string,
+  fullName: string,
+  categoryId: string,
+  categoryName: string,
+): Course {
+  return {
+    id,
+    fullName,
+    shortName: id,
+    categoryId,
+    categoryName,
+    identifier: null,
+    visible: true,
+    visibility: 'PUBLISHED',
+  };
+}
+
+const MOCK_CATALOG_COURSES: Course[] = [
+  makeCourse('course-1', 'Développement React', 'cat-1', 'Dev'),
+  makeCourse('course-2', 'Node.js Avancé', 'cat-1', 'Dev'),
+  makeCourse('course-3', 'DevOps CI/CD', 'cat-2', 'Ops'),
 ];
+
+const MOCK_LARGE_MODULE_COURSES: ApiCourse[] = Array.from({ length: 101 }, (_, index) => ({
+  id: `course-${index + 1}`,
+  tenant_id: '1',
+  created_by: 'admin-1',
+  full_name: `Leçon ${index + 1}`,
+  short_name: `L-${index + 1}`,
+  id_number: null,
+  category_id: 'cat-1',
+  visibility: 'PUBLISHED',
+  description: null,
+  created_at: '2025-01-01T00:00:00Z',
+  updated_at: '2025-01-01T00:00:00Z',
+}));
+
+const EMPTY_CATALOG = {
+  data: { pages: [{ data: [], total: 0 }] },
+  isLoading: false,
+  isSuccess: true,
+  isError: false,
+  isFetching: false,
+  refetch: jest.fn(),
+  hasNextPage: false,
+  fetchNextPage: jest.fn(),
+  isFetchingNextPage: false,
+  isFetchNextPageError: false,
+};
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
 interface RenderOptions {
@@ -201,7 +237,8 @@ function renderDrawer({ module, onClose = jest.fn(), onSuccess = jest.fn() }: Re
 describe('AdminModuleFormDrawer', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockUseAvailableCoursesQuery.mockReturnValue({ data: [], isLoading: false });
+    mockUseCoursesInfinite.mockReturnValue(EMPTY_CATALOG);
+    mockListCourses.mockReset().mockResolvedValue({ data: [] });
   });
 
   // ── Validation ─────────────────────────────────────────────────────────────
@@ -291,6 +328,41 @@ describe('AdminModuleFormDrawer', () => {
   // ── Mode édition ───────────────────────────────────────────────────────────
 
   describe('édition', () => {
+    it('résout les 101 cours enregistrés et conserve leurs associations dans le bon ordre', async () => {
+      const user = userEvent.setup();
+      const courseIds = MOCK_LARGE_MODULE_COURSES.map((course) => course.id).reverse();
+      const expectedCourseNames = MOCK_LARGE_MODULE_COURSES.map(
+        (course) => course.full_name,
+      ).reverse();
+      mockListCourses.mockImplementation(async (params) => {
+        const requestedIds = params?.ids?.split(',') ?? [];
+        return {
+          data: MOCK_LARGE_MODULE_COURSES.filter((course) => requestedIds.includes(course.id)),
+        };
+      });
+      renderDrawer({ module: { ...MOCK_MODULE, courseIds, coursesCount: courseIds.length } });
+
+      await waitFor(() => {
+        const displayedNames = screen.queryAllByText(/^Leçon \d+$/).map((node) => node.textContent);
+        expect(displayedNames).toEqual(expectedCourseNames);
+      });
+      for (const [params] of mockListCourses.mock.calls) {
+        expect(params?.per_page).toBeLessThanOrEqual(100);
+      }
+
+      await user.click(screen.getByRole('button', { name: /enregistrer/i }));
+
+      await waitFor(() => {
+        expect(mockUpdate).toHaveBeenCalledWith(
+          expect.objectContaining({
+            id: MOCK_MODULE.id,
+            data: expect.objectContaining({ course_ids: courseIds }),
+          }),
+          expect.any(Object),
+        );
+      });
+    });
+
     it('affiche le titre "Modifier le module"', () => {
       renderDrawer({ module: MOCK_MODULE });
       expect(screen.getByText('Modifier le module')).toBeInTheDocument();
@@ -357,9 +429,9 @@ describe('AdminModuleFormDrawer', () => {
 
   describe('sélection de cours via la modale', () => {
     beforeEach(() => {
-      mockUseAvailableCoursesQuery.mockReturnValue({
-        data: MOCK_AVAILABLE_COURSES,
-        isLoading: false,
+      mockUseCoursesInfinite.mockReturnValue({
+        ...EMPTY_CATALOG,
+        data: { pages: [{ data: MOCK_CATALOG_COURSES, total: MOCK_CATALOG_COURSES.length }] },
       });
     });
 
@@ -404,14 +476,13 @@ describe('AdminModuleFormDrawer', () => {
       });
     });
 
-    it('les cours ALREADY_LINKED sont affichés mais désactivés', async () => {
+    it('un cours déjà lié à un autre module reste sélectionnable', async () => {
       const user = userEvent.setup();
       renderDrawer();
 
       const dialog = await openCourseDialog(user);
-      const linkedBtn = within(dialog).getByRole('button', { name: /devops ci\/cd/i });
-      expect(linkedBtn).toBeDisabled();
-      expect(within(dialog).getByText('Déjà lié')).toBeInTheDocument();
+      const reusableBtn = within(dialog).getByRole('button', { name: /devops ci\/cd/i });
+      expect(reusableBtn).toBeEnabled();
     });
 
     it('les cours déjà liés au module sont affichés mais désactivés', async () => {
