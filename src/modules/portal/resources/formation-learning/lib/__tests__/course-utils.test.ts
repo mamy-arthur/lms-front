@@ -1,4 +1,4 @@
-import { getDefaultActiveId } from '../course-utils';
+import { getDefaultActiveId, resolveActive } from '../course-utils';
 import type { Formation, CourseContent } from '../types';
 
 function makeContent(id: string, completed: boolean, locked = false): CourseContent {
@@ -80,5 +80,38 @@ describe('getDefaultActiveId', () => {
   it('returns empty string when formation has no nodes', () => {
     const empty: Formation = { id: 'f1', slug: 'f1', title: 'F', progress: 0, nodes: [] };
     expect(getDefaultActiveId(empty)).toBe('');
+  });
+});
+
+describe('Résolution des destinations de navigation', () => {
+  it('refuse de résoudre un identifiant de contenu verrouillé', () => {
+    const formation = makeFormation([makeContent('c1', false), makeContent('c2', false, true)]);
+    expect(resolveActive(formation, 'c2')).toBeNull();
+    expect(resolveActive(formation, 'c1')).toMatchObject({
+      kind: 'content',
+      next: 'c2',
+      isNextLocked: true,
+    });
+  });
+
+  it('ne propose pas de retour vers un contenu verrouillé lors de la relecture', () => {
+    const formation = makeFormation([makeContent('c1', false, true), makeContent('c2', true)]);
+    expect(resolveActive(formation, 'c2')).toMatchObject({ kind: 'content', prev: null });
+  });
+
+  it('refuse une évaluation verrouillée même si son identifiant est connu', () => {
+    const formation = makeFormation([]);
+    formation.nodes.push({
+      id: 'eval-1',
+      formationId: 'f1',
+      type: 'evaluation',
+      evaluationType: 'final',
+      title: 'Évaluation finale',
+      status: 'locked',
+      order: 2,
+      passingScore: 70,
+      questions: [],
+    });
+    expect(resolveActive(formation, 'eval-1')).toBeNull();
   });
 });

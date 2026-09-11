@@ -5,6 +5,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Loader2, AlertCircle, Menu } from 'lucide-react';
 import { MOCK_FORMATION } from './lib/course-data';
 import { getDefaultActiveId, resolveActive } from './lib/course-utils';
+import type { Formation } from './lib/types';
 import { useFormationSummaryQuery } from './hooks/useFormationSummaryQuery';
 import { usePortalContentEntryQuery } from './hooks/usePortalContentEntryQuery';
 import { useMarkContentCompleteMutation } from './hooks/useMarkContentCompleteMutation';
@@ -37,7 +38,8 @@ export default function FormationPlayer({ enrollmentId }: Props) {
   // For real mode: derive courseId from the resolved content.
   const activeCourseId =
     isRealMode && resolved?.kind === 'content' ? resolved.content.courseId : null;
-  const activeEntryId = isRealMode && resolved?.kind === 'content' ? resolved.content.id : null;
+  const activeEntryId =
+    isRealMode && resolved?.kind === 'content' ? (resolved.content.entryId ?? null) : null;
 
   const entryQuery = usePortalContentEntryQuery(
     isRealMode ? (enrollmentId ?? null) : null,
@@ -50,17 +52,35 @@ export default function FormationPlayer({ enrollmentId }: Props) {
   );
 
   function handleMarkComplete(onDone?: () => void) {
-    if (!enrollmentId || !activeCourseId || !activeEntryId) return;
-    markComplete({ courseId: activeCourseId, entryId: activeEntryId }, { onSuccess: onDone });
+    if (
+      !enrollmentId ||
+      !activeCourseId ||
+      !activeEntryId ||
+      isCompleting ||
+      resolved?.kind !== 'content' ||
+      resolved.content.completed
+    ) {
+      return;
+    }
+    markComplete(
+      { competencyId: resolved.node.id, courseId: activeCourseId, entryId: activeEntryId },
+      { onSuccess: onDone },
+    );
   }
 
   function handleSelect(id: string) {
-    setActiveId(id);
+    if (isCompleting) return;
+    handleNavigate(id);
     setSidebarOpen(false);
   }
 
   function handleNavigate(id: string | null) {
-    if (id) setActiveId(id);
+    // A completion callback holds the previous render's formation. Consult the
+    // refreshed cache so it can only navigate to a genuinely unlocked successor.
+    const currentFormation = enrollmentId
+      ? queryClient.getQueryData<Formation>(portalLearningPathKeys.summary(enrollmentId))
+      : formation;
+    if (id && currentFormation && resolveActive(currentFormation, id)) setActiveId(id);
   }
 
   function handleEvaluationComplete() {

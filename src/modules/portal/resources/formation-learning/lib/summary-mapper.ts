@@ -25,6 +25,7 @@ import type {
 export function mapSummaryToFormation(summary: ApiPortalLearningPathSummary): Formation {
   const nodes: (FormationModule | FormationEvaluation)[] = [];
   let order = 1;
+  let hasPendingContent = false;
 
   for (const mod of summary.modules) {
     const courses: CourseSummary[] = mod.courses.map((course) => ({
@@ -34,23 +35,40 @@ export function mapSummaryToFormation(summary: ApiPortalLearningPathSummary): Fo
         id: section.id,
         moduleId: mod.id,
         title: section.name,
-        contents: section.content_entries.map((entry): CourseContent => ({
-          id: entry.id,
-          courseId: course.id,
-          type: 'page', // placeholder; real type resolved when entry is fetched
-          title: entry.title ?? '',
-          status: entry.completed ? 'completed' : mod.accessible ? 'available' : 'locked',
-          completed: entry.completed,
-        })),
+        contents: section.content_entries.map((entry): CourseContent => {
+          // Keep the sequence across sections, courses and modules. Backend
+          // module prerequisites still apply to the first unfinished content.
+          const status = entry.completed
+            ? 'completed'
+            : !hasPendingContent && mod.accessible
+              ? 'available'
+              : 'locked';
+          if (!entry.completed) hasPendingContent = true;
+
+          return {
+            // A shared course has an independent progression in each module.
+            id: `${mod.id}:${course.id}:${entry.id}`,
+            entryId: entry.id,
+            courseId: course.id,
+            type: 'page', // placeholder; real type resolved when entry is fetched
+            title: entry.title ?? '',
+            status,
+            completed: entry.completed,
+          };
+        }),
       })),
     }));
+
+    const hasCompletedContent = courses.some((course) =>
+      course.sections.some((section) => section.contents.some((content) => content.completed)),
+    );
 
     nodes.push({
       id: mod.id,
       formationId: summary.id,
       type: 'module',
       title: mod.name,
-      status: mod.accessible ? 'available' : 'locked',
+      status: mod.accessible || hasCompletedContent ? 'available' : 'locked',
       progress: Math.round(mod.progress.percent),
       order: order++,
       courses,

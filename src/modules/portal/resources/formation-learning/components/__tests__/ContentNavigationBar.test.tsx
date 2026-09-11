@@ -118,6 +118,14 @@ describe('ContentNavigationBar', () => {
 
   // ── Bornes de navigation ───────────────────────────────────────────────────
 
+  it('ne permet pas de passer directement au suivant lorsqu’il est verrouillé', async () => {
+    const props = setup({ isCompleted: true, isNextLocked: true });
+    const next = screen.getByRole('button', { name: 'Suivant' });
+    expect(next).toBeDisabled();
+    await userEvent.click(next);
+    expect(props.onNavigate).not.toHaveBeenCalled();
+  });
+
   it('désactive Précédent sur le premier contenu et Suivant sur le dernier', () => {
     const { unmount } = render(<ContentNavigationBar {...baseProps} prev={null} />);
     expect(screen.getByRole('button', { name: /précédent/i })).toBeDisabled();
