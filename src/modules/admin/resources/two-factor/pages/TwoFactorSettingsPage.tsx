@@ -1,10 +1,8 @@
 'use client';
 
 import * as React from 'react';
-
+import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Select,
   SelectContent,
@@ -12,9 +10,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useTenants } from '@/modules/admin/resources/tenants/hooks/useTenantsQuery';
-
-import { TwoFactorSettingsForm } from './_components/two-factor-settings-form';
 import {
   useGlobalTwoFactorSettings,
   useTenantTemplateMails,
@@ -22,6 +20,8 @@ import {
   useUpdateGlobalTwoFactorSettings,
   useUpdateTenantTwoFactorSettings,
 } from '../hooks/useTwoFactorSettings';
+import type { TwoFactorSettings } from '../types';
+import { TwoFactorSettingsForm } from './_components/two-factor-settings-form';
 
 export function TwoFactorSettingsPage() {
   const [tenantId, setTenantId] = React.useState<string | null>(null);
@@ -52,10 +52,15 @@ export function TwoFactorSettingsPage() {
         </TabsList>
 
         <TabsContent value="global" className="mt-6">
-          {globalSettings.isLoading || !globalSettings.data ? (
+          {globalSettings.isError ? (
+            <SettingsError onRetry={() => globalSettings.refetch()} />
+          ) : globalSettings.isLoading || !globalSettings.data ? (
             <SettingsSkeleton />
           ) : (
             <TwoFactorSettingsForm
+              // Resynchronise les champs sur un enregistrement, jamais sur une
+              // simple nouvelle référence de la réponse.
+              key={resyncKey(globalSettings.data.data)}
               settings={globalSettings.data.data}
               scope="global"
               isSaving={updateGlobal.isPending}
@@ -87,12 +92,15 @@ export function TwoFactorSettingsPage() {
             <p className="text-sm text-muted-foreground">
               Sélectionnez un tenant pour afficher ses paramètres.
             </p>
+          ) : tenantSettings.isError ? (
+            <SettingsError onRetry={() => tenantSettings.refetch()} />
           ) : tenantSettings.isLoading || !tenantSettings.data ? (
             <SettingsSkeleton />
           ) : (
             <TwoFactorSettingsForm
-              // Force la réinitialisation du formulaire au changement de tenant.
-              key={tenantId}
+              // Force la réinitialisation du formulaire au changement de tenant
+              // et après un enregistrement, pas à chaque refetch.
+              key={resyncKey(tenantSettings.data.data)}
               settings={tenantSettings.data.data}
               scope="tenant"
               templateMails={templateMails.data?.data ?? []}
@@ -115,4 +123,26 @@ function SettingsSkeleton() {
       ))}
     </div>
   );
+}
+
+function SettingsError({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div
+      role="alert"
+      className="flex flex-col items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-4"
+    >
+      <p className="text-sm text-destructive">
+        Impossible de charger les paramètres. Vérifiez vos droits d’accès ou réessayez.
+      </p>
+
+      <Button type="button" variant="outline" size="sm" onClick={onRetry}>
+        Réessayer
+      </Button>
+    </div>
+  );
+}
+
+/** Seule une écriture côté serveur doit écraser une saisie en cours. */
+function resyncKey(settings: TwoFactorSettings): string {
+  return `${settings.tenant_id ?? 'global'}:${settings.updated_at ?? ''}`;
 }

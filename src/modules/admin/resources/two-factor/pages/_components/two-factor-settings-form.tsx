@@ -1,12 +1,11 @@
 'use client';
 
-import * as React from 'react';
 import { Loader2, Save, TriangleAlert } from 'lucide-react';
+import * as React from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import {
   Select,
   SelectContent,
@@ -14,21 +13,38 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import {
-  TWO_FACTOR_BOUNDS,
   type NumericSettingKey,
   type TenantTemplateMail,
+  TWO_FACTOR_BOUNDS,
   type TwoFactorSettings,
   type TwoFactorSettingsPayload,
 } from '../../types';
 
-const NUMERIC_FIELDS: { key: NumericSettingKey; label: string; hint: string }[] = [
+const NUMERIC_FIELDS: {
+  key: NumericSettingKey;
+  label: string;
+  hint: string;
+}[] = [
   { key: 'code_length', label: 'Longueur du code', hint: 'chiffres' },
   { key: 'ttl_minutes', label: 'Durée de validité', hint: 'minutes' },
-  { key: 'resend_cooldown_seconds', label: 'Délai avant renvoi', hint: 'secondes' },
+  {
+    key: 'resend_cooldown_seconds',
+    label: 'Délai avant renvoi',
+    hint: 'secondes',
+  },
   { key: 'max_attempts', label: 'Tentatives max par code', hint: 'tentatives' },
-  { key: 'lockout_threshold', label: 'Seuil de blocage du compte', hint: 'codes verrouillés' },
-  { key: 'trusted_device_days', label: 'Validité appareil de confiance', hint: 'jours' },
+  {
+    key: 'lockout_threshold',
+    label: 'Seuil de blocage du compte',
+    hint: 'codes verrouillés',
+  },
+  {
+    key: 'trusted_device_days',
+    label: 'Validité appareil de confiance',
+    hint: 'jours',
+  },
 ];
 
 const NO_TEMPLATE = 'none';
@@ -64,16 +80,11 @@ export function TwoFactorSettingsForm({
   );
   const [errors, setErrors] = React.useState<Partial<Record<NumericSettingKey, string>>>({});
 
-  // Le formulaire est remonté à chaque changement d'onglet ou de tenant.
-  React.useEffect(() => {
-    setFields(buildFieldState(settings));
-    setEnabled(settings.effective.enabled);
-    setTemplateMailId(settings.overrides.template_mail_id);
-    setErrors({});
-  }, [settings]);
-
   const updateField = (key: NumericSettingKey, patch: Partial<FieldState>) => {
-    setFields((previous) => ({ ...previous, [key]: { ...previous[key], ...patch } }));
+    setFields((previous) => ({
+      ...previous,
+      [key]: { ...previous[key], ...patch },
+    }));
   };
 
   const handleSubmit = (event: React.FormEvent) => {
@@ -91,7 +102,9 @@ export function TwoFactorSettingsForm({
       settings.overrides.enabled === null &&
       enabled === settings.effective.enabled;
 
-    const payload: TwoFactorSettingsPayload = { enabled: keepsInheritedEnabled ? null : enabled };
+    const payload: TwoFactorSettingsPayload = {
+      enabled: keepsInheritedEnabled ? null : enabled,
+    };
 
     for (const { key } of NUMERIC_FIELDS) {
       payload[key] = fields[key].inherited ? null : fields[key].value;

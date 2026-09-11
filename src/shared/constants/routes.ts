@@ -6,6 +6,7 @@ export const ROUTES = {
   },
   platform: {
     login: '/admin/login',
+    forgotPassword: '/admin/forgot-password',
   },
   tenantNotFound: '/tenant-not-found',
   admin: {

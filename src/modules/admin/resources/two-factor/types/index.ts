@@ -16,7 +16,9 @@ export interface TwoFactorSettingsFields {
  */
 export interface TwoFactorSettings {
   tenant_id: string | null;
-  overrides: { [K in keyof TwoFactorSettingsFields]: TwoFactorSettingsFields[K] | null };
+  overrides: {
+    [K in keyof TwoFactorSettingsFields]: TwoFactorSettingsFields[K] | null;
+  };
   effective: TwoFactorSettingsFields;
   updated_by: string | null;
   updated_at: string | null;

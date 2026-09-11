@@ -1,6 +1,6 @@
+import type { Role } from '@/shared/constants/roles';
 import { apiGet, apiPost } from '@/shared/lib/apiClient';
 import type { AuthUser } from '@/shared/types/auth.types';
-import { Role } from '@/shared/constants/roles';
 
 interface BackendUser {
   id: string;
@@ -44,6 +44,11 @@ export interface TwoFactorChallenge {
   code_length: number;
   /** Délai avant qu'un renvoi soit accepté, décompté depuis le dernier envoi. */
   resend_cooldown_seconds: number;
+  /**
+   * Durée de confiance accordée à l'appareil, en jours. Absent des backends
+   * antérieurs : l'interface tait alors la durée plutôt que d'en inventer une.
+   */
+  trusted_device_days?: number;
 }
 
 export interface TwoFactorChallengePayload {
@@ -80,7 +85,11 @@ export interface ExistingSessionInfo {
  */
 export type SessionResult =
   | { outcome: 'authenticated'; user: AuthUser; sessionId: string }
-  | { outcome: 'session_conflict'; existingSession: ExistingSessionInfo; replacementToken: string };
+  | {
+      outcome: 'session_conflict';
+      existingSession: ExistingSessionInfo;
+      replacementToken: string;
+    };
 
 /**
  * Le login ajoute un troisième cas : le mot de passe est valide mais le 2FA exige
@@ -109,7 +118,11 @@ function isApiError(err: unknown): err is { status: number; json: unknown } {
 }
 
 function toAuthenticated(res: LoginSuccessApiResponse): SessionResult {
-  return { outcome: 'authenticated', user: toAuthUser(res.user), sessionId: res.session_id };
+  return {
+    outcome: 'authenticated',
+    user: toAuthUser(res.user),
+    sessionId: res.session_id,
+  };
 }
 
 /** Convertit le 409 SESSION_ALREADY_ACTIVE en résultat métier ; toute autre erreur remonte. */

@@ -1,15 +1,16 @@
 'use client';
 
-import * as React from 'react';
 import { ArrowLeft, Loader2, RefreshCw } from 'lucide-react';
-
-import { OtpInput } from '@/components/ui/otp-input';
+import Link from 'next/link';
+import * as React from 'react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { OtpInput } from '@/components/ui/otp-input';
 import { cn } from '@/lib/utils';
 import { mapTwoFactorError, type TwoFactorError } from '@/modules/auth/lib/twoFactorErrors';
 import type { TwoFactorChallenge } from '@/shared/api/auth.api';
+import { ROUTES } from '@/shared/constants/routes';
 
 interface TwoFactorChallengeStepProps {
   challenge: TwoFactorChallenge;
@@ -19,6 +20,8 @@ interface TwoFactorChallengeStepProps {
   onResend: () => Promise<TwoFactorChallenge>;
   /** Abandon du challenge : retour à la saisie du mot de passe. */
   onAbandon: (reason?: string) => void;
+  /** Page de réinitialisation adaptée au contexte (tenant ou plateforme). */
+  forgotPasswordHref?: string;
 }
 
 export function TwoFactorChallengeStep({
@@ -26,6 +29,7 @@ export function TwoFactorChallengeStep({
   onVerify,
   onResend,
   onAbandon,
+  forgotPasswordHref = ROUTES.auth.forgotPassword,
 }: TwoFactorChallengeStepProps) {
   const [current, setCurrent] = React.useState(challenge);
   const [code, setCode] = React.useState('');
@@ -33,12 +37,14 @@ export function TwoFactorChallengeStep({
   const [error, setError] = React.useState<TwoFactorError | null>(null);
   const [isVerifying, setIsVerifying] = React.useState(false);
   const [isResending, setIsResending] = React.useState(false);
-  const [expiresIn, setExpiresIn] = React.useState(challenge.expires_in);
+  const [expiresAt, setExpiresAt] = React.useState(() => deadlineFromNow(challenge.expires_in));
   // Le backend décompte le cooldown depuis le dernier envoi, envoi initial compris.
-  const [cooldown, setCooldown] = React.useState(challenge.resend_cooldown_seconds);
+  const [resendableAt, setResendableAt] = React.useState(() =>
+    deadlineFromNow(challenge.resend_cooldown_seconds),
+  );
 
-  useCountdown(expiresIn, setExpiresIn);
-  useCountdown(cooldown, setCooldown);
+  const expiresIn = useCountdown(expiresAt);
+  const cooldown = useCountdown(resendableAt);
 
   const isExpired = expiresIn <= 0;
   const isChallengeLocked = error?.kind === 'locked';
@@ -76,13 +82,18 @@ export function TwoFactorChallengeStep({
     try {
       const next = await onResend();
       setCurrent(next);
-      setExpiresIn(next.expires_in);
-      setCooldown(next.resend_cooldown_seconds);
+      setExpiresAt(deadlineFromNow(next.expires_in));
+      setResendableAt(deadlineFromNow(next.resend_cooldown_seconds));
       setCode('');
     } catch (err) {
       const mapped = mapTwoFactorError(err);
       setError(mapped);
-      setCooldown(mapped.retryAfterSeconds ?? 0);
+
+      // Une erreur sans Retry-After (réseau, 5xx) ne doit pas rouvrir l'envoi :
+      // le cooldown en cours reste la seule borne connue.
+      if (mapped.retryAfterSeconds !== undefined) {
+        setResendableAt(deadlineFromNow(mapped.retryAfterSeconds));
+      }
 
       if (mapped.kind === 'invalid_challenge') {
         onAbandon(mapped.message);
@@ -94,9 +105,31 @@ export function TwoFactorChallengeStep({
 
   if (isAccountLocked) {
     return (
-      <div className="mt-8 space-y-4" role="alert">
-        <h2 className="text-lg font-semibold">Compte bloqué</h2>
-        <p className="text-sm text-muted-foreground">{error.message}</p>
+      <div className="mt-8 space-y-4">
+        <div className="space-y-1" role="alert">
+          <h2 className="text-lg font-semibold">Compte bloqué</h2>
+          <p className="text-sm text-muted-foreground">{error.message}</p>
+        </div>
+
+        <div className="flex flex-col items-start gap-2">
+          <Link
+            href={forgotPasswordHref}
+            className="text-sm text-primary underline-offset-4 hover:underline"
+          >
+            Réinitialiser mon mot de passe
+          </Link>
+
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => onAbandon()}
+            className="h-auto px-0 text-xs text-muted-foreground"
+          >
+            <ArrowLeft className="mr-1 h-3 w-3" />
+            Retour à la connexion
+          </Button>
+        </div>
       </div>
     );
   }
@@ -158,7 +191,11 @@ export function TwoFactorChallengeStep({
           className="mt-0.5"
         />
         <Label htmlFor="trust-device" className="cursor-pointer text-sm leading-snug font-normal">
-          Ne plus demander de code sur cet appareil pendant 30 jours
+          {current.trusted_device_days === undefined
+            ? 'Ne plus demander de code sur cet appareil'
+            : `Ne plus demander de code sur cet appareil pendant ${current.trusted_device_days} jour${
+                current.trusted_device_days > 1 ? 's' : ''
+              }`}
         </Label>
       </div>
 
@@ -194,17 +231,39 @@ export function TwoFactorChallengeStep({
   );
 }
 
-/** Décrémente une valeur en secondes jusqu'à zéro. */
-function useCountdown(value: number, setValue: React.Dispatch<React.SetStateAction<number>>) {
+/**
+ * Décompte jusqu'à une échéance absolue.
+ *
+ * Le restant est recalculé depuis l'échéance à chaque tick : le bridage des
+ * timers en onglet masqué ne peut donc plus désynchroniser l'affichage de
+ * l'expiration réelle du code côté serveur.
+ */
+function useCountdown(deadline: number): number {
+  const [remaining, setRemaining] = React.useState(() => remainingSeconds(deadline));
+
   React.useEffect(() => {
-    if (value <= 0) return;
+    const sync = () => setRemaining(remainingSeconds(deadline));
 
-    const timer = setInterval(() => {
-      setValue((seconds) => (seconds <= 1 ? 0 : seconds - 1));
-    }, 1000);
+    sync();
 
-    return () => clearInterval(timer);
-  }, [value, setValue]);
+    const timer = setInterval(sync, 1000);
+    document.addEventListener('visibilitychange', sync);
+
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', sync);
+    };
+  }, [deadline]);
+
+  return remaining;
+}
+
+function deadlineFromNow(seconds: number): number {
+  return Date.now() + seconds * 1000;
+}
+
+function remainingSeconds(deadline: number): number {
+  return Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
 }
 
 function formatCountdown(seconds: number): string {

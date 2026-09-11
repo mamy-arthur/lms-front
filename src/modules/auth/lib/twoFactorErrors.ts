@@ -1,4 +1,4 @@
-import { getApiErrorMessage } from '@/shared/lib/errors';
+import { getApiErrorMessage, getApiErrorStatus, getRetryAfterSeconds } from '@/shared/lib/errors';
 
 /**
  * Nature d'une erreur 2FA, indépendante de la langue de l'API.
@@ -49,7 +49,7 @@ const FALLBACK_MESSAGE: Record<TwoFactorErrorKind, string> = {
  * à l'introduction de ce champ.
  */
 export function mapTwoFactorError(err: unknown): TwoFactorError {
-  const retryAfterSeconds = readRetryAfter(err);
+  const retryAfterSeconds = getRetryAfterSeconds(err);
   const kind = resolveKind(err);
 
   return {
@@ -67,14 +67,14 @@ function resolveKind(err: unknown): TwoFactorErrorKind {
     return KIND_BY_ERROR_CODE[errorCode];
   }
 
-  const status = readStatus(err);
+  const status = getApiErrorStatus(err);
 
   if (status === 423) return 'account_locked';
 
   if (status === 429) {
     // Les limiteurs de débit du framework ne portent pas d'error_code ; seul le
     // cooldown applicatif expose un Retry-After.
-    return readRetryAfter(err) !== undefined ? 'resend_cooldown' : 'throttled';
+    return getRetryAfterSeconds(err) !== undefined ? 'resend_cooldown' : 'throttled';
   }
 
   if (status === 422) {
@@ -82,13 +82,6 @@ function resolveKind(err: unknown): TwoFactorErrorKind {
   }
 
   return 'unknown';
-}
-
-function readStatus(err: unknown): number | undefined {
-  if (!err || typeof err !== 'object') return undefined;
-  const status = (err as { status?: unknown }).status;
-
-  return typeof status === 'number' ? status : undefined;
 }
 
 function readJsonObject(err: unknown): Record<string, unknown> | undefined {
@@ -103,18 +96,4 @@ function hasCodeFieldError(body: Record<string, unknown> | undefined): boolean {
   if (!errors || typeof errors !== 'object') return false;
 
   return 'code' in (errors as Record<string, unknown>);
-}
-
-function readRetryAfter(err: unknown): number | undefined {
-  if (!err || typeof err !== 'object') return undefined;
-  const headers = (err as { headers?: unknown }).headers;
-
-  if (!headers || typeof (headers as Headers).get !== 'function') return undefined;
-
-  const raw = (headers as Headers).get('Retry-After');
-  if (raw === null) return undefined;
-
-  const seconds = Number.parseInt(raw, 10);
-
-  return Number.isFinite(seconds) && seconds >= 0 ? seconds : undefined;
 }

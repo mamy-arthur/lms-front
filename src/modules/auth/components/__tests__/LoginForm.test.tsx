@@ -7,10 +7,10 @@
  */
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { LoginForm } from '../LoginForm';
-import { useTenantStore } from '@/shared/stores/tenant.store';
 import { Role } from '@/shared/constants/roles';
+import { useTenantStore } from '@/shared/stores/tenant.store';
 import type { Tenant } from '@/shared/types/tenant.types';
+import { LoginForm } from '../LoginForm';
 
 // ─── Polyfills pour l'environnement test ───────────────────────────────────────
 
@@ -55,7 +55,9 @@ jest.mock('@/modules/auth/utils/loginUtils', () => ({
     return hasTenant ? '/dashboard' : '/tenant-not-found';
   },
 }));
+
 import { resolveLogin } from '@/modules/auth/utils/loginUtils';
+
 const mockResolveLogin = jest.mocked(resolveLogin);
 
 /**
@@ -70,7 +72,9 @@ jest.mock('@/shared/api/auth.api', () => ({
     twoFactorResend: jest.fn(),
   },
 }));
+
 import { authApi } from '@/shared/api/auth.api';
+
 const mockReplaceSession = jest.mocked(authApi.replaceSession);
 const mockTwoFactorChallenge = jest.mocked(authApi.twoFactorChallenge);
 
@@ -225,7 +229,10 @@ describe('LoginForm', () => {
       ...MOCK_AUTH_RESPONSE,
       user: { ...MOCK_AUTH_RESPONSE.user, role: Role.TRAINEE },
     });
-    useTenantStore.setState({ tenant: MOCK_TENANT, resolutionStatus: 'resolved' });
+    useTenantStore.setState({
+      tenant: MOCK_TENANT,
+      resolutionStatus: 'resolved',
+    });
     render(<LoginForm />);
 
     await fillAndSubmit(user, VALID_CREDENTIALS.email, VALID_CREDENTIALS.password);
@@ -472,13 +479,48 @@ describe('LoginForm', () => {
       expect(await screen.findByText('Ce challenge est invalide.')).toBeInTheDocument();
       expect(screen.getByLabelText(/adresse email/i)).toBeInTheDocument();
     });
+
+    it('laisse revenir à la connexion quand le compte est bloqué', async () => {
+      const user = userEvent.setup();
+      mockResolveLogin.mockResolvedValue(CHALLENGE);
+      mockTwoFactorChallenge.mockRejectedValue(
+        Object.assign(new Error('Locked'), {
+          status: 423,
+          headers: new Headers(),
+          json: {
+            message: 'Votre compte est bloqué après trop de tentatives.',
+            error_code: 'two_factor.account_locked',
+          },
+        }),
+      );
+      render(<LoginForm />);
+
+      await fillAndSubmit(user, VALID_CREDENTIALS.email, VALID_CREDENTIALS.password);
+      await screen.findByText(/vérification en deux étapes/i);
+
+      await user.click(screen.getAllByRole('textbox')[0]);
+      await user.keyboard('123456');
+      await user.click(screen.getByRole('button', { name: /vérifier/i }));
+
+      await screen.findByText('Votre compte est bloqué après trop de tentatives.');
+
+      await user.click(screen.getByRole('button', { name: /retour à la connexion/i }));
+
+      expect(screen.getByLabelText(/adresse email/i)).toBeInTheDocument();
+    });
   });
 
   // ── Gestion d'erreurs ──────────────────────────────────────────────────────
 
-  it("affiche un message d'erreur si la connexion échoue", async () => {
+  it('affiche un message générique quand les identifiants sont refusés', async () => {
     const user = userEvent.setup();
-    mockResolveLogin.mockRejectedValue(new Error('Invalid credentials'));
+    mockResolveLogin.mockRejectedValue(
+      Object.assign(new Error('Unauthorized'), {
+        status: 401,
+        headers: new Headers(),
+        json: {},
+      }),
+    );
     render(<LoginForm />);
 
     await fillAndSubmit(user, VALID_CREDENTIALS.email, VALID_CREDENTIALS.password);
@@ -486,6 +528,54 @@ describe('LoginForm', () => {
     await waitFor(() => {
       expect(screen.getByText('Email ou mot de passe incorrect.')).toBeInTheDocument();
     });
+  });
+
+  it('annonce le blocage du compte au lieu d’une erreur de saisie (423)', async () => {
+    const user = userEvent.setup();
+    mockResolveLogin.mockRejectedValue(
+      Object.assign(new Error('Locked'), {
+        status: 423,
+        headers: new Headers(),
+        json: { message: 'Votre compte est bloqué après trop de tentatives.' },
+      }),
+    );
+    render(<LoginForm />);
+
+    await fillAndSubmit(user, VALID_CREDENTIALS.email, VALID_CREDENTIALS.password);
+
+    expect(
+      await screen.findByText('Votre compte est bloqué après trop de tentatives.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Email ou mot de passe incorrect.')).not.toBeInTheDocument();
+  });
+
+  it('indique le délai d’attente quand la connexion est limitée en débit (429)', async () => {
+    const user = userEvent.setup();
+    mockResolveLogin.mockRejectedValue(
+      Object.assign(new Error('Too Many Requests'), {
+        status: 429,
+        headers: new Headers({ 'Retry-After': '120' }),
+        json: {},
+      }),
+    );
+    render(<LoginForm />);
+
+    await fillAndSubmit(user, VALID_CREDENTIALS.email, VALID_CREDENTIALS.password);
+
+    expect(await screen.findByText(/trop de tentatives de connexion/i)).toHaveTextContent(
+      '2 minutes',
+    );
+  });
+
+  it('distingue une panne réseau d’un refus d’identifiants', async () => {
+    const user = userEvent.setup();
+    mockResolveLogin.mockRejectedValue(new TypeError('Failed to fetch'));
+    render(<LoginForm />);
+
+    await fillAndSubmit(user, VALID_CREDENTIALS.email, VALID_CREDENTIALS.password);
+
+    expect(await screen.findByText(/impossible de joindre le serveur/i)).toBeInTheDocument();
+    expect(screen.queryByText('Email ou mot de passe incorrect.')).not.toBeInTheDocument();
   });
 
   // ── Interactions UI ────────────────────────────────────────────────────────

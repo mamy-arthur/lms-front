@@ -1,15 +1,16 @@
 'use client';
 import { useRouter } from 'next/navigation';
 import { AuthGuard } from '@/modules/auth/guards/AuthGuard';
-import { LayoutSideBar } from '@/modules/shared/layout/AppSidebar';
 import { PORTAL_NAV } from '@/modules/portal/config/navigation';
-import { useAuthStore } from '@/shared/stores/auth.store';
-import { useTenant } from '@/shared/hooks/useTenant';
+import { LayoutSideBar } from '@/modules/shared/layout/AppSidebar';
 import { authApi } from '@/shared/api/auth.api';
 import { ROUTES } from '@/shared/constants/routes';
 import { usePermissions } from '@/shared/hooks/usePermissions';
+import { useTenant } from '@/shared/hooks/useTenant';
+import { resetEcho } from '@/shared/lib/echo';
 import { EchoProvider } from '@/shared/providers/EchoProvider';
 import { SessionRevocationListener } from '@/shared/providers/SessionRevocationListener';
+import { useAuthStore } from '@/shared/stores/auth.store';
 
 function PortalLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -23,6 +24,7 @@ function PortalLayout({ children }: { children: React.ReactNode }) {
     try {
       await authApi.logout();
     } finally {
+      resetEcho();
       useAuthStore.getState().clearAuth();
       router.push(ROUTES.auth.login);
     }

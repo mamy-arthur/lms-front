@@ -1,8 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-
-import { TwoFactorSettingsForm } from '../two-factor-settings-form';
 import type { TwoFactorSettings } from '../../../types';
+import { TwoFactorSettingsForm } from '../two-factor-settings-form';
 
 const EFFECTIVE = {
   enabled: false,
@@ -83,10 +82,14 @@ describe('TwoFactorSettingsForm — héritage', () => {
     );
 
     await user.click(
-      screen.getByLabelText('Valeur par défaut', { selector: '#inherit-ttl_minutes' }),
+      screen.getByLabelText('Valeur par défaut', {
+        selector: '#inherit-ttl_minutes',
+      }),
     );
 
-    fireEvent.change(screen.getByLabelText('Durée de validité'), { target: { value: '25' } });
+    fireEvent.change(screen.getByLabelText('Durée de validité'), {
+      target: { value: '25' },
+    });
     await user.click(save());
 
     await waitFor(() => expect(onSubmit).toHaveBeenCalled());
@@ -108,10 +111,14 @@ describe('TwoFactorSettingsForm — validation des bornes', () => {
     );
 
     await user.click(
-      screen.getByLabelText('Valeur par défaut', { selector: '#inherit-code_length' }),
+      screen.getByLabelText('Valeur par défaut', {
+        selector: '#inherit-code_length',
+      }),
     );
 
-    fireEvent.change(screen.getByLabelText('Longueur du code'), { target: { value: '99' } });
+    fireEvent.change(screen.getByLabelText('Longueur du code'), {
+      target: { value: '99' },
+    });
     await user.click(save());
 
     expect(await screen.findByText(/comprise entre 6 et 10/i)).toBeInTheDocument();

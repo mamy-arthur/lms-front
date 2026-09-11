@@ -37,7 +37,9 @@ export function useUpdateGlobalTwoFactorSettings() {
     mutationFn: (payload: TwoFactorSettingsPayload) => twoFactorApi.updateGlobal(payload),
     onSuccess: () => {
       // Les surcharges tenant héritent du global : les deux niveaux sont invalidés.
-      queryClient.invalidateQueries({ queryKey: TWO_FACTOR_SETTINGS_QUERY_KEY });
+      queryClient.invalidateQueries({
+        queryKey: TWO_FACTOR_SETTINGS_QUERY_KEY,
+      });
       toast.success('Paramètres 2FA globaux mis à jour');
     },
     onError: (error) =>
@@ -52,7 +54,9 @@ export function useUpdateTenantTwoFactorSettings(tenantId: string | null) {
     mutationFn: (payload: TwoFactorSettingsPayload) =>
       twoFactorApi.updateForTenant(tenantId as string, payload),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: TWO_FACTOR_SETTINGS_QUERY_KEY });
+      queryClient.invalidateQueries({
+        queryKey: TWO_FACTOR_SETTINGS_QUERY_KEY,
+      });
       toast.success('Paramètres 2FA du tenant mis à jour');
     },
     onError: (error) =>
