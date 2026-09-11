@@ -137,7 +137,9 @@ export const portalContentEntryKeys = {
 
 export const portalLearnerEvaluationKeys = {
   all: ['portal', 'learner-evaluations'] as const,
-  list: (learningPathId: string) => [...portalLearnerEvaluationKeys.all, learningPathId] as const,
+  // Clé par inscription : deux inscriptions sur la même formation ont des
+  // compteurs de tentatives distincts et ne doivent pas partager de cache.
+  list: (enrollmentId: string) => [...portalLearnerEvaluationKeys.all, enrollmentId] as const,
 };
 
 export const portalScormLaunchKeys = {

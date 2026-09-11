@@ -51,6 +51,7 @@ export default function FormationContentView({
         <EvaluationRunner
           key={resolved.node.id}
           evaluation={resolved.node}
+          enrollmentId={enrollmentId}
           onComplete={onEvaluationComplete}
         />
       </div>
