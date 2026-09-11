@@ -37,6 +37,7 @@ export const ACCESS = {
   tenants: { superAdminOnly: true },
   templates: { anyRoles: [Role.EDITOR] },
   contentTypes: { superAdminOnly: true },
+  twoFactor: { superAdminOnly: true },
   formationsManagement: { anyRoles: [Role.CLIENT_MANAGER] },
   wallet: { anyRoles: [Role.CLIENT_MANAGER, Role.EDITOR] },
   notes: { anyRoles: [Role.CLIENT_MANAGER, Role.EDITOR] },

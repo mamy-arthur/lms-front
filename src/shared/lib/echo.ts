@@ -44,3 +44,13 @@ export function getEcho(): Echo<'reverb'> {
 
   return echoInstance;
 }
+
+/**
+ * Ferme la connexion et jette le singleton. Indispensable avant une redirection
+ * client (révocation, logout) : pusher-js ne se reconnecte jamais après un
+ * disconnect(), et getEcho() rendrait sinon une instance morte au login suivant.
+ */
+export function resetEcho(): void {
+  echoInstance?.disconnect();
+  echoInstance = null;
+}

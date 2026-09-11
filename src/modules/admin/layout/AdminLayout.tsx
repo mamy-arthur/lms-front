@@ -1,12 +1,13 @@
 'use client';
 import { useRouter } from 'next/navigation';
-import { LayoutSideBar } from '@/modules/shared/layout/AppSidebar';
 import { ADMIN_NAV } from '@/modules/admin/config/navigation';
-import { useAuthStore } from '@/shared/stores/auth.store';
-import { usePermissions } from '@/shared/hooks/usePermissions';
+import { LayoutSideBar } from '@/modules/shared/layout/AppSidebar';
 import { authApi } from '@/shared/api/auth.api';
-import { useTenant } from '@/shared/hooks/useTenant';
 import { ROUTES } from '@/shared/constants/routes';
+import { usePermissions } from '@/shared/hooks/usePermissions';
+import { useTenant } from '@/shared/hooks/useTenant';
+import { resetEcho } from '@/shared/lib/echo';
+import { useAuthStore } from '@/shared/stores/auth.store';
 
 export function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -20,6 +21,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
     try {
       await authApi.platformLogout();
     } finally {
+      resetEcho();
       useAuthStore.getState().clearAuth();
       router.push(ROUTES.platform.login);
     }

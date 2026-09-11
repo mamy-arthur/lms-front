@@ -6,14 +6,14 @@ import { Role } from '@/shared/constants/roles';
 /**
  * État d'authentification côté client.
  *
- * Le token JWT est géré exclusivement via cookie HttpOnly posé par le backend.
- * Aucun token n'est stocké ici — le store ne conserve que les informations
- * utilisateur nécessaires au rendu (rôle, identité).
+ * Le token Sanctum est géré exclusivement via cookie HttpOnly posé par le backend.
+ * sessionId est l'UUID public de la session, nécessaire à l'abonnement WebSocket.
  */
 interface AuthState {
   user: AuthUser | null;
   role: Role | null;
-  setAuth: (user: AuthUser) => void;
+  sessionId: string | null;
+  setAuth: (user: AuthUser, sessionId?: string) => void;
   clearAuth: () => void;
 }
 
@@ -22,8 +22,15 @@ export const useAuthStore = create<AuthState>()(
     (set) => ({
       user: null,
       role: null,
-      setAuth: (user) => set({ user, role: user.role }),
-      clearAuth: () => set({ user: null, role: null }),
+      sessionId: null,
+      setAuth: (user, sessionId) =>
+        set((state) => ({
+          user,
+          role: user.role,
+          // Preserve existing sessionId when updating profile (no new session issued)
+          sessionId: sessionId ?? state.sessionId,
+        })),
+      clearAuth: () => set({ user: null, role: null, sessionId: null }),
     }),
     { name: 'auth-store' },
   ),
