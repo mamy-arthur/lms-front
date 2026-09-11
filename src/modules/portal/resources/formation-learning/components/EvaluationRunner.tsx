@@ -23,10 +23,12 @@ import {
 
 interface Props {
   evaluation: FormationEvaluation;
+  /** Inscription consultée — porte les compteurs de tentatives. Absente en mode maquette. */
+  enrollmentId?: string;
   onComplete: (score: number, passed: boolean) => void;
 }
 
-export default function EvaluationRunner({ evaluation, onComplete }: Props) {
+export default function EvaluationRunner({ evaluation, enrollmentId, onComplete }: Props) {
   const isRealMode = evaluation.questions.length === 0;
   const typLabel = evaluation.evaluationType === 'intermediate' ? 'Intermédiaire' : 'Finale';
   const evalDescription = `Évaluation ${typLabel} · Score requis : ${evaluation.passingScore}%`;
@@ -36,10 +38,7 @@ export default function EvaluationRunner({ evaluation, onComplete }: Props) {
     isPending: isEvalInfoPending,
     isError: isEvalInfoError,
     refetch: refetchEvalInfo,
-  } = usePortalLearnerEvaluationQuery(
-    isRealMode ? evaluation.formationId : undefined,
-    evaluation.id,
-  );
+  } = usePortalLearnerEvaluationQuery(isRealMode ? enrollmentId : undefined, evaluation.id);
   const invalidateLearnerEvaluation = useInvalidateLearnerEvaluation();
 
   // Gates the splash CTA. `isPending` (not `isLoading`) so a background refetch
@@ -73,10 +72,11 @@ export default function EvaluationRunner({ evaluation, onComplete }: Props) {
     // render or a keyboard activation must not slip a start request through.
     if (isCheckingAttempts) return;
 
+    if (!enrollmentId) return;
+
     setIsStarting(true);
     try {
-      // evaluation.formationId is set to the learning path id in summary-mapper
-      const res = await evaluationAttemptsApi.start(evaluation.formationId, evaluation.id);
+      const res = await evaluationAttemptsApi.start(enrollmentId, evaluation.id);
       setAttempt(res.data);
       setPhase('quiz');
     } catch (err) {
@@ -84,7 +84,7 @@ export default function EvaluationRunner({ evaluation, onComplete }: Props) {
       // here is wrong: no retry can ever succeed. Refresh the quota instead so
       // the splash flips to its "tentatives épuisées" state.
       if ((err as { status?: number }).status === 409) {
-        invalidateLearnerEvaluation(evaluation.formationId);
+        invalidateLearnerEvaluation(enrollmentId);
         toast.error("Vous n'avez plus de tentative disponible pour cette évaluation.");
       } else {
         toast.error(
@@ -117,7 +117,7 @@ export default function EvaluationRunner({ evaluation, onComplete }: Props) {
       setFinalScore(score);
       setPhase('result');
       onComplete(score, score >= evaluation.passingScore);
-      invalidateLearnerEvaluation(evaluation.formationId);
+      if (enrollmentId) invalidateLearnerEvaluation(enrollmentId);
     } catch {
       toast.error('Erreur lors de la soumission. Veuillez réessayer.');
     } finally {
