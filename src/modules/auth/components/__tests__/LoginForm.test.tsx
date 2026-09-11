@@ -7,10 +7,10 @@
  */
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { LoginForm } from '../LoginForm';
-import { useTenantStore } from '@/shared/stores/tenant.store';
 import { Role } from '@/shared/constants/roles';
+import { useTenantStore } from '@/shared/stores/tenant.store';
 import type { Tenant } from '@/shared/types/tenant.types';
+import { LoginForm } from '../LoginForm';
 
 // ─── Polyfills pour l'environnement test ───────────────────────────────────────
 
@@ -55,8 +55,28 @@ jest.mock('@/modules/auth/utils/loginUtils', () => ({
     return hasTenant ? '/dashboard' : '/tenant-not-found';
   },
 }));
+
 import { resolveLogin } from '@/modules/auth/utils/loginUtils';
+
 const mockResolveLogin = jest.mocked(resolveLogin);
+
+/**
+ * Mock du client d'authentification : le remplacement de session et l'étape OTP
+ * l'appellent directement, et le module réel chargerait apiClient (cf. remarque
+ * sur loginUtils ci-dessus).
+ */
+jest.mock('@/shared/api/auth.api', () => ({
+  authApi: {
+    replaceSession: jest.fn(),
+    twoFactorChallenge: jest.fn(),
+    twoFactorResend: jest.fn(),
+  },
+}));
+
+import { authApi } from '@/shared/api/auth.api';
+
+const mockReplaceSession = jest.mocked(authApi.replaceSession);
+const mockTwoFactorChallenge = jest.mocked(authApi.twoFactorChallenge);
 
 /**
  * Mock du store d'authentification :
@@ -93,13 +113,24 @@ const VALID_CREDENTIALS = {
 };
 
 const MOCK_AUTH_RESPONSE = {
-  token: 'eyJhbGci.mock.token',
+  outcome: 'authenticated' as const,
   user: {
     id: 'u-001',
     name: 'Alice Dupont',
     email: VALID_CREDENTIALS.email,
     role: Role.SUPER_ADMIN,
   },
+  sessionId: 'session-uuid-001',
+};
+
+const MOCK_SESSION_CONFLICT = {
+  outcome: 'session_conflict' as const,
+  existingSession: {
+    deviceName: 'PC (Windows)',
+    browser: 'Chrome',
+    lastActivityAt: '2026-08-25T10:00:00Z',
+  },
+  replacementToken: 'replace-token-abc',
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -158,14 +189,16 @@ describe('LoginForm', () => {
     await fillAndSubmit(user, VALID_CREDENTIALS.email, VALID_CREDENTIALS.password);
 
     await waitFor(() => {
-      expect(mockSetAuth).toHaveBeenCalledWith(MOCK_AUTH_RESPONSE.user);
+      expect(mockSetAuth).toHaveBeenCalledWith(
+        MOCK_AUTH_RESPONSE.user,
+        MOCK_AUTH_RESPONSE.sessionId,
+      );
     });
   });
 
   it('redirige vers /admin pour un SUPER_ADMIN (avec ou sans tenant)', async () => {
     const user = userEvent.setup();
     mockResolveLogin.mockResolvedValue(MOCK_AUTH_RESPONSE);
-    // Pas de tenant dans le store → hasTenant = false
     render(<LoginForm />);
 
     await fillAndSubmit(user, VALID_CREDENTIALS.email, VALID_CREDENTIALS.password);
@@ -181,7 +214,6 @@ describe('LoginForm', () => {
       ...MOCK_AUTH_RESPONSE,
       user: { ...MOCK_AUTH_RESPONSE.user, role: Role.TRAINEE },
     });
-    // Pas de tenant dans le store → hasTenant = false
     render(<LoginForm />);
 
     await fillAndSubmit(user, VALID_CREDENTIALS.email, VALID_CREDENTIALS.password);
@@ -197,7 +229,6 @@ describe('LoginForm', () => {
       ...MOCK_AUTH_RESPONSE,
       user: { ...MOCK_AUTH_RESPONSE.user, role: Role.TRAINEE },
     });
-    // Tenant présent dans le store → hasTenant = true
     useTenantStore.setState({
       tenant: MOCK_TENANT,
       resolutionStatus: 'resolved',
@@ -211,11 +242,285 @@ describe('LoginForm', () => {
     });
   });
 
+  // ── Conflit de session ─────────────────────────────────────────────────────
+
+  it('affiche la modale de conflit de session sur une réponse 409', async () => {
+    const user = userEvent.setup();
+    mockResolveLogin.mockResolvedValue(MOCK_SESSION_CONFLICT);
+    render(<LoginForm />);
+
+    await fillAndSubmit(user, VALID_CREDENTIALS.email, VALID_CREDENTIALS.password);
+
+    await waitFor(() => {
+      expect(screen.getByText('Session déjà active')).toBeInTheDocument();
+    });
+  });
+
+  it("annuler la modale ne déclenche pas d'appel de remplacement", async () => {
+    const user = userEvent.setup();
+    mockResolveLogin.mockResolvedValue(MOCK_SESSION_CONFLICT);
+    render(<LoginForm />);
+
+    await fillAndSubmit(user, VALID_CREDENTIALS.email, VALID_CREDENTIALS.password);
+    await waitFor(() => screen.getByText('Session déjà active'));
+    await user.click(screen.getByRole('button', { name: /annuler/i }));
+
+    expect(mockReplaceSession).not.toHaveBeenCalled();
+    expect(mockReplace).not.toHaveBeenCalled();
+  });
+
+  it('confirmer appelle replaceSession et redirige', async () => {
+    const user = userEvent.setup();
+    mockResolveLogin.mockResolvedValue(MOCK_SESSION_CONFLICT);
+    mockReplaceSession.mockResolvedValue({
+      user: MOCK_AUTH_RESPONSE.user,
+      sessionId: 'session-new-001',
+    });
+    render(<LoginForm />);
+
+    await fillAndSubmit(user, VALID_CREDENTIALS.email, VALID_CREDENTIALS.password);
+    await waitFor(() => screen.getByText('Session déjà active'));
+    await user.click(screen.getByRole('button', { name: /me connecter sur cet appareil/i }));
+
+    await waitFor(() => {
+      expect(mockReplaceSession).toHaveBeenCalledWith('replace-token-abc');
+      expect(mockSetAuth).toHaveBeenCalledWith(MOCK_AUTH_RESPONSE.user, 'session-new-001');
+      expect(mockReplace).toHaveBeenCalledWith('/admin');
+    });
+  });
+
+  // ── 2FA ────────────────────────────────────────────────────────────────────
+
+  describe('vérification en deux étapes', () => {
+    const CHALLENGE = {
+      outcome: 'two_factor_required' as const,
+      challenge: {
+        two_factor_required: true as const,
+        challenge_token: 'chal-123',
+        expires_in: 600,
+        code_length: 6,
+        resend_cooldown_seconds: 0,
+      },
+    };
+
+    it('ne change rien au parcours quand le 2FA est désactivé', async () => {
+      const user = userEvent.setup();
+      mockResolveLogin.mockResolvedValue(MOCK_AUTH_RESPONSE);
+      render(<LoginForm />);
+
+      await fillAndSubmit(user, VALID_CREDENTIALS.email, VALID_CREDENTIALS.password);
+
+      await waitFor(() => {
+        expect(mockSetAuth).toHaveBeenCalledWith(
+          MOCK_AUTH_RESPONSE.user,
+          MOCK_AUTH_RESPONSE.sessionId,
+        );
+      });
+      expect(screen.queryByText(/vérification en deux étapes/i)).not.toBeInTheDocument();
+    });
+
+    it('affiche l’étape OTP sans ouvrir de session quand un challenge est renvoyé', async () => {
+      const user = userEvent.setup();
+      mockResolveLogin.mockResolvedValue(CHALLENGE);
+      render(<LoginForm />);
+
+      await fillAndSubmit(user, VALID_CREDENTIALS.email, VALID_CREDENTIALS.password);
+
+      await waitFor(() => {
+        expect(screen.getByText(/vérification en deux étapes/i)).toBeInTheDocument();
+      });
+      expect(screen.getAllByRole('textbox')).toHaveLength(6);
+      expect(mockSetAuth).not.toHaveBeenCalled();
+      expect(mockReplace).not.toHaveBeenCalled();
+    });
+
+    it('ouvre la session après validation du code', async () => {
+      const user = userEvent.setup();
+      mockResolveLogin.mockResolvedValue(CHALLENGE);
+      mockTwoFactorChallenge.mockResolvedValue(MOCK_AUTH_RESPONSE);
+      render(<LoginForm />);
+
+      await fillAndSubmit(user, VALID_CREDENTIALS.email, VALID_CREDENTIALS.password);
+      await screen.findByText(/vérification en deux étapes/i);
+
+      await user.click(screen.getAllByRole('textbox')[0]);
+      await user.keyboard('123456');
+      await user.click(screen.getByRole('button', { name: /vérifier/i }));
+
+      await waitFor(() => {
+        expect(mockTwoFactorChallenge).toHaveBeenCalledWith({
+          challenge_token: 'chal-123',
+          code: '123456',
+          trust_device: false,
+        });
+      });
+      expect(mockSetAuth).toHaveBeenCalledWith(
+        MOCK_AUTH_RESPONSE.user,
+        MOCK_AUTH_RESPONSE.sessionId,
+      );
+      expect(mockReplace).toHaveBeenCalledWith('/admin');
+    });
+
+    it('bascule sur la modale de conflit si une session est déjà active', async () => {
+      const user = userEvent.setup();
+      mockResolveLogin.mockResolvedValue(CHALLENGE);
+      mockTwoFactorChallenge.mockResolvedValue(MOCK_SESSION_CONFLICT);
+      render(<LoginForm />);
+
+      await fillAndSubmit(user, VALID_CREDENTIALS.email, VALID_CREDENTIALS.password);
+      await screen.findByText(/vérification en deux étapes/i);
+
+      await user.click(screen.getAllByRole('textbox')[0]);
+      await user.keyboard('123456');
+      await user.click(screen.getByRole('button', { name: /vérifier/i }));
+
+      expect(await screen.findByText('Session déjà active')).toBeInTheDocument();
+      expect(mockSetAuth).not.toHaveBeenCalled();
+    });
+
+    it('transmet trust_device quand la case est cochée', async () => {
+      const user = userEvent.setup();
+      mockResolveLogin.mockResolvedValue(CHALLENGE);
+      mockTwoFactorChallenge.mockResolvedValue(MOCK_AUTH_RESPONSE);
+      render(<LoginForm />);
+
+      await fillAndSubmit(user, VALID_CREDENTIALS.email, VALID_CREDENTIALS.password);
+      await screen.findByText(/vérification en deux étapes/i);
+
+      await user.click(screen.getAllByRole('textbox')[0]);
+      await user.keyboard('123456');
+      await user.click(screen.getByRole('checkbox'));
+      await user.click(screen.getByRole('button', { name: /vérifier/i }));
+
+      await waitFor(() => {
+        expect(mockTwoFactorChallenge).toHaveBeenCalledWith(
+          expect.objectContaining({ trust_device: true }),
+        );
+      });
+    });
+
+    it('desactive le renvoi tant que le cooldown du dernier envoi court', async () => {
+      const user = userEvent.setup();
+      mockResolveLogin.mockResolvedValue({
+        ...CHALLENGE,
+        challenge: { ...CHALLENGE.challenge, resend_cooldown_seconds: 45 },
+      });
+      render(<LoginForm />);
+
+      await fillAndSubmit(user, VALID_CREDENTIALS.email, VALID_CREDENTIALS.password);
+      await screen.findByText(/vérification en deux étapes/i);
+
+      expect(screen.getByRole('button', { name: /renvoyer dans 45s/i })).toBeDisabled();
+    });
+
+    it('revient à la saisie du mot de passe via « Retour à la connexion »', async () => {
+      const user = userEvent.setup();
+      mockResolveLogin.mockResolvedValue(CHALLENGE);
+      render(<LoginForm />);
+
+      await fillAndSubmit(user, VALID_CREDENTIALS.email, VALID_CREDENTIALS.password);
+      await screen.findByText(/vérification en deux étapes/i);
+
+      await user.click(screen.getByRole('button', { name: /retour à la connexion/i }));
+
+      expect(screen.getByLabelText(/adresse email/i)).toBeInTheDocument();
+      expect(screen.queryByText(/vérification en deux étapes/i)).not.toBeInTheDocument();
+    });
+
+    it('garde l’utilisateur sur l’étape OTP quand le code est incorrect', async () => {
+      const user = userEvent.setup();
+      mockResolveLogin.mockResolvedValue(CHALLENGE);
+      mockTwoFactorChallenge.mockRejectedValue(
+        Object.assign(new Error('Unprocessable'), {
+          status: 422,
+          headers: new Headers(),
+          json: {
+            message: 'Le code fourni est incorrect.',
+            error_code: 'two_factor.invalid_code',
+          },
+        }),
+      );
+      render(<LoginForm />);
+
+      await fillAndSubmit(user, VALID_CREDENTIALS.email, VALID_CREDENTIALS.password);
+      await screen.findByText(/vérification en deux étapes/i);
+
+      await user.click(screen.getAllByRole('textbox')[0]);
+      await user.keyboard('000000');
+      await user.click(screen.getByRole('button', { name: /vérifier/i }));
+
+      expect(await screen.findByRole('alert')).toHaveTextContent('Le code fourni est incorrect.');
+      expect(screen.getByText(/vérification en deux étapes/i)).toBeInTheDocument();
+      expect(mockSetAuth).not.toHaveBeenCalled();
+    });
+
+    it('ramène à la saisie du mot de passe quand le challenge n’est plus valide', async () => {
+      const user = userEvent.setup();
+      mockResolveLogin.mockResolvedValue(CHALLENGE);
+      mockTwoFactorChallenge.mockRejectedValue(
+        Object.assign(new Error('Unprocessable'), {
+          status: 422,
+          headers: new Headers(),
+          json: {
+            message: 'Ce challenge est invalide.',
+            error_code: 'two_factor.invalid_challenge',
+          },
+        }),
+      );
+      render(<LoginForm />);
+
+      await fillAndSubmit(user, VALID_CREDENTIALS.email, VALID_CREDENTIALS.password);
+      await screen.findByText(/vérification en deux étapes/i);
+
+      await user.click(screen.getAllByRole('textbox')[0]);
+      await user.keyboard('123456');
+      await user.click(screen.getByRole('button', { name: /vérifier/i }));
+
+      expect(await screen.findByText('Ce challenge est invalide.')).toBeInTheDocument();
+      expect(screen.getByLabelText(/adresse email/i)).toBeInTheDocument();
+    });
+
+    it('laisse revenir à la connexion quand le compte est bloqué', async () => {
+      const user = userEvent.setup();
+      mockResolveLogin.mockResolvedValue(CHALLENGE);
+      mockTwoFactorChallenge.mockRejectedValue(
+        Object.assign(new Error('Locked'), {
+          status: 423,
+          headers: new Headers(),
+          json: {
+            message: 'Votre compte est bloqué après trop de tentatives.',
+            error_code: 'two_factor.account_locked',
+          },
+        }),
+      );
+      render(<LoginForm />);
+
+      await fillAndSubmit(user, VALID_CREDENTIALS.email, VALID_CREDENTIALS.password);
+      await screen.findByText(/vérification en deux étapes/i);
+
+      await user.click(screen.getAllByRole('textbox')[0]);
+      await user.keyboard('123456');
+      await user.click(screen.getByRole('button', { name: /vérifier/i }));
+
+      await screen.findByText('Votre compte est bloqué après trop de tentatives.');
+
+      await user.click(screen.getByRole('button', { name: /retour à la connexion/i }));
+
+      expect(screen.getByLabelText(/adresse email/i)).toBeInTheDocument();
+    });
+  });
+
   // ── Gestion d'erreurs ──────────────────────────────────────────────────────
 
-  it("affiche un message d'erreur si la connexion échoue", async () => {
+  it('affiche un message générique quand les identifiants sont refusés', async () => {
     const user = userEvent.setup();
-    mockResolveLogin.mockRejectedValue(new Error('Invalid credentials'));
+    mockResolveLogin.mockRejectedValue(
+      Object.assign(new Error('Unauthorized'), {
+        status: 401,
+        headers: new Headers(),
+        json: {},
+      }),
+    );
     render(<LoginForm />);
 
     await fillAndSubmit(user, VALID_CREDENTIALS.email, VALID_CREDENTIALS.password);
@@ -223,6 +528,54 @@ describe('LoginForm', () => {
     await waitFor(() => {
       expect(screen.getByText('Email ou mot de passe incorrect.')).toBeInTheDocument();
     });
+  });
+
+  it('annonce le blocage du compte au lieu d’une erreur de saisie (423)', async () => {
+    const user = userEvent.setup();
+    mockResolveLogin.mockRejectedValue(
+      Object.assign(new Error('Locked'), {
+        status: 423,
+        headers: new Headers(),
+        json: { message: 'Votre compte est bloqué après trop de tentatives.' },
+      }),
+    );
+    render(<LoginForm />);
+
+    await fillAndSubmit(user, VALID_CREDENTIALS.email, VALID_CREDENTIALS.password);
+
+    expect(
+      await screen.findByText('Votre compte est bloqué après trop de tentatives.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Email ou mot de passe incorrect.')).not.toBeInTheDocument();
+  });
+
+  it('indique le délai d’attente quand la connexion est limitée en débit (429)', async () => {
+    const user = userEvent.setup();
+    mockResolveLogin.mockRejectedValue(
+      Object.assign(new Error('Too Many Requests'), {
+        status: 429,
+        headers: new Headers({ 'Retry-After': '120' }),
+        json: {},
+      }),
+    );
+    render(<LoginForm />);
+
+    await fillAndSubmit(user, VALID_CREDENTIALS.email, VALID_CREDENTIALS.password);
+
+    expect(await screen.findByText(/trop de tentatives de connexion/i)).toHaveTextContent(
+      '2 minutes',
+    );
+  });
+
+  it('distingue une panne réseau d’un refus d’identifiants', async () => {
+    const user = userEvent.setup();
+    mockResolveLogin.mockRejectedValue(new TypeError('Failed to fetch'));
+    render(<LoginForm />);
+
+    await fillAndSubmit(user, VALID_CREDENTIALS.email, VALID_CREDENTIALS.password);
+
+    expect(await screen.findByText(/impossible de joindre le serveur/i)).toBeInTheDocument();
+    expect(screen.queryByText('Email ou mot de passe incorrect.')).not.toBeInTheDocument();
   });
 
   // ── Interactions UI ────────────────────────────────────────────────────────

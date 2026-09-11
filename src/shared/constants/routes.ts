@@ -6,6 +6,7 @@ export const ROUTES = {
   },
   platform: {
     login: '/admin/login',
+    forgotPassword: '/admin/forgot-password',
   },
   tenantNotFound: '/tenant-not-found',
   admin: {
@@ -29,6 +30,7 @@ export const ROUTES = {
     certificate: '/admin/certificates',
     mailTemplates: '/admin/mail-templates',
     contentTypes: '/admin/content-types',
+    twoFactor: '/admin/two-factor',
     clientEvaluationNotes: '/admin/evaluation-notes',
   },
   portal: {

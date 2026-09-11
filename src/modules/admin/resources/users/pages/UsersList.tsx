@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { ChevronDown, Plus, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -15,8 +15,11 @@ import { useUsersListController } from '@/modules/shared/hooks/useUsersListContr
 import { Role } from '@/shared/constants/roles';
 import { useToggleUserActive } from '../hooks/useToggleUserActive';
 import { useDeleteUser } from '../hooks/useDeleteUser';
+import { useResetUserTwoFactor } from '../hooks/useResetUserTwoFactor';
 import { useDeleteConfirm } from '@/modules/shared/hooks/useDeleteConfirm';
 import { useTenantStore } from '@/shared/stores/tenant.store';
+import { useAuthStore } from '@/shared/stores/auth.store';
+import { ConfirmDialog } from '@/shared/components/confirm-dialog/ConfirmDialog';
 
 const ROLE_OPTIONS = [
   { value: Role.SUPER_ADMIN, label: 'Super admin' },
@@ -67,6 +70,10 @@ export function UsersList() {
   const { openConfirm: confirmDelete, dialog: deleteDialog } = useDeleteConfirm((id) =>
     deleteUser.mutate(id),
   );
+
+  const isSuperAdmin = useAuthStore((s) => s.role) === Role.SUPER_ADMIN;
+  const resetTwoFactor = useResetUserTwoFactor();
+  const [twoFactorTarget, setTwoFactorTarget] = useState<User | null>(null);
 
   const selectedRoleLabels = ROLE_OPTIONS.filter((o) => selectedRoles.includes(o.value));
   const selectedStatusLabel = STATUS_OPTIONS.find((o) => o.value === draftStatus)?.label;
@@ -223,6 +230,7 @@ export function UsersList() {
             toggleActive.mutate({ id: user.id, is_active: !user.is_active })
           }
           onDelete={(user) => confirmDelete(user)}
+          onResetTwoFactor={isSuperAdmin ? (user) => setTwoFactorTarget(user) : undefined}
         />
       </div>
 
@@ -234,6 +242,24 @@ export function UsersList() {
       />
 
       {deleteDialog}
+
+      <ConfirmDialog
+        open={twoFactorTarget !== null}
+        title="Réinitialiser la double authentification"
+        description={
+          twoFactorTarget
+            ? `Cette action révoque tous les appareils de confiance de ${twoFactorTarget.full_name} et invalide son code en cours. Un nouveau code lui sera demandé à la prochaine connexion.`
+            : undefined
+        }
+        confirmLabel="Réinitialiser"
+        onClose={() => setTwoFactorTarget(null)}
+        onConfirm={() => {
+          if (twoFactorTarget) {
+            resetTwoFactor.mutate(twoFactorTarget.id);
+            setTwoFactorTarget(null);
+          }
+        }}
+      />
     </div>
   );
 }

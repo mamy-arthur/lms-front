@@ -11,8 +11,13 @@ export const portalLearningPathsApi = {
   summary: (enrollmentId: string) =>
     apiGet<{ data: ApiPortalLearningPathSummary }>(`enrollments/${enrollmentId}/summary`),
 
-  learnerEvaluations: (learningPathId: string) =>
-    apiGet<{ data: ApiLearnerEvaluation[] }>(`learning-paths/${learningPathId}/evaluations`),
+  /**
+   * Porté par l'inscription et non par le parcours : les compteurs de tentatives
+   * appartiennent à l'inscription consultée. Un apprenant inscrit plusieurs fois
+   * à la même formation verrait sinon les tentatives de sa dernière inscription.
+   */
+  learnerEvaluations: (enrollmentId: string) =>
+    apiGet<{ data: ApiLearnerEvaluation[] }>(`enrollments/${enrollmentId}/evaluations`),
 };
 
 export const portalContentEntriesApi = {
@@ -65,9 +70,9 @@ export const portalContentTimeApi = {
 };
 
 export const evaluationAttemptsApi = {
-  start: (learningPathId: string, evaluationId: string) =>
+  start: (enrollmentId: string, evaluationId: string) =>
     apiPost<{ data: ApiEvaluationAttempt }>(
-      `learning-paths/${learningPathId}/evaluations/${evaluationId}/attempts`,
+      `enrollments/${enrollmentId}/evaluations/${evaluationId}/attempts`,
     ),
 
   answer: (attemptId: string, attemptQuizId: string, payload: Record<string, unknown>) =>

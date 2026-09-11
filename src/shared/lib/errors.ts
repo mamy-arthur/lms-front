@@ -44,6 +44,32 @@ function isGenericHttpStatusText(message: string): boolean {
 }
 
 /**
+ * Statut HTTP porté par une erreur du apiClient.
+ * `undefined` signale une panne réseau : la requête n'a jamais reçu de réponse.
+ */
+export function getApiErrorStatus(err: unknown): number | undefined {
+  if (!err || typeof err !== 'object') return undefined;
+  const status = (err as { status?: unknown }).status;
+
+  return typeof status === 'number' ? status : undefined;
+}
+
+/** Valeur de l'en-tête `Retry-After`, en secondes, quand l'API en pose un. */
+export function getRetryAfterSeconds(err: unknown): number | undefined {
+  if (!err || typeof err !== 'object') return undefined;
+  const headers = (err as { headers?: unknown }).headers;
+
+  if (!headers || typeof (headers as Headers).get !== 'function') return undefined;
+
+  const raw = (headers as Headers).get('Retry-After');
+  if (raw === null) return undefined;
+
+  const seconds = Number.parseInt(raw, 10);
+
+  return Number.isFinite(seconds) && seconds >= 0 ? seconds : undefined;
+}
+
+/**
  * Construit un message toast à partir des erreurs de validation react-hook-form / zod.
  */
 export function getFormValidationMessage(

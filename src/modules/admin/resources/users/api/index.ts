@@ -28,4 +28,8 @@ export const adminUsersApi = {
     apiPatch<{ data: User }>(`platform/users/${id}`, data),
 
   remove: (id: string) => apiDelete(`platform/users/${id}`),
+
+  /** Réinitialise le 2FA : invalide le challenge en cours et révoque les appareils de confiance. */
+  resetTwoFactor: (id: string) =>
+    apiPost<{ message: string }>(`platform/users/${id}/reset-two-factor`),
 };
