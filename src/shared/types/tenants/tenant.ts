@@ -19,8 +19,6 @@ export interface Tenant {
 export interface CreateTenantPayload {
   editor_name: string;
   editor_slug?: string;
-  client_name: string;
-  client_slug?: string;
   tenant_name: string;
   tenant_slug?: string;
   domain?: string;

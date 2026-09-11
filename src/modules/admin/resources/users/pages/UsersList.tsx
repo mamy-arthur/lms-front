@@ -12,6 +12,7 @@ import { AdminUsersTable } from './_components/admin-users-table';
 import { useUsersQuery } from '../hooks/useUsersQuery';
 import type { User, UserSearchParams } from '../types';
 import { useUsersListController } from '@/modules/shared/hooks/useUsersListController';
+import { useClientsQuery } from '@/modules/admin/resources/clients';
 import { Role } from '@/shared/constants/roles';
 import { useToggleUserActive } from '../hooks/useToggleUserActive';
 import { useDeleteUser } from '../hooks/useDeleteUser';
@@ -59,9 +60,21 @@ export function UsersList() {
   } = useUsersListController<User, UserSearchParams>({ defaultPageSize: 25 });
 
   const activeTenant = useTenantStore((s) => s.tenant);
+  const [clientFilter, setClientFilter] = useState<string | null>(null);
+
+  // Un CLIENT_MANAGER n'a qu'un client : le backend le force deja, afficher le
+  // filtre n'aurait aucun sens pour lui.
+  const callerRole = useAuthStore((s) => s.role);
+  const canFilterByClient = callerRole !== Role.CLIENT_MANAGER;
+  const { data: clients } = useClientsQuery(canFilterByClient);
+
   const scopedParams = useMemo(
-    () => ({ ...params, ...(activeTenant ? { tenant_id: activeTenant.id } : {}) }),
-    [params, activeTenant],
+    () => ({
+      ...params,
+      ...(activeTenant ? { tenant_id: activeTenant.id } : {}),
+      ...(clientFilter ? { client_id: clientFilter } : {}),
+    }),
+    [params, activeTenant, clientFilter],
   );
 
   const { data, isLoading } = useUsersQuery(scopedParams);
@@ -166,6 +179,47 @@ export function UsersList() {
                 )}
               </PopoverContent>
             </Popover>
+
+            {/* Client filter */}
+            {canFilterByClient && (clients?.length ?? 0) > 0 ? (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="justify-between text-xs font-normal">
+                    {clientFilter
+                      ? (clients?.find((c) => c.id === clientFilter)?.name ?? 'Client')
+                      : 'Tous les clients'}
+                    <ChevronDown className="ml-1 size-3.5 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-56 p-2" align="end">
+                  <div className="space-y-0.5">
+                    {(clients ?? []).map((c) => (
+                      <label
+                        key={c.id}
+                        className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 hover:bg-muted text-xs"
+                      >
+                        <Checkbox
+                          checked={clientFilter === c.id}
+                          onCheckedChange={() =>
+                            setClientFilter(clientFilter === c.id ? null : c.id)
+                          }
+                          className="data-[state=checked]:bg-(--color-primary) data-[state=checked]:border-(--color-primary)"
+                        />
+                        {c.name}
+                      </label>
+                    ))}
+                  </div>
+                  {clientFilter ? (
+                    <button
+                      className="mt-1.5 w-full rounded px-2 py-1 text-center text-xs text-muted-foreground hover:bg-muted"
+                      onClick={() => setClientFilter(null)}
+                    >
+                      Effacer
+                    </button>
+                  ) : null}
+                </PopoverContent>
+              </Popover>
+            ) : null}
 
             <Button
               onClick={handleOpenCreate}

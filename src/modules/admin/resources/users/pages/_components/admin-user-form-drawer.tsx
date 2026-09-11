@@ -18,6 +18,8 @@ import type { CreateUserPayload, UpdateUserPayload, User } from '../../types';
 import { useAuthStore } from '@/shared/stores/auth.store';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { tenantApi } from '@/modules/admin/resources/tenants/api';
+import { useClientsQuery } from '@/modules/admin/resources/clients';
+import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -58,9 +60,30 @@ const createSchema = z
     password: passwordSchema,
     role: z.nativeEnum(Role),
     tenant_id: z.string().uuid().nullable().optional(),
+    client_id: z.string().uuid().nullable().optional(),
+    client_name: z.string().max(255).nullable().optional(),
     is_active: z.boolean().default(true),
   })
-  .merge(profileFieldsSchema);
+  .merge(profileFieldsSchema)
+  .superRefine((values, ctx) => {
+    // Un stagiaire rejoint un client existant ; un responsable en crée un ou
+    // reprend celui du même nom.
+    if (values.role === Role.TRAINEE && !values.client_id) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['client_id'],
+        message: 'Client requis',
+      });
+    }
+
+    if (values.role === Role.CLIENT_MANAGER && !values.client_name?.trim() && !values.client_id) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['client_name'],
+        message: 'Nom du client requis',
+      });
+    }
+  });
 
 const updateSchema = z
   .object({
@@ -88,6 +111,8 @@ const ROLE_DEFAULTS: z.infer<typeof createSchema> = {
   password: '',
   role: Role.TRAINEE,
   tenant_id: null,
+  client_id: null,
+  client_name: null,
   is_active: true,
   address: null,
   zip_code: null,
@@ -119,6 +144,10 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
     queryFn: () => tenantApi.getAll(),
     enabled: isSuperAdmin && open,
   });
+
+  // Le rattachement client ne concerne que la creation : le backend n'expose pas
+  // encore le changement de client sur PATCH.
+  const { data: clients } = useClientsQuery(open && !isEdit);
 
   const schema = isEdit ? updateSchema : createSchema;
 
@@ -169,6 +198,8 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
         password: values.password as string,
         role: values.role,
         tenant_id: values.tenant_id ?? null,
+        client_id: values.role === Role.TRAINEE ? (values.client_id ?? null) : null,
+        client_name: values.role === Role.CLIENT_MANAGER ? (values.client_name ?? null) : null,
         is_active: values.is_active,
         address: values.address ?? null,
         zip_code: values.zip_code ?? null,
@@ -245,6 +276,12 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
             password: values.password as string,
             role: values.role as CreateUserPayload['role'],
             tenant_id: (values.tenant_id as string | null) ?? null,
+            client_id:
+              values.role === Role.TRAINEE ? ((values.client_id as string | null) ?? null) : null,
+            client_name:
+              values.role === Role.CLIENT_MANAGER
+                ? ((values.client_name as string | null) ?? null)
+                : null,
             is_active: values.is_active as boolean,
             address: (values.address as string | null) ?? null,
             zip_code: (values.zip_code as string | null) ?? null,
@@ -328,6 +365,67 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
     />
   ) : null;
 
+  // Le rattachement client suit le role choisi dans le formulaire, pas celui de
+  // l'utilisateur connecte : un responsable nomme son client, un stagiaire
+  // rejoint un client existant, les autres roles n'en ont pas.
+  const selectedRole = formState.form.watch('role');
+
+  const clientField =
+    isEdit || !selectedRole ? null : selectedRole === Role.CLIENT_MANAGER ? (
+      <FieldRoot
+        control={formState.form.control}
+        name="client_name"
+        render={({ field }) => (
+          <FieldGroup>
+            <FieldLabel className="text-xs">Nom du client</FieldLabel>
+            <FieldContent>
+              <Input
+                placeholder="Ex : Globex Corporation"
+                className="text-xs"
+                value={field.value ?? ''}
+                onChange={(e) => field.onChange(e.target.value || null)}
+                aria-label="Nom du client"
+              />
+            </FieldContent>
+            <p className="text-[11px] text-muted-foreground">
+              Le client est créé s’il n’existe pas encore dans ce tenant.
+            </p>
+            <FieldError />
+          </FieldGroup>
+        )}
+      />
+    ) : selectedRole === Role.TRAINEE ? (
+      <FieldRoot
+        control={formState.form.control}
+        name="client_id"
+        render={({ field }) => (
+          <FieldGroup>
+            <FieldLabel className="text-xs">Client</FieldLabel>
+            <Select onValueChange={field.onChange} value={field.value ?? undefined}>
+              <FieldContent>
+                <SelectTrigger size="default" aria-label="Client" className="w-full">
+                  <SelectValue placeholder="Sélectionner un client" />
+                </SelectTrigger>
+              </FieldContent>
+              <SelectContent>
+                {(clients ?? []).map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {clients?.length === 0 ? (
+              <p className="text-[11px] text-muted-foreground">
+                Aucun client dans ce tenant. Créez d’abord un responsable.
+              </p>
+            ) : null}
+            <FieldError />
+          </FieldGroup>
+        )}
+      />
+    ) : null;
+
   return (
     <Sheet open={open} onOpenChange={(nextOpen) => !nextOpen && formState.handleClose()}>
       <SheetContent
@@ -359,6 +457,7 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
           extraFields={
             <>
               {tenantField}
+              {clientField}
               <UserProfileFields form={formState.form} />
               {activeField}
             </>
