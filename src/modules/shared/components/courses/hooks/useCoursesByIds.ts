@@ -16,7 +16,7 @@ export function useCoursesByIds(ids: string[]) {
   const idsParam = requestedIds.join(',');
 
   return useQuery<Course[]>({
-    queryKey: [...courseKeys.all, 'by-ids', idsParam],
+    queryKey: [...courseKeys.lists(), 'by-ids', idsParam],
     queryFn: async () => {
       const courses: Course[] = [];
       for (let offset = 0; offset < requestedIds.length; offset += MAX_IDS) {

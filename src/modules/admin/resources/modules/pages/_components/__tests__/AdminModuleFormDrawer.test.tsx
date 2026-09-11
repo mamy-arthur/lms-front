@@ -107,7 +107,7 @@ jest.mock('@/modules/shared/components/courses/hooks/useCoursesInfinite', () => 
 }));
 
 jest.mock('@/shared/api/courses.api', () => ({
-  coursesApi: { list: jest.fn() },
+  coursesApi: { list: jest.fn(), update: jest.fn(), remove: jest.fn() },
 }));
 
 jest.mock('@/modules/shared/components/courses/hooks/useCategoryData', () => ({
@@ -140,12 +140,13 @@ jest.mock(
 
 // ─── Imports ──────────────────────────────────────────────────────────────────
 import React from 'react';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, renderHook, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AdminModuleFormDrawer } from '../AdminModuleFormDrawer';
 import type { Module } from '../../../types';
 import type { Course } from '@/modules/shared/components/courses/types';
+import { useCourseData } from '@/modules/shared/components/courses/hooks/useCourseData';
 import { coursesApi } from '@/shared/api/courses.api';
 import type { ApiCourse } from '@/shared/types/course.types';
 
@@ -222,10 +223,15 @@ interface RenderOptions {
   module?: Module;
   onClose?: jest.Mock;
   onSuccess?: jest.Mock;
+  queryClient?: QueryClient;
 }
 
-function renderDrawer({ module, onClose = jest.fn(), onSuccess = jest.fn() }: RenderOptions = {}) {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+function renderDrawer({
+  module,
+  onClose = jest.fn(),
+  onSuccess = jest.fn(),
+  queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+}: RenderOptions = {}) {
   return render(
     <QueryClientProvider client={queryClient}>
       <AdminModuleFormDrawer open={true} onClose={onClose} onSuccess={onSuccess} module={module} />
@@ -328,6 +334,51 @@ describe('AdminModuleFormDrawer', () => {
   // ── Mode édition ───────────────────────────────────────────────────────────
 
   describe('édition', () => {
+    it('actualise les cours sélectionnés après un renommage puis une suppression sans fermer le drawer', async () => {
+      const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      const course = MOCK_LARGE_MODULE_COURSES[0];
+      const renamedCourse = { ...course, full_name: 'Leçon renommée' };
+      let savedCourses = [course];
+      mockListCourses.mockImplementation(async (params) => ({
+        data: savedCourses.filter((item) => params?.ids?.split(',').includes(item.id)),
+      }));
+      jest.mocked(coursesApi.update).mockImplementation(async () => {
+        savedCourses = [renamedCourse];
+        return { data: renamedCourse };
+      });
+      jest.mocked(coursesApi.remove).mockImplementation(async () => {
+        savedCourses = [];
+      });
+      renderDrawer({
+        module: { ...MOCK_MODULE, courseIds: [course.id], coursesCount: 1 },
+        queryClient,
+      });
+      const { result } = renderHook(() => useCourseData(), {
+        wrapper: ({ children }) => (
+          <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+        ),
+      });
+      expect(await screen.findByText(course.full_name)).toBeInTheDocument();
+
+      await act(async () => {
+        await result.current.updateMutation.mutateAsync({
+          id: course.id,
+          full_name: renamedCourse.full_name,
+        });
+      });
+
+      expect(await screen.findByText(renamedCourse.full_name)).toBeInTheDocument();
+      expect(screen.queryByText(course.full_name)).not.toBeInTheDocument();
+
+      await act(async () => {
+        await result.current.deleteMutation.mutateAsync(course.id);
+      });
+
+      await waitFor(() => {
+        expect(screen.queryByText(renamedCourse.full_name)).not.toBeInTheDocument();
+      });
+    });
+
     it('résout les 101 cours enregistrés et conserve leurs associations dans le bon ordre', async () => {
       const user = userEvent.setup();
       const courseIds = MOCK_LARGE_MODULE_COURSES.map((course) => course.id).reverse();
