@@ -350,7 +350,7 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
             <Switch
               checked={field.value}
               onCheckedChange={field.onChange}
-              aria-label="Compte actif"
+              aria-label="Autoriser l’accès au compte"
               className="data-checked:bg-(--color-primary)"
             />
           </div>
