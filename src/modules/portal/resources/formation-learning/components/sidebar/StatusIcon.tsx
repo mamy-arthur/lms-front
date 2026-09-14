@@ -31,7 +31,7 @@ export default function StatusIcon({ status }: { status: ProgressStatus }) {
 
   if (status === 'locked') {
     return (
-      <span>
+      <span className={base}>
         <Lock className="size-2.5 text-slate-400" />
       </span>
     );
