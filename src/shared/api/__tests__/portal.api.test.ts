@@ -20,9 +20,9 @@ describe('Complétion des contenus par module', () => {
   it('adresse chaque validation au module concerné et permet de répéter le même appel', async () => {
     jest.mocked(apiPost).mockResolvedValue(undefined);
     for (const competencyId of [COMPETENCY_A, COMPETENCY_A, COMPETENCY_B]) {
-      await expect(portalContentEntriesApi.markComplete(
-        ENROLLMENT_ID, competencyId, COURSE_ID, ENTRY_ID,
-      )).resolves.toBeUndefined();
+      await expect(
+        portalContentEntriesApi.markComplete(ENROLLMENT_ID, competencyId, COURSE_ID, ENTRY_ID),
+      ).resolves.toBeUndefined();
     }
     expect(jest.mocked(apiPost).mock.calls).toEqual(
       [COMPETENCY_A, COMPETENCY_A, COMPETENCY_B].map((competencyId) => [
@@ -41,8 +41,8 @@ describe('Complétion des contenus par module', () => {
   it('propage le refus de validation au lieu de considérer le contenu terminé', async () => {
     const error = { status: 403, message: 'Accès refusé' };
     jest.mocked(apiPost).mockRejectedValue(error);
-    await expect(portalContentEntriesApi.markComplete(
-      ENROLLMENT_ID, COMPETENCY_A, COURSE_ID, ENTRY_ID,
-    )).rejects.toBe(error);
+    await expect(
+      portalContentEntriesApi.markComplete(ENROLLMENT_ID, COMPETENCY_A, COURSE_ID, ENTRY_ID),
+    ).rejects.toBe(error);
   });
 });

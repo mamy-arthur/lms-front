@@ -123,19 +123,23 @@ function useSharedCourse(entryCount = 2) {
     modules: SUMMARY.modules.map((module) => ({
       ...module,
       progress: { completed: 0, total: entryCount, percent: 0 },
-      courses: [{
-        id: 'shared-course',
-        name: 'Cours partagé',
-        sections: [{
-          id: 'shared-section',
-          name: 'Section partagée',
-          content_entries: Array.from({ length: entryCount }, (_, index) => ({
-            id: `shared-entry-${index + 1}`,
-            title: `Contenu partagé ${index + 1}`,
-            completed: false,
-          })),
-        }],
-      }],
+      courses: [
+        {
+          id: 'shared-course',
+          name: 'Cours partagé',
+          sections: [
+            {
+              id: 'shared-section',
+              name: 'Section partagée',
+              content_entries: Array.from({ length: entryCount }, (_, index) => ({
+                id: `shared-entry-${index + 1}`,
+                title: `Contenu partagé ${index + 1}`,
+                completed: false,
+              })),
+            },
+          ],
+        },
+      ],
     })),
   };
 }
@@ -212,9 +216,11 @@ describe('Progression séquentielle du stagiaire', () => {
       await user.click(screen.getByRole('button', { name: 'Terminer et continuer' }));
       await screen.findByText(`Texte de entry-${entryNumber + 1}`);
       await waitFor(() =>
-        expect(screen.getByRole('button', {
-          name: entryNumber === 4 ? 'Terminer' : 'Terminer et continuer',
-        })).toBeEnabled(),
+        expect(
+          screen.getByRole('button', {
+            name: entryNumber === 4 ? 'Terminer' : 'Terminer et continuer',
+          }),
+        ).toBeEnabled(),
       );
     }
 
@@ -239,18 +245,24 @@ describe('Progression séquentielle du stagiaire', () => {
   it('attend la sauvegarde puis le résumé actualisé avant de débloquer et charger le suivant', async () => {
     let finishSave!: () => void;
     let finishRefresh!: () => void;
-    mockComplete.mockImplementation(() => new Promise<void>((resolve) => {
-      finishSave = () => {
-        completeEntry('entry-2');
-        resolve();
-      };
-    }));
+    mockComplete.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          finishSave = () => {
+            completeEntry('entry-2');
+            resolve();
+          };
+        }),
+    );
     const { user } = setup();
     await screen.findByText('Texte de entry-2');
     await user.click(screen.getByRole('button', { name: 'Contenu 2' }));
-    mockSummary.mockImplementationOnce(() => new Promise((resolve) => {
-      finishRefresh = () => resolve({ data: summary });
-    }));
+    mockSummary.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finishRefresh = () => resolve({ data: summary });
+        }),
+    );
 
     await user.click(screen.getByRole('button', { name: 'Terminer et continuer' }));
     expect(screen.getByRole('button', { name: 'Terminer et continuer' })).toBeDisabled();
@@ -396,7 +408,10 @@ describe('Progression séquentielle du stagiaire', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: 'Suivant' })).toBeDisabled());
     expect(mockComplete).toHaveBeenCalledTimes(1);
     expect(mockComplete).toHaveBeenCalledWith(
-      ENROLLMENT_ID, 'module-2', 'shared-course', 'shared-entry-1',
+      ENROLLMENT_ID,
+      'module-2',
+      'shared-course',
+      'shared-entry-1',
     );
   });
 
@@ -468,12 +483,14 @@ describe('Progression séquentielle du stagiaire', () => {
     await screen.findByRole('button', { name: 'Afficher en plein écran' });
     await waitFor(() => expect(screen.getByRole('button', { name: 'Terminer' })).toBeEnabled());
 
-    const scormApi = (window as unknown as {
-      API: {
-        LMSSetValue: (key: string, value: string) => string;
-        LMSCommit: () => string;
-      };
-    }).API;
+    const scormApi = (
+      window as unknown as {
+        API: {
+          LMSSetValue: (key: string, value: string) => string;
+          LMSCommit: () => string;
+        };
+      }
+    ).API;
     await act(async () => {
       scormApi.LMSSetValue('cmi.core.lesson_status', 'completed');
       scormApi.LMSCommit();
