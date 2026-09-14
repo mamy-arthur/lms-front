@@ -1,5 +1,6 @@
 import { ContentTypeResource } from '@/shared/types/content-type.types';
 import type { CourseVisibility } from '@/shared/types/course.types';
+import type { ApiCatalogLockOrigin } from '@/shared/types/catalog-lock.types';
 
 export type Category = {
   id: string;
@@ -21,6 +22,10 @@ export type Course = {
   visible: boolean;
   visibility: CourseVisibility;
   description?: string;
+  /** True when this course sits in a module belonging to a sold learning path. */
+  isLocked?: boolean;
+  /** The (module, learning path) pairs behind the lock — empty when unlocked. */
+  lockOrigins?: ApiCatalogLockOrigin[];
 };
 
 export type ContentType = 'folder' | 'file' | 'page' | 'scorm' | 'survey' | 'url' | 'text-media';

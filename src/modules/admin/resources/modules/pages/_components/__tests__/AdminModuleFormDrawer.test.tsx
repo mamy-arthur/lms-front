@@ -163,6 +163,8 @@ const MOCK_MODULE: Module = {
   tenantId: '1',
   courseIds: [],
   coursesCount: 0,
+  isLocked: false,
+  lockOrigins: [],
   createdAt: '2025-01-01T00:00:00Z',
   updatedAt: '2025-01-01T00:00:00Z',
 };
@@ -233,6 +235,8 @@ function moduleDetailWith(courses: ApiCourse[]): Module {
     courseIds: courses.map((course) => course.id),
     courses: courses.map(toModuleCourse),
     coursesCount: courses.length,
+    isLocked: false,
+    lockOrigins: [],
   };
 }
 

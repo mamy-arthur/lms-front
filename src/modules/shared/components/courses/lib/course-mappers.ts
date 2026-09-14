@@ -34,5 +34,9 @@ export function mapApiCourse(api: ApiCourse): Course {
     visible: api.visibility === 'PUBLISHED',
     visibility: api.visibility,
     description: api.description ?? undefined,
+    // Carried by the list and detail endpoints; absent elsewhere, in which case the
+    // course reports unlocked and the server's 409 remains the real guard.
+    isLocked: api.is_locked ?? false,
+    lockOrigins: api.lock_origins ?? [],
   };
 }

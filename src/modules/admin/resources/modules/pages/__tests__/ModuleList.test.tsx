@@ -108,6 +108,8 @@ const MOD_1: Module = {
   tenantId: '1',
   courseIds: [],
   coursesCount: 0,
+  isLocked: false,
+  lockOrigins: [],
   createdAt: '2025-01-01T00:00:00Z',
   updatedAt: '2025-01-01T00:00:00Z',
 };
@@ -122,6 +124,8 @@ const MOD_2: Module = {
   tenantId: '1',
   courseIds: [],
   coursesCount: 0,
+  isLocked: false,
+  lockOrigins: [],
   createdAt: '2025-02-01T00:00:00Z',
   updatedAt: '2025-02-01T00:00:00Z',
 };

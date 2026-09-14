@@ -1,6 +1,6 @@
 import { memo, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { Eye, EyeOff, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { Eye, EyeOff, Lock, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -15,6 +15,7 @@ import {
   type DataTableColumn,
   type DataTableSort,
 } from '@/shared/components/ui/DataTable';
+import { describeLockOrigins } from '@/shared/types/catalog-lock.types';
 import type { Category, Course } from '../types/index';
 
 interface CourseDataTableProps {
@@ -55,6 +56,9 @@ function CourseDataTableBase({
   const router = useRouter();
   const ActionMenu = useCallback(
     function ActionMenu({ item }: { item: Course }) {
+      const locked = item.isLocked ?? false;
+      const lockReason = `${describeLockOrigins(item.lockOrigins ?? [])} La suppression et la visibilité sont figées.`;
+
       return (
         <div className="text-right" onClick={(e) => e.stopPropagation()}>
           <DropdownMenu>
@@ -73,7 +77,9 @@ function CourseDataTableBase({
                 <Pencil className="mr-2 size-3.5 text-muted-foreground" />
                 Modifier
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onToggleVisibility(item)}>
+              {/* Hiding a course removes it from the learner's tree just like a
+                  delete does, so the sale freezes both. */}
+              <DropdownMenuItem disabled={locked} onClick={() => onToggleVisibility(item)}>
                 {item.visible ? (
                   <>
                     <EyeOff className="mr-2 size-3.5 text-muted-foreground" />
@@ -88,12 +94,21 @@ function CourseDataTableBase({
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
+                disabled={locked}
                 className="text-destructive focus:text-destructive"
                 onClick={() => onDelete(item)}
               >
                 <Trash2 className="mr-2 size-3.5" />
                 Supprimer
               </DropdownMenuItem>
+              {locked && (
+                // A caption, not a tooltip: a disabled menu item never receives the
+                // hover Radix would need to open one.
+                <p className="flex items-start gap-1.5 border-t px-2 py-2 text-[11px] leading-snug text-muted-foreground">
+                  <Lock className="mt-0.5 size-3 shrink-0" />
+                  <span>{lockReason}</span>
+                </p>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

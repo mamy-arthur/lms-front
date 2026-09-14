@@ -11,6 +11,7 @@ import {
   BookOpen,
   GripVertical,
   Loader2,
+  Lock,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -58,6 +59,7 @@ import {
   useRemoveEntry,
   useMoveEntry,
 } from '../hooks/useCourseContentApi';
+import { apiMessage } from '@/shared/utils/api-error';
 import { AddContentModal } from './AddContentModal';
 import { SortableEntryItem } from './SortableEntryItem';
 
@@ -84,6 +86,13 @@ interface Props {
   onPendingEntryCancel?: () => void;
   /** Called when the user picks a ContentType from the modal — NO API call yet. */
   onContentTypeSelected?: (ct: ContentTypeResource) => void;
+  /**
+   * Course frozen by a sale. Adding and deleting are refused server-side;
+   * renaming and reordering stay open, so only the structural controls react.
+   */
+  locked?: boolean;
+  /** Names the module and learning path behind the lock. */
+  lockReason?: string;
 }
 
 export function SectionCard({
@@ -97,6 +106,8 @@ export function SectionCard({
   onPendingEntrySelect,
   onPendingEntryCancel,
   onContentTypeSelected,
+  locked = false,
+  lockReason = '',
 }: Props) {
   const [addOpen, setAddOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -142,8 +153,8 @@ export function SectionCard({
         orderedIds,
         position: newIndex,
       });
-    } catch {
-      toast.error('Erreur lors du réordonnancement du contenu');
+    } catch (err) {
+      toast.error(apiMessage(err, 'Erreur lors du réordonnancement du contenu'));
     }
   };
 
@@ -151,8 +162,8 @@ export function SectionCard({
     try {
       await removeEntry.mutateAsync(entryId);
       onEntryDeleted?.(entryId);
-    } catch {
-      toast.error('Erreur lors de la suppression');
+    } catch (err) {
+      toast.error(apiMessage(err, 'Erreur lors de la suppression'));
     }
   };
 
@@ -163,16 +174,16 @@ export function SectionCard({
         name: title.trim() || section.name,
       });
       setEditOpen(false);
-    } catch {
-      toast.error('Erreur lors de la mise à jour de la section');
+    } catch (err) {
+      toast.error(apiMessage(err, 'Erreur lors de la mise à jour de la section'));
     }
   };
 
   const handleDeleteSection = async () => {
     try {
       await removeSection.mutateAsync(section.id);
-    } catch {
-      toast.error('Erreur lors de la suppression de la section');
+    } catch (err) {
+      toast.error(apiMessage(err, 'Erreur lors de la suppression de la section'));
     }
   };
 
@@ -224,7 +235,7 @@ export function SectionCard({
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={handleDeleteSection}
-                disabled={removeSection.isPending}
+                disabled={removeSection.isPending || locked}
                 className="text-destructive"
               >
                 {removeSection.isPending ? (
@@ -234,6 +245,14 @@ export function SectionCard({
                 )}
                 Supprimer
               </DropdownMenuItem>
+              {locked && lockReason && (
+                // A caption, not a tooltip: a disabled menu item never receives the
+                // hover Radix would need to open one.
+                <p className="flex items-start gap-1.5 border-t px-2 py-2 text-[11px] leading-snug text-muted-foreground">
+                  <Lock className="mt-0.5 size-3 shrink-0" />
+                  <span>{lockReason}</span>
+                </p>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -259,6 +278,8 @@ export function SectionCard({
                     onSelect={() => onSelectEntry(entry)}
                     onDelete={() => handleDeleteEntry(entry.id)}
                     isDeleting={removeEntry.isPending && removeEntry.variables === entry.id}
+                    locked={locked}
+                    lockReason={lockReason}
                   />
                 ))}
               </SortableContext>
@@ -298,15 +319,20 @@ export function SectionCard({
               </div>
             )}
 
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setAddOpen(true)}
-              className="mt-2 w-full justify-start"
-            >
-              <Plus className="mr-2 size-4" />
-              Ajouter un contenu
-            </Button>
+            {/* Hidden rather than disabled, like "Ajouter une section": the course
+                banner already carries the reason, and a greyed-out row per section
+                would repeat it once per section for nothing. */}
+            {!locked && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setAddOpen(true)}
+                className="mt-2 w-full justify-start"
+              >
+                <Plus className="mr-2 size-4" />
+                Ajouter un contenu
+              </Button>
+            )}
           </div>
 
           <AddContentModal

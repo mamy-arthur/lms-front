@@ -1,3 +1,5 @@
+import type { ApiCatalogLockOrigin } from '@/shared/types/catalog-lock.types';
+
 export type CourseVisibility = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
 
 export interface ApiCourse {
@@ -13,6 +15,9 @@ export interface ApiCourse {
   description: string | null;
   created_at: string;
   updated_at: string;
+  /** Catalogue sale lock — present on the detail endpoints, absent from list rows. */
+  is_locked?: boolean;
+  lock_origins?: ApiCatalogLockOrigin[];
 }
 
 export interface ApiCourseCategory {

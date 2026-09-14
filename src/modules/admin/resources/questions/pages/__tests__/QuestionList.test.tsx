@@ -112,6 +112,8 @@ function makeModule(id: string, shortname: string): Module {
     tenantId: '1',
     courseIds: [],
     coursesCount: 0,
+    isLocked: false,
+    lockOrigins: [],
     createdAt: '2025-01-01T00:00:00Z',
     updatedAt: '2025-01-01T00:00:00Z',
   };

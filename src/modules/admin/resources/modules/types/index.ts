@@ -1,4 +1,5 @@
 import type { Course } from '@/modules/shared/components/courses/types';
+import type { ApiCatalogLock, ApiCatalogLockOrigin } from '@/shared/types/catalog-lock.types';
 
 /** What the module UI displays for a linked course — the rest lives on /platform/courses. */
 export type ModuleCourse = Pick<Course, 'id' | 'fullName' | 'categoryName'>;
@@ -20,6 +21,10 @@ export interface Module {
   coursesCount: number;
   createdAt: string;
   updatedAt: string;
+  /** True when this module sits in at least one learning path that has been sold. */
+  isLocked: boolean;
+  /** The (module, learning path) pairs behind the lock — empty when unlocked. */
+  lockOrigins: ApiCatalogLockOrigin[];
 }
 
 export interface ModulePayload {
@@ -53,7 +58,7 @@ export interface CompetencyCourseApi {
 }
 
 /** Raw object returned by the backend /platform/competencies endpoints */
-export interface CompetencyApiResponse {
+export interface CompetencyApiResponse extends ApiCatalogLock {
   id: string;
   shortname?: string | null;
   idnumber?: string | null;
@@ -134,5 +139,9 @@ export function normalizeModule(raw: CompetencyApiResponse): Module {
     coursesCount: raw.courses_count ?? courseIds.length,
     createdAt: raw.created_at ?? '',
     updatedAt: raw.updated_at ?? '',
+    // Only the list endpoint carries the lock; detail payloads omit it, so a module
+    // rebuilt from a detail response reports unlocked and relies on the 409 instead.
+    isLocked: raw.is_locked ?? false,
+    lockOrigins: raw.lock_origins ?? [],
   };
 }

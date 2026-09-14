@@ -15,9 +15,18 @@ interface Props {
   selection: Selection;
   onDeselect: () => void;
   onCreated: (entry: ApiContentEntry) => void;
+  /** Course frozen by a sale — publishing is refused, editing the payload is not. */
+  locked?: boolean;
+  lockReason?: string;
 }
 
-export function EditorPanel({ selection, onDeselect, onCreated }: Props) {
+export function EditorPanel({
+  selection,
+  onDeselect,
+  onCreated,
+  locked = false,
+  lockReason = '',
+}: Props) {
   const existingContentTypeId =
     selection?.kind === 'existing' ? selection.entry.content_type_id : undefined;
   const { data: contentType, isLoading } = useContentTypeQuery(existingContentTypeId);
@@ -75,6 +84,8 @@ export function EditorPanel({ selection, onDeselect, onCreated }: Props) {
       entry={selection.entry}
       contentType={contentType}
       onDeselect={onDeselect}
+      locked={locked}
+      lockReason={lockReason}
     />
   );
 }
