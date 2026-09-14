@@ -93,7 +93,7 @@ const buildCreateSchema = (callerHasClient: boolean) =>
     }
   });
 
-const updateSchema = z
+const updateSchemaShape = z
   .object({
     first_name: z.string().min(1, 'Prénom requis').max(120),
     last_name: z.string().min(1, 'Nom requis').max(120),
@@ -105,6 +105,28 @@ const updateSchema = z
     is_active: z.boolean(),
   })
   .merge(profileFieldsSchema);
+
+// Le backend n'exige un client que si ce PATCH en change la valeur ou le role :
+// un compte anterieur au cloisonnement reste modifiable tel quel.
+const buildUpdateSchema = (canReassignClient: boolean, current?: User) =>
+  updateSchemaShape.superRefine((values, ctx) => {
+    const roleNeedsClient = values.role === Role.TRAINEE || values.role === Role.CLIENT_MANAGER;
+
+    if (!canReassignClient || !roleNeedsClient || values.client_id) {
+      return;
+    }
+
+    const clientCleared = (current?.client_id ?? null) !== null;
+    const roleChanged = values.role !== current?.role;
+
+    if (clientCleared || roleChanged) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['client_id'],
+        message: 'Client requis',
+      });
+    }
+  });
 
 const ROLE_LABELS: Record<string, string> = {
   [Role.SUPER_ADMIN]: 'Super admin',
@@ -167,6 +189,11 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
   );
 
   const createSchema = useMemo(() => buildCreateSchema(callerHasClient), [callerHasClient]);
+
+  const updateSchema = useMemo(
+    () => buildUpdateSchema(canReassignClient, user),
+    [canReassignClient, user],
+  );
 
   const schema = isEdit ? updateSchema : createSchema;
 
