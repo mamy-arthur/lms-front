@@ -1,3 +1,8 @@
+import type { Course } from '@/modules/shared/components/courses/types';
+
+/** What the module UI displays for a linked course — the rest lives on /platform/courses. */
+export type ModuleCourse = Pick<Course, 'id' | 'fullName' | 'categoryName'>;
+
 export interface Module {
   id: string;
   shortname: string;
@@ -9,6 +14,8 @@ export interface Module {
   category_name: string | null;
   tenantId: string;
   courseIds: string[];
+  /** Linked courses with names/categories — detail endpoints only, the list endpoint omits them. */
+  courses?: ModuleCourse[];
   /** Total linked courses — from `courses_count` (list endpoint doesn't return full course ids/objects). */
   coursesCount: number;
   createdAt: string;
@@ -37,15 +44,12 @@ export interface ModuleSearchParams {
   page_size?: number;
 }
 
-export type AvailableCourseStatus = 'AVAILABLE' | 'ALREADY_LINKED';
-
-/** Course item returned by GET /platform/competencies/available-courses */
-export interface AvailableCourse {
-  id: string;
-  fullName: string;
-  categoryId: string;
-  categoryName: string;
-  status: AvailableCourseStatus;
+/** Linked course as returned by the competency detail endpoints, already resolved server-side. */
+export interface CompetencyCourseApi {
+  course_id: string;
+  position: number;
+  full_name: string | null;
+  category_name: string | null;
 }
 
 /** Raw object returned by the backend /platform/competencies endpoints */
@@ -58,9 +62,9 @@ export interface CompetencyApiResponse {
   category_id?: string | null;
   category_name?: string | null;
   courses_count?: number;
-  /** Course objects on detail/duplicate endpoints */
-  courses?: Array<{ id: string }>;
-  /** Course UUID array on list/create/update endpoints */
+  /** Course objects on detail/create/update/duplicate endpoints */
+  courses?: CompetencyCourseApi[];
+  /** Course UUID array on list endpoints */
   course_ids?: string[];
   created_at?: string | null;
   updated_at?: string | null;
@@ -105,19 +109,17 @@ export interface UpdateCompetencyCategoryPayload {
 
 /** Maps a backend CompetencyApiResponse to the frontend Module model. */
 export function normalizeModule(raw: CompetencyApiResponse): Module {
-  // Handle any course shape: string UUIDs, { id }, { course_id }, full objects
-  const extractId = (item: unknown): string => {
-    if (typeof item === 'string') return item;
-    if (item && typeof item === 'object') {
-      const o = item as Record<string, unknown>;
-      return String(o.id ?? o.course_id ?? o.courseId ?? '');
-    }
-    return '';
-  };
-  const courseIds = [
-    ...(raw.course_ids ?? []).map(extractId),
-    ...(raw.courses ?? []).map(extractId),
-  ].filter(Boolean);
+  const linked = [...(raw.courses ?? [])].sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+  const courseIds = [...(raw.course_ids ?? []), ...linked.map((course) => course.course_id)].filter(
+    Boolean,
+  );
+
+  const courses: ModuleCourse[] = linked.map((course) => ({
+    id: course.course_id,
+    // Falls back to the id so a course with no resolved name never renders as a blank row.
+    fullName: course.full_name ?? course.course_id,
+    categoryName: course.category_name ?? null,
+  }));
 
   return {
     id: raw.id,
@@ -128,6 +130,7 @@ export function normalizeModule(raw: CompetencyApiResponse): Module {
     category_name: raw.category_name ?? null,
     tenantId: raw.tenant_id ?? '',
     courseIds,
+    courses,
     coursesCount: raw.courses_count ?? courseIds.length,
     createdAt: raw.created_at ?? '',
     updatedAt: raw.updated_at ?? '',

@@ -36,10 +36,14 @@ function AdminModuleFormDrawerBase({
   // Fetch full details when editing to ensure course_ids are populated
   // (the list endpoint may omit them for performance).
   // Keyed by idnumber per cache convention.
-  const { data: detailedModule } = useModule(
+  const { data: detailedModule, isLoading: isDetailedModuleLoading } = useModule(
     isEdit ? module?.idnumber : undefined,
     isEdit ? module?.id : undefined,
   );
+
+  // The list payload never carries course names, so until the detail request
+  // resolves the selection would otherwise render raw course ids.
+  const isCoursesLoading = isEdit && isDetailedModuleLoading && !detailedModule;
 
   const defaultValues = useMemo(() => {
     if (module) {
@@ -54,11 +58,18 @@ function AdminModuleFormDrawerBase({
     return MODULE_FORM_DEFAULTS;
   }, [module, detailedModule]);
 
+  // The detail endpoint embeds each linked course with its name and category,
+  // so the form can label the selection without resolving ids one by one.
+  const formModule = useMemo(
+    () => (module ? { ...module, courses: detailedModule?.courses ?? module.courses } : undefined),
+    [module, detailedModule],
+  );
+
   const formState = useModuleFormDrawer({
     open,
     onClose,
     onSuccess,
-    module,
+    module: formModule,
     createMutation,
     updateMutation,
     schema: moduleSchema,
@@ -107,9 +118,9 @@ function AdminModuleFormDrawerBase({
           onSubmit={formState.onSubmit}
           selectedCourseIds={formState.selectedCourseIds}
           toggleCourse={formState.toggleCourse}
-          addCourseIds={formState.addCourseIds}
-          availableCourses={formState.availableCourses}
-          isLoadingCourses={formState.isLoadingCourses}
+          addCourses={formState.addCourses}
+          selectedCourses={formState.selectedCourses}
+          isCoursesLoading={isCoursesLoading}
         />
       </SheetContent>
     </Sheet>
