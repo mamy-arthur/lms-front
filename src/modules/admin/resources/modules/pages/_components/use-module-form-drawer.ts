@@ -4,8 +4,8 @@ import { useWatch } from 'react-hook-form';
 import type { z } from 'zod';
 import type { MutationLike } from '@/shared/types/mutation';
 import { useFormDrawer as _useFormDrawer } from '@/shared/components/form-drawer/use-form-drawer';
-import { useCoursesByIds } from '@/modules/shared/components/courses/hooks/useCoursesByIds';
 import type { Course } from '@/modules/shared/components/courses/types';
+import type { ModuleCourse } from '../../types';
 
 export type { MutationLike };
 
@@ -15,6 +15,8 @@ export interface ModuleFormModule {
   idnumber: string;
   description: string;
   courseIds: string[];
+  /** Already resolved by the competency detail endpoint — no per-id lookup needed. */
+  courses?: ModuleCourse[];
 }
 
 export function useModuleFormDrawer({
@@ -90,20 +92,18 @@ export function useModuleFormDrawer({
     [base.form],
   );
 
-  const { data: persistedCourses = [] } = useCoursesByIds(selectedCourseIds);
-
   // Courses picked in the dialog are kept locally so their name shows up
-  // immediately, before the by-ids query has caught up with the new selection.
+  // immediately, before the module payload has caught up with the new selection.
   const selectedCourses = useMemo(() => {
-    const byId = new Map<string, Course>();
-    for (const course of [...pickedCourses, ...persistedCourses]) {
+    const byId = new Map<string, ModuleCourse>();
+    for (const course of [...pickedCourses, ...(module?.courses ?? [])]) {
       byId.set(course.id, course);
     }
     return selectedCourseIds.flatMap((id) => {
       const course = byId.get(id);
       return course ? [course] : [];
     });
-  }, [pickedCourses, persistedCourses, selectedCourseIds]);
+  }, [pickedCourses, module?.courses, selectedCourseIds]);
 
   return {
     ...base,

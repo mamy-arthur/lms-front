@@ -97,8 +97,9 @@ jest.mock('@/modules/admin/resources/modules/hooks/useUpdateModule', () => ({
     reset: jest.fn(),
   }),
 }));
+let mockModuleDetail: Module | undefined;
 jest.mock('@/modules/admin/resources/modules/hooks/useModule', () => ({
-  useModule: () => ({ data: undefined }),
+  useModule: () => ({ data: mockModuleDetail }),
 }));
 
 const mockUseCoursesInfinite = jest.fn();
@@ -140,13 +141,12 @@ jest.mock(
 
 // ─── Imports ──────────────────────────────────────────────────────────────────
 import React from 'react';
-import { act, render, renderHook, screen, waitFor, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AdminModuleFormDrawer } from '../AdminModuleFormDrawer';
-import type { Module } from '../../../types';
+import type { Module, ModuleCourse } from '../../../types';
 import type { Course } from '@/modules/shared/components/courses/types';
-import { useCourseData } from '@/modules/shared/components/courses/hooks/useCourseData';
 import { coursesApi } from '@/shared/api/courses.api';
 import type { ApiCourse } from '@/shared/types/course.types';
 
@@ -218,6 +218,24 @@ const EMPTY_CATALOG = {
   isFetchNextPageError: false,
 };
 
+/** Mirrors what the competency detail endpoint now embeds for each linked course. */
+function toModuleCourse(api: ApiCourse): ModuleCourse {
+  return {
+    id: api.id,
+    fullName: api.full_name,
+    categoryName: null,
+  };
+}
+
+function moduleDetailWith(courses: ApiCourse[]): Module {
+  return {
+    ...MOCK_MODULE,
+    courseIds: courses.map((course) => course.id),
+    courses: courses.map(toModuleCourse),
+    coursesCount: courses.length,
+  };
+}
+
 // ─── Helper ───────────────────────────────────────────────────────────────────
 interface RenderOptions {
   module?: Module;
@@ -243,6 +261,7 @@ function renderDrawer({
 describe('AdminModuleFormDrawer', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockModuleDetail = undefined;
     mockUseCoursesInfinite.mockReturnValue(EMPTY_CATALOG);
     mockListCourses.mockReset().mockResolvedValue({ data: [] });
   });
@@ -335,71 +354,46 @@ describe('AdminModuleFormDrawer', () => {
 
   describe('édition', () => {
     it('actualise les cours sélectionnés après un renommage puis une suppression sans fermer le drawer', async () => {
-      const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
       const course = MOCK_LARGE_MODULE_COURSES[0];
       const renamedCourse = { ...course, full_name: 'Leçon renommée' };
-      let savedCourses = [course];
-      mockListCourses.mockImplementation(async (params) => ({
-        data: savedCourses.filter((item) => params?.ids?.split(',').includes(item.id)),
-      }));
-      jest.mocked(coursesApi.update).mockImplementation(async () => {
-        savedCourses = [renamedCourse];
-        return { data: renamedCourse };
-      });
-      jest.mocked(coursesApi.remove).mockImplementation(async () => {
-        savedCourses = [];
-      });
-      renderDrawer({
-        module: { ...MOCK_MODULE, courseIds: [course.id], coursesCount: 1 },
-        queryClient,
-      });
-      const { result } = renderHook(() => useCourseData(), {
-        wrapper: ({ children }) => (
-          <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-        ),
-      });
+      mockModuleDetail = moduleDetailWith([course]);
+      const module = { ...MOCK_MODULE, courseIds: [course.id], coursesCount: 1 };
+      const { rerender } = renderDrawer({ module });
+      const remount = () =>
+        rerender(
+          <QueryClientProvider client={new QueryClient()}>
+            <AdminModuleFormDrawer open onClose={jest.fn()} module={module} />
+          </QueryClientProvider>,
+        );
+
       expect(await screen.findByText(course.full_name)).toBeInTheDocument();
 
-      await act(async () => {
-        await result.current.updateMutation.mutateAsync({
-          id: course.id,
-          full_name: renamedCourse.full_name,
-        });
-      });
+      mockModuleDetail = moduleDetailWith([renamedCourse]);
+      remount();
 
       expect(await screen.findByText(renamedCourse.full_name)).toBeInTheDocument();
       expect(screen.queryByText(course.full_name)).not.toBeInTheDocument();
 
-      await act(async () => {
-        await result.current.deleteMutation.mutateAsync(course.id);
-      });
+      mockModuleDetail = moduleDetailWith([]);
+      remount();
 
       await waitFor(() => {
         expect(screen.queryByText(renamedCourse.full_name)).not.toBeInTheDocument();
       });
     });
 
-    it('résout les 101 cours enregistrés et conserve leurs associations dans le bon ordre', async () => {
+    it('affiche les 101 cours du module dans le bon ordre sans requête de résolution', async () => {
       const user = userEvent.setup();
-      const courseIds = MOCK_LARGE_MODULE_COURSES.map((course) => course.id).reverse();
-      const expectedCourseNames = MOCK_LARGE_MODULE_COURSES.map(
-        (course) => course.full_name,
-      ).reverse();
-      mockListCourses.mockImplementation(async (params) => {
-        const requestedIds = params?.ids?.split(',') ?? [];
-        return {
-          data: MOCK_LARGE_MODULE_COURSES.filter((course) => requestedIds.includes(course.id)),
-        };
-      });
+      const ordered = [...MOCK_LARGE_MODULE_COURSES].reverse();
+      const courseIds = ordered.map((course) => course.id);
+      mockModuleDetail = moduleDetailWith(ordered);
       renderDrawer({ module: { ...MOCK_MODULE, courseIds, coursesCount: courseIds.length } });
 
       await waitFor(() => {
         const displayedNames = screen.queryAllByText(/^Leçon \d+$/).map((node) => node.textContent);
-        expect(displayedNames).toEqual(expectedCourseNames);
+        expect(displayedNames).toEqual(ordered.map((course) => course.full_name));
       });
-      for (const [params] of mockListCourses.mock.calls) {
-        expect(params?.per_page).toBeLessThanOrEqual(100);
-      }
+      expect(mockListCourses).not.toHaveBeenCalled();
 
       await user.click(screen.getByRole('button', { name: /enregistrer/i }));
 

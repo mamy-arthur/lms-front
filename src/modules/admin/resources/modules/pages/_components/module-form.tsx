@@ -31,6 +31,7 @@ import {
   FieldRoot,
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import type { MutationLike } from '@/shared/types/mutation';
@@ -38,6 +39,7 @@ import { extractApiError } from '@/shared/utils/api-error';
 import { CompetencyCategorySelect } from '../../components/categories/CompetencyCategorySelect';
 import { SelectCoursesDialog } from './SelectCoursesDialog';
 import type { Course } from '@/modules/shared/components/courses/types';
+import type { ModuleCourse } from '../../types';
 
 export interface ModuleFormProps {
   form: UseFormReturn<any>;
@@ -48,7 +50,9 @@ export interface ModuleFormProps {
   selectedCourseIds: string[];
   toggleCourse: (courseId: string) => void;
   addCourses: (courses: Course[]) => void;
-  selectedCourses: Course[];
+  selectedCourses: ModuleCourse[];
+  /** True while the linked courses' names are still being resolved (detail request in flight). */
+  isCoursesLoading?: boolean;
 }
 
 function SortableCourseItem({
@@ -117,6 +121,7 @@ export function ModuleForm({
   toggleCourse,
   addCourses,
   selectedCourses,
+  isCoursesLoading = false,
 }: ModuleFormProps) {
   const [coursesDialogOpen, setCoursesDialogOpen] = useState(false);
 
@@ -235,7 +240,13 @@ export function ModuleForm({
                   </Button>
                 </div>
 
-                {selectedCourseIds.length > 0 ? (
+                {selectedCourseIds.length > 0 && isCoursesLoading ? (
+                  <div className="mt-1 space-y-1">
+                    {selectedCourseIds.map((courseId) => (
+                      <Skeleton key={courseId} className="h-7 w-full rounded-md" />
+                    ))}
+                  </div>
+                ) : selectedCourseIds.length > 0 ? (
                   <DndContext
                     sensors={sensors}
                     collisionDetection={closestCenter}
