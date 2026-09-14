@@ -7,7 +7,10 @@ export type ContentType = 'folder' | 'file' | 'page' | 'scorm' | 'survey' | 'url
 export type ProgressStatus = 'completed' | 'in_progress' | 'available' | 'locked';
 
 export interface CourseContent {
+  /** Navigation identity, scoped to the module and course for API contents. */
   id: string;
+  /** Raw backend UUID for API calls; absent for mock contents. */
+  entryId?: string;
   /** courseId — used to call the portal entry endpoint (/courses/{courseId}/entries/{entryId}). */
   courseId: string;
   type: ContentType;

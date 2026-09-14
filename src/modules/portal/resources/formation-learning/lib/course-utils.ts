@@ -50,7 +50,9 @@ export interface ResolvedContent {
   sectionTitle: string;
   content: CourseContent;
   prev: string | null;
+  /** Immediate successor, potentially unlocked only after completion. */
   next: string | null;
+  isNextLocked: boolean;
 }
 
 export interface ResolvedEvaluation {
@@ -70,6 +72,10 @@ export function resolveActive(formation: Formation, activeId: string): Resolved 
 
   if (contentIndex !== -1) {
     const content = allContents[contentIndex];
+    if (content.status === 'locked') return null;
+
+    const prev = allContents[contentIndex - 1];
+    const next = allContents[contentIndex + 1];
     for (const node of formation.nodes) {
       if (node.type !== 'module') continue;
       for (const course of node.courses) {
@@ -80,8 +86,9 @@ export function resolveActive(formation: Formation, activeId: string): Resolved 
               node,
               sectionTitle: section.title,
               content,
-              prev: allContents[contentIndex - 1]?.id ?? null,
-              next: allContents[contentIndex + 1]?.id ?? null,
+              prev: prev && prev.status !== 'locked' ? prev.id : null,
+              next: next?.id ?? null,
+              isNextLocked: next?.status === 'locked',
             };
           }
         }
@@ -91,6 +98,7 @@ export function resolveActive(formation: Formation, activeId: string): Resolved 
 
   for (const node of formation.nodes) {
     if (node.type === 'evaluation' && node.id === activeId) {
+      if (node.status === 'locked') return null;
       return { kind: 'evaluation', node };
     }
   }
@@ -106,7 +114,7 @@ export function getContentPosition(
   formation: Formation,
   contentId: string,
 ): { index: number; total: number } {
-  const all = flattenContents(formation).filter((c) => c.status !== 'locked');
+  const all = flattenContents(formation);
   const index = all.findIndex((c) => c.id === contentId);
   return { index: index + 1, total: all.length };
 }

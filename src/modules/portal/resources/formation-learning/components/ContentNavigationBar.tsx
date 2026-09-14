@@ -5,11 +5,12 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 interface Props {
-  /** 1-based position of the current content among the unlocked ones. */
+  /** 1-based position of the current content in the full sequence. */
   index: number;
   total: number;
   prev: string | null;
   next: string | null;
+  isNextLocked?: boolean;
   onNavigate: (id: string | null) => void;
   /** Already validated — the primary action becomes plain navigation. */
   isCompleted: boolean;
@@ -31,6 +32,7 @@ export default function ContentNavigationBar({
   total,
   prev,
   next,
+  isNextLocked = false,
   onNavigate,
   isCompleted,
   onMarkComplete,
@@ -114,7 +116,7 @@ export default function ContentNavigationBar({
             <Button
               size={'lg'}
               onClick={() => onNavigate(next)}
-              disabled={!next || isCompleting}
+              disabled={!next || isNextLocked || isCompleting}
               className="bg-(--color-primary) hover:bg-(--color-primary)/80"
             >
               Suivant

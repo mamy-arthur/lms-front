@@ -86,6 +86,7 @@ export default function FormationContentView({
         <div className="flex-1 px-6 ">
           {usePortal ? (
             <PortalContentRenderer
+              key={`${enrollmentId}:${content.id}`}
               entry={portalEntry ?? undefined}
               isLoading={portalEntryLoading ?? false}
               enrollmentId={enrollmentId}
@@ -103,6 +104,7 @@ export default function FormationContentView({
         total={pos.total}
         prev={prev}
         next={next}
+        isNextLocked={resolved.isNextLocked}
         onNavigate={onNavigate}
         isCompleted={content.completed === true}
         onMarkComplete={onMarkComplete}

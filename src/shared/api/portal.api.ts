@@ -26,8 +26,15 @@ export const portalContentEntriesApi = {
       `enrollments/${enrollmentId}/courses/${courseId}/entries/${entryId}`,
     ),
 
-  markComplete: (enrollmentId: string, courseId: string, entryId: string): Promise<void> =>
-    apiPost<void>(`enrollments/${enrollmentId}/courses/${courseId}/entries/${entryId}/complete`),
+  markComplete: (
+    enrollmentId: string,
+    competencyId: string,
+    courseId: string,
+    entryId: string,
+  ): Promise<void> =>
+    apiPost<void>(
+      `enrollments/${enrollmentId}/competencies/${competencyId}/courses/${courseId}/entries/${entryId}/complete`,
+    ),
 };
 
 export interface ContentTimeSessionPayload {
