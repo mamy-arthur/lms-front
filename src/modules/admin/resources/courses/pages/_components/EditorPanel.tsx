@@ -33,7 +33,7 @@ export function EditorPanel({
 
   if (selection === null) {
     return (
-      <div className="flex h-full items-center justify-center text-center">
+      <div className="flex h-125 items-center justify-center text-center">
         <div>
           <h3 className="font-medium text-sm">Aucun contenu sélectionné</h3>
           <p className="mt-1 text-xs text-muted-foreground">

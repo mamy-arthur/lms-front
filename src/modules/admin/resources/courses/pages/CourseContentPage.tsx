@@ -98,7 +98,7 @@ export function CourseContentPage({ courseId }: Props) {
         )}
       </header>
 
-      <main className="mx-auto py-8">
+      <main className="mx-auto mt-5">
         {isLoading ? (
           <div className="flex items-center justify-center py-16">
             <Loader2 className="size-6 animate-spin text-muted-foreground" />
