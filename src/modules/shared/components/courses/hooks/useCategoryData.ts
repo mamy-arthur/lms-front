@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { courseCategoriesApi } from '@/shared/api/courses.api';
-import { courseKeys, courseCategoryKeys } from '@/shared/queries/keys';
+import { competencyKeys, courseKeys, courseCategoryKeys } from '@/shared/queries/keys';
 import { mapApiCategory, flattenCategories } from '../lib/course-mappers';
 
 export function useCategoryData() {
@@ -26,7 +26,12 @@ export function useCategoryData() {
       ...payload
     }: { id: string } & Parameters<typeof courseCategoriesApi.update>[1]) =>
       courseCategoriesApi.update(id, payload),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: courseCategoryKeys.lists() }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: courseCategoryKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: courseKeys.lists() });
+      // Competency payloads embed the category name of their linked courses.
+      queryClient.invalidateQueries({ queryKey: competencyKeys.all });
+    },
   });
 
   const deleteMutation = useMutation({
@@ -34,6 +39,7 @@ export function useCategoryData() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: courseCategoryKeys.lists() });
       queryClient.invalidateQueries({ queryKey: courseKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: competencyKeys.all });
     },
   });
 

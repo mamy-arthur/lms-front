@@ -61,7 +61,7 @@ export const ADMIN_NAV: AdminNavItem[] = [
     items: [
       { title: 'Cours', url: ROUTES.admin.courses },
       { title: 'Modules', url: ROUTES.admin.modules },
-      { title: 'Quiz', url: ROUTES.admin.quizzes },
+      { title: 'Banques de questions', url: ROUTES.admin.quizzes },
       { title: 'Parcours', url: ROUTES.admin.programs },
       // { title: 'Notes', url: ROUTES.admin.clientEvaluationNotes },
     ],

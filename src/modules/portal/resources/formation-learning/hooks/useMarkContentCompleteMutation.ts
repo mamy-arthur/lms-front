@@ -4,6 +4,7 @@ import { portalContentEntriesApi } from '@/shared/api/portal.api';
 import { portalLearningPathKeys, portalMyEnrollmentsKeys } from '@/shared/queries/keys';
 
 interface Vars {
+  competencyId: string;
   courseId: string;
   entryId: string;
 }
@@ -13,14 +14,15 @@ export function useMarkContentCompleteMutation(enrollmentId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ courseId, entryId }: Vars) =>
-      portalContentEntriesApi.markComplete(enrollmentId, courseId, entryId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: portalLearningPathKeys.summary(enrollmentId),
-      });
+    mutationFn: ({ competencyId, courseId, entryId }: Vars) =>
+      portalContentEntriesApi.markComplete(enrollmentId, competencyId, courseId, entryId),
+    onSuccess: async () => {
       queryClient.invalidateQueries({
         queryKey: portalMyEnrollmentsKeys.all,
+      });
+      // Keep the mutation pending until navigation permissions are refreshed.
+      await queryClient.invalidateQueries({
+        queryKey: portalLearningPathKeys.summary(enrollmentId),
       });
     },
     onError: () => {

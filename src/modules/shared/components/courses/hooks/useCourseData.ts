@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { coursesApi } from '@/shared/api/courses.api';
-import { courseKeys } from '@/shared/queries/keys';
+import { competencyKeys, courseKeys } from '@/shared/queries/keys';
 import { mapApiCourse } from '../lib/course-mappers';
 
 export function useCourseData() {
@@ -14,13 +14,16 @@ export function useCourseData() {
     },
   });
 
-  const invalidateCourses = () => queryClient.invalidateQueries({ queryKey: courseKeys.lists() });
+  const invalidateCourses = () => {
+    queryClient.invalidateQueries({ queryKey: courseKeys.lists() });
+    // Competency payloads embed the name/category of their linked courses.
+    queryClient.invalidateQueries({ queryKey: competencyKeys.all });
+  };
 
   const createMutation = useMutation({
     mutationFn: (payload: Parameters<typeof coursesApi.create>[0]) => coursesApi.create(payload),
     onSuccess: () => {
       invalidateCourses();
-      queryClient.invalidateQueries({ queryKey: ['admin', 'modules', 'available-courses'] });
     },
   });
 

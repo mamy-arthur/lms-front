@@ -28,6 +28,12 @@ import {
 import { useCoursesStore, getCategoryPath } from '../lib/course-store';
 import type { Course } from '../types/index';
 import { courseSectionsApi } from '@/shared/api/courses.api';
+import { CatalogLockAlert } from '@/shared/components/CatalogLockAlert';
+import {
+  describeLockOrigins,
+  extractLockOrigins,
+  isCatalogLockError,
+} from '@/shared/types/catalog-lock.types';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
@@ -82,6 +88,17 @@ export function CourseDrawer({ open, onOpenChange, course }: Props) {
 
   const selectedCategory = categories.find((c) => c.id === categoryId);
 
+  // Only the visibility is frozen by a sale — renaming, re-describing and moving the
+  // course to another category stay allowed, so the drawer opens as usual and locks
+  // the one control the backend refuses (see UpdateCourseUseCase: the guard fires on
+  // a CHANGE of visibility, which is why submitting the unchanged value is safe).
+  //
+  // `=== true`: undefined means the course was mapped from a payload carrying no
+  // lock, which is unknown rather than free. The 409 below covers that case, and the
+  // late-sale one, where the lock simply did not exist when the drawer was opened.
+  const locked = course?.isLocked === true;
+  const lockReason = describeLockOrigins(course?.lockOrigins ?? []);
+
   const onSubmit = async (values: FormValues) => {
     try {
       setIsSubmitting(true);
@@ -94,8 +111,16 @@ export function CourseDrawer({ open, onOpenChange, course }: Props) {
       if (!course) {
         router.push(`/admin/courses/${saved.id}`);
       }
-    } catch {
-      toast.error('Une erreur est survenue');
+    } catch (err) {
+      // A sale can land while this form is open: the refusal names the module and
+      // learning path responsible, which a generic message would throw away.
+      toast.error(
+        isCatalogLockError(err)
+          ? `Ce cours vient d'être lié à une formation vendue : sa visibilité ne peut plus être modifiée. ${describeLockOrigins(
+              extractLockOrigins(err),
+            )}`
+          : 'Une erreur est survenue',
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -115,6 +140,13 @@ export function CourseDrawer({ open, onOpenChange, course }: Props) {
 
         <form onSubmit={form.handleSubmit(onSubmit)} className="flex min-h-0 flex-1 flex-col">
           <div className="flex-1 space-y-5 overflow-y-auto px-4 py-6">
+            {locked && (
+              <CatalogLockAlert title="Ce cours appartient à un module lié à une formation vendue">
+                {lockReason} Sa visibilité est figée ; le nom, la catégorie et la description
+                restent modifiables.
+              </CatalogLockAlert>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="fullName">Nom complet du cours</Label>
               <Input
@@ -230,12 +262,19 @@ export function CourseDrawer({ open, onOpenChange, course }: Props) {
               <div className="space-y-0.5">
                 <Label htmlFor="visible">Visibilité</Label>
                 <p className="text-xs text-muted-foreground">
-                  {visible ? 'Publié' : 'Brouillon (masqué)'}
+                  {locked
+                    ? `${visible ? 'Publié' : 'Brouillon (masqué)'} — figé par une vente`
+                    : visible
+                      ? 'Publié'
+                      : 'Brouillon (masqué)'}
                 </p>
               </div>
+              {/* Hiding a course removes it from the learner's tree just like a delete
+                  does, so the sale freezes the switch in both directions. */}
               <Switch
                 id="visible"
                 checked={visible}
+                disabled={locked}
                 onCheckedChange={(v) => form.setValue('visible', v)}
                 className="data-[state=checked]:bg-(--color-primary)"
               />

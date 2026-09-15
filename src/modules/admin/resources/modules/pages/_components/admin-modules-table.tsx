@@ -6,6 +6,7 @@ import {
   type DataTableSort,
 } from '@/shared/components/ui/DataTable';
 import { formatDate } from '@/shared/lib/date';
+import { MODULE_LOCKED_LABEL, describeLockOrigins } from '@/shared/types/catalog-lock.types';
 import type { Module } from '../../types';
 import { ModuleActions } from './module-actions';
 
@@ -92,6 +93,8 @@ export function AdminModulesTable({
             onEdit={() => onEdit?.(mod)}
             onDuplicate={() => onDuplicate?.(mod)}
             onDelete={() => onDelete?.(mod)}
+            locked={mod.isLocked}
+            lockReason={`${MODULE_LOCKED_LABEL}. ${describeLockOrigins(mod.lockOrigins)}`}
           />
         </div>
       ),

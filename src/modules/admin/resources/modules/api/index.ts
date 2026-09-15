@@ -10,7 +10,6 @@ import type {
   UpdateCompetencyCategoryPayload,
   CreateModulePayload,
   UpdateModulePayload,
-  AvailableCourse,
 } from '../types';
 
 const BASE = 'platform/competencies';
@@ -24,14 +23,6 @@ interface ListParams {
   sort_by?: string;
   sort_dir?: 'asc' | 'desc';
   sort_order?: 'asc' | 'desc';
-}
-
-interface AvailableCourseRaw {
-  id: string;
-  full_name?: string | null;
-  category_id?: string | null;
-  category_name?: string | null;
-  status?: string | null;
 }
 
 export const adminModulesApi = {
@@ -79,23 +70,6 @@ export const adminModulesApi = {
       form,
     );
     return { id: res.data.id, url: res.data.url, mimeType: res.data.mime_type };
-  },
-
-  availableCourses: async (competencyId?: string): Promise<AvailableCourse[]> => {
-    const res = await apiGet<{ data: AvailableCourseRaw[] }>(
-      `${BASE}/available-courses`,
-      competencyId ? { competency_id: competencyId } : undefined,
-    );
-    return (res.data ?? []).map(
-      (c) =>
-        ({
-          id: c.id,
-          fullName: String(c.full_name ?? ''),
-          categoryId: c.category_id ?? '',
-          categoryName: String(c.category_name ?? ''),
-          status: c.status === 'ALREADY_LINKED' ? 'ALREADY_LINKED' : 'AVAILABLE',
-        }) satisfies import('../types').AvailableCourse,
-    );
   },
 };
 

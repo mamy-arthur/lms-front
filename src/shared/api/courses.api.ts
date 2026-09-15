@@ -14,6 +14,8 @@ export interface CourseListParams {
   per_page?: number;
   q?: string;
   category_ids?: string;
+  /** Comma-separated course ids — restricts the list to those courses. */
+  ids?: string;
   sort_by?: string;
   sort_dir?: 'asc' | 'desc';
   sort_order?: 'asc' | 'desc';
@@ -29,6 +31,7 @@ export const coursesApi = {
       per_page: params.per_page ?? 25,
       q: params.q,
       category_ids: params.category_ids,
+      ids: params.ids,
       sort_by: params.sort_by,
       sort_dir: params.sort_dir ?? params.sort_order,
     }),
