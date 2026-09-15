@@ -55,6 +55,9 @@ export default function ScormPlayer({
   const [isReady, setIsReady] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const onCompletedRef = useRef(onCompleted);
+  onCompletedRef.current = onCompleted;
+
   // Two distinct ways of being expanded: the real Fullscreen API, and a fixed
   // overlay used only when the API refuses (iPhone Safari, a restrictive
   // Permissions-Policy upstream). `expanded` is what the layout keys off.
@@ -118,7 +121,7 @@ export default function ScormPlayer({
       courseId,
       entryId,
       version: launch.version,
-      onCompleted: () => onCompleted?.(),
+      onCompleted: () => onCompletedRef.current?.(),
     });
 
     // Bound *before* the iframe starts loading: SCORM content looks up
@@ -134,15 +137,7 @@ export default function ScormPlayer({
       session.apiFinish();
       unbind();
     };
-  }, [
-    enrollmentId,
-    competencyId,
-    courseId,
-    entryId,
-    launch?.scorm_package_id,
-    launch?.version,
-    onCompleted,
-  ]);
+  }, [enrollmentId, competencyId, courseId, entryId, launch?.scorm_package_id, launch?.version]);
 
   if (launchQuery.isLoading) {
     return (
