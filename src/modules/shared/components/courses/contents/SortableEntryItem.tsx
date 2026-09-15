@@ -14,6 +14,9 @@ interface Props {
   onSelect: () => void;
   onDelete: () => void;
   isDeleting: boolean;
+  /** Course frozen by a sale — deleting is refused, reordering and editing stay open. */
+  locked?: boolean;
+  lockReason?: string;
 }
 
 /**
@@ -28,6 +31,8 @@ export function SortableEntryItem({
   onSelect,
   onDelete,
   isDeleting,
+  locked = false,
+  lockReason = '',
 }: Props) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: entry.id,
@@ -64,21 +69,28 @@ export function SortableEntryItem({
         <span className="truncate text-xs">{label || 'Nouveau contenu'}</span>
       </div>
 
-      <button
-        onClick={(e) => {
-          e.stopPropagation(); // Empêche de sélectionner lors de la suppression
-          onDelete();
-        }}
-        disabled={isDeleting}
-        className={`shrink-0 cursor-pointer rounded p-0.5 opacity-0 transition-opacity group-hover:opacity-100
+      {/* Hidden rather than disabled: this button only appears on row hover, so a
+          greyed-out one would read as a glitch more than as an explanation. The
+          section menu carries the reason for the whole course. */}
+      {locked ? (
+        <span className="sr-only">{lockReason}</span>
+      ) : (
+        <button
+          onClick={(e) => {
+            e.stopPropagation(); // Empêche de sélectionner lors de la suppression
+            onDelete();
+          }}
+          disabled={isDeleting}
+          className={`shrink-0 cursor-pointer rounded p-0.5 opacity-0 transition-opacity group-hover:opacity-100
       ${
         isSelected
           ? 'hover:bg-destructive/70 text-white'
           : 'hover:bg-destructive/10 text-destructive'
       }`}
-      >
-        {isDeleting ? <Loader2 className="size-3 animate-spin" /> : <Trash2 className="size-3" />}
-      </button>
+        >
+          {isDeleting ? <Loader2 className="size-3 animate-spin" /> : <Trash2 className="size-3" />}
+        </button>
+      )}
     </div>
   );
 }

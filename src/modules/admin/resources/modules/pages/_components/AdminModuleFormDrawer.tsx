@@ -15,6 +15,7 @@ import { useUpdateModule } from '../../hooks/useUpdateModule';
 import { useModule } from '../../hooks/useModule';
 import { moduleSchema, MODULE_FORM_DEFAULTS } from '../../validation';
 import type { Module, ModulePayload } from '../../types';
+import type { CatalogLock } from '@/shared/types/catalog-lock.types';
 export interface AdminModuleFormDrawerProps {
   open: boolean;
   onClose: () => void;
@@ -98,6 +99,16 @@ function AdminModuleFormDrawerBase({
     }
   }, [open, defaultValues, formState.form]);
 
+  // Both the list row and the detail payload carry the lock; the detail wins once it
+  // lands, so a drawer opened straight from a URL is as accurate as one opened from the list.
+  const lock = useMemo<CatalogLock>(
+    () => ({
+      isLocked: detailedModule?.isLocked ?? module?.isLocked ?? false,
+      origins: detailedModule?.lockOrigins ?? module?.lockOrigins ?? [],
+    }),
+    [detailedModule, module],
+  );
+
   const title = isEdit ? 'Modifier le module' : 'Ajouter un module';
 
   return (
@@ -121,6 +132,7 @@ function AdminModuleFormDrawerBase({
           addCourses={formState.addCourses}
           selectedCourses={formState.selectedCourses}
           isCoursesLoading={isCoursesLoading}
+          lock={lock}
         />
       </SheetContent>
     </Sheet>

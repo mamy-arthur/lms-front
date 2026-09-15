@@ -32,6 +32,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Category, Course } from '@/modules/shared/components/courses/types';
+import { CatalogLockMenuNote } from '@/shared/components/CatalogLockMenuNote';
+import { describeCourseActionsLock } from '@/shared/types/catalog-lock.types';
 
 interface CourseCardProps {
   course: Course;
@@ -52,6 +54,11 @@ export function CourseCard({
   href,
 }: CourseCardProps) {
   const router = useRouter();
+  // Same reading as the table view: `=== true`, so an unanswered lock stays enabled
+  // and is refused by the server rather than greyed out on a guess.
+  const locked = course.isLocked === true;
+  const lockReason = describeCourseActionsLock(course.lockOrigins ?? []);
+
   return (
     <Card
       className="group relative flex flex-col overflow-hidden transition-shadow hover:shadow-md cursor-pointer"
@@ -66,56 +73,63 @@ export function CourseCard({
           </CardDescription>
         </div>
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-5 cursor-pointer"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <MoreVertical className="size-3" />
-            </Button>
-          </DropdownMenuTrigger>
+        {/* The whole card navigates on click, so every click coming out of this menu
+            has to be stopped — on the wrapper, not just on the trigger. Radix renders
+            the menu in a DOM portal, but a React event still bubbles up the COMPONENT
+            tree, so an item's click reaches the Card's onClick and pushes a route
+            behind whatever the item was supposed to do. */}
+        <div onClick={(e) => e.stopPropagation()}>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="size-5 cursor-pointer">
+                <MoreVertical className="size-3" />
+              </Button>
+            </DropdownMenuTrigger>
 
-          <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuItem asChild>
-              <Link href={`/admin/courses/${course.id}`}>
-                <BookOpen className="mr-2 size-4" />
-                Contenu du cours
-              </Link>
-            </DropdownMenuItem>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem asChild>
+                <Link href={href(course.id)}>
+                  <BookOpen className="mr-2 size-4" />
+                  Contenu du cours
+                </Link>
+              </DropdownMenuItem>
 
-            <DropdownMenuItem onClick={() => onEdit(course)}>
-              <Pencil className="mr-2 size-4" />
-              Modifier
-            </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onEdit(course)}>
+                <Pencil className="mr-2 size-4" />
+                Modifier
+              </DropdownMenuItem>
 
-            <DropdownMenuItem onClick={() => onToggleVisibility(course)}>
-              {course.visible ? (
-                <>
-                  <EyeOff className="mr-2 size-4" />
-                  Cacher
-                </>
-              ) : (
-                <>
-                  <Eye className="mr-2 size-4" />
-                  Afficher
-                </>
-              )}
-            </DropdownMenuItem>
+              {/* Hiding a course removes it from the learner's tree just like a
+                  delete does, so the sale freezes both. */}
+              <DropdownMenuItem disabled={locked} onClick={() => onToggleVisibility(course)}>
+                {course.visible ? (
+                  <>
+                    <EyeOff className="mr-2 size-4" />
+                    Cacher
+                  </>
+                ) : (
+                  <>
+                    <Eye className="mr-2 size-4" />
+                    Afficher
+                  </>
+                )}
+              </DropdownMenuItem>
 
-            <DropdownMenuSeparator />
+              <DropdownMenuSeparator />
 
-            <DropdownMenuItem
-              className="text-destructive focus:text-destructive"
-              onClick={() => onDelete(course)}
-            >
-              <Trash2 className="mr-2 size-4" />
-              Supprimer
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+              <DropdownMenuItem
+                disabled={locked}
+                className="text-destructive focus:text-destructive"
+                onClick={() => onDelete(course)}
+              >
+                <Trash2 className="mr-2 size-4" />
+                Supprimer
+              </DropdownMenuItem>
+
+              {locked && <CatalogLockMenuNote reason={lockReason} />}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </CardHeader>
 
       <CardContent className="relative z-10 flex-1 space-y-2 text-xs">

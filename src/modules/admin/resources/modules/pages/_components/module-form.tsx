@@ -34,7 +34,17 @@ import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
+import { CatalogLockAlert } from '@/shared/components/CatalogLockAlert';
+import { CatalogLockTooltip } from '@/shared/components/CatalogLockTooltip';
 import type { MutationLike } from '@/shared/types/mutation';
+import {
+  CATALOG_LOCK_UNLOCKED,
+  MODULE_LOCKED_LABEL,
+  describeLockOrigins,
+  extractLockOrigins,
+  isCatalogLockError,
+  type CatalogLock,
+} from '@/shared/types/catalog-lock.types';
 import { extractApiError } from '@/shared/utils/api-error';
 import { CompetencyCategorySelect } from '../../components/categories/CompetencyCategorySelect';
 import { SelectCoursesDialog } from './SelectCoursesDialog';
@@ -53,6 +63,8 @@ export interface ModuleFormProps {
   selectedCourses: ModuleCourse[];
   /** True while the linked courses' names are still being resolved (detail request in flight). */
   isCoursesLoading?: boolean;
+  /** Set when the module belongs to a sold learning path — its structure is frozen. */
+  lock?: CatalogLock;
 }
 
 function SortableCourseItem({
@@ -61,15 +73,19 @@ function SortableCourseItem({
   categoryName,
   index,
   onRemove,
+  locked = false,
 }: {
   courseId: string;
   fullName: string;
   categoryName?: string;
   index: number;
   onRemove: () => void;
+  /** Reordering and unlinking both rewrite course_ids, which a sold module refuses. */
+  locked?: boolean;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: courseId,
+    disabled: locked,
   });
 
   const style = {
@@ -88,7 +104,13 @@ function SortableCourseItem({
     >
       <button
         type="button"
-        className="inline-flex items-center justify-center rounded p-0.5 text-muted-foreground hover:text-foreground hover:bg-accent cursor-grab active:cursor-grabbing"
+        disabled={locked}
+        className={cn(
+          'inline-flex items-center justify-center rounded p-0.5 text-muted-foreground',
+          locked
+            ? 'cursor-not-allowed opacity-40'
+            : 'cursor-grab hover:bg-accent hover:text-foreground active:cursor-grabbing',
+        )}
         {...attributes}
         {...listeners}
       >
@@ -99,14 +121,16 @@ function SortableCourseItem({
       </span>
       <span className="flex-1 truncate">{fullName}</span>
       {categoryName && <span className="shrink-0 text-muted-foreground">{categoryName}</span>}
-      <button
-        type="button"
-        onClick={onRemove}
-        className="ml-1 inline-flex items-center justify-center rounded p-0.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-        aria-label={`Retirer ${fullName}`}
-      >
-        <X className="size-3" />
-      </button>
+      {!locked && (
+        <button
+          type="button"
+          onClick={onRemove}
+          className="ml-1 inline-flex items-center justify-center rounded p-0.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+          aria-label={`Retirer ${fullName}`}
+        >
+          <X className="size-3" />
+        </button>
+      )}
     </div>
   );
 }
@@ -122,8 +146,17 @@ export function ModuleForm({
   addCourses,
   selectedCourses,
   isCoursesLoading = false,
+  lock = CATALOG_LOCK_UNLOCKED,
 }: ModuleFormProps) {
   const [coursesDialogOpen, setCoursesDialogOpen] = useState(false);
+
+  const isLocked = lock.isLocked;
+  const lockedReason = `${MODULE_LOCKED_LABEL}. ${describeLockOrigins(lock.origins)}`;
+
+  // A module can be sold between opening the drawer and hitting Save: the refusal
+  // then arrives as a 409 rather than as a greyed-out button.
+  const refusedByLock = isCatalogLockError(mutation.error);
+  const refusalOrigins = refusedByLock ? extractLockOrigins(mutation.error) : [];
 
   const courseMap = useMemo(() => {
     const map = new Map<string, { fullName: string; categoryName: string }>();
@@ -160,13 +193,30 @@ export function ModuleForm({
         noValidate
       >
         <div className="flex-1 space-y-5 overflow-y-auto px-4 py-4 sm:px-6">
-          {mutation.isError && (
-            <div
-              role="alert"
-              className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive"
-            >
-              {extractApiError(mutation.error, isEdit)}
-            </div>
+          {mutation.isError &&
+            // A sale that landed mid-edit is not a mistake the user made, so it reads
+            // as a notice rather than a red failure — and the form keeps every value
+            // typed so far, since nothing is reset on error.
+            (refusedByLock ? (
+              <CatalogLockAlert title="Ce module vient d’être lié à une formation vendue">
+                {extractApiError(mutation.error, isEdit)}
+                {refusalOrigins.length > 0 && ` ${describeLockOrigins(refusalOrigins)}`} Votre
+                saisie est conservée.
+              </CatalogLockAlert>
+            ) : (
+              <div
+                role="alert"
+                className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive"
+              >
+                {extractApiError(mutation.error, isEdit)}
+              </div>
+            ))}
+
+          {isLocked && (
+            <CatalogLockAlert title={MODULE_LOCKED_LABEL}>
+              {describeLockOrigins(lock.origins)} Sa structure ne peut plus être modifiée : ni le
+              nom, ni la catégorie, ni la liste des cours.
+            </CatalogLockAlert>
           )}
 
           <FieldRoot
@@ -228,16 +278,19 @@ export function ModuleForm({
                       </span>
                     )}
                   </FieldLabel>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="xs"
-                    className="h-6 gap-1 text-xs"
-                    onClick={() => setCoursesDialogOpen(true)}
-                  >
-                    <Plus className="size-3" />
-                    Ajouter un cours
-                  </Button>
+                  <CatalogLockTooltip locked={isLocked} reason={lockedReason}>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="xs"
+                      className="h-6 gap-1 text-xs"
+                      disabled={isLocked}
+                      onClick={() => setCoursesDialogOpen(true)}
+                    >
+                      <Plus className="size-3" />
+                      Ajouter un cours
+                    </Button>
+                  </CatalogLockTooltip>
                 </div>
 
                 {selectedCourseIds.length > 0 && isCoursesLoading ? (
@@ -267,6 +320,7 @@ export function ModuleForm({
                               categoryName={info?.categoryName}
                               index={index}
                               onRemove={() => toggleCourse(courseId)}
+                              locked={isLocked}
                             />
                           );
                         })}
@@ -301,19 +355,21 @@ export function ModuleForm({
           >
             Annuler
           </Button>
-          <Button
-            type="submit"
-            disabled={mutation.isPending}
-            size="lg"
-            className="w-full bg-(--color-primary) hover:bg-(--color-primary)/80 sm:w-auto"
-          >
-            {mutation.isPending ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <Save className="size-4" />
-            )}
-            Enregistrer
-          </Button>
+          <CatalogLockTooltip locked={isLocked} reason={lockedReason}>
+            <Button
+              type="submit"
+              disabled={mutation.isPending || isLocked}
+              size="lg"
+              className="w-full bg-(--color-primary) hover:bg-(--color-primary)/80 sm:w-auto"
+            >
+              {mutation.isPending ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Save className="size-4" />
+              )}
+              Enregistrer
+            </Button>
+          </CatalogLockTooltip>
         </div>
       </form>
     </Field>

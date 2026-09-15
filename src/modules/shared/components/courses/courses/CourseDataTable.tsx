@@ -15,6 +15,8 @@ import {
   type DataTableColumn,
   type DataTableSort,
 } from '@/shared/components/ui/DataTable';
+import { CatalogLockMenuNote } from '@/shared/components/CatalogLockMenuNote';
+import { describeCourseActionsLock } from '@/shared/types/catalog-lock.types';
 import type { Category, Course } from '../types/index';
 
 interface CourseDataTableProps {
@@ -55,6 +57,13 @@ function CourseDataTableBase({
   const router = useRouter();
   const ActionMenu = useCallback(
     function ActionMenu({ item }: { item: Course }) {
+      // `=== true` and not `?? false`: an undefined lock means the payload did not
+      // answer (see Course.isLocked). List rows always do, so this only guards a
+      // course mapped from a create/update echo — left enabled, with the server's
+      // 409 as the real refusal, rather than greyed out on an unknown.
+      const locked = item.isLocked === true;
+      const lockReason = describeCourseActionsLock(item.lockOrigins ?? []);
+
       return (
         <div className="text-right" onClick={(e) => e.stopPropagation()}>
           <DropdownMenu>
@@ -69,11 +78,16 @@ function CourseDataTableBase({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
+              {/* Stays enabled under the lock: the backend refuses a change of
+                  `visibility`, not a rename. The drawer disables the one field that
+                  is frozen. */}
               <DropdownMenuItem onClick={() => onEdit(item)}>
                 <Pencil className="mr-2 size-3.5 text-muted-foreground" />
                 Modifier
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onToggleVisibility(item)}>
+              {/* Hiding a course removes it from the learner's tree just like a
+                  delete does, so the sale freezes both. */}
+              <DropdownMenuItem disabled={locked} onClick={() => onToggleVisibility(item)}>
                 {item.visible ? (
                   <>
                     <EyeOff className="mr-2 size-3.5 text-muted-foreground" />
@@ -88,12 +102,14 @@ function CourseDataTableBase({
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
+                disabled={locked}
                 className="text-destructive focus:text-destructive"
                 onClick={() => onDelete(item)}
               >
                 <Trash2 className="mr-2 size-3.5" />
                 Supprimer
               </DropdownMenuItem>
+              {locked && <CatalogLockMenuNote reason={lockReason} />}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

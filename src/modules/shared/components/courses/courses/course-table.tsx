@@ -37,6 +37,11 @@ import { CategoryDrawer } from '../categories/category-drawer';
 import { ModuleSearch } from '@modules/shared/components/modules';
 import { usePaginatedCourses } from '../hooks/usePaginatedCourses';
 import type { CourseListParams } from '@/shared/api/courses.api';
+import {
+  describeLockOrigins,
+  extractLockOrigins,
+  isCatalogLockError,
+} from '@/shared/types/catalog-lock.types';
 
 type View = 'card' | 'table';
 
@@ -117,6 +122,29 @@ export function CourseTable({ basePath }: Props) {
   const handlePageSizeChange = useCallback((newSize: number) => {
     setParams((prev) => ({ ...prev, per_page: newSize, page: 1 }));
   }, []);
+
+  // Shared by both views. The success toast waits for the server: a course frozen by
+  // a sale is refused with a 409, and the refusal names the module and learning path
+  // responsible — which a generic message would throw away. The lock can also land
+  // while the page is open, so this fires even on a row that rendered unlocked.
+  const handleToggleVisibility = useCallback(
+    async (course: Course) => {
+      const wasVisible = course.visible;
+      try {
+        await toggleCourseVisibility(course.id, course.visibility ?? 'DRAFT');
+        toast.success(wasVisible ? 'Cours masqué' : 'Cours rendu visible');
+      } catch (err) {
+        toast.error(
+          isCatalogLockError(err)
+            ? `Ce cours est lié à une formation vendue : sa visibilité est figée. ${describeLockOrigins(
+                extractLockOrigins(err),
+              )}`
+            : 'Erreur lors du changement de visibilité',
+        );
+      }
+    },
+    [toggleCourseVisibility],
+  );
 
   const [confirmDelete, setConfirmDelete] = useState<Course | null>(null);
   const [view, setView] = useState<View>('table');
@@ -243,10 +271,7 @@ export function CourseTable({ basePath }: Props) {
           onPageSizeChange={handlePageSizeChange}
           onEdit={(course) => setCourseDrawer({ open: true, course })}
           onDelete={setConfirmDelete}
-          onToggleVisibility={(course) => {
-            toggleCourseVisibility(course.id, course.visibility ?? 'DRAFT');
-            toast.success(course.visible ? 'Cours masqué' : 'Cours rendu visible');
-          }}
+          onToggleVisibility={handleToggleVisibility}
         />
       ) : isLoading ? (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -291,10 +316,7 @@ export function CourseTable({ basePath }: Props) {
                 getCategoryPath={getCategoryPath}
                 onEdit={(course) => setCourseDrawer({ open: true, course })}
                 onDelete={setConfirmDelete}
-                onToggleVisibility={(course) => {
-                  toggleCourseVisibility(course.id, course.visibility ?? 'DRAFT');
-                  toast.success(course.visible ? 'Cours masqué' : 'Cours rendu visible');
-                }}
+                onToggleVisibility={handleToggleVisibility}
                 href={() => `${basePath}/${course.id}`}
               />
             ))}
@@ -349,8 +371,14 @@ export function CourseTable({ basePath }: Props) {
                   try {
                     await deleteCourse(confirmDelete.id);
                     toast.success('Cours supprimé');
-                  } catch {
-                    toast.error('Erreur lors de la suppression');
+                  } catch (err) {
+                    toast.error(
+                      isCatalogLockError(err)
+                        ? `Ce cours est lié à une formation vendue : il ne peut plus être supprimé. ${describeLockOrigins(
+                            extractLockOrigins(err),
+                          )}`
+                        : 'Erreur lors de la suppression',
+                    );
                   }
                 }
                 setConfirmDelete(null);
