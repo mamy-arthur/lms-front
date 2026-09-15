@@ -24,6 +24,12 @@ const STATUS_CONFIG = {
       'bg-[color-mix(in_srgb,var(--color-primary)_10%,transparent)] text-[var(--color-primary)] border-[color-mix(in_srgb,var(--color-primary)_30%,transparent)]',
     iconClass: 'text-[var(--color-primary)]',
   },
+  failed: {
+    label: 'Échouée',
+    icon: BookOpen,
+    className: 'bg-red-50 text-red-700 border-red-200',
+    iconClass: 'text-red-500',
+  },
   not_started: {
     label: 'Non commencé',
     icon: BookOpen,

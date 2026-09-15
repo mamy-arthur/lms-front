@@ -20,6 +20,7 @@ export interface ApiPurchasedLearningPath {
   enrollments_in_progress_count: number;
   enrollments_completed_count: number;
   enrollments_expired_count: number;
+  enrollments_failed_count: number;
   learning_path: ApiPurchasedLearningPathNested;
   created_at: string;
   updated_at: string;

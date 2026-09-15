@@ -450,6 +450,8 @@ describe('Progression séquentielle du stagiaire', () => {
       },
     });
     const tracking: ApiScormTrackingState = {
+      enrollment_id: ENROLLMENT_ID,
+      competency_id: 'module-1',
       content_entry_id: 'shared-entry-1',
       lesson_status: 'incomplete',
       score_raw: null,
@@ -464,6 +466,8 @@ describe('Progression séquentielle du stagiaire', () => {
     };
     jest.mocked(portalScormApi.launch).mockResolvedValue({
       data: {
+        enrollment_id: ENROLLMENT_ID,
+        competency_id: 'module-1',
         content_entry_id: 'shared-entry-1',
         scorm_package_id: 'package-1',
         version: '1.2',

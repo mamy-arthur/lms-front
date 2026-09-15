@@ -27,6 +27,7 @@ export function mapToPurchasedLearningPath(api: ApiPurchasedLearningPath): Purch
     enrollmentsInProgressCount: api.enrollments_in_progress_count,
     enrollmentsCompletedCount: api.enrollments_completed_count,
     enrollmentsExpiredCount: api.enrollments_expired_count,
+    enrollmentsFailedCount: api.enrollments_failed_count,
   };
 }
 
@@ -72,6 +73,8 @@ export function mapEnrollmentHistoryToRow(
     enrolledAt: enrollment.enrolled_at,
     startedAt: enrollment.started_at,
     completedAt: enrollment.completed_at,
+    failureReason: enrollment.failure_reason,
+    failedAt: enrollment.failed_at,
     expiresAt: enrollment.expires_at,
   };
 }

@@ -11,9 +11,11 @@ function buildPurchasedLearningPathStats(plp: PurchasedLearningPath): PurchasedL
       Number(plp.enrollmentsNotStartedCount) +
       Number(plp.enrollmentsInProgressCount) +
       Number(plp.enrollmentsCompletedCount) +
-      Number(plp.enrollmentsExpiredCount),
+      Number(plp.enrollmentsExpiredCount) +
+      Number(plp.enrollmentsFailedCount),
     inProgress: Number(plp.enrollmentsInProgressCount),
     notStarted: Number(plp.enrollmentsNotStartedCount),
+    failed: Number(plp.enrollmentsFailedCount),
     availableCredits: Number(plp.creditsAvailable),
   };
 }

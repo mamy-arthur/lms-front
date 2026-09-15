@@ -15,6 +15,8 @@ const MOCK_ENROLLMENT_HISTORY: ApiEnrollmentHistoryWithLearner = {
     email: 'marie.martin@example.com',
     profile_photo: null,
   },
+  failure_reason: null,
+  failed_at: null,
 };
 
 describe('mapEnrollmentHistoryToRow', () => {
@@ -30,6 +32,8 @@ describe('mapEnrollmentHistoryToRow', () => {
       enrolledAt: '2026-06-01T00:00:00+00:00',
       startedAt: '2026-06-05T00:00:00+00:00',
       completedAt: '2026-07-10T00:00:00+00:00',
+      failureReason: null,
+      failedAt: null,
       expiresAt: '2026-09-01T08:00:00+00:00',
     });
   });
