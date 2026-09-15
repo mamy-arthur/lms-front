@@ -15,7 +15,15 @@ export interface ApiCourse {
   description: string | null;
   created_at: string;
   updated_at: string;
-  /** Catalogue sale lock — present on the detail endpoints, absent from list rows. */
+  /**
+   * Catalogue sale lock. Carried by the READ endpoints — `GET /platform/courses`
+   * resolves it in batch for the whole page, `GET /platform/courses/{id}` and
+   * `.../content` for the course asked — and ABSENT from the create/update
+   * responses, which serialise the course entity alone.
+   *
+   * Optional therefore means "not answered here", never "unlocked": a course
+   * echoed back by a PATCH carries no lock, and must not be read as a free one.
+   */
   is_locked?: boolean;
   lock_origins?: ApiCatalogLockOrigin[];
 }

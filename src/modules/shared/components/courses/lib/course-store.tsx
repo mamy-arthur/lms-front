@@ -32,7 +32,8 @@ type Ctx = {
   loading: boolean;
   upsertCourse: (c: UpsertCourseInput) => Promise<Course>;
   deleteCourse: (id: string) => Promise<void>;
-  toggleCourseVisibility: (id: string, currentVisibility: CourseVisibility) => void;
+  /** Rejects when the server refuses — a sale freezes a course's visibility. */
+  toggleCourseVisibility: (id: string, currentVisibility: CourseVisibility) => Promise<void>;
   upsertCategory: (c: UpsertCategoryInput) => Promise<Category>;
   deleteCategory: (id: string) => Promise<void>;
 };
@@ -83,10 +84,13 @@ export function CoursesProvider({ children }: { children: ReactNode }) {
 
       deleteCourse: (id) => deleteCourse.mutateAsync(id),
 
-      toggleCourseVisibility: (id, currentVisibility) => {
+      toggleCourseVisibility: async (id, currentVisibility) => {
         const newVisibility =
           currentVisibility === 'PUBLISHED' ? ('DRAFT' as const) : ('PUBLISHED' as const);
-        updateCourse.mutate({ id, visibility: newVisibility });
+        // mutateAsync, not mutate: the catalogue lock refuses this with a 409, and a
+        // fire-and-forget call leaves the caller announcing a success that never
+        // happened.
+        await updateCourse.mutateAsync({ id, visibility: newVisibility });
       },
 
       upsertCategory: async (c) => {

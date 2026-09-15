@@ -34,9 +34,11 @@ export function mapApiCourse(api: ApiCourse): Course {
     visible: api.visibility === 'PUBLISHED',
     visibility: api.visibility,
     description: api.description ?? undefined,
-    // Carried by the list and detail endpoints; absent elsewhere, in which case the
-    // course reports unlocked and the server's 409 remains the real guard.
-    isLocked: api.is_locked ?? false,
-    lockOrigins: api.lock_origins ?? [],
+    // Left UNDEFINED when the payload carries no lock (the create/update responses)
+    // rather than defaulted to false: collapsing "not answered" into "unlocked" would
+    // present a frozen course as a free one. The read endpoints — list rows included —
+    // always answer, so a row rendered from them is never in that state.
+    isLocked: api.is_locked,
+    lockOrigins: api.lock_origins,
   };
 }

@@ -15,7 +15,11 @@ interface Props {
   selection: Selection;
   onDeselect: () => void;
   onCreated: (entry: ApiContentEntry) => void;
-  /** Course frozen by a sale — publishing is refused, editing the payload is not. */
+  /**
+   * Course frozen by a sale. What it blocks depends on the branch below: creating an
+   * entry is refused outright, while an existing one stays editable and only loses
+   * the publish toggle.
+   */
   locked?: boolean;
   lockReason?: string;
 }
@@ -52,6 +56,8 @@ export function EditorPanel({
         contentType={selection.contentType}
         onCreated={onCreated}
         onCancel={onDeselect}
+        locked={locked}
+        lockReason={lockReason}
       />
     );
   }

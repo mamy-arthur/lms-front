@@ -45,10 +45,22 @@ export function normalizeCatalogLock(raw: ApiCatalogLock | undefined | null): Ca
 /** Short label for a module drawer, where the module in question is already on screen. */
 export const MODULE_LOCKED_LABEL = 'Module lié à une formation vendue';
 
+/** « 1 autre formation » / « 3 autres formations ». */
+function plural(count: number, noun: string): string {
+  const s = count > 1 ? 's' : '';
+  return `${count} autre${s} ${noun}${s}`;
+}
+
 /**
  * Names the module and learning path responsible. Several origins are summarised
  * rather than listed in full — the first one is enough to explain the block, and a
  * tooltip is the wrong place for an exhaustive list.
+ *
+ * The remainder is counted by DISTINCT learning path, not by origin: an origin is a
+ * (module, learning path) pair, so two locked modules inside a single sold path are
+ * two origins but one formation. Counting origins would announce "1 autre formation"
+ * where there is none. When every extra origin belongs to the path already named, the
+ * remainder is described as other modules instead — which is what it actually is.
  */
 export function describeLockOrigins(origins: ApiCatalogLockOrigin[]): string {
   if (origins.length === 0) return 'Cet élément est lié à une formation vendue.';
@@ -58,8 +70,16 @@ export function describeLockOrigins(origins: ApiCatalogLockOrigin[]): string {
 
   if (origins.length === 1) return base;
 
-  const others = origins.length - 1;
-  return `${base} Et ${others} autre${others > 1 ? 's' : ''} formation${others > 1 ? 's' : ''}.`;
+  // Sets rather than `length - 1`: the same module can appear under several paths,
+  // and the backend makes no promise that the pairs are free of duplicates.
+  const otherPaths = new Set(origins.map((o) => o.learning_path_id)).size - 1;
+  if (otherPaths > 0) return `${base} Et ${plural(otherPaths, 'formation')}.`;
+
+  const otherModules = new Set(origins.map((o) => o.competency_id)).size - 1;
+  if (otherModules > 0) return `${base} Et ${plural(otherModules, 'module')} dans cette formation.`;
+
+  // Only duplicated pairs remain: nothing to add beyond the origin already named.
+  return base;
 }
 
 /** Full sentence for a locked course control: what is blocked, then why. */
@@ -67,6 +87,20 @@ export function describeCourseLock(origins: ApiCatalogLockOrigin[]): string {
   return `Ce cours appartient à un module lié à une formation vendue : sa structure ne peut plus être modifiée. ${describeLockOrigins(
     origins,
   )}`;
+}
+
+/**
+ * Caption for a locked course's action menu.
+ *
+ * Says what remains open as well as what closed: the backend refuses a course's
+ * DELETE and any change of its `visibility`, but keeps renaming, re-describing and
+ * re-categorising allowed. A caption that only listed the refusals would read as if
+ * "Modifier" had been left enabled by mistake.
+ */
+export function describeCourseActionsLock(origins: ApiCatalogLockOrigin[]): string {
+  return `${describeLockOrigins(
+    origins,
+  )} La suppression et la visibilité sont figées ; le renommage reste possible.`;
 }
 
 function errorJson(err: unknown): Record<string, unknown> | null {

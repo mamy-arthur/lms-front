@@ -1,6 +1,6 @@
 import { memo, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { Eye, EyeOff, Lock, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { Eye, EyeOff, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -15,7 +15,8 @@ import {
   type DataTableColumn,
   type DataTableSort,
 } from '@/shared/components/ui/DataTable';
-import { describeLockOrigins } from '@/shared/types/catalog-lock.types';
+import { CatalogLockMenuNote } from '@/shared/components/CatalogLockMenuNote';
+import { describeCourseActionsLock } from '@/shared/types/catalog-lock.types';
 import type { Category, Course } from '../types/index';
 
 interface CourseDataTableProps {
@@ -56,8 +57,12 @@ function CourseDataTableBase({
   const router = useRouter();
   const ActionMenu = useCallback(
     function ActionMenu({ item }: { item: Course }) {
-      const locked = item.isLocked ?? false;
-      const lockReason = `${describeLockOrigins(item.lockOrigins ?? [])} La suppression et la visibilité sont figées.`;
+      // `=== true` and not `?? false`: an undefined lock means the payload did not
+      // answer (see Course.isLocked). List rows always do, so this only guards a
+      // course mapped from a create/update echo — left enabled, with the server's
+      // 409 as the real refusal, rather than greyed out on an unknown.
+      const locked = item.isLocked === true;
+      const lockReason = describeCourseActionsLock(item.lockOrigins ?? []);
 
       return (
         <div className="text-right" onClick={(e) => e.stopPropagation()}>
@@ -73,6 +78,9 @@ function CourseDataTableBase({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
+              {/* Stays enabled under the lock: the backend refuses a change of
+                  `visibility`, not a rename. The drawer disables the one field that
+                  is frozen. */}
               <DropdownMenuItem onClick={() => onEdit(item)}>
                 <Pencil className="mr-2 size-3.5 text-muted-foreground" />
                 Modifier
@@ -101,14 +109,7 @@ function CourseDataTableBase({
                 <Trash2 className="mr-2 size-3.5" />
                 Supprimer
               </DropdownMenuItem>
-              {locked && (
-                // A caption, not a tooltip: a disabled menu item never receives the
-                // hover Radix would need to open one.
-                <p className="flex items-start gap-1.5 border-t px-2 py-2 text-[11px] leading-snug text-muted-foreground">
-                  <Lock className="mt-0.5 size-3 shrink-0" />
-                  <span>{lockReason}</span>
-                </p>
-              )}
+              {locked && <CatalogLockMenuNote reason={lockReason} />}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

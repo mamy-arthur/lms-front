@@ -11,7 +11,6 @@ import {
   BookOpen,
   GripVertical,
   Loader2,
-  Lock,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -60,6 +59,7 @@ import {
   useMoveEntry,
 } from '../hooks/useCourseContentApi';
 import { apiMessage } from '@/shared/utils/api-error';
+import { CatalogLockMenuNote } from '@/shared/components/CatalogLockMenuNote';
 import { AddContentModal } from './AddContentModal';
 import { SortableEntryItem } from './SortableEntryItem';
 
@@ -245,14 +245,7 @@ export function SectionCard({
                 )}
                 Supprimer
               </DropdownMenuItem>
-              {locked && lockReason && (
-                // A caption, not a tooltip: a disabled menu item never receives the
-                // hover Radix would need to open one.
-                <p className="flex items-start gap-1.5 border-t px-2 py-2 text-[11px] leading-snug text-muted-foreground">
-                  <Lock className="mt-0.5 size-3 shrink-0" />
-                  <span>{lockReason}</span>
-                </p>
-              )}
+              {locked && <CatalogLockMenuNote reason={lockReason} />}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
