@@ -20,12 +20,30 @@ describe('adminClientsApi', () => {
 
     await adminClientsApi.list();
 
-    expect(mockApiGet).toHaveBeenCalledWith('platform/clients');
+    expect(mockApiGet).toHaveBeenCalledWith('platform/clients', undefined);
+  });
+
+  it('transmet le tenant vise quand il est fourni', async () => {
+    mockApiGet.mockResolvedValue({ data: [] });
+
+    await adminClientsApi.list('t-1');
+
+    expect(mockApiGet).toHaveBeenCalledWith('platform/clients', {
+      tenant_id: 't-1',
+    });
   });
 
   it('retourne les clients renvoyés par le backend', async () => {
     mockApiGet.mockResolvedValue({
-      data: [{ id: 'c-1', tenant_id: 't-1', name: 'Globex', slug: 'globex', is_active: true }],
+      data: [
+        {
+          id: 'c-1',
+          tenant_id: 't-1',
+          name: 'Globex',
+          slug: 'globex',
+          is_active: true,
+        },
+      ],
     });
 
     const res = await adminClientsApi.list();

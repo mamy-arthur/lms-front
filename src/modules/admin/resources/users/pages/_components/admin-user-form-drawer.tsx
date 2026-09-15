@@ -1,25 +1,14 @@
 'use client';
 
-import { memo, useCallback, useMemo, useRef } from 'react';
-import { z } from 'zod';
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet';
-import { Role } from '@/shared/constants/roles';
 import { useUserFormDrawer } from '@modules/shared/components/users/use-user-form-drawer';
 import { UserForm } from '@modules/shared/components/users/user-form';
-import { useCreateUser } from '../../hooks/useCreateUser';
-import { useUpdateUser } from '../../hooks/useUpdateUser';
-import type { CreateUserPayload, UpdateUserPayload, User } from '../../types';
-import { useAuthStore } from '@/shared/stores/auth.store';
+import { UserPhotoField } from '@modules/shared/components/users/user-photo-field';
+import { UserProfileFields } from '@modules/shared/components/users/user-profile-fields';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { tenantApi } from '@/modules/admin/resources/tenants/api';
-import { useClientsQuery } from '@/modules/admin/resources/clients';
-import { Input } from '@/components/ui/input';
+import { memo, useCallback, useEffect, useMemo, useRef } from 'react';
+import { toast } from 'sonner';
+import { z } from 'zod';
+import { FieldContent, FieldError, FieldGroup, FieldLabel, FieldRoot } from '@/components/ui/field';
 import {
   Select,
   SelectContent,
@@ -27,13 +16,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { FieldContent, FieldError, FieldGroup, FieldLabel, FieldRoot } from '@/components/ui/field';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
 import { Switch } from '@/components/ui/switch';
-import { UserPhotoField } from '@modules/shared/components/users/user-photo-field';
-import { UserProfileFields } from '@modules/shared/components/users/user-profile-fields';
+import { useClientsQuery } from '@/modules/admin/resources/clients';
+import { tenantApi } from '@/modules/admin/resources/tenants/api';
 import { uploadUserProfilePhoto } from '@/modules/shared/lib/uploadUserProfilePhoto';
-import { toast } from 'sonner';
+import { Role } from '@/shared/constants/roles';
+import { useAuthStore } from '@/shared/stores/auth.store';
+import { useCreateUser } from '../../hooks/useCreateUser';
+import { useUpdateUser } from '../../hooks/useUpdateUser';
 import { ADMIN_USERS_QUERY_KEY } from '../../hooks/useUsersQuery';
+import type { CreateUserPayload, UpdateUserPayload, User } from '../../types';
+import { ClientNameCombobox } from './client-name-combobox';
 
 const passwordSchema = z
   .string()
@@ -183,11 +183,6 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
   // Un createur rattache a un client transmet le sien : aucun champ a afficher.
   const callerHasClient = authUser?.role === Role.CLIENT_MANAGER;
 
-  // La liste n'est utile qu'a ceux qui choisissent reellement un client.
-  const { data: clients } = useClientsQuery(
-    open && !callerHasClient && (!isEdit || canReassignClient),
-  );
-
   const createSchema = useMemo(() => buildCreateSchema(callerHasClient), [callerHasClient]);
 
   const updateSchema = useMemo(
@@ -245,8 +240,16 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
         password: values.password as string,
         role: values.role,
         tenant_id: values.tenant_id ?? null,
-        client_id: values.role === Role.TRAINEE ? (values.client_id ?? null) : null,
-        client_name: values.role === Role.CLIENT_MANAGER ? (values.client_name ?? null) : null,
+        client_id:
+          values.role === Role.TRAINEE || values.role === Role.CLIENT_MANAGER
+            ? (values.client_id ?? null)
+            : null,
+        // Le nom n'est transmis que faute de client existant retenu : l'envoyer
+        // avec un client_id rendrait l'intention ambigue.
+        client_name:
+          values.role === Role.CLIENT_MANAGER && !values.client_id
+            ? (values.client_name ?? null)
+            : null,
         is_active: values.is_active,
         address: values.address ?? null,
         zip_code: values.zip_code ?? null,
@@ -281,6 +284,39 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
     }),
   });
 
+  // Le rattachement client suit le role choisi dans le formulaire, pas celui de
+  // l'utilisateur connecte : un responsable nomme son client, un stagiaire
+  // rejoint un client existant, les autres roles n'en ont pas.
+  const selectedRole = formState.form.watch('role');
+
+  // Un compte global n'a pas de tenant propre : c'est celui du formulaire qui
+  // determine les clients proposables.
+  const selectedTenantId = formState.form.watch('tenant_id') ?? null;
+
+  // La liste n'est utile qu'a ceux qui choisissent reellement un client.
+  const { data: clients, isLoading: clientsLoading } = useClientsQuery(
+    open &&
+      !callerHasClient &&
+      (!isEdit || canReassignClient) &&
+      (!isSuperAdmin || selectedTenantId !== null),
+    isSuperAdmin ? selectedTenantId : null,
+  );
+
+  // Changer de tenant invalide le client retenu : il appartient a l'ancien.
+  const previousTenantIdRef = useRef<string | null | undefined>(undefined);
+  useEffect(() => {
+    if (previousTenantIdRef.current === undefined) {
+      previousTenantIdRef.current = selectedTenantId;
+      return;
+    }
+
+    if (previousTenantIdRef.current !== selectedTenantId) {
+      previousTenantIdRef.current = selectedTenantId;
+      formState.form.setValue('client_id', null);
+      formState.form.setValue('client_name', null);
+    }
+  }, [selectedTenantId, formState.form]);
+
   // Submit avec upload photo si fichier sélectionné
   const onSubmitWithPhoto = useCallback(
     async (values: Record<string, unknown>) => {
@@ -311,7 +347,9 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
         // L'endpoint profile-photo lie déjà la photo côté backend — best-effort
         try {
           await uploadUserProfilePhoto(user.id, pendingPhotoRef.current, 'platform/users');
-          await queryClient.invalidateQueries({ queryKey: ADMIN_USERS_QUERY_KEY });
+          await queryClient.invalidateQueries({
+            queryKey: ADMIN_USERS_QUERY_KEY,
+          });
         } catch {
           toast.warning("Données sauvegardées, mais l'upload photo a échoué.");
         }
@@ -330,9 +368,11 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
             role: values.role as CreateUserPayload['role'],
             tenant_id: (values.tenant_id as string | null) ?? null,
             client_id:
-              values.role === Role.TRAINEE ? ((values.client_id as string | null) ?? null) : null,
+              values.role === Role.TRAINEE || values.role === Role.CLIENT_MANAGER
+                ? ((values.client_id as string | null) ?? null)
+                : null,
             client_name:
-              values.role === Role.CLIENT_MANAGER
+              values.role === Role.CLIENT_MANAGER && !values.client_id
                 ? ((values.client_name as string | null) ?? null)
                 : null,
             is_active: values.is_active as boolean,
@@ -354,7 +394,9 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
         } catch {
           toast.error("Utilisateur créé, mais l'upload photo a échoué.");
         }
-        await queryClient.invalidateQueries({ queryKey: ADMIN_USERS_QUERY_KEY });
+        await queryClient.invalidateQueries({
+          queryKey: ADMIN_USERS_QUERY_KEY,
+        });
         pendingPhotoRef.current = null;
         handleSuccess();
         onClose();
@@ -418,13 +460,7 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
     />
   ) : null;
 
-  // Le rattachement client suit le role choisi dans le formulaire, pas celui de
-  // l'utilisateur connecte : un responsable nomme son client, un stagiaire
-  // rejoint un client existant, les autres roles n'en ont pas.
-  const selectedRole = formState.form.watch('role');
-
   const roleNeedsClient = selectedRole === Role.TRAINEE || selectedRole === Role.CLIENT_MANAGER;
-
   // En edition on ne propose que des clients existants : creer un client depuis
   // un formulaire d'edition ferait naitre un client fantome sur une faute de frappe.
   const showClientSelect =
@@ -439,19 +475,29 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
       name="client_name"
       render={({ field }) => (
         <FieldGroup>
-          <FieldLabel className="text-xs">Nom du client</FieldLabel>
+          <FieldLabel className="text-xs">Client</FieldLabel>
           <FieldContent>
-            <Input
-              placeholder="Ex : Globex Corporation"
-              className="text-xs"
-              value={field.value ?? ''}
-              onChange={(e) => field.onChange(e.target.value || null)}
-              aria-label="Nom du client"
+            <ClientNameCombobox
+              clients={clients ?? []}
+              isLoading={clientsLoading}
+              disabled={isSuperAdmin && selectedTenantId === null}
+              clientId={formState.form.watch('client_id') ?? null}
+              clientName={field.value ?? null}
+              onSelectExisting={(client) => {
+                // Le client_id prime cote backend : le nom ne sert plus qu'a l'affichage.
+                formState.form.setValue('client_id', client.id, {
+                  shouldValidate: true,
+                });
+                field.onChange(client.name);
+              }}
+              onUseNewName={(name) => {
+                formState.form.setValue('client_id', null, {
+                  shouldValidate: true,
+                });
+                field.onChange(name || null);
+              }}
             />
           </FieldContent>
-          <p className="text-[11px] text-muted-foreground">
-            Le client est créé s’il n’existe pas encore dans ce tenant.
-          </p>
           <FieldError />
         </FieldGroup>
       )}
