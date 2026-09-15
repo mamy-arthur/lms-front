@@ -1,4 +1,4 @@
-export type FormationStatus = 'in_progress' | 'completed' | 'not_started';
+export type FormationStatus = 'in_progress' | 'completed' | 'not_started' | 'failed';
 
 export interface TraineeFormation {
   id: string;
@@ -14,6 +14,8 @@ export interface TraineeFormation {
   enrolledAt: string;
   lastActivity: string;
   completedDate?: string;
+  failureReason?: string | null;
+  failedAt?: string;
   hasAttestation?: boolean;
   totalDurationMin: number;
   currentLesson?: string;

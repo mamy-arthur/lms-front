@@ -28,6 +28,8 @@ const mockApi = portalScormApi as jest.Mocked<typeof portalScormApi>;
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 const BASE_STATE: ApiScormTrackingState = {
+  enrollment_id: 'enr-1',
+  competency_id: 'competency-1',
   content_entry_id: 'entry-1',
   lesson_status: 'incomplete',
   score_raw: null,
@@ -44,6 +46,7 @@ const BASE_STATE: ApiScormTrackingState = {
 function makeSession(version: '1.2' | '2004' = '1.2', onCompleted = jest.fn()) {
   return new ScormSession({
     enrollmentId: 'enr-1',
+    competencyId: 'competency-1',
     courseId: 'course-1',
     entryId: 'entry-1',
     version,
@@ -138,6 +141,7 @@ describe('ScormSession — mapping SCORM 2004', () => {
 
     expect(mockApi.commitTracking).toHaveBeenCalledWith(
       'enr-1',
+      'competency-1',
       'course-1',
       'entry-1',
       expect.objectContaining({ lesson_status: 'passed' }),
@@ -158,6 +162,7 @@ describe('ScormSession — parsing des temps', () => {
 
     expect(mockApi.commitTracking).toHaveBeenCalledWith(
       'enr-1',
+      'competency-1',
       'course-1',
       'entry-1',
       expect.objectContaining({ session_time: 300, total_time: BASE_STATE.total_time + 300 }),
@@ -177,6 +182,7 @@ describe('ScormSession — parsing des temps', () => {
     const expectedSeconds = 3600 + 2 * 60 + 3;
     expect(mockApi.commitTracking).toHaveBeenCalledWith(
       'enr-1',
+      'competency-1',
       'course-1',
       'entry-1',
       expect.objectContaining({ session_time: expectedSeconds }),
@@ -196,7 +202,7 @@ describe('ScormSession — commit', () => {
     await flush();
 
     expect(mockApi.commitTracking).toHaveBeenCalledTimes(1);
-    expect(mockApi.commitTracking.mock.calls[0][3]).toMatchObject({
+    expect(mockApi.commitTracking.mock.calls[0][4]).toMatchObject({
       sequence: BASE_STATE.last_sequence + 1,
     });
   });
@@ -228,7 +234,7 @@ describe('ScormSession — commit', () => {
 
     expect(mockApi.getTrackingSequence).toHaveBeenCalledTimes(1);
     expect(mockApi.commitTracking).toHaveBeenCalledTimes(2);
-    expect(mockApi.commitTracking.mock.calls[1][3]).toMatchObject({ sequence: 11 });
+    expect(mockApi.commitTracking.mock.calls[1][4]).toMatchObject({ sequence: 11 });
   });
 
   it('gives up silently if the retry after a 409 fails too', async () => {

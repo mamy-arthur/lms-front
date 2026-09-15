@@ -114,6 +114,18 @@ export function PurchasedLearningPathsTable({
       ),
     },
     {
+      key: 'failed',
+      label: 'Inscriptions échouées',
+      sortable: true,
+      render: (row) => (
+        <PurchasedLearningPathStatTrigger
+          label="Échouées"
+          value={row.stats.failed}
+          onClick={() => onStatClick(row, 'failed')}
+        />
+      ),
+    },
+    {
       key: 'availableCredits',
       label: 'Crédits disponibles',
       sortable: true,

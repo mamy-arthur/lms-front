@@ -90,6 +90,7 @@ export default function FormationContentView({
               entry={portalEntry ?? undefined}
               isLoading={portalEntryLoading ?? false}
               enrollmentId={enrollmentId}
+              competencyId={content.competencyId}
               courseId={content.courseId}
               onScormCompleted={onMarkComplete ? () => onMarkComplete() : undefined}
             />

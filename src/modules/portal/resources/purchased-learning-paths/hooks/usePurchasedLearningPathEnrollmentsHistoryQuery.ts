@@ -10,6 +10,7 @@ const STAT_TO_STATUS: Record<PurchasedLearningPathStatKey, EnrollmentStatus | un
   cumulative: undefined,
   inProgress: 'in_progress',
   notStarted: 'not_started',
+  failed: 'failed',
 };
 
 export function usePurchasedLearningPathEnrollmentsHistoryQuery(

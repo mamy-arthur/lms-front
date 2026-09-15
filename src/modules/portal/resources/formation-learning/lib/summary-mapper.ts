@@ -48,6 +48,7 @@ export function mapSummaryToFormation(summary: ApiPortalLearningPathSummary): Fo
           return {
             // A shared course has an independent progression in each module.
             id: `${mod.id}:${course.id}:${entry.id}`,
+            competencyId: mod.id,
             entryId: entry.id,
             courseId: course.id,
             type: 'page', // placeholder; real type resolved when entry is fetched

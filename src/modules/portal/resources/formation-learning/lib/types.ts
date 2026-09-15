@@ -9,6 +9,8 @@ export type ProgressStatus = 'completed' | 'in_progress' | 'available' | 'locked
 export interface CourseContent {
   /** Navigation identity, scoped to the module and course for API contents. */
   id: string;
+  /** Module competency ID required by enrollment-scoped APIs. */
+  competencyId?: string;
   /** Raw backend UUID for API calls; absent for mock contents. */
   entryId?: string;
   /** courseId — used to call the portal entry endpoint (/courses/{courseId}/entries/{entryId}). */

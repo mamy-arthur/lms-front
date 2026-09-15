@@ -6,6 +6,8 @@ export type ScormLessonStatus =
   'not_attempted' | 'incomplete' | 'completed' | 'passed' | 'failed' | 'browsed' | 'unknown';
 
 export interface ApiScormLaunch {
+  enrollment_id: string;
+  competency_id: string;
   content_entry_id: string;
   scorm_package_id: string;
   version: ScormVersion;
@@ -14,6 +16,8 @@ export interface ApiScormLaunch {
 }
 
 export interface ApiScormTrackingState {
+  enrollment_id: string;
+  competency_id: string;
   content_entry_id: string;
   lesson_status: ScormLessonStatus;
   score_raw: number | null;
@@ -44,27 +48,37 @@ const scormBase = (enrollmentId: string, courseId: string, entryId: string): str
 
 /** Portal (stagiaire) SCORM launch + tracking — see API.md §22.9-22.10. */
 export const portalScormApi = {
-  launch: (enrollmentId: string, courseId: string, entryId: string) =>
-    apiGet<{ data: ApiScormLaunch }>(`${scormBase(enrollmentId, courseId, entryId)}/launch`),
+  launch: (enrollmentId: string, competencyId: string, courseId: string, entryId: string) =>
+    apiGet<{ data: ApiScormLaunch }>(`${scormBase(enrollmentId, courseId, entryId)}/launch`, {
+      competency_id: competencyId,
+    }),
 
-  getTracking: (enrollmentId: string, courseId: string, entryId: string) =>
+  getTracking: (enrollmentId: string, competencyId: string, courseId: string, entryId: string) =>
     apiGet<{ data: ApiScormTrackingState }>(
       `${scormBase(enrollmentId, courseId, entryId)}/tracking`,
+      { competency_id: competencyId },
     ),
 
   commitTracking: (
     enrollmentId: string,
+    competencyId: string,
     courseId: string,
     entryId: string,
     payload: ScormTrackingCommitPayload,
   ) =>
     apiPut<{ data: ApiScormTrackingState }>(
       `${scormBase(enrollmentId, courseId, entryId)}/tracking`,
-      payload,
+      { ...payload, competency_id: competencyId },
     ),
 
-  getTrackingSequence: (enrollmentId: string, courseId: string, entryId: string) =>
+  getTrackingSequence: (
+    enrollmentId: string,
+    competencyId: string,
+    courseId: string,
+    entryId: string,
+  ) =>
     apiGet<{ data: { last_sequence: number } }>(
       `${scormBase(enrollmentId, courseId, entryId)}/tracking/sequence`,
+      { competency_id: competencyId },
     ),
 };
