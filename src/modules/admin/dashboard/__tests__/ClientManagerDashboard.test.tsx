@@ -214,7 +214,15 @@ describe('ClientManagerDashboard', () => {
       await user.keyboard('{Enter}');
       const dialog = await screen.findByRole('dialog', { name: `Étudiants · ${status.label}` });
       expect(within(dialog).getByText(formation.name)).toBeInTheDocument();
-      expect(within(dialog).getAllByRole('listitem')).toHaveLength(formation[status.key]);
+      const rows = within(dialog).getAllByRole('listitem');
+      const students = getDemoFormationStudents(formation, status.key);
+      expect(rows).toHaveLength(formation[status.key]);
+      rows.forEach((row, index) => {
+        expect(within(row).getByText(students[index].name)).toBeInTheDocument();
+        expect(within(row).getByText(students[index].email)).toBeInTheDocument();
+        expect(row.querySelector('[data-slot="avatar"]')).toHaveAttribute('aria-hidden', 'true');
+        expect(row.querySelector('[data-slot="avatar-fallback"]')).toBeInTheDocument();
+      });
       await user.keyboard('{Escape}');
       await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
       expect(trigger).toHaveFocus();
@@ -251,17 +259,26 @@ describe('ClientManagerDashboard', () => {
 
   it('conserve des effectifs cohérents entre les listes étudiantes, les cartes et la synthèse', () => {
     const studentIds = new Set<string>();
+    const studentEmails = new Map<string, string>();
     const totals = enrollmentStatuses.map((status) => {
       return formationProgressDemo.reduce((total, formation) => {
         const students = getDemoFormationStudents(formation, status.key);
         expect(students).toHaveLength(formation[status.key]);
         expect(new Set(students.map((student) => student.id)).size).toBe(students.length);
-        students.forEach((student) => studentIds.add(student.id));
+        students.forEach((student) => {
+          studentIds.add(student.id);
+          expect(student.email).toMatch(/^etudiant\.\d{3}@example\.com$/);
+          if (studentEmails.has(student.id)) {
+            expect(student.email).toBe(studentEmails.get(student.id));
+          }
+          studentEmails.set(student.id, student.email);
+        });
         return total + students.length;
       }, 0);
     });
     expect(totals).toEqual([72, 81, 18, 9]);
     expect(totals).toEqual(demoProgress.enrollments.map((status) => status.count));
     expect(studentIds.size).toBe(demoProgress.students);
+    expect(new Set(studentEmails.values()).size).toBe(demoProgress.students);
   });
 });

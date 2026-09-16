@@ -117,9 +117,11 @@ export function getDemoFormationStudents(
 
   return Array.from({ length: formation[status] }, (_, index) => {
     const studentNumber = ((formationOffset + statusOffset + index) % demoProgress.students) + 1;
+    const studentLabel = String(studentNumber).padStart(3, '0');
     return {
       id: `demo-student-${studentNumber}`,
-      name: `Étudiant ${String(studentNumber).padStart(3, '0')}`,
+      name: `Étudiant ${studentLabel}`,
+      email: `etudiant.${studentLabel}@example.com`,
     };
   });
 }
