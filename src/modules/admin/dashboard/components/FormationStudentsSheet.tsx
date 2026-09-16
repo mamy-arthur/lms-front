@@ -1,12 +1,10 @@
 'use client';
 
 import { useEffect, useId, useRef, useState } from 'react';
-import { UserRound, X } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
 import {
   Sheet,
-  SheetClose,
   SheetContent,
   SheetDescription,
   SheetHeader,
@@ -83,7 +81,6 @@ function FormationStudentsContent({
 
   return (
     <SheetContent
-      showCloseButton={false}
       data-expanded={Boolean(student)}
       className={cn(
         'data-[side=right]:w-full transition-[max-width] duration-300 motion-reduce:transition-none motion-reduce:animate-none',
@@ -100,23 +97,15 @@ function FormationStudentsContent({
         onRestoreFocus();
       }}
     >
-      <SheetHeader className="shrink-0">
-        <div className="flex items-center justify-between gap-3">
-          <SheetTitle>Étudiants · {status?.label}</SheetTitle>
-          <SheetClose asChild>
-            <Button variant="ghost" size="icon" aria-label="Fermer le panneau">
-              <X aria-hidden="true" />
-            </Button>
-          </SheetClose>
+      <SheetHeader className="shrink-0 border-b px-5 py-3.5">
+        <div>
+          <SheetTitle className="text-base">Étudiants · {status?.label}</SheetTitle>
+          <SheetDescription className="text-muted-foreground text-xs">
+            {selection?.formation.name}
+          </SheetDescription>
         </div>
-        <SheetDescription>{selection?.formation.name}</SheetDescription>
       </SheetHeader>
-      <div
-        className={cn(
-          'min-h-0 flex-1 border-t border-border',
-          student && 'grid lg:grid-cols-[minmax(0,1fr)_25rem]',
-        )}
-      >
+      <div className={cn('min-h-0 flex-1', student && 'grid lg:grid-cols-[minmax(0,1fr)_25rem]')}>
         {student && (
           <section
             id={historyId}
@@ -149,7 +138,7 @@ function FormationStudentsContent({
             {students.length} étudiant{students.length > 1 ? 's' : ''} · Cliquez pour voir les
             tentatives.
           </p>
-          <ul aria-label="Étudiants concernés" className="divide-y">
+          <ul aria-label="Étudiants concernés" className="space-y-2">
             {students.map((item) => (
               <li key={item.id}>
                 <button
@@ -161,16 +150,19 @@ function FormationStudentsContent({
                   aria-label={`Voir les tentatives de ${item.name}`}
                   aria-pressed={item.id === studentId}
                   aria-controls={student ? historyId : undefined}
-                  className="flex w-full items-center gap-3 rounded-sm px-2 py-3 text-left transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring aria-pressed:bg-primary/5"
+                  className="group flex w-full items-center gap-3 border rounded-sm   px-2 py-3 text-left transition-colors hover:bg-(--color-primary)/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring aria-pressed:border-(--color-primary) aria-pressed:bg-(--color-primary)/10"
                   onClick={() => setStudentId(item.id)}
                 >
                   <Avatar size="lg" aria-hidden="true">
-                    <AvatarFallback className="bg-primary/10 text-primary">
-                      <UserRound className="size-4" />
+                    <AvatarFallback className="bg-gray-50 text-primary transition-colors group-aria-pressed:bg-(--color-primary) group-aria-pressed:text-primary-foreground text-xs">
+                      ET
                     </AvatarFallback>
                   </Avatar>
                   <span className="min-w-0 flex-1 space-y-1">
-                    <span className="block truncate text-sm font-medium" title={item.name}>
+                    <span
+                      className="block truncate text-sm font-medium group-aria-pressed:text-primary"
+                      title={item.name}
+                    >
                       {item.name}
                     </span>
                     <span
@@ -180,6 +172,10 @@ function FormationStudentsContent({
                       {item.email}
                     </span>
                   </span>
+                  <Check
+                    aria-hidden="true"
+                    className="invisible size-4 shrink-0 text-(--color-primary) group-aria-pressed:visible"
+                  />
                 </button>
               </li>
             ))}

@@ -1,10 +1,11 @@
-import { CalendarDays, History, RotateCcw } from 'lucide-react';
+import { CalendarDays, CircleAlert, History, RotateCcw } from 'lucide-react';
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { formatAttemptDate, type StudentAttemptDemo } from '../data/studentAttemptsDemo';
 import { enrollmentStatuses } from '../data/studentProgressDemo';
@@ -64,19 +65,33 @@ export function StudentAttemptHistory({ attempts }: { attempts: StudentAttemptDe
                       </span>
                     )}
                   </span>
-                  {attempt.restartReason && (
-                    <span className="flex items-start gap-1.5 text-xs font-normal text-muted-foreground">
-                      <RotateCcw aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
-                      {attempt.restartReason}
-                    </span>
-                  )}
-                  {attempt.interruptionReason && (
-                    <span className="block text-xs font-normal text-red-700 dark:text-red-300">
-                      Motif d’interruption : {attempt.interruptionReason}
-                    </span>
-                  )}
                 </span>
               </AccordionTrigger>
+              {(attempt.restartReason || attempt.interruptionReason) && (
+                <div className="space-y-2 px-4 pb-4">
+                  {attempt.restartReason && (
+                    <Alert
+                      className="rounded-sm bg-muted/40"
+                      aria-label={`Reprise du parcours · Tentative ${attempt.number}`}
+                    >
+                      <RotateCcw aria-hidden="true" />
+                      <AlertTitle>Reprise du parcours</AlertTitle>
+                      <AlertDescription>{attempt.restartReason}</AlertDescription>
+                    </Alert>
+                  )}
+                  {attempt.interruptionReason && (
+                    <Alert
+                      variant="destructive"
+                      className="rounded-sm border-destructive/20 bg-destructive/5"
+                      aria-label={`Motif d’interruption · Tentative ${attempt.number}`}
+                    >
+                      <CircleAlert aria-hidden="true" />
+                      <AlertTitle>Motif d’interruption</AlertTitle>
+                      <AlertDescription>{attempt.interruptionReason}</AlertDescription>
+                    </Alert>
+                  )}
+                </div>
+              )}
               <AccordionContent className="h-auto pb-4 [&_p:not(:last-child)]:mb-0">
                 <StudentAttemptDetails attempt={attempt} />
               </AccordionContent>

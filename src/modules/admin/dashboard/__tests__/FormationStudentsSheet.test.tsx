@@ -61,6 +61,18 @@ describe('panneau des tentatives étudiantes', () => {
     );
     expect(within(history).getByText(/Reprise depuis le début/)).toBeInTheDocument();
     expect(within(history).getAllByText(/Motif d’interruption/)).toHaveLength(2);
+    const alerts = within(history).getAllByRole('alert');
+    expect(alerts).toHaveLength(3);
+    alerts.forEach((alert) => {
+      expect(alert).toHaveAttribute('data-slot', 'alert');
+      expect(alert.closest('button')).toBeNull();
+    });
+    expect(
+      within(history).getByRole('alert', { name: 'Reprise du parcours · Tentative 2' }),
+    ).toHaveTextContent(/Reprise depuis le début/);
+    expect(
+      within(history).getByRole('alert', { name: 'Motif d’interruption · Tentative 1' }),
+    ).toHaveTextContent(/Échec à l’évaluation 1/);
     expect(history.querySelectorAll('time')).toHaveLength(4);
     expect(within(history).queryByRole('list')).not.toBeInTheDocument();
   });
@@ -111,6 +123,23 @@ describe('panneau des tentatives étudiantes', () => {
     expect(screen.queryByRole('region', { name: /^Tentatives de/ })).not.toBeInTheDocument();
   });
 
+  it('consulte les temps par cours sans replier la tentative et les réinitialise au changement d’étudiant', async () => {
+    const { user } = await selectFirstStudent();
+    const attempt = screen.getByRole('button', { name: /^Tentative 1/ });
+    await user.click(attempt);
+    await user.click(screen.getByRole('button', { name: 'Voir le temps par cours de Module 1' }));
+    expect(attempt).toHaveAttribute('aria-expanded', 'true');
+    expect(
+      screen.getByRole('list', { name: 'Temps par cours de Module 1 — tentative 1' }),
+    ).toBeInTheDocument();
+    const next = getDemoFormationStudents(formation, 'failed')[1];
+    await user.click(screen.getByRole('button', { name: `Voir les tentatives de ${next.name}` }));
+    await user.click(screen.getByRole('button', { name: /^Tentative 1/ }));
+    expect(
+      screen.getByRole('button', { name: 'Voir le temps par cours de Module 1' }),
+    ).toHaveAttribute('aria-expanded', 'false');
+  });
+
   it('ne conserve pas une tentative ouverte en changeant d’étudiant', async () => {
     const { user } = await selectFirstStudent();
     await user.click(screen.getByRole('button', { name: /^Tentative 1/ }));
@@ -158,7 +187,7 @@ describe('panneau des tentatives étudiantes', () => {
     const next = getDemoFormationStudents(formation, 'failed')[1];
     await user.click(screen.getByRole('button', { name: `Voir les tentatives de ${next.name}` }));
     await user.click(screen.getByRole('button', { name: /^Tentative 1/ }));
-    await user.click(screen.getByRole('button', { name: 'Fermer le panneau' }));
+    await user.click(screen.getByRole('button', { name: 'Close' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     await user.click(screen.getByRole('button', { name: 'Ouvrir le panneau' }));
     expect(screen.getByRole('dialog')).toHaveAttribute('data-expanded', 'true');

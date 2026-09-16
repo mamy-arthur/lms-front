@@ -79,6 +79,37 @@ describe('historique des tentatives de démonstration', () => {
     expect(attempt.steps[5]).toMatchObject({ state: 'failed', kind: 'evaluation' });
   });
 
+  it('fait correspondre la somme des cours au temps de chaque module et chaque tentative', () => {
+    formationProgressDemo.forEach((formation) => {
+      enrollmentStatuses.forEach(({ key }) => {
+        const student = getDemoFormationStudents(formation, key)[0];
+        getDemoStudentAttempts(formation, key, student.id).forEach((attempt) => {
+          attempt.steps.forEach((step) => {
+            if (step.kind === 'evaluation') {
+              expect(step).not.toHaveProperty('courses');
+              return;
+            }
+            if (step.state === 'locked') {
+              expect(step.courses).toEqual([]);
+              return;
+            }
+            expect(step.courses).toHaveLength(3);
+            expect(new Set(step.courses.map((course) => course.id)).size).toBe(3);
+            expect(step.courses.reduce((total, course) => total + course.minutes, 0)).toBe(
+              step.minutes,
+            );
+            step.courses.forEach((course) => {
+              expect(course.minutes).toBeGreaterThanOrEqual(0);
+              expect(Number.isInteger(course.minutes)).toBe(true);
+              if (course.state === 'not_started') expect(course.minutes).toBe(0);
+              if (step.state === 'completed') expect(course.state).toBe('completed');
+            });
+          });
+        });
+      });
+    });
+  });
+
   it('isole les historiques par étudiant et par formation sans modifier les fixtures', () => {
     const formation = formationProgressDemo[0];
     const [first, second] = getDemoFormationStudents(formation, 'completed');

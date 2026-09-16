@@ -6,14 +6,21 @@ import {
 
 export type FormationStudentDemo = ReturnType<typeof getDemoFormationStudents>[number];
 
+export type AttemptCourseDemo = {
+  id: string;
+  title: string;
+  state: 'completed' | 'in_progress' | 'not_started';
+  minutes: number;
+};
+
 export type AttemptStepDemo = {
   id: string;
   title: string;
-  kind: 'module' | 'evaluation';
-} & (
-  | { state: 'completed' | 'failed' | 'in_progress'; minutes: number }
-  | { state: 'locked'; reason: string }
-);
+} & ({ kind: 'module'; courses: AttemptCourseDemo[] } | { kind: 'evaluation' }) &
+  (
+    | { state: 'completed' | 'failed' | 'in_progress'; minutes: number }
+    | { state: 'locked'; reason: string }
+  );
 
 export type StudentAttemptDemo = {
   id: string;
@@ -26,6 +33,23 @@ export type StudentAttemptDemo = {
   steps: AttemptStepDemo[];
 };
 
+function buildModuleCourses(
+  moduleNumber: number,
+  minutes: number,
+  inProgress: boolean,
+): AttemptCourseDemo[] {
+  const first = inProgress ? 20 : Math.floor(minutes / 4);
+  const second = inProgress ? minutes - first : Math.floor(minutes / 3);
+  const courseMinutes = [first, second, minutes - first - second];
+
+  return ['Introduction', 'Concepts clés', 'Mise en pratique'].map((title, index) => ({
+    id: `module-${moduleNumber}-course-${index + 1}`,
+    title: `Cours ${index + 1} — ${title}`,
+    state: inProgress && index > 0 ? (index === 1 ? 'in_progress' : 'not_started') : 'completed',
+    minutes: courseMinutes[index],
+  }));
+}
+
 function buildSteps(
   attemptNumber: number,
   outcome: StudentAttemptDemo['outcome'],
@@ -37,12 +61,12 @@ function buildSteps(
     const base = {
       id: `${kind}-${moduleNumber}`,
       title: `${kind === 'module' ? 'Module' : 'Évaluation'} ${moduleNumber}`,
-      kind,
     } as const;
 
     if (outcome !== 'completed' && index > stoppingStep) {
       return {
         ...base,
+        ...(kind === 'module' ? { kind, courses: [] } : { kind }),
         state: 'locked',
         reason:
           outcome === 'failed'
@@ -53,11 +77,15 @@ function buildSteps(
 
     const state = index === stoppingStep ? outcome : 'completed';
     const moduleMinutes = [attemptNumber === 1 ? 180 : 240, 90, 60];
+    const minutes =
+      state === 'in_progress' ? 35 : kind === 'module' ? moduleMinutes[moduleNumber - 1] : 20;
     return {
       ...base,
+      ...(kind === 'module'
+        ? { kind, courses: buildModuleCourses(moduleNumber, minutes, state === 'in_progress') }
+        : { kind }),
       state,
-      minutes:
-        state === 'in_progress' ? 35 : kind === 'module' ? moduleMinutes[moduleNumber - 1] : 20,
+      minutes,
     };
   });
 }

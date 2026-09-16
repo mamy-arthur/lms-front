@@ -26,14 +26,14 @@ export function FormationCatalogOverview({
           <div
             key={label}
             className={cn(
-              'relative isolate flex flex-col gap-16 overflow-hidden rounded-sm border border-gray-100 px-4 py-3',
+              'relative isolate flex flex-col gap-16 overflow-hidden rounded-sm border  px-4 py-3',
               highlighted &&
                 'border-none bg-linear-to-br from-emerald-50 to-emerald-100/60 dark:border-emerald-900 dark:from-emerald-950 dark:to-emerald-950/40',
             )}
           >
             <dt
               className={cn(
-                'relative z-10 flex items-center gap-2 text-xs text-muted-foreground',
+                'relative z-10 flex items-center gap-2 text-xs text-black',
                 highlighted && 'text-emerald-800 dark:text-emerald-200',
               )}
             >
