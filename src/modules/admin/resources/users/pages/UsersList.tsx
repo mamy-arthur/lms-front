@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { ChevronDown, Plus, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -13,6 +14,7 @@ import { useUsersQuery } from '../hooks/useUsersQuery';
 import type { User, UserSearchParams } from '../types';
 import { useUsersListController } from '@/modules/shared/hooks/useUsersListController';
 import { useClientsQuery } from '@/modules/admin/resources/clients';
+import { tenantApi } from '@/modules/admin/resources/tenants/api';
 import { Role } from '@/shared/constants/roles';
 import { useToggleUserActive } from '../hooks/useToggleUserActive';
 import { useDeleteUser } from '../hooks/useDeleteUser';
@@ -61,20 +63,40 @@ export function UsersList() {
 
   const activeTenant = useTenantStore((s) => s.tenant);
   const [clientFilter, setClientFilter] = useState<string | null>(null);
+  const [tenantFilter, setTenantFilter] = useState<string | null>(null);
 
   // Un CLIENT_MANAGER n'a qu'un client : le backend le force deja, afficher le
   // filtre n'aurait aucun sens pour lui.
   const callerRole = useAuthStore((s) => s.role);
   const canFilterByClient = callerRole !== Role.CLIENT_MANAGER;
-  const { data: clients } = useClientsQuery(canFilterByClient);
+
+  // Sur le domaine central aucun tenant n'est resolu : seul un compte global
+  // peut en designer un, les autres restent cloisonnes par le backend.
+  const canSelectTenant = callerRole === Role.SUPER_ADMIN && !activeTenant;
+  const { data: tenantsData } = useQuery({
+    queryKey: ['tenants-select'],
+    queryFn: () => tenantApi.getAll(),
+    enabled: canSelectTenant,
+  });
+  const tenants = tenantsData?.data ?? [];
+
+  const tenantId = activeTenant?.id ?? tenantFilter;
+  // Un client n'existe que dans un tenant : sans tenant cible la liste reste vide.
+  const { data: clients } = useClientsQuery(canFilterByClient, tenantId);
+
+  // Changer de tenant invalide le client retenu, qui appartient au precedent.
+  const handleTenantFilter = (id: string | null) => {
+    setTenantFilter(id);
+    setClientFilter(null);
+  };
 
   const scopedParams = useMemo(
     () => ({
       ...params,
-      ...(activeTenant ? { tenant_id: activeTenant.id } : {}),
+      ...(tenantId ? { tenant_id: tenantId } : {}),
       ...(clientFilter ? { client_id: clientFilter } : {}),
     }),
-    [params, activeTenant, clientFilter],
+    [params, tenantId, clientFilter],
   );
 
   const { data, isLoading } = useUsersQuery(scopedParams);
@@ -179,6 +201,47 @@ export function UsersList() {
                 )}
               </PopoverContent>
             </Popover>
+
+            {/* Tenant filter */}
+            {canSelectTenant && tenants.length > 0 ? (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="justify-between text-xs font-normal">
+                    {tenantFilter
+                      ? (tenants.find((t) => String(t.id) === tenantFilter)?.name ?? 'Tenant')
+                      : 'Tous les tenants'}
+                    <ChevronDown className="ml-1 size-3.5 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-56 p-2" align="end">
+                  <div className="max-h-64 space-y-0.5 overflow-y-auto">
+                    {tenants.map((t) => (
+                      <label
+                        key={String(t.id)}
+                        className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 hover:bg-muted text-xs"
+                      >
+                        <Checkbox
+                          checked={tenantFilter === String(t.id)}
+                          onCheckedChange={() =>
+                            handleTenantFilter(tenantFilter === String(t.id) ? null : String(t.id))
+                          }
+                          className="data-[state=checked]:bg-(--color-primary) data-[state=checked]:border-(--color-primary)"
+                        />
+                        {t.name}
+                      </label>
+                    ))}
+                  </div>
+                  {tenantFilter ? (
+                    <button
+                      className="mt-1.5 w-full rounded px-2 py-1 text-center text-xs text-muted-foreground hover:bg-muted"
+                      onClick={() => handleTenantFilter(null)}
+                    >
+                      Effacer
+                    </button>
+                  ) : null}
+                </PopoverContent>
+              </Popover>
+            ) : null}
 
             {/* Client filter */}
             {canFilterByClient && (clients?.length ?? 0) > 0 ? (
