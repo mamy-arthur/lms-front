@@ -33,7 +33,7 @@ export interface FormationDetailData {
   slug: string;
   enrollmentId: string;
   title: string;
-  status: 'in_progress' | 'completed' | 'not_started';
+  status: 'in_progress' | 'completed' | 'not_started' | 'failed';
   category: string;
   level: string;
   description: string;

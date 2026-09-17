@@ -144,8 +144,8 @@ export const portalLearnerEvaluationKeys = {
 
 export const portalScormLaunchKeys = {
   all: ['portal', 'scorm-launch'] as const,
-  detail: (enrollmentId: string, courseId: string, entryId: string) =>
-    [...portalScormLaunchKeys.all, enrollmentId, courseId, entryId] as const,
+  detail: (enrollmentId: string, competencyId: string, courseId: string, entryId: string) =>
+    [...portalScormLaunchKeys.all, enrollmentId, competencyId, courseId, entryId] as const,
 };
 
 export const questionBankKeys = {

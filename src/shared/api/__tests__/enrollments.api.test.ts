@@ -30,6 +30,8 @@ const MOCK_ENROLLMENT: ApiEnrollment = {
   enrolled_at: '2026-07-30T10:00:00+00:00',
   started_at: null,
   completed_at: null,
+  failure_reason: null,
+  failed_at: null,
   created_at: '2026-07-30T10:00:00+00:00',
   updated_at: '2026-07-30T10:00:00+00:00',
 };

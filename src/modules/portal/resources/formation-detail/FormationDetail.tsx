@@ -28,6 +28,7 @@ interface FormationDetailProps {
 
 const STATUS_BADGE: Record<FormationDetailData['status'], { label: string; className: string }> = {
   completed: { label: 'Terminée', className: 'bg-emerald-100 text-emerald-700' },
+  failed: { label: 'Échouée', className: 'bg-red-100 text-red-700' },
   in_progress: { label: 'En cours', className: 'bg-(--color-primary)/10 text-(--color-primary)' },
   not_started: { label: 'Non commencée', className: 'bg-slate-100 text-slate-600' },
 };

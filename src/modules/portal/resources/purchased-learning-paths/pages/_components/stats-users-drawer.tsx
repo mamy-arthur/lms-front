@@ -26,6 +26,7 @@ const STAT_LABELS: Record<PurchasedLearningPathStatKey, string> = {
   cumulative: 'Inscrits cumulés',
   inProgress: 'En cours',
   notStarted: 'Non commencés',
+  failed: 'Échouées',
 };
 
 interface PurchasedLearningPathStatsUsersDrawerProps {
@@ -78,13 +79,15 @@ export function PurchasedLearningPathStatsUsersDrawer({
                       <TableHead>Date d'inscription</TableHead>
                       <TableHead>Date de début</TableHead>
                       <TableHead>Date de fin</TableHead>
+                      <TableHead>Motif d'échec</TableHead>
+                      <TableHead>Date d'échec</TableHead>
                       <TableHead>Date d'expiration</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {enrollments.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
+                        <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
                           Aucun stagiaire pour ce filtre.
                         </TableCell>
                       </TableRow>
@@ -98,6 +101,10 @@ export function PurchasedLearningPathStatsUsersDrawer({
                           </TableCell>
                           <TableCell>
                             {enrollment.completedAt ? formatDate(enrollment.completedAt) : '—'}
+                          </TableCell>
+                          <TableCell>{enrollment.failureReason ?? '—'}</TableCell>
+                          <TableCell>
+                            {enrollment.failedAt ? formatDate(enrollment.failedAt) : '—'}
                           </TableCell>
                           <TableCell>
                             {enrollment.expiresAt ? formatDate(enrollment.expiresAt) : '—'}

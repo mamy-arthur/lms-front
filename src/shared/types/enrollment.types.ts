@@ -1,4 +1,4 @@
-export type EnrollmentStatus = 'not_started' | 'in_progress' | 'completed' | 'expired';
+export type EnrollmentStatus = 'not_started' | 'in_progress' | 'completed' | 'expired' | 'failed';
 
 export interface ApiEnrollment {
   id: string;
@@ -10,6 +10,8 @@ export interface ApiEnrollment {
   enrolled_at: string;
   started_at: string | null;
   completed_at: string | null;
+  failure_reason: string | null;
+  failed_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -36,6 +38,8 @@ export interface ApiEnrollmentHistoryWithLearner {
   enrolled_at: string;
   started_at: string | null;
   completed_at: string | null;
+  failure_reason: string | null;
+  failed_at: string | null;
   expires_at: string | null;
   learner: {
     first_name: string;
@@ -95,6 +99,8 @@ export interface ApiMeEnrollment {
   enrolled_at: string;
   started_at: string | null;
   completed_at: string | null;
+  failure_reason: string | null;
+  failed_at: string | null;
   created_at: string;
   updated_at: string;
   learning_path: ApiMeEnrollmentLearningPath;

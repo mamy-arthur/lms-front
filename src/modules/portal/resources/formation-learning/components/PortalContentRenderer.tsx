@@ -10,6 +10,7 @@ interface Props {
   isLoading: boolean;
   /** Required to render the 'scorm' module_type (launch/tracking are enrollment-scoped). */
   enrollmentId?: string;
+  competencyId?: string;
   courseId?: string;
   onScormCompleted?: () => void;
 }
@@ -176,6 +177,7 @@ export default function PortalContentRenderer({
   entry,
   isLoading,
   enrollmentId,
+  competencyId,
   courseId,
   onScormCompleted,
 }: Props) {
@@ -194,7 +196,7 @@ export default function PortalContentRenderer({
   if (entry.module_type === 'scorm') {
     const scormPackageId =
       typeof entry.data.scorm_package_id === 'string' ? entry.data.scorm_package_id : null;
-    if (!scormPackageId || !enrollmentId || !courseId) {
+    if (!scormPackageId || !enrollmentId || !competencyId || !courseId) {
       return (
         <p className="text-slate-400 italic text-sm">Aucun package SCORM rattaché à ce contenu.</p>
       );
@@ -202,6 +204,7 @@ export default function PortalContentRenderer({
     return (
       <ScormPlayer
         enrollmentId={enrollmentId}
+        competencyId={competencyId}
         courseId={courseId}
         entryId={entry.id}
         onCompleted={onScormCompleted}

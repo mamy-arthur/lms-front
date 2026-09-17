@@ -1,6 +1,6 @@
 import type { EnrollmentStatus } from '@/shared/types/enrollment.types';
 
-export type PurchasedLearningPathStatKey = 'cumulative' | 'inProgress' | 'notStarted';
+export type PurchasedLearningPathStatKey = 'cumulative' | 'inProgress' | 'notStarted' | 'failed';
 
 export interface PurchasedLearningPathEnrollment {
   id: string;
@@ -11,6 +11,8 @@ export interface PurchasedLearningPathEnrollment {
   enrolledAt: string;
   startedAt: string | null;
   completedAt: string | null;
+  failureReason: string | null;
+  failedAt: string | null;
   expiresAt: string | null;
 }
 
@@ -28,6 +30,7 @@ export interface PurchasedLearningPath {
   enrollmentsInProgressCount: number;
   enrollmentsCompletedCount: number;
   enrollmentsExpiredCount: number;
+  enrollmentsFailedCount: number;
 }
 
 export interface PurchasedLearningPathLearner {
@@ -58,6 +61,7 @@ export interface PurchasedLearningPathStats {
   cumulative: number;
   inProgress: number;
   notStarted: number;
+  failed: number;
   availableCredits: number;
 }
 

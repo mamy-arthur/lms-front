@@ -84,6 +84,7 @@ function combineScorm2004Status(completion: string, success: string): ScormLesso
 
 export interface ScormSessionOptions {
   enrollmentId: string;
+  competencyId: string;
   courseId: string;
   entryId: string;
   version: ScormVersion;
@@ -126,6 +127,7 @@ export class ScormSession {
     try {
       const { data } = await portalScormApi.getTracking(
         this.opts.enrollmentId,
+        this.opts.competencyId,
         this.opts.courseId,
         this.opts.entryId,
       );
@@ -314,6 +316,7 @@ export class ScormSession {
     try {
       const { data } = await portalScormApi.commitTracking(
         this.opts.enrollmentId,
+        this.opts.competencyId,
         this.opts.courseId,
         this.opts.entryId,
         payload(),
@@ -328,12 +331,14 @@ export class ScormSession {
       try {
         const { data: seq } = await portalScormApi.getTrackingSequence(
           this.opts.enrollmentId,
+          this.opts.competencyId,
           this.opts.courseId,
           this.opts.entryId,
         );
         this.lastSequence = seq.last_sequence;
         const { data } = await portalScormApi.commitTracking(
           this.opts.enrollmentId,
+          this.opts.competencyId,
           this.opts.courseId,
           this.opts.entryId,
           payload(),

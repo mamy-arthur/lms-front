@@ -23,6 +23,7 @@ const MOCK_PURCHASED: ApiPurchasedLearningPath = {
   },
   created_at: '2026-07-28T10:00:00+00:00',
   updated_at: '2026-07-28T10:00:00+00:00',
+  enrollments_failed_count: 1,
 };
 
 describe('mapToPurchasedLearningPath', () => {
@@ -43,6 +44,7 @@ describe('mapToPurchasedLearningPath', () => {
       enrollmentsInProgressCount: 2,
       enrollmentsCompletedCount: 0,
       enrollmentsExpiredCount: 0,
+      enrollmentsFailedCount: 1,
     });
   });
 });

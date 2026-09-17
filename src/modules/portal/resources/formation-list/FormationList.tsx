@@ -21,6 +21,7 @@ const FILTER_TABS: { label: string; value: FilterTab }[] = [
   { label: 'Toutes', value: 'all' },
   { label: 'En cours', value: 'in_progress' },
   { label: 'Terminées', value: 'completed' },
+  { label: 'Échouées', value: 'failed' },
   { label: 'À commencer', value: 'not_started' },
 ];
 

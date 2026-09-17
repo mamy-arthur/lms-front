@@ -9,6 +9,7 @@ import { ScormSession, bindScormWindowApi } from '../lib/scormRuntime';
 
 interface Props {
   enrollmentId: string;
+  competencyId: string;
   courseId: string;
   entryId: string;
   onCompleted?: () => void;
@@ -37,16 +38,26 @@ function fullscreenElement(): Element | null {
  * renders the launch page in a sandboxed same-origin iframe so the SCORM
  * content can find `window.parent.API`/`API_1484_11`.
  */
-export default function ScormPlayer({ enrollmentId, courseId, entryId, onCompleted }: Props) {
+export default function ScormPlayer({
+  enrollmentId,
+  competencyId,
+  courseId,
+  entryId,
+  onCompleted,
+}: Props) {
   const launchQuery = useQuery({
-    queryKey: portalScormLaunchKeys.detail(enrollmentId, courseId, entryId),
-    queryFn: async () => (await portalScormApi.launch(enrollmentId, courseId, entryId)).data,
+    queryKey: portalScormLaunchKeys.detail(enrollmentId, competencyId, courseId, entryId),
+    queryFn: async () =>
+      (await portalScormApi.launch(enrollmentId, competencyId, courseId, entryId)).data,
     staleTime: 0,
   });
 
   const [isReady, setIsReady] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const onCompletedRef = useRef(onCompleted);
+  onCompletedRef.current = onCompleted;
+
   // Two distinct ways of being expanded: the real Fullscreen API, and a fixed
   // overlay used only when the API refuses (iPhone Safari, a restrictive
   // Permissions-Policy upstream). `expanded` is what the layout keys off.
@@ -106,10 +117,11 @@ export default function ScormPlayer({ enrollmentId, courseId, entryId, onComplet
 
     const session = new ScormSession({
       enrollmentId,
+      competencyId,
       courseId,
       entryId,
       version: launch.version,
-      onCompleted: () => onCompleted?.(),
+      onCompleted: () => onCompletedRef.current?.(),
     });
 
     // Bound *before* the iframe starts loading: SCORM content looks up
@@ -125,7 +137,7 @@ export default function ScormPlayer({ enrollmentId, courseId, entryId, onComplet
       session.apiFinish();
       unbind();
     };
-  }, [launch?.scorm_package_id, launch?.version]);
+  }, [enrollmentId, competencyId, courseId, entryId, launch?.scorm_package_id, launch?.version]);
 
   if (launchQuery.isLoading) {
     return (
