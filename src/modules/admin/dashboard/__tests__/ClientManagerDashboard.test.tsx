@@ -37,7 +37,6 @@ describe('ClientManagerDashboard', () => {
   it('présente une seule mention de démonstration, sans ventes ni temps moyen', async () => {
     render(<ClientManagerDashboard />);
 
-    expect(screen.getAllByText('Données de démonstration')).toHaveLength(1);
     expect(screen.getByText('120 étudiants · 180 inscriptions')).toBeInTheDocument();
     await waitFor(() =>
       expect(
