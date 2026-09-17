@@ -28,7 +28,7 @@ export function FormationCatalogOverview({
             className={cn(
               'relative isolate flex flex-col gap-16 overflow-hidden rounded-sm border  px-4 py-3',
               highlighted &&
-                'border-none bg-linear-to-br from-emerald-50 to-emerald-100/60 dark:border-emerald-900 dark:from-emerald-950 dark:to-emerald-950/40',
+                'border-none bg-linear-to-br from-emerald-200 to-emerald-100/50 dark:border-emerald-900 dark:from-emerald-950 dark:to-emerald-950/40',
             )}
           >
             <dt
