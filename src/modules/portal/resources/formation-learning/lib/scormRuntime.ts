@@ -3,7 +3,12 @@ import {
   type ScormVersion,
   type ScormLessonStatus,
   type ApiScormTrackingState,
+  type ScormRequestContext,
 } from '@/shared/api/portal-scorm.api';
+import {
+  isExecutionContextRejection,
+  isScormSequenceConflict,
+} from '@/shared/lib/execution-conflict';
 
 // ── SCORM error codes (minimal subset — enough for well-behaved packages) ──
 
@@ -88,8 +93,27 @@ export interface ScormSessionOptions {
   courseId: string;
   entryId: string;
   version: ScormVersion;
+  /**
+   * Visite courante. Chaque visite a un runtime vierge : ni le score, ni
+   * `suspend_data`, ni le temps, ni la séquence d'un ancien passage ne sont
+   * repris, et cet identifiant est ce qui les sépare côté serveur.
+   */
+  nodeExecutionId: string;
+  /**
+   * Révision lue, évaluée à chaque commit : une transition ailleurs dans le
+   * parcours la fait avancer, et figée au montage elle ferait échouer tous les
+   * commits d'une session pourtant toujours valide.
+   */
+  expectedStateRevision: () => number;
+  /** Historical visits may run locally, but must never persist new tracking. */
+  readOnly?: () => boolean;
   /** Called once, the first time a commit resolves to completed/passed. */
   onCompleted?: (status: ScormLessonStatus) => void;
+  /**
+   * Le contexte d'exécution transmis n'est plus valide. Le commit est abandonné :
+   * l'appelant doit recharger l'état, jamais rejouer avec la visite courante.
+   */
+  onExecutionConflict?: (error: unknown) => void;
 }
 
 /**
@@ -122,15 +146,20 @@ export class ScormSession {
     this.opts = opts;
   }
 
+  private get context(): ScormRequestContext {
+    return {
+      enrollmentId: this.opts.enrollmentId,
+      competencyId: this.opts.competencyId,
+      courseId: this.opts.courseId,
+      entryId: this.opts.entryId,
+      nodeExecutionId: this.opts.nodeExecutionId,
+    };
+  }
+
   /** Fetches the current tracking state. Must resolve before the iframe is mounted. */
   async preload(): Promise<boolean> {
     try {
-      const { data } = await portalScormApi.getTracking(
-        this.opts.enrollmentId,
-        this.opts.competencyId,
-        this.opts.courseId,
-        this.opts.entryId,
-      );
+      const { data } = await portalScormApi.getTracking(this.context);
       this.applyServerState(data);
       // Already completed in a previous session — don't re-notify on the next commit.
       if (this.lessonStatus === 'completed' || this.lessonStatus === 'passed') {
@@ -207,10 +236,10 @@ export class ScormSession {
         return formatIso8601Duration(this.baselineTotalTime);
       case 'cmi.core.credit':
       case 'cmi.credit':
-        return 'credit';
+        return this.opts.readOnly?.() ? 'no-credit' : 'credit';
       case 'cmi.core.lesson_mode':
       case 'cmi.mode':
-        return 'normal';
+        return this.opts.readOnly?.() ? 'review' : 'normal';
       case 'cmi.core.entry':
       case 'cmi.entry':
         return this.baselineTotalTime > 0 ? 'resume' : 'ab-initio';
@@ -300,11 +329,13 @@ export class ScormSession {
   }
 
   private async commit(): Promise<void> {
-    if (!this.dirty) return;
+    if (!this.dirty || this.opts.readOnly?.()) return;
     const payload = () => ({
       commit_id: crypto.randomUUID(),
       sequence: this.lastSequence + 1,
       lesson_status: this.lessonStatus,
+      node_execution_id: this.opts.nodeExecutionId,
+      expected_state_revision: this.opts.expectedStateRevision(),
       ...(this.scoreRaw != null ? { score_raw: this.scoreRaw } : {}),
       ...(this.scoreMin != null ? { score_min: this.scoreMin } : {}),
       ...(this.scoreMax != null ? { score_max: this.scoreMax } : {}),
@@ -314,46 +345,39 @@ export class ScormSession {
     });
 
     try {
-      const { data } = await portalScormApi.commitTracking(
-        this.opts.enrollmentId,
-        this.opts.competencyId,
-        this.opts.courseId,
-        this.opts.entryId,
-        payload(),
-      );
+      const { data } = await portalScormApi.commitTracking(this.context, payload());
       this.applyServerState(data);
       this.dirty = false;
       this.notifyIfCompleted();
     } catch (err) {
-      const status = (err as { status?: number } | undefined)?.status;
-      if (status !== 409 && status !== 422) return;
+      // Un refus de contexte n'est PAS une dérive de compteur : resynchroniser
+      // la séquence puis rejouer ferait entrer les données de ce passage dans la
+      // visite courante. On abandonne le commit et on remonte le conflit.
+      if (isExecutionContextRejection(err)) {
+        this.opts.onExecutionConflict?.(err);
+        return;
+      }
+      if (!isScormSequenceConflict(err)) return;
       // Sequence drifted — resync then retry once with the corrected sequence.
       try {
-        const { data: seq } = await portalScormApi.getTrackingSequence(
-          this.opts.enrollmentId,
-          this.opts.competencyId,
-          this.opts.courseId,
-          this.opts.entryId,
-        );
+        const { data: seq } = await portalScormApi.getTrackingSequence(this.context);
+        if (this.opts.readOnly?.()) return;
         this.lastSequence = seq.last_sequence;
-        const { data } = await portalScormApi.commitTracking(
-          this.opts.enrollmentId,
-          this.opts.competencyId,
-          this.opts.courseId,
-          this.opts.entryId,
-          payload(),
-        );
+        const { data } = await portalScormApi.commitTracking(this.context, payload());
         this.applyServerState(data);
         this.dirty = false;
         this.notifyIfCompleted();
-      } catch {
-        // Give up silently for this commit — the next one will retry from scratch.
+      } catch (retryErr) {
+        // Le parcours a pu basculer pendant la resynchronisation : sans cette
+        // remontée, le commit serait abandonné sans aucun signal.
+        if (isExecutionContextRejection(retryErr)) this.opts.onExecutionConflict?.(retryErr);
+        // Sinon on abandonne ce commit — le suivant repartira de zéro.
       }
     }
   }
 
   private notifyIfCompleted(): void {
-    if (this.hasNotifiedCompletion) return;
+    if (this.hasNotifiedCompletion || this.opts.readOnly?.()) return;
     if (this.lessonStatus === 'completed' || this.lessonStatus === 'passed') {
       this.hasNotifiedCompletion = true;
       this.opts.onCompleted?.(this.lessonStatus);

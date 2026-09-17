@@ -14,8 +14,8 @@ interface Props {
   onNavigate: (id: string | null) => void;
   /** Already validated — the primary action becomes plain navigation. */
   isCompleted: boolean;
-  /** Absent in mock mode: there is nothing to persist. */
-  onMarkComplete?: (onDone?: () => void) => void;
+  /** Absent quand la visite n'autorise aucune écriture. */
+  onMarkComplete?: () => void;
   isCompleting?: boolean;
 }
 
@@ -92,7 +92,7 @@ export default function ContentNavigationBar({
           {canValidate ? (
             <Button
               size="lg"
-              onClick={() => onMarkComplete(next ? () => onNavigate(next) : undefined)}
+              onClick={() => onMarkComplete()}
               disabled={isCompleting}
               aria-busy={isCompleting}
               className={cn(

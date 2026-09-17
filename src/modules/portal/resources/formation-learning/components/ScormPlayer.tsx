@@ -12,7 +12,13 @@ interface Props {
   competencyId: string;
   courseId: string;
   entryId: string;
+  /** Visite consultée, active ou historique — obligatoire sur les routes SCORM. */
+  nodeExecutionId: string;
+  expectedStateRevision: number;
+  readOnly: boolean;
   onCompleted?: () => void;
+  /** Le contexte transmis n'est plus valide : l'appelant doit recharger l'état. */
+  onExecutionConflict?: (error: unknown) => void;
 }
 
 /**
@@ -43,12 +49,30 @@ export default function ScormPlayer({
   competencyId,
   courseId,
   entryId,
+  nodeExecutionId,
+  expectedStateRevision,
+  readOnly,
   onCompleted,
+  onExecutionConflict,
 }: Props) {
   const launchQuery = useQuery({
-    queryKey: portalScormLaunchKeys.detail(enrollmentId, competencyId, courseId, entryId),
+    queryKey: portalScormLaunchKeys.detail(
+      enrollmentId,
+      competencyId,
+      courseId,
+      entryId,
+      nodeExecutionId,
+    ),
     queryFn: async () =>
-      (await portalScormApi.launch(enrollmentId, competencyId, courseId, entryId)).data,
+      (
+        await portalScormApi.launch({
+          enrollmentId,
+          competencyId,
+          courseId,
+          entryId,
+          nodeExecutionId,
+        })
+      ).data,
     staleTime: 0,
   });
 
@@ -57,6 +81,14 @@ export default function ScormPlayer({
   const containerRef = useRef<HTMLDivElement>(null);
   const onCompletedRef = useRef(onCompleted);
   onCompletedRef.current = onCompleted;
+  const onExecutionConflictRef = useRef(onExecutionConflict);
+  onExecutionConflictRef.current = onExecutionConflict;
+  // Lue par ref : la révision bouge à chaque transition du parcours et ne doit
+  // pas recréer la session RTE sous les pieds du contenu SCORM en cours.
+  const revisionRef = useRef(expectedStateRevision);
+  revisionRef.current = expectedStateRevision;
+  const readOnlyRef = useRef(readOnly);
+  readOnlyRef.current = readOnly;
 
   // Two distinct ways of being expanded: the real Fullscreen API, and a fixed
   // overlay used only when the API refuses (iPhone Safari, a restrictive
@@ -120,8 +152,12 @@ export default function ScormPlayer({
       competencyId,
       courseId,
       entryId,
+      nodeExecutionId,
+      expectedStateRevision: () => revisionRef.current,
+      readOnly: () => readOnlyRef.current,
       version: launch.version,
       onCompleted: () => onCompletedRef.current?.(),
+      onExecutionConflict: (error) => onExecutionConflictRef.current?.(error),
     });
 
     // Bound *before* the iframe starts loading: SCORM content looks up
@@ -137,7 +173,18 @@ export default function ScormPlayer({
       session.apiFinish();
       unbind();
     };
-  }, [enrollmentId, competencyId, courseId, entryId, launch?.scorm_package_id, launch?.version]);
+    // `nodeExecutionId` recrée délibérément la session : une nouvelle visite part
+    // d'un runtime vierge, sans reprise du score, de `suspend_data`, du temps ni
+    // de la séquence de la précédente.
+  }, [
+    enrollmentId,
+    competencyId,
+    courseId,
+    entryId,
+    nodeExecutionId,
+    launch?.scorm_package_id,
+    launch?.version,
+  ]);
 
   if (launchQuery.isLoading) {
     return (

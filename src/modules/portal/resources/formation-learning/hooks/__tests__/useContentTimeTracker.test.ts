@@ -23,10 +23,11 @@ const FLUSH_INTERVAL_MS = 30_000;
 const PENDING_GRACE_MS = 5_000;
 
 interface Props {
-  enrollmentId: string | null;
+  enrollmentId: string;
   courseId: string | null;
   entryId: string | null;
   competencyId: string | null;
+  context: { node_execution_id: string; expected_state_revision: number } | null;
   idleDetection: boolean;
 }
 
@@ -36,6 +37,7 @@ function props(entryId: string, overrides: Partial<Props> = {}): Props {
     courseId: 'course-1',
     entryId,
     competencyId: 'competency-1',
+    context: { node_execution_id: 'execution-1', expected_state_revision: 7 },
     idleDetection: true,
     ...overrides,
   };
@@ -90,6 +92,97 @@ afterEach(() => {
 });
 
 describe('useContentTimeTracker', () => {
+  it.each([10_000, 35_000])(
+    'acquitte le dernier segment à %i ms avant de fermer la visite',
+    async (duration) => {
+      const { result, rerender, unmount } = renderHook((p: Props) => useContentTimeTracker(p), {
+        initialProps: props('entry-1'),
+      });
+      await advance(duration);
+      let acknowledge!: () => void;
+      record.mockImplementationOnce(
+        () =>
+          new Promise<void>((resolve) => {
+            acknowledge = resolve;
+          }),
+      );
+      let done = false;
+      let flush!: Promise<void>;
+      act(() => {
+        flush = result.current.flushBeforeComplete().then(() => {
+          done = true;
+        });
+      });
+      const final = lastCall();
+      expect(final.payload.time_spent).toBe(duration / 1000);
+      if (duration > FLUSH_INTERVAL_MS) expect(final.sessionId).toBe(callAt(0).sessionId);
+      expect(done).toBe(false);
+
+      const calls = record.mock.calls.length;
+      await advance(FLUSH_INTERVAL_MS);
+      window.dispatchEvent(new Event('pointerdown'));
+      setVisibility('hidden');
+      setVisibility('visible');
+      window.dispatchEvent(new Event('pageshow'));
+      await advance(5_000);
+      expect(record).toHaveBeenCalledTimes(calls);
+      await act(async () => {
+        acknowledge();
+        await flush;
+      });
+      expect(done).toBe(true);
+      rerender(props('entry-1', { entryId: null }));
+      unmount();
+      expect(record).toHaveBeenCalledTimes(calls);
+      expect(window.localStorage.getItem('learneo:content-time:pending')).toBeNull();
+    },
+  );
+
+  it('remonte un échec du flush obligatoire et reprend la même période pour réessayer', async () => {
+    const { result, unmount } = renderHook((p: Props) => useContentTimeTracker(p), {
+      initialProps: props('entry-1'),
+    });
+    await advance(10_000);
+    record.mockRejectedValueOnce(new Error('network down'));
+    await act(async () => {
+      await expect(result.current.flushBeforeComplete()).rejects.toThrow('network down');
+    });
+    const first = lastCall();
+    act(() => result.current.resumeAfterFailure());
+    await advance(5_000);
+    await act(async () => {
+      await result.current.flushBeforeComplete();
+    });
+    expect(lastCall().sessionId).toBe(first.sessionId);
+    expect(lastCall().payload.time_spent).toBe(15);
+    unmount();
+  });
+
+  it('ne supprime pas un flush final non acquitté à la réception d’un ancien acquittement', async () => {
+    let acknowledgePeriodic!: () => void;
+    record.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          acknowledgePeriodic = resolve;
+        }),
+    );
+    const { result, unmount } = renderHook((p: Props) => useContentTimeTracker(p), {
+      initialProps: props('entry-1'),
+    });
+    await advance(35_000);
+    record.mockRejectedValueOnce(new Error('network down'));
+    await act(async () => {
+      await expect(result.current.flushBeforeComplete()).rejects.toThrow('network down');
+    });
+    await act(async () => {
+      acknowledgePeriodic();
+    });
+    const pending = JSON.parse(window.localStorage.getItem('learneo:content-time:pending') ?? '[]');
+    expect(pending).toHaveLength(1);
+    expect(pending[0].payload.time_spent).toBe(35);
+    unmount();
+  });
+
   it('clôt la période en cours et en ouvre une nouvelle au changement de contenu', async () => {
     const { rerender, unmount } = renderHook((p: Props) => useContentTimeTracker(p), {
       initialProps: props('entry-1'),

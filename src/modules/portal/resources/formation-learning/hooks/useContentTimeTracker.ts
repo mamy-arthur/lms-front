@@ -1,5 +1,6 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { type ContentTimeSessionPayload, portalContentTimeApi } from '@/shared/api/portal.api';
+import type { ExecutionMutationContext } from '@/shared/types/progression.types';
 
 /** Au-delà, on considère l'apprenant parti et le chrono se met en pause. */
 const IDLE_MS = 60_000;
@@ -111,8 +112,15 @@ function rememberPending(record: Omit<PendingRecord, 'queuedAt'>): void {
   writePending([...others, { ...record, queuedAt: Date.now() }]);
 }
 
-function forgetPending(sessionId: string): void {
-  writePending(readPending().filter((pending) => pending.sessionId !== sessionId));
+function forgetPending(record: PendingRecord): void {
+  // An older periodic acknowledgement must not erase the final, larger flush.
+  writePending(
+    readPending().filter(
+      (pending) =>
+        pending.sessionId !== record.sessionId ||
+        JSON.stringify(pending.payload) !== JSON.stringify(record.payload),
+    ),
+  );
 }
 
 /**
@@ -136,7 +144,11 @@ function isPermanentFailure(error: unknown): boolean {
  * la réponse arrive. Le rejeu est sans risque, la route est idempotente sur
  * l'identifiant de période et le serveur ne retient que la valeur la plus haute.
  */
-async function postRecord(record: PendingRecord, keepalive: boolean): Promise<void> {
+async function postRecord(
+  record: PendingRecord,
+  keepalive: boolean,
+  required = false,
+): Promise<void> {
   try {
     await portalContentTimeApi.record(
       record.enrollmentId,
@@ -147,9 +159,10 @@ async function postRecord(record: PendingRecord, keepalive: boolean): Promise<vo
       { keepalive },
     );
 
-    forgetPending(record.sessionId);
+    forgetPending(record);
   } catch (error) {
-    if (isPermanentFailure(error)) forgetPending(record.sessionId);
+    if (isPermanentFailure(error)) forgetPending(record);
+    if (required) throw error;
   }
 }
 
@@ -174,11 +187,20 @@ function retryPending(excludedSessionId: string | null): void {
 }
 
 interface Options {
-  enrollmentId: string | null;
+  enrollmentId: string;
   courseId: string | null;
   entryId: string | null;
   /** Module depuis lequel le contenu est consulté. */
   competencyId: string | null;
+  /**
+   * Visite et révision. `null` quand aucune visite n'est ouverte : le chrono ne
+   * démarre pas plutôt que d'envoyer une période sans contexte.
+   *
+   * La visite fait partie de l'identité de la période : en changer doit clore la
+   * période en cours et en ouvrir une nouvelle, sinon le temps d'un ancien
+   * passage serait recompté dans le nouveau.
+   */
+  context: ExecutionMutationContext | null;
   /**
    * `false` pour les contenus en iframe (SCORM) : nos écouteurs ne voient pas
    * les interactions à l'intérieur du cadre, donc la détection d'inactivité
@@ -209,6 +231,7 @@ export function useContentTimeTracker({
   courseId,
   entryId,
   competencyId,
+  context,
   idleDetection,
 }: Options) {
   // Tout est en refs : ce hook ne doit jamais provoquer de rendu.
@@ -220,19 +243,56 @@ export function useContentTimeTracker({
   const lastActivityRef = useRef(0);
   /** Instant réel de fin de la dernière plage active — sert de `ended_at`. */
   const lastActiveAtRef = useRef<Date | null>(null);
+  /**
+   * La révision bouge à chaque transition du parcours. La lire par ref évite de
+   * remonter ces changements dans les dépendances de l'effet, dont le cleanup
+   * clôturerait la période en cours à chaque avancement.
+   */
+  const revisionRef = useRef(context?.expected_state_revision);
+  revisionRef.current = context?.expected_state_revision;
+  /**
+   * Révision lue à l'ouverture de la période. Elle sert de repli quand la visite
+   * se referme au moment même du flush : sans elle, le temps accumulé serait
+   * abandonné précisément à l'instant où il faut l'enregistrer. Le serveur tolère
+   * la révision d'origine sur le rejeu exact d'une période (API.md §27.3).
+   */
+  const sessionRevisionRef = useRef<number | undefined>(undefined);
+
+  const nodeExecutionId = context?.node_execution_id ?? null;
+  const completionControlRef = useRef<{
+    flush: () => Promise<void>;
+    resume: () => void;
+  } | null>(null);
+
+  const flushBeforeComplete = useCallback(
+    () => completionControlRef.current?.flush() ?? Promise.resolve(),
+    [],
+  );
+  const resumeAfterFailure = useCallback(() => completionControlRef.current?.resume(), []);
 
   useEffect(() => {
-    if (!enrollmentId || !courseId || !entryId || !competencyId) return;
+    if (!courseId || !entryId || !competencyId || !nodeExecutionId) return;
+    let completing = false;
+
+    const resetSession = () => {
+      sessionIdRef.current = null;
+      startedAtRef.current = null;
+      accumulatedMsRef.current = 0;
+      activeSinceRef.current = null;
+      lastActiveAtRef.current = null;
+      sessionRevisionRef.current = undefined;
+    };
 
     const openSession = () => {
       sessionIdRef.current = newSessionId();
       startedAtRef.current = new Date();
       accumulatedMsRef.current = 0;
       lastActiveAtRef.current = null;
+      sessionRevisionRef.current = revisionRef.current;
     };
 
     const resume = () => {
-      if (activeSinceRef.current !== null) return;
+      if (completing || activeSinceRef.current !== null) return;
       if (sessionIdRef.current === null) openSession();
       activeSinceRef.current = performance.now();
     };
@@ -244,7 +304,7 @@ export function useContentTimeTracker({
       lastActiveAtRef.current = new Date();
     };
 
-    const send = (close: boolean, keepalive: boolean) => {
+    const send = (close: boolean, keepalive: boolean, required = false): Promise<void> => {
       // Replie la plage active en cours sans arrêter le chrono, pour que la
       // sauvegarde périodique reflète le temps jusqu'à maintenant.
       if (activeSinceRef.current !== null) {
@@ -258,16 +318,14 @@ export function useContentTimeTracker({
       const startedAt = startedAtRef.current;
       const endedAt = lastActiveAtRef.current ?? startedAt;
       const accumulatedMs = accumulatedMsRef.current;
+      const revision = revisionRef.current ?? sessionRevisionRef.current;
 
-      if (close) {
-        sessionIdRef.current = null;
-        startedAtRef.current = null;
-        accumulatedMsRef.current = 0;
-        activeSinceRef.current = null;
-        lastActiveAtRef.current = null;
+      if (close) resetSession();
+
+      if (!sessionId || !startedAt || !endedAt || accumulatedMs < MIN_REPORTABLE_MS) {
+        return Promise.resolve();
       }
-
-      if (!sessionId || !startedAt || !endedAt || accumulatedMs < MIN_REPORTABLE_MS) return;
+      if (revision === undefined) return Promise.resolve();
 
       const record: PendingRecord = {
         enrollmentId,
@@ -276,6 +334,8 @@ export function useContentTimeTracker({
         sessionId,
         payload: {
           competency_id: competencyId,
+          node_execution_id: nodeExecutionId,
+          expected_state_revision: revision,
           started_at: startedAt.toISOString(),
           ended_at: endedAt.toISOString(),
           time_spent: Math.floor(accumulatedMs / 1000),
@@ -284,13 +344,28 @@ export function useContentTimeTracker({
       };
 
       // Mise en file AVANT l'envoi : si celui-ci échoue, ou si la page disparaît
-      // avant l'acquittement, la période est rejouée au montage suivant. Le
-      // tracking ne doit jamais dégrader la consultation, donc rien n'est
-      // remonté à l'appelant ici.
+      // avant l'acquittement, la période est rejouée au montage suivant.
+      // Seul le flush préalable à la complétion remonte les erreurs à l'appelant.
       rememberPending(record);
 
-      void postRecord(record, keepalive);
+      return postRecord(record, keepalive, required);
     };
+
+    const completionControl = {
+      flush: () => {
+        completing = true;
+        pause();
+        // Keep the period identity until completion succeeds. A failed request
+        // can resume it, but no timer/activity may extend it while closing the visit.
+        return send(false, false, true);
+      },
+      resume: () => {
+        completing = false;
+        lastActivityRef.current = performance.now();
+        if (document.visibilityState === 'visible') resume();
+      },
+    };
+    completionControlRef.current = completionControl;
 
     const onActivity = () => {
       lastActivityRef.current = performance.now();
@@ -298,6 +373,7 @@ export function useContentTimeTracker({
     };
 
     const onVisibilityChange = () => {
+      if (completing) return;
       if (document.visibilityState === 'visible') {
         lastActivityRef.current = performance.now();
         resume();
@@ -308,6 +384,7 @@ export function useContentTimeTracker({
     };
 
     const onPageHide = () => {
+      if (completing) return;
       pause();
       // Pas de clôture : un `pagehide` peut venir du bfcache et la page revenir.
       // Si elle ne revient pas, cet envoi est le dernier et il a tout persisté.
@@ -339,6 +416,7 @@ export function useContentTimeTracker({
     }
 
     const flushTimer = window.setInterval(() => {
+      if (completing) return;
       retryPending(sessionIdRef.current);
       send(false, false);
     }, FLUSH_INTERVAL_MS);
@@ -362,10 +440,23 @@ export function useContentTimeTracker({
       // Ce cleanup EST la détection de changement de contenu : FormationPlayer
       // garde le contenu actif en state local, sans changement de route, donc
       // aucun composant ne se démonte quand l'apprenant passe au module suivant.
-      pause();
-      send(true, true);
+      if (!completing) {
+        pause();
+        void send(true, true);
+      } else {
+        resetSession();
+      }
+      if (completionControlRef.current === completionControl) completionControlRef.current = null;
     };
     // `competencyId` fait partie des dépendances : changer de module change le
     // contexte de la période, donc la période en cours doit être close.
-  }, [enrollmentId, courseId, entryId, competencyId, idleDetection]);
+    // `nodeExecutionId` pour la même raison : une nouvelle visite du même module
+    // est un autre passage, avec son propre temps.
+    //
+    // `expectedStateRevision` en est volontairement absent : la révision change
+    // à chaque transition du parcours, et la mettre ici clôturerait la période en
+    // cours à chaque fois. Elle est relue via une ref à l'envoi.
+  }, [enrollmentId, courseId, entryId, competencyId, nodeExecutionId, idleDetection]);
+
+  return { flushBeforeComplete, resumeAfterFailure };
 }

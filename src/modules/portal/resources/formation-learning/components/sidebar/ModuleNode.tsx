@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronDown, Lock } from 'lucide-react';
+import { ChevronDown, Lock, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { FormationModule } from '../../lib/types';
 import CourseBlock from './CourseBlock';
@@ -32,13 +32,15 @@ export default function ModuleNode({ node, activeId, onSelect, index }: Props) {
   );
 
   const isLocked = node.status === 'locked';
-  const isDone = node.progress === 100;
+  const isRetry = node.status === 'retry';
+  const isDone = !isRetry && node.progress === 100;
 
   return (
     <section
       className={cn(
         'overflow-hidden rounded-sm border bg-white transition-colors',
         containsActive ? 'border-(--color-primary)/40 shadow-xs' : 'border-slate-200',
+        isRetry && !containsActive && 'border-amber-300',
         isLocked && 'bg-slate-50/50',
       )}
     >
@@ -57,16 +59,34 @@ export default function ModuleNode({ node, activeId, onSelect, index }: Props) {
           className={cn(
             'flex size-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold',
             isLocked && 'bg-slate-100 text-slate-400',
-            !isLocked && isDone && 'bg-emerald-400 text-white',
-            !isLocked && !isDone && containsActive && 'bg-(--color-primary)/80 text-white',
-            !isLocked && !isDone && !containsActive && 'bg-slate-100 text-slate-500',
+            !isLocked && isRetry && 'bg-amber-500 text-white',
+            !isLocked && !isRetry && isDone && 'bg-emerald-400 text-white',
+            !isLocked &&
+              !isRetry &&
+              !isDone &&
+              containsActive &&
+              'bg-(--color-primary)/80 text-white',
+            !isLocked && !isRetry && !isDone && !containsActive && 'bg-slate-100 text-slate-500',
           )}
         >
-          {isLocked ? <Lock className="size-3" /> : index}
+          {isLocked ? (
+            <Lock className="size-3" />
+          ) : isRetry ? (
+            <RotateCcw className="size-3" strokeWidth={3} />
+          ) : (
+            index
+          )}
         </span>
 
         <span className="min-w-0 flex-1">
-          <span className="block text-[10.5px] font-semibold uppercase text-slate-400">Module</span>
+          <span
+            className={cn(
+              'block text-[10.5px] font-semibold uppercase',
+              isRetry ? 'text-amber-600' : 'text-slate-400',
+            )}
+          >
+            {isRetry ? 'À refaire' : 'Module'}
+          </span>
           <span
             className={cn('text-sm font-medium', isLocked ? 'text-slate-400' : 'text-slate-900')}
           >
@@ -94,7 +114,9 @@ export default function ModuleNode({ node, activeId, onSelect, index }: Props) {
       {!isLocked && (
         <ProgressVariant
           value={node.progress}
-          indicatorColor={isDone ? 'bg-emerald-400' : 'bg-(--color-primary)'}
+          indicatorColor={
+            isRetry ? 'bg-amber-500' : isDone ? 'bg-emerald-400' : 'bg-(--color-primary)'
+          }
           className="h-0.5 w-full rounded-none"
         />
       )}

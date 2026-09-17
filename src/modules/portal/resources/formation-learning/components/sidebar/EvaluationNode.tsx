@@ -1,4 +1,4 @@
-import { Check, ClipboardCheck, Lock } from 'lucide-react';
+import { Check, ClipboardCheck, Lock, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { FormationEvaluation } from '../../lib/types';
 
@@ -17,8 +17,10 @@ interface Props {
  */
 export default function EvaluationNode({ node, active, onSelect }: Props) {
   const isLocked = node.status === 'locked';
+  const isRetry = node.status === 'retry';
   const isDone = node.status === 'completed';
   const typeLabel = node.evaluationType === 'intermediate' ? 'Intermédiaire' : 'Finale';
+  const remaining = node.execution.round?.remaining_attempts ?? null;
 
   return (
     <button
@@ -29,6 +31,7 @@ export default function EvaluationNode({ node, active, onSelect }: Props) {
       className={cn(
         'flex w-full items-center gap-2.5 rounded-sm border px-2.5 py-2.5 text-left transition-colors',
         active ? 'border-(--color-primary)/50' : 'border-slate-300',
+        isRetry && !active && 'border-amber-300',
         isLocked ? 'cursor-not-allowed bg-slate-50/50' : 'hover:bg-slate-50',
       )}
       style={
@@ -41,12 +44,15 @@ export default function EvaluationNode({ node, active, onSelect }: Props) {
         className={cn(
           'flex size-6 shrink-0 items-center justify-center rounded-full',
           isLocked && 'bg-slate-100 text-slate-400',
-          !isLocked && isDone && 'bg-emerald-400 text-white',
-          !isLocked && !isDone && 'bg-amber-50 text-amber-600',
+          !isLocked && isRetry && 'bg-amber-500 text-white',
+          !isLocked && !isRetry && isDone && 'bg-emerald-400 text-white',
+          !isLocked && !isRetry && !isDone && 'bg-amber-50 text-amber-600',
         )}
       >
         {isLocked ? (
           <Lock className="size-3" />
+        ) : isRetry ? (
+          <RotateCcw className="size-3" strokeWidth={3} />
         ) : isDone ? (
           <Check className="size-2.5" strokeWidth={3} />
         ) : (
@@ -55,8 +61,13 @@ export default function EvaluationNode({ node, active, onSelect }: Props) {
       </span>
 
       <span className="min-w-0 flex-1">
-        <span className="block text-[10.5px] font-semibold uppercase text-slate-400">
-          Évaluation {typeLabel}
+        <span
+          className={cn(
+            'block text-[10.5px] font-semibold uppercase',
+            isRetry ? 'text-amber-600' : 'text-slate-400',
+          )}
+        >
+          {isRetry ? 'À repasser' : `Évaluation ${typeLabel}`}
         </span>
         <span
           className={cn(
@@ -70,16 +81,9 @@ export default function EvaluationNode({ node, active, onSelect }: Props) {
         </span>
       </span>
 
-      {node.attempt && (
-        <span
-          className={cn(
-            'shrink-0 rounded-full border px-1.5 py-0.5 text-[10px] font-semibold tabular-nums',
-            node.attempt.passed
-              ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-              : 'border-red-200 bg-red-50 text-red-600',
-          )}
-        >
-          {node.attempt.score}%
+      {isRetry && remaining !== null && (
+        <span className="shrink-0 rounded-full border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-amber-700">
+          {remaining} restante{remaining > 1 ? 's' : ''}
         </span>
       )}
     </button>

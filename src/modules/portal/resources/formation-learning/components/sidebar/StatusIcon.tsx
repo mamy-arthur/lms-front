@@ -1,4 +1,4 @@
-import { Check, Lock, Play } from 'lucide-react';
+import { Check, Lock, Play, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ProgressStatus } from '../../lib/types';
 
@@ -25,6 +25,15 @@ export default function StatusIcon({ status }: { status: ProgressStatus }) {
     return (
       <span className={cn(base, 'bg-(--color-primary)')}>
         <Play className="size-2 fill-white text-white" />
+      </span>
+    );
+  }
+
+  // À refaire : déjà vu, mais la preuve historique ne compte plus pour ce passage.
+  if (status === 'retry') {
+    return (
+      <span className={cn(base, 'bg-amber-500')}>
+        <RotateCcw className="size-2.5 text-white" strokeWidth={3} />
       </span>
     );
   }
