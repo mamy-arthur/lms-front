@@ -1,8 +1,38 @@
-import type { Formation, FormationModule, FormationEvaluation, CourseContent } from './types';
+import type {
+  Formation,
+  FormationModule,
+  FormationEvaluation,
+  CourseContent,
+  ProgressStatus,
+} from './types';
 
 // ─────────────────────────────────────────────────────────
 // Flatten all contents in order
 // ─────────────────────────────────────────────────────────
+
+/**
+ * Suite des étapes franchissables, contenus ET évaluations mêlés dans l'ordre
+ * figé. Le sommaire saute les évaluations, pas le parcours : sans elles, la
+ * navigation enjamberait l'épreuve qui conditionne la suite.
+ */
+export function formationSteps(formation: Formation): { id: string; status: ProgressStatus }[] {
+  const steps: { id: string; status: ProgressStatus }[] = [];
+  for (const node of formation.nodes) {
+    if (node.type === 'evaluation') {
+      steps.push({ id: node.id, status: node.status });
+      continue;
+    }
+    for (const course of node.courses) {
+      for (const section of course.sections) {
+        steps.push(
+          ...section.contents.map((content) => ({ id: content.id, status: content.status })),
+        );
+      }
+    }
+  }
+
+  return steps;
+}
 
 export function flattenContents(formation: Formation): CourseContent[] {
   const items: CourseContent[] = [];
@@ -23,6 +53,22 @@ export function flattenContents(formation: Formation): CourseContent[] {
 // ─────────────────────────────────────────────────────────
 
 export function getDefaultActiveId(formation: Formation): string {
+  // Le moteur désigne lui-même le nœud à travailler : on y atterrit plutôt que
+  // sur le premier contenu lisible, qui appartient souvent à un passage clos.
+  const current = formation.nodes.find((node) => node.execution.actionable);
+  if (current) {
+    if (current.type === 'evaluation') return current.id;
+
+    const contents = current.courses.flatMap((course) =>
+      course.sections.flatMap((section) => section.contents),
+    );
+    const pending = contents.find((c) => !c.completed && c.status !== 'locked');
+    if (pending) return pending.id;
+
+    const last = [...contents].reverse().find((c) => c.status !== 'locked');
+    if (last) return last.id;
+  }
+
   const allContents = flattenContents(formation);
 
   // First content that is not yet completed (and not locked).
@@ -74,8 +120,10 @@ export function resolveActive(formation: Formation, activeId: string): Resolved 
     const content = allContents[contentIndex];
     if (content.status === 'locked') return null;
 
-    const prev = allContents[contentIndex - 1];
-    const next = allContents[contentIndex + 1];
+    const steps = formationSteps(formation);
+    const stepIndex = steps.findIndex((step) => step.id === activeId);
+    const prev = steps[stepIndex - 1];
+    const next = steps[stepIndex + 1];
     for (const node of formation.nodes) {
       if (node.type !== 'module') continue;
       for (const course of node.courses) {

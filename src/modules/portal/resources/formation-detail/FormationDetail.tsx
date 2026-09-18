@@ -49,6 +49,8 @@ export default function FormationDetail({ formation }: FormationDetailProps) {
   const progress = summaryQuery.data?.progress ?? formation.progress;
   const status = STATUS_BADGE[formation.status];
   const hasStarted = progress > 0;
+  // États terminaux : le parcours ne se poursuit plus, il se consulte.
+  const isTerminal = formation.status === 'completed' || formation.status === 'failed';
 
   return (
     <div className="pb-10">
@@ -80,6 +82,19 @@ export default function FormationDetail({ formation }: FormationDetailProps) {
                 </p>
               )}
 
+              {formation.status === 'failed' && (
+                <div
+                  role="alert"
+                  className="mt-4 max-w-2xl rounded-lg border border-red-200 bg-red-50 px-4 py-3"
+                >
+                  <p className="text-sm font-semibold text-red-800">Formation en échec</p>
+                  <p className="mt-0.5 text-sm text-red-700">
+                    {formation.failureReason ??
+                      'Les tentatives autorisées ont été épuisées et aucune voie de secours n’était prévue.'}
+                  </p>
+                </div>
+              )}
+
               <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
                 <Button
                   size="lg"
@@ -87,7 +102,11 @@ export default function FormationDetail({ formation }: FormationDetailProps) {
                   className="h-11 gap-2 bg-(--color-primary) px-6 text-sm font-semibold hover:bg-(--color-primary)/90"
                 >
                   <Play className="size-4 fill-current" />
-                  {hasStarted ? 'Reprendre la formation' : 'Commencer la formation'}
+                  {isTerminal
+                    ? 'Consulter la formation'
+                    : hasStarted
+                      ? 'Reprendre la formation'
+                      : 'Commencer la formation'}
                 </Button>
 
                 {hasStarted && (
@@ -185,7 +204,17 @@ export default function FormationDetail({ formation }: FormationDetailProps) {
                 <span className="font-semibold tabular-nums text-slate-900">{progress}%</span>
               </dt>
               <dd className="mt-1.5">
-                <ProgressVariant value={progress} className="h-1.5" />
+                <ProgressVariant
+                  value={progress}
+                  indicatorColor={
+                    formation.status === 'failed'
+                      ? 'bg-red-500'
+                      : formation.status === 'completed'
+                        ? 'bg-emerald-500'
+                        : 'bg-(--color-primary)'
+                  }
+                  className="h-1"
+                />
                 <p className="mt-1 text-[11px] text-slate-500">
                   {completedModules} sur {totalModules} module{totalModules > 1 ? 's' : ''} terminé
                   {completedModules > 1 ? 's' : ''}

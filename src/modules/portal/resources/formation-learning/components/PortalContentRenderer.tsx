@@ -9,10 +9,15 @@ interface Props {
   entry: ApiPortalContentEntry | undefined;
   isLoading: boolean;
   /** Required to render the 'scorm' module_type (launch/tracking are enrollment-scoped). */
-  enrollmentId?: string;
+  enrollmentId: string;
   competencyId?: string;
   courseId?: string;
+  /** Visite active ou historique consultée, et révision lue. */
+  nodeExecutionId: string | null;
+  expectedStateRevision: number | null;
+  readOnly: boolean;
   onScormCompleted?: () => void;
+  onScormExecutionConflict?: (error: unknown) => void;
 }
 
 // Extra utility classes for portal richtext content.
@@ -179,7 +184,11 @@ export default function PortalContentRenderer({
   enrollmentId,
   competencyId,
   courseId,
+  nodeExecutionId,
+  expectedStateRevision,
+  readOnly,
   onScormCompleted,
+  onScormExecutionConflict,
 }: Props) {
   if (isLoading) {
     return (
@@ -196,7 +205,14 @@ export default function PortalContentRenderer({
   if (entry.module_type === 'scorm') {
     const scormPackageId =
       typeof entry.data.scorm_package_id === 'string' ? entry.data.scorm_package_id : null;
-    if (!scormPackageId || !enrollmentId || !competencyId || !courseId) {
+    // Reading requires an authorized visit, not necessarily the active one.
+    if (
+      !scormPackageId ||
+      !competencyId ||
+      !courseId ||
+      !nodeExecutionId ||
+      expectedStateRevision === null
+    ) {
       return (
         <p className="text-slate-400 italic text-sm">Aucun package SCORM rattaché à ce contenu.</p>
       );
@@ -207,7 +223,11 @@ export default function PortalContentRenderer({
         competencyId={competencyId}
         courseId={courseId}
         entryId={entry.id}
+        nodeExecutionId={nodeExecutionId}
+        expectedStateRevision={expectedStateRevision}
+        readOnly={readOnly}
         onCompleted={onScormCompleted}
+        onExecutionConflict={onScormExecutionConflict}
       />
     );
   }

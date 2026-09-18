@@ -41,18 +41,35 @@ const BASE_STATE: ApiScormTrackingState = {
   last_commit_id: null,
   last_sequence: 3,
   updated_at: null,
+  node_execution_id: 'execution-1',
 };
 
-function makeSession(version: '1.2' | '2004' = '1.2', onCompleted = jest.fn()) {
+function makeSession(
+  version: '1.2' | '2004' = '1.2',
+  onCompleted = jest.fn(),
+  overrides: Partial<ConstructorParameters<typeof ScormSession>[0]> = {},
+) {
   return new ScormSession({
     enrollmentId: 'enr-1',
     competencyId: 'competency-1',
     courseId: 'course-1',
     entryId: 'entry-1',
+    nodeExecutionId: 'execution-1',
+    expectedStateRevision: () => 7,
     version,
     onCompleted,
+    ...overrides,
   });
 }
+
+/** Le contexte de requête attendu sur chaque appel du client SCORM. */
+const CONTEXT = {
+  enrollmentId: 'enr-1',
+  competencyId: 'competency-1',
+  courseId: 'course-1',
+  entryId: 'entry-1',
+  nodeExecutionId: 'execution-1',
+};
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -140,10 +157,7 @@ describe('ScormSession — mapping SCORM 2004', () => {
     await flush();
 
     expect(mockApi.commitTracking).toHaveBeenCalledWith(
-      'enr-1',
-      'competency-1',
-      'course-1',
-      'entry-1',
+      CONTEXT,
       expect.objectContaining({ lesson_status: 'passed' }),
     );
   });
@@ -161,10 +175,7 @@ describe('ScormSession — parsing des temps', () => {
     await flush();
 
     expect(mockApi.commitTracking).toHaveBeenCalledWith(
-      'enr-1',
-      'competency-1',
-      'course-1',
-      'entry-1',
+      CONTEXT,
       expect.objectContaining({ session_time: 300, total_time: BASE_STATE.total_time + 300 }),
     );
   });
@@ -181,16 +192,48 @@ describe('ScormSession — parsing des temps', () => {
 
     const expectedSeconds = 3600 + 2 * 60 + 3;
     expect(mockApi.commitTracking).toHaveBeenCalledWith(
-      'enr-1',
-      'competency-1',
-      'course-1',
-      'entry-1',
+      CONTEXT,
       expect.objectContaining({ session_time: expectedSeconds }),
     );
   });
 });
 
 describe('ScormSession — commit', () => {
+  it.each(['1.2', '2004'] as const)(
+    'consulte un historique %s sans commit ni notification',
+    async (version) => {
+      mockApi.getTracking.mockResolvedValue({ data: BASE_STATE });
+      const onCompleted = jest.fn();
+      const session = makeSession(version, onCompleted, { readOnly: () => true });
+      await session.preload();
+      expect(session.apiGetValue(version === '1.2' ? 'cmi.core.lesson_mode' : 'cmi.mode')).toBe(
+        'review',
+      );
+      expect(session.apiGetValue(version === '1.2' ? 'cmi.core.credit' : 'cmi.credit')).toBe(
+        'no-credit',
+      );
+      expect(session.apiSetValue('cmi.core.lesson_status', 'completed')).toBe('true');
+      expect(session.apiCommit()).toBe('true');
+      expect(session.apiFinish()).toBe('true');
+      await flush();
+      expect(mockApi.commitTracking).not.toHaveBeenCalled();
+      expect(mockApi.getTrackingSequence).not.toHaveBeenCalled();
+      expect(onCompleted).not.toHaveBeenCalled();
+    },
+  );
+
+  it('abandonne un commit en file si la visite est devenue non modifiable', async () => {
+    mockApi.getTracking.mockResolvedValue({ data: BASE_STATE });
+    let readOnly = false;
+    const session = makeSession('1.2', jest.fn(), { readOnly: () => readOnly });
+    await session.preload();
+    session.apiSetValue('cmi.core.lesson_status', 'completed');
+    session.apiCommit();
+    readOnly = true;
+    await flush();
+    expect(mockApi.commitTracking).not.toHaveBeenCalled();
+  });
+
   it('sends a strictly incrementing sequence and a fresh commit_id per call', async () => {
     mockApi.getTracking.mockResolvedValue({ data: BASE_STATE });
     mockApi.commitTracking.mockResolvedValue({ data: { ...BASE_STATE, last_sequence: 4 } });
@@ -202,7 +245,7 @@ describe('ScormSession — commit', () => {
     await flush();
 
     expect(mockApi.commitTracking).toHaveBeenCalledTimes(1);
-    expect(mockApi.commitTracking.mock.calls[0][4]).toMatchObject({
+    expect(mockApi.commitTracking.mock.calls[0][1]).toMatchObject({
       sequence: BASE_STATE.last_sequence + 1,
     });
   });
@@ -223,7 +266,14 @@ describe('ScormSession — commit', () => {
     mockApi.commitTracking
       .mockRejectedValueOnce(Object.assign(new Error('conflict'), { status: 409 }))
       .mockResolvedValueOnce({ data: { ...BASE_STATE, last_sequence: 11 } });
-    mockApi.getTrackingSequence.mockResolvedValue({ data: { last_sequence: 10 } });
+    mockApi.getTrackingSequence.mockResolvedValue({
+      data: {
+        last_sequence: 10,
+        enrollment_id: 'enr-1',
+        competency_id: 'competency-1',
+        node_execution_id: 'execution-1',
+      },
+    });
 
     const session = makeSession();
     await session.preload();
@@ -234,7 +284,55 @@ describe('ScormSession — commit', () => {
 
     expect(mockApi.getTrackingSequence).toHaveBeenCalledTimes(1);
     expect(mockApi.commitTracking).toHaveBeenCalledTimes(2);
-    expect(mockApi.commitTracking.mock.calls[1][4]).toMatchObject({ sequence: 11 });
+    expect(mockApi.commitTracking.mock.calls[1][1]).toMatchObject({ sequence: 11 });
+  });
+
+  it("abandonne le commit sur un conflit d'exécution, sans resynchroniser la séquence", async () => {
+    const onExecutionConflict = jest.fn();
+    mockApi.getTracking.mockResolvedValue({ data: BASE_STATE });
+    mockApi.commitTracking.mockRejectedValue(
+      Object.assign(new Error('conflict'), {
+        status: 409,
+        json: { code: 'execution_conflict', message: 'stale' },
+      }),
+    );
+
+    const session = makeSession('1.2', jest.fn(), {
+      nodeExecutionId: 'exec-1',
+      expectedStateRevision: () => 4,
+      onExecutionConflict,
+    });
+    await session.preload();
+    session.apiSetValue('cmi.core.lesson_status', 'incomplete');
+    session.apiCommit();
+    await flush();
+    await flush();
+
+    // Rejouer après resynchronisation ferait entrer ce commit dans la visite
+    // courante : le contrat l'interdit explicitement.
+    expect(mockApi.getTrackingSequence).not.toHaveBeenCalled();
+    expect(mockApi.commitTracking).toHaveBeenCalledTimes(1);
+    expect(onExecutionConflict).toHaveBeenCalledTimes(1);
+  });
+
+  it('transmet la visite et la révision dans le contexte et le payload', async () => {
+    mockApi.getTracking.mockResolvedValue({ data: BASE_STATE });
+    mockApi.commitTracking.mockResolvedValue({ data: BASE_STATE });
+
+    const session = makeSession('1.2', jest.fn(), {
+      nodeExecutionId: 'exec-1',
+      expectedStateRevision: () => 9,
+    });
+    await session.preload();
+    session.apiSetValue('cmi.core.lesson_status', 'incomplete');
+    session.apiCommit();
+    await flush();
+
+    expect(mockApi.getTracking).toHaveBeenCalledWith({ ...CONTEXT, nodeExecutionId: 'exec-1' });
+    expect(mockApi.commitTracking).toHaveBeenCalledWith(
+      { ...CONTEXT, nodeExecutionId: 'exec-1' },
+      expect.objectContaining({ expected_state_revision: 9 }),
+    );
   });
 
   it('gives up silently if the retry after a 409 fails too', async () => {

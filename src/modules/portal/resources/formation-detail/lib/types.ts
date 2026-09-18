@@ -34,6 +34,8 @@ export interface FormationDetailData {
   enrollmentId: string;
   title: string;
   status: 'in_progress' | 'completed' | 'not_started' | 'failed';
+  /** Motif renvoyé par le backend quand l'inscription est en échec. */
+  failureReason?: string | null;
   category: string;
   level: string;
   description: string;

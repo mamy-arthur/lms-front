@@ -1,4 +1,5 @@
 import { apiGet, apiPut } from '@/shared/lib/apiClient';
+import type { ExecutionMutationContext } from '@/shared/types/progression.types';
 
 export type ScormVersion = '1.2' | '2004';
 
@@ -13,6 +14,8 @@ export interface ApiScormLaunch {
   version: ScormVersion;
   launch_path: string;
   launch_url: string;
+  /** Visite propagée par le token de lancement. */
+  node_execution_id: string;
 }
 
 export interface ApiScormTrackingState {
@@ -29,9 +32,10 @@ export interface ApiScormTrackingState {
   last_commit_id: string | null;
   last_sequence: number;
   updated_at: string | null;
+  node_execution_id: string;
 }
 
-export interface ScormTrackingCommitPayload {
+export interface ScormTrackingCommitPayload extends ExecutionMutationContext {
   commit_id: string;
   sequence: number;
   lesson_status: ScormLessonStatus;
@@ -46,39 +50,70 @@ export interface ScormTrackingCommitPayload {
 const scormBase = (enrollmentId: string, courseId: string, entryId: string): string =>
   `enrollments/${enrollmentId}/courses/${courseId}/entries/${entryId}/scorm`;
 
+/**
+ * Contexte commun aux quatre routes SCORM. `competency_id` et
+ * `node_execution_id` sont tous deux obligatoires : ils isolent le runtime de la
+ * visite en cours. Un rejeu conserve la visite d'origine, jamais la courante.
+ */
+export interface ScormRequestContext {
+  enrollmentId: string;
+  competencyId: string;
+  courseId: string;
+  entryId: string;
+  nodeExecutionId: string;
+}
+
 /** Portal (stagiaire) SCORM launch + tracking — see API.md §22.9-22.10. */
 export const portalScormApi = {
-  launch: (enrollmentId: string, competencyId: string, courseId: string, entryId: string) =>
+  launch: ({
+    enrollmentId,
+    competencyId,
+    courseId,
+    entryId,
+    nodeExecutionId,
+  }: ScormRequestContext) =>
     apiGet<{ data: ApiScormLaunch }>(`${scormBase(enrollmentId, courseId, entryId)}/launch`, {
       competency_id: competencyId,
+      node_execution_id: nodeExecutionId,
     }),
 
-  getTracking: (enrollmentId: string, competencyId: string, courseId: string, entryId: string) =>
+  getTracking: ({
+    enrollmentId,
+    competencyId,
+    courseId,
+    entryId,
+    nodeExecutionId,
+  }: ScormRequestContext) =>
     apiGet<{ data: ApiScormTrackingState }>(
       `${scormBase(enrollmentId, courseId, entryId)}/tracking`,
-      { competency_id: competencyId },
+      { competency_id: competencyId, node_execution_id: nodeExecutionId },
     ),
 
   commitTracking: (
-    enrollmentId: string,
-    competencyId: string,
-    courseId: string,
-    entryId: string,
+    { enrollmentId, competencyId, courseId, entryId, nodeExecutionId }: ScormRequestContext,
     payload: ScormTrackingCommitPayload,
   ) =>
     apiPut<{ data: ApiScormTrackingState }>(
       `${scormBase(enrollmentId, courseId, entryId)}/tracking`,
-      { ...payload, competency_id: competencyId },
+      { ...payload, competency_id: competencyId, node_execution_id: nodeExecutionId },
     ),
 
-  getTrackingSequence: (
-    enrollmentId: string,
-    competencyId: string,
-    courseId: string,
-    entryId: string,
-  ) =>
-    apiGet<{ data: { last_sequence: number } }>(
-      `${scormBase(enrollmentId, courseId, entryId)}/tracking/sequence`,
-      { competency_id: competencyId },
-    ),
+  getTrackingSequence: ({
+    enrollmentId,
+    competencyId,
+    courseId,
+    entryId,
+    nodeExecutionId,
+  }: ScormRequestContext) =>
+    apiGet<{
+      data: {
+        last_sequence: number;
+        enrollment_id: string;
+        competency_id: string;
+        node_execution_id: string;
+      };
+    }>(`${scormBase(enrollmentId, courseId, entryId)}/tracking/sequence`, {
+      competency_id: competencyId,
+      node_execution_id: nodeExecutionId,
+    }),
 };
