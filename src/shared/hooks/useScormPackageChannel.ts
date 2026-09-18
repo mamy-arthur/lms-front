@@ -1,8 +1,10 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { getEcho } from '@/shared/lib/echo';
+import { getEcho, resetEcho } from '@/shared/lib/echo';
 import { useTenantStore } from '@/shared/stores/tenant.store';
+import { useAuthStore } from '@/shared/stores/auth.store';
+import { useSimulationStore } from '@/shared/simulation/simulation.store';
 import type { ScormPackageStatus } from '@/shared/api/scorm.api';
 
 export interface ScormPackageStatusChangedEvent {
@@ -23,6 +25,9 @@ export function useScormPackageChannel(
   onSubscriptionError?: () => void,
 ): void {
   const tenantId = useTenantStore((state) => state.tenant?.id);
+  const simulatedRole = useAuthStore((state) => state.simulatedRole);
+  const phase = useSimulationStore((state) => state.phase);
+  const blocked = !!simulatedRole || (phase !== 'idle' && phase !== 'ready');
 
   const statusHandlerRef = useRef(onStatusChanged);
   statusHandlerRef.current = onStatusChanged;
@@ -30,22 +35,53 @@ export function useScormPackageChannel(
   errorHandlerRef.current = onSubscriptionError;
 
   useEffect(() => {
+    const isBlocked = () => {
+      const currentPhase = useSimulationStore.getState().phase;
+      return (
+        !!useAuthStore.getState().simulatedRole ||
+        (currentPhase !== 'idle' && currentPhase !== 'ready')
+      );
+    };
+    if (blocked || isBlocked()) {
+      resetEcho();
+      return;
+    }
     if (!packageId || !tenantId) return;
 
     const channelName = `tenant.${tenantId}.scorm.${packageId}`;
     const echo = getEcho();
     const channel = echo.private(channelName);
 
-    const handleStatusChanged = (event: ScormPackageStatusChangedEvent) =>
-      statusHandlerRef.current(event);
-    const handleError = () => errorHandlerRef.current?.();
+    const handleStatusChanged = (event: ScormPackageStatusChangedEvent) => {
+      if (!isBlocked()) statusHandlerRef.current(event);
+    };
+    const handleError = () => {
+      if (!isBlocked()) errorHandlerRef.current?.();
+    };
 
     channel.listen('.scorm.status.changed', handleStatusChanged);
     channel.error(handleError);
 
-    return () => {
+    let stopped = false;
+    const stop = () => {
+      if (stopped) return;
+      stopped = true;
       channel.stopListening('.scorm.status.changed', handleStatusChanged);
       echo.leave(channelName);
     };
-  }, [packageId, tenantId]);
+    const stopIfBlocked = () => {
+      if (isBlocked()) {
+        stop();
+        resetEcho();
+      }
+    };
+    const unsubscribeAuth = useAuthStore.subscribe(stopIfBlocked);
+    const unsubscribeSimulation = useSimulationStore.subscribe(stopIfBlocked);
+
+    return () => {
+      unsubscribeAuth();
+      unsubscribeSimulation();
+      stop();
+    };
+  }, [packageId, tenantId, blocked]);
 }

@@ -1,5 +1,12 @@
 import { useEffect, useRef } from 'react';
 import { type ContentTimeSessionPayload, portalContentTimeApi } from '@/shared/api/portal.api';
+import { useAuthStore } from '@/shared/stores/auth.store';
+import { useSimulationStore } from '@/shared/simulation/simulation.store';
+
+function trackingBlocked(): boolean {
+  const phase = useSimulationStore.getState().phase;
+  return !!useAuthStore.getState().simulatedRole || (phase !== 'idle' && phase !== 'ready');
+}
 
 /** Au-delà, on considère l'apprenant parti et le chrono se met en pause. */
 const IDLE_MS = 60_000;
@@ -111,8 +118,16 @@ function rememberPending(record: Omit<PendingRecord, 'queuedAt'>): void {
   writePending([...others, { ...record, queuedAt: Date.now() }]);
 }
 
-function forgetPending(sessionId: string): void {
-  writePending(readPending().filter((pending) => pending.sessionId !== sessionId));
+function forgetPending(record: PendingRecord): void {
+  // An older in-flight flush must not acknowledge a newer final measurement.
+  writePending(
+    readPending().filter(
+      (pending) =>
+        pending.sessionId !== record.sessionId ||
+        pending.payload.time_spent !== record.payload.time_spent ||
+        pending.payload.ended_at !== record.payload.ended_at,
+    ),
+  );
 }
 
 /**
@@ -137,6 +152,9 @@ function isPermanentFailure(error: unknown): boolean {
  * l'identifiant de période et le serveur ne retient que la valeur la plus haute.
  */
 async function postRecord(record: PendingRecord, keepalive: boolean): Promise<void> {
+  if (trackingBlocked()) return;
+  const epoch = useSimulationStore.getState().epoch;
+  const canAcknowledge = () => !trackingBlocked() && useSimulationStore.getState().epoch === epoch;
   try {
     await portalContentTimeApi.record(
       record.enrollmentId,
@@ -147,9 +165,9 @@ async function postRecord(record: PendingRecord, keepalive: boolean): Promise<vo
       { keepalive },
     );
 
-    forgetPending(record.sessionId);
+    if (canAcknowledge()) forgetPending(record);
   } catch (error) {
-    if (isPermanentFailure(error)) forgetPending(record.sessionId);
+    if (canAcknowledge() && isPermanentFailure(error)) forgetPending(record);
   }
 }
 
@@ -159,6 +177,8 @@ async function postRecord(record: PendingRecord, keepalive: boolean): Promise<vo
  * après un échec réseau ou une page fermée avant l'acquittement.
  */
 function retryPending(excludedSessionId: string | null): void {
+  // Do not even read/prune the real queue while viewing demo contents.
+  if (trackingBlocked()) return;
   const now = Date.now();
   const pending = readPending();
   const fresh = pending.filter((record) => now - record.queuedAt < PENDING_MAX_AGE_MS);
@@ -211,7 +231,10 @@ export function useContentTimeTracker({
   competencyId,
   idleDetection,
 }: Options) {
-  // Tout est en refs : ce hook ne doit jamais provoquer de rendu.
+  const simulatedRole = useAuthStore((s) => s.simulatedRole);
+  const phase = useSimulationStore((s) => s.phase);
+  const blocked = !!simulatedRole || (phase !== 'idle' && phase !== 'ready');
+  // Les mesures restent en refs : aucun rendu à chaque tick.
   const sessionIdRef = useRef<string | null>(null);
   const startedAtRef = useRef<Date | null>(null);
   const accumulatedMsRef = useRef(0);
@@ -222,7 +245,9 @@ export function useContentTimeTracker({
   const lastActiveAtRef = useRef<Date | null>(null);
 
   useEffect(() => {
-    if (!enrollmentId || !courseId || !entryId || !competencyId) return;
+    if (blocked || trackingBlocked() || !enrollmentId || !courseId || !entryId || !competencyId)
+      return;
+    let stopped = false;
 
     const openSession = () => {
       sessionIdRef.current = newSessionId();
@@ -232,6 +257,7 @@ export function useContentTimeTracker({
     };
 
     const resume = () => {
+      if (stopped || trackingBlocked()) return;
       if (activeSinceRef.current !== null) return;
       if (sessionIdRef.current === null) openSession();
       activeSinceRef.current = performance.now();
@@ -245,6 +271,7 @@ export function useContentTimeTracker({
     };
 
     const send = (close: boolean, keepalive: boolean) => {
+      if (!close && (stopped || trackingBlocked())) return;
       // Replie la plage active en cours sans arrêter le chrono, pour que la
       // sauvegarde périodique reflète le temps jusqu'à maintenant.
       if (activeSinceRef.current !== null) {
@@ -349,7 +376,9 @@ export function useContentTimeTracker({
         }, IDLE_CHECK_INTERVAL_MS)
       : undefined;
 
-    return () => {
+    const stop = () => {
+      if (stopped) return;
+      stopped = true;
       document.removeEventListener('visibilitychange', onVisibilityChange);
       window.removeEventListener('pagehide', onPageHide);
       window.removeEventListener('pageshow', onPageShow);
@@ -363,9 +392,23 @@ export function useContentTimeTracker({
       // garde le contenu actif en state local, sans changement de route, donc
       // aucun composant ne se démonte quand l'apprenant passe au module suivant.
       pause();
+      // This period was opened in real mode. Persist its final measurement,
+      // but postRecord will not send it while transitioning/simulating.
       send(true, true);
+    };
+    // Freeze the real period at the boundary, not at a later React cleanup.
+    const stopIfBlocked = () => {
+      if (trackingBlocked()) stop();
+    };
+    const unsubscribeAuth = useAuthStore.subscribe(stopIfBlocked);
+    const unsubscribeSimulation = useSimulationStore.subscribe(stopIfBlocked);
+
+    return () => {
+      unsubscribeAuth();
+      unsubscribeSimulation();
+      stop();
     };
     // `competencyId` fait partie des dépendances : changer de module change le
     // contexte de la période, donc la période en cours doit être close.
-  }, [enrollmentId, courseId, entryId, competencyId, idleDetection]);
+  }, [enrollmentId, courseId, entryId, competencyId, idleDetection, blocked]);
 }

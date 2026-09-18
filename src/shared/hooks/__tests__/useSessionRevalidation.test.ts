@@ -123,7 +123,7 @@ describe('useSessionRevalidation', () => {
 
   it('redirige vers le login admin depuis une route admin', async () => {
     mockPathname = '/admin/users';
-    mockStore({ sessionId: null, role: Role.EDITOR });
+    mockStore({ user: { ...USER, role: Role.EDITOR }, sessionId: null, role: Role.EDITOR });
     mockPlatformMe.mockResolvedValue({ user: USER, sessionId: null });
 
     renderHook(() => useSessionRevalidation());
@@ -194,12 +194,47 @@ describe('useSessionRevalidation', () => {
   // --- Sélection de l'endpoint et cas inertes ---
 
   it('interroge la route plateforme pour un rôle plateforme', async () => {
-    mockStore({ role: Role.SUPER_ADMIN, sessionId: 'session-local' });
+    mockStore({
+      user: { ...USER, role: Role.SUPER_ADMIN },
+      role: Role.SUPER_ADMIN,
+      sessionId: 'session-local',
+    });
 
     renderHook(() => useSessionRevalidation());
 
     await waitFor(() => expect(mockPlatformMe).toHaveBeenCalled());
     expect(mockMe).not.toHaveBeenCalled();
+  });
+
+  it.each([Role.CLIENT_MANAGER, Role.TRAINEE])(
+    'sonde le compte plateforme réel pendant la simulation %s',
+    async (effectiveRole) => {
+      mockStore({
+        user: { ...USER, role: Role.SUPER_ADMIN },
+        role: effectiveRole,
+        sessionId: 'session-local',
+      });
+
+      renderHook(() => useSessionRevalidation());
+
+      await waitFor(() => expect(mockPlatformMe).toHaveBeenCalledTimes(1));
+      expect(mockMe).not.toHaveBeenCalled();
+      expect(mockClearAuth).not.toHaveBeenCalled();
+    },
+  );
+
+  it('conserve la sonde tenant pour un responsable réel simulant un stagiaire', async () => {
+    mockStore({
+      user: { ...USER, role: Role.CLIENT_MANAGER },
+      role: Role.TRAINEE,
+      sessionId: 'session-local',
+    });
+
+    renderHook(() => useSessionRevalidation());
+
+    await waitFor(() => expect(mockMe).toHaveBeenCalledTimes(1));
+    expect(mockPlatformMe).not.toHaveBeenCalled();
+    expect(mockClearAuth).not.toHaveBeenCalled();
   });
 
   it('ne sonde pas en l’absence d’utilisateur', () => {

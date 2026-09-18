@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useAuthStore } from '@/shared/stores/auth.store';
+import { useSimulationUser } from '@/shared/simulation/useSimulationUser';
 import { apiPatch } from '@/shared/lib/apiClient';
 import { toast } from 'sonner';
 
@@ -29,7 +29,7 @@ interface UsePasswordChangeOptions {
 }
 
 export function usePasswordChange({ patchPath = 'platform/users' }: UsePasswordChangeOptions = {}) {
-  const { user } = useAuthStore();
+  const user = useSimulationUser();
   const [showCurrentPwd, setShowCurrentPwd] = useState(false);
   const [showNewPwd, setShowNewPwd] = useState(false);
   const [showConfirmPwd, setShowConfirmPwd] = useState(false);

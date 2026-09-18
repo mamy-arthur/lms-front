@@ -7,14 +7,14 @@ import { useCartQuery } from '@/modules/portal/resources/cart/hooks/useCartQuery
 import { useCreateOrder } from '@/modules/portal/resources/cart/hooks/useCreateOrder';
 import { getApiErrorMessage } from '@/shared/lib/errors';
 import { ROUTES } from '@/shared/constants/routes';
-import { useAuthStore } from '@/shared/stores/auth.store';
+import { useSimulationUser } from '@/shared/simulation/useSimulationUser';
 import type { PaymentMethod } from '@/shared/types/order.types';
 
 export function useCheckoutController() {
   const router = useRouter();
   const cartQuery = useCartQuery();
   const createOrder = useCreateOrder();
-  const user = useAuthStore((s) => s.user);
+  const user = useSimulationUser();
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('card');
   const [paid, setPaid] = useState(false);
   const [paidTotal, setPaidTotal] = useState(0);

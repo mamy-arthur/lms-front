@@ -88,6 +88,8 @@ export interface ScormSessionOptions {
   courseId: string;
   entryId: string;
   version: ScormVersion;
+  /** Discard queued work if the real/simulated execution context has changed. */
+  isContextCurrent?: () => boolean;
   /** Called once, the first time a commit resolves to completed/passed. */
   onCompleted?: (status: ScormLessonStatus) => void;
 }
@@ -124,6 +126,7 @@ export class ScormSession {
 
   /** Fetches the current tracking state. Must resolve before the iframe is mounted. */
   async preload(): Promise<boolean> {
+    if (this.opts.isContextCurrent?.() === false) return false;
     try {
       const { data } = await portalScormApi.getTracking(
         this.opts.enrollmentId,
@@ -131,6 +134,7 @@ export class ScormSession {
         this.opts.courseId,
         this.opts.entryId,
       );
+      if (this.opts.isContextCurrent?.() === false) return false;
       this.applyServerState(data);
       // Already completed in a previous session — don't re-notify on the next commit.
       if (this.lessonStatus === 'completed' || this.lessonStatus === 'passed') {
@@ -300,7 +304,7 @@ export class ScormSession {
   }
 
   private async commit(): Promise<void> {
-    if (!this.dirty) return;
+    if (!this.dirty || this.opts.isContextCurrent?.() === false) return;
     const payload = () => ({
       commit_id: crypto.randomUUID(),
       sequence: this.lastSequence + 1,
@@ -321,10 +325,12 @@ export class ScormSession {
         this.opts.entryId,
         payload(),
       );
+      if (this.opts.isContextCurrent?.() === false) return;
       this.applyServerState(data);
       this.dirty = false;
       this.notifyIfCompleted();
     } catch (err) {
+      if (this.opts.isContextCurrent?.() === false) return;
       const status = (err as { status?: number } | undefined)?.status;
       if (status !== 409 && status !== 422) return;
       // Sequence drifted — resync then retry once with the corrected sequence.
@@ -335,6 +341,7 @@ export class ScormSession {
           this.opts.courseId,
           this.opts.entryId,
         );
+        if (this.opts.isContextCurrent?.() === false) return;
         this.lastSequence = seq.last_sequence;
         const { data } = await portalScormApi.commitTracking(
           this.opts.enrollmentId,
@@ -343,6 +350,7 @@ export class ScormSession {
           this.opts.entryId,
           payload(),
         );
+        if (this.opts.isContextCurrent?.() === false) return;
         this.applyServerState(data);
         this.dirty = false;
         this.notifyIfCompleted();

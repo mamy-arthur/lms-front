@@ -5,7 +5,7 @@ import { ChevronsUpDown } from 'lucide-react';
 
 import { DropdownMenu, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
-import { useTenantStore } from '@/shared/stores/tenant.store';
+import { useTenant } from '@/shared/hooks/useTenant';
 
 export function TeamSwitcher({
   teams,
@@ -16,7 +16,7 @@ export function TeamSwitcher({
     plan: string;
   }[];
 }) {
-  const { tenant } = useTenantStore();
+  const { tenant } = useTenant();
   const activeTeam = teams[0];
 
   if (!activeTeam) {

@@ -5,15 +5,17 @@ import { useAuthStore } from '@/shared/stores/auth.store';
 import { ROUTES } from '@/shared/constants/routes';
 import { PLATFORM_ROLES } from '@/shared/constants/roles';
 import { LoadingSpinner } from '@/shared/components/feedback/LoadingSpinner';
+import { roleHome } from '@/shared/simulation/simulation.store';
 
 /**
  * Protège les pages admin.
  * Seuls SUPER_ADMIN et EDITOR (PLATFORM_ROLES) peuvent y accéder.
- * Redirige vers /admin/login sinon.
+ * Redirige un utilisateur connecté vers l'accueil de son rôle effectif.
  */
 export function AdminAuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
+  const role = useAuthStore((s) => s.role);
 
   const [hydrated, setHydrated] = useState(() => useAuthStore.persist.hasHydrated());
 
@@ -24,15 +26,16 @@ export function AdminAuthGuard({ children }: { children: React.ReactNode }) {
     return unsub;
   }, [hydrated]);
 
-  const isAuthenticated = hydrated && !!user && PLATFORM_ROLES.includes(user.role);
+  const isAuthenticated = hydrated && !!user;
+  const isAuthorized = isAuthenticated && role !== null && PLATFORM_ROLES.includes(role);
 
   useEffect(() => {
-    if (hydrated && !isAuthenticated) {
-      router.replace(ROUTES.platform.login);
+    if (hydrated && !isAuthorized) {
+      router.replace(isAuthenticated ? roleHome(role) : ROUTES.platform.login);
     }
-  }, [hydrated, isAuthenticated, router]);
+  }, [hydrated, isAuthenticated, isAuthorized, role, router]);
 
-  if (!hydrated || !isAuthenticated) return <LoadingSpinner className="h-screen" />;
+  if (!hydrated || !isAuthorized) return <LoadingSpinner className="h-screen" />;
 
   return <>{children}</>;
 }

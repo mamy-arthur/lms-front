@@ -6,6 +6,8 @@ import { AlertCircle, Loader2, Maximize2, Minimize2 } from 'lucide-react';
 import { portalScormApi } from '@/shared/api/portal-scorm.api';
 import { portalScormLaunchKeys } from '@/shared/queries/keys';
 import { ScormSession, bindScormWindowApi } from '../lib/scormRuntime';
+import { useAuthStore } from '@/shared/stores/auth.store';
+import { useSimulationStore } from '@/shared/simulation/simulation.store';
 
 interface Props {
   enrollmentId: string;
@@ -45,6 +47,7 @@ export default function ScormPlayer({
   entryId,
   onCompleted,
 }: Props) {
+  const simulatedRole = useAuthStore((state) => state.simulatedRole);
   const launchQuery = useQuery({
     queryKey: portalScormLaunchKeys.detail(enrollmentId, competencyId, courseId, entryId),
     queryFn: async () =>
@@ -66,6 +69,7 @@ export default function ScormPlayer({
   const expanded = nativeFullscreen || overlay;
 
   const launch = launchQuery.data;
+  const ready = simulatedRole ? !!launch : isReady;
 
   // The SCORM content can request fullscreen on itself, in which case the
   // fullscreen element is the iframe, not our container — only our own container
@@ -103,17 +107,24 @@ export default function ScormPlayer({
       return;
     }
 
+    // Native fullscreen would hide the persistent simulation banner.
+    if (simulatedRole) {
+      setOverlay(true);
+      return;
+    }
+
     try {
       await (element.requestFullscreen?.() ?? element.webkitRequestFullscreen?.());
     } catch {
       setOverlay(true);
     }
-  }, [expanded, nativeFullscreen]);
+  }, [expanded, nativeFullscreen, simulatedRole]);
 
   useEffect(() => {
-    if (!launch) return;
+    if (!launch || simulatedRole) return;
     let cancelled = false;
     setIsReady(false);
+    const epoch = useSimulationStore.getState().epoch;
 
     const session = new ScormSession({
       enrollmentId,
@@ -121,6 +132,14 @@ export default function ScormPlayer({
       courseId,
       entryId,
       version: launch.version,
+      isContextCurrent: () => {
+        const context = useSimulationStore.getState();
+        return (
+          context.epoch === epoch &&
+          (context.phase === 'ready' || context.phase === 'idle') &&
+          !useAuthStore.getState().simulatedRole
+        );
+      },
       onCompleted: () => onCompletedRef.current?.(),
     });
 
@@ -137,7 +156,15 @@ export default function ScormPlayer({
       session.apiFinish();
       unbind();
     };
-  }, [enrollmentId, competencyId, courseId, entryId, launch?.scorm_package_id, launch?.version]);
+  }, [
+    enrollmentId,
+    competencyId,
+    courseId,
+    entryId,
+    launch?.scorm_package_id,
+    launch?.version,
+    simulatedRole,
+  ]);
 
   if (launchQuery.isLoading) {
     return (
@@ -166,7 +193,7 @@ export default function ScormPlayer({
         expanded ? 'fixed inset-0 z-50 gap-0 bg-white' : ''
       }`}
     >
-      {isReady && (
+      {ready && (
         <button
           type="button"
           onClick={toggleFullscreen}
@@ -178,7 +205,7 @@ export default function ScormPlayer({
           {expanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
         </button>
       )}
-      {!isReady && (
+      {!ready && (
         <div className="flex h-40 items-center justify-center text-slate-400">
           <Loader2 className="h-5 w-5 animate-spin" />
         </div>
@@ -197,14 +224,32 @@ export default function ScormPlayer({
       <iframe
         key={launch.scorm_package_id}
         title="Contenu SCORM"
-        src={isReady ? launch.launch_url : undefined}
-        sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals allow-downloads allow-presentation allow-pointer-lock allow-orientation-lock allow-top-navigation-by-user-activation"
+        src={!simulatedRole && ready ? launch.launch_url : undefined}
+        srcDoc={
+          simulatedRole
+            ? '<!doctype html><html lang="fr"><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src &apos;none&apos;; form-action &apos;none&apos;"><h1>Activité SCORM de démonstration</h1><p>Explorez ce contenu fictif, puis terminez l’activité. Votre progression reste locale.</p></html>'
+            : undefined
+        }
+        sandbox={
+          simulatedRole
+            ? ''
+            : 'allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals allow-downloads allow-presentation allow-pointer-lock allow-orientation-lock allow-top-navigation-by-user-activation'
+        }
         allow="fullscreen; autoplay; encrypted-media; picture-in-picture; clipboard-write"
         allowFullScreen
         className={`w-full bg-white ${
           expanded ? 'h-full border-0' : 'h-[70vh] rounded-lg border border-slate-200'
-        } ${isReady ? '' : 'hidden'}`}
+        } ${ready ? '' : 'hidden'}`}
       />
+      {simulatedRole && (
+        <button
+          type="button"
+          className="self-end rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground"
+          onClick={() => onCompletedRef.current?.()}
+        >
+          Terminer l’activité simulée
+        </button>
+      )}
     </div>
   );
 }
