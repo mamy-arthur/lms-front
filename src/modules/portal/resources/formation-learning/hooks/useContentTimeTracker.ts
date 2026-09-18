@@ -144,11 +144,7 @@ function isPermanentFailure(error: unknown): boolean {
  * la réponse arrive. Le rejeu est sans risque, la route est idempotente sur
  * l'identifiant de période et le serveur ne retient que la valeur la plus haute.
  */
-async function postRecord(
-  record: PendingRecord,
-  keepalive: boolean,
-  required = false,
-): Promise<void> {
+async function postRecord(record: PendingRecord, keepalive: boolean, required = false): Promise<void> {
   try {
     await portalContentTimeApi.record(
       record.enrollmentId,

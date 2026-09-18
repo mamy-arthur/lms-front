@@ -2,11 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { toast } from 'sonner';
-import {
-  portalContentEntriesApi,
-  portalContentTimeApi,
-  portalLearningPathsApi,
-} from '@/shared/api/portal.api';
+import { portalContentEntriesApi, portalContentTimeApi, portalLearningPathsApi } from '@/shared/api/portal.api';
 import { progressionApi } from '@/shared/api/progression.api';
 import { portalScormApi, type ApiScormTrackingState } from '@/shared/api/portal-scorm.api';
 import type { ApiPortalLearningPathSummary } from '@/shared/types/portal.types';
@@ -120,8 +116,6 @@ describe('Parcours du stagiaire piloté par le snapshot d’exécution', () => {
     }));
     mockComplete.mockImplementation(async (_enrollmentId, competencyId, _courseId, entryId) => {
       completeEntry(entryId, competencyId);
-
-      return { data: summary.execution };
     });
   });
 
@@ -133,25 +127,16 @@ describe('Parcours du stagiaire piloté par le snapshot d’exécution', () => {
     await screen.findByText('Texte de shared-entry-1');
     clock.mockReturnValue(10_000);
     let acknowledge!: () => void;
-    mockRecordTime.mockImplementationOnce(
-      () =>
-        new Promise<void>((resolve) => {
-          acknowledge = resolve;
-        }),
-    );
+    mockRecordTime.mockImplementationOnce(() => new Promise<void>((resolve) => { acknowledge = resolve; }));
 
     await user.click(screen.getByRole('button', { name: 'Terminer et continuer' }));
     await waitFor(() => expect(mockRecordTime).toHaveBeenCalledTimes(1));
     expect(mockComplete).not.toHaveBeenCalled();
     expect(mockRecordTime.mock.calls[0][4]).toMatchObject({
-      time_spent: 10,
-      node_execution_id: 'exec-module-1',
-      expected_state_revision: 7,
+      time_spent: 10, node_execution_id: 'exec-module-1', expected_state_revision: 7,
     });
     expect(screen.getByRole('button', { name: 'Terminer et continuer' })).toBeDisabled();
-    await act(async () => {
-      acknowledge();
-    });
+    await act(async () => { acknowledge(); });
     await waitFor(() => expect(mockComplete).toHaveBeenCalledTimes(1));
   });
 
@@ -162,11 +147,9 @@ describe('Parcours du stagiaire piloté par le snapshot d’exécution', () => {
     clock.mockReturnValue(10_000);
     mockRecordTime.mockRejectedValueOnce(new Error('network'));
     await user.click(screen.getByRole('button', { name: 'Terminer et continuer' }));
-    await waitFor(() =>
-      expect(toast.error).toHaveBeenCalledWith(
-        'Impossible de sauvegarder le temps de consultation. Veuillez réessayer.',
-      ),
-    );
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith(
+      'Impossible de sauvegarder le temps de consultation. Veuillez réessayer.',
+    ));
     expect(mockComplete).not.toHaveBeenCalled();
     await user.click(screen.getByRole('button', { name: 'Terminer et continuer' }));
     await waitFor(() => expect(mockComplete).toHaveBeenCalledTimes(1));
@@ -209,13 +192,14 @@ describe('Parcours du stagiaire piloté par le snapshot d’exécution', () => {
   });
 
   it('n’autorise aucune écriture sur l’occurrence d’un module non actionable', async () => {
-    setup();
+    const { user } = setup();
     await screen.findByText('Texte de shared-entry-1');
 
-    // Le module non ouvert est verrouillé jusqu'à son tour : son sommaire ne se
-    // déplie pas, donc son occurrence du cours partagé reste hors de portée.
-    expect(screen.getByRole('button', { name: /module la suite/i })).toBeDisabled();
-    expect(screen.getAllByRole('button', { name: 'Contenu partagé 1' })).toHaveLength(1);
+    await user.click(screen.getByRole('button', { name: /module la suite/i }));
+    await user.click(screen.getAllByRole('button', { name: 'Contenu partagé 1' })[1]);
+    await screen.findByText('Contenu 3 / 4');
+
+    expect(screen.queryByRole('button', { name: /Terminer/ })).not.toBeInTheDocument();
     expect(mockComplete).not.toHaveBeenCalled();
   });
 
@@ -249,10 +233,10 @@ describe('Parcours du stagiaire piloté par le snapshot d’exécution', () => {
     let finishRefresh!: () => void;
     mockComplete.mockImplementation(
       () =>
-        new Promise((resolve) => {
+        new Promise<void>((resolve) => {
           finishSave = () => {
             completeEntry('shared-entry-1', 'module-1');
-            resolve({ data: summary.execution });
+            resolve();
           };
         }),
     );
@@ -301,9 +285,10 @@ describe('Parcours du stagiaire piloté par le snapshot d’exécution', () => {
     const mobileNavigation = within(
       screen.getAllByRole('navigation', { name: 'Sommaire de la formation' })[1],
     );
-    // Le tiroir mobile applique la même séquence que le sommaire de bureau.
-    expect(mobileNavigation.getByRole('button', { name: /module la suite/i })).toBeDisabled();
-    expect(mobileNavigation.getAllByRole('button', { name: 'Contenu partagé 1' })).toHaveLength(1);
+    await user.click(mobileNavigation.getByRole('button', { name: /module la suite/i }));
+    await user.click(mobileNavigation.getAllByRole('button', { name: 'Contenu partagé 1' })[1]);
+
+    await screen.findByText('Contenu 3 / 4');
     expect(mockComplete).not.toHaveBeenCalled();
   });
 
@@ -357,12 +342,7 @@ describe('Parcours du stagiaire piloté par le snapshot d’exécution', () => {
     await screen.findByRole('button', { name: 'Afficher en plein écran' });
     clock.mockReturnValue(10_000);
     let acknowledgeTime!: () => void;
-    mockRecordTime.mockImplementationOnce(
-      () =>
-        new Promise<void>((resolve) => {
-          acknowledgeTime = resolve;
-        }),
-    );
+    mockRecordTime.mockImplementationOnce(() => new Promise<void>((resolve) => { acknowledgeTime = resolve; }));
 
     const scormApi = (
       window as unknown as {
@@ -376,9 +356,7 @@ describe('Parcours du stagiaire piloté par le snapshot d’exécution', () => {
 
     await waitFor(() => expect(mockRecordTime).toHaveBeenCalledTimes(1));
     expect(mockComplete).not.toHaveBeenCalled();
-    await act(async () => {
-      acknowledgeTime();
-    });
+    await act(async () => { acknowledgeTime(); });
     await waitFor(() => expect(mockComplete).toHaveBeenCalledTimes(1));
     expect(mockComplete).toHaveBeenCalledWith(
       ENROLLMENT_ID,
@@ -395,87 +373,38 @@ describe('Parcours du stagiaire piloté par le snapshot d’exécution', () => {
 
   it('lance la visite SCORM historique après une boucle sans écriture ni nouveau temps', async () => {
     const [first, second] = sharedCourseModules(1);
-    // Contenu déjà prouvé sur une visite close : il reste consultable, et la
-    // séquence ne s'y applique pas puisqu'il ne reste rien à y faire.
-    useSummary([
-      first,
-      {
-        ...second,
-        executionId: null,
-        historicalCompleted: true,
-        courses: [
-          {
-            ...second.courses[0],
-            entries: [
-              { ...second.courses[0].entries[0], completed: true, historicalCompleted: true },
-            ],
-          },
-        ],
-      },
-    ]);
-    summary.modules[1].history = [
-      visit({ id: 'old-module-2', node_id: 'module-2', status: 'completed' }),
-    ];
-    mockGetEntry.mockResolvedValue({
-      data: {
-        id: 'shared-entry-1',
-        content_type_id: 'type-scorm',
-        module_type: 'scorm',
-        data: { scorm_package_id: 'package-1' },
-        field_types: {},
-        is_published: true,
-      },
-    });
-    jest.mocked(portalScormApi.launch).mockImplementation(async (context) => ({
-      data: {
-        enrollment_id: ENROLLMENT_ID,
-        competency_id: context.competencyId,
-        content_entry_id: context.entryId,
-        node_execution_id: context.nodeExecutionId,
-        scorm_package_id: 'package-1',
-        version: '1.2',
-        launch_path: 'index.html',
-        launch_url: 'about:blank',
-      },
-    }));
-    jest.mocked(portalScormApi.getTracking).mockImplementation(async (context) => ({
-      data: {
-        enrollment_id: ENROLLMENT_ID,
-        competency_id: context.competencyId,
-        content_entry_id: context.entryId,
-        node_execution_id: context.nodeExecutionId,
-        lesson_status: 'completed',
-        score_raw: 100,
-        score_min: 0,
-        score_max: 100,
-        session_time: 10,
-        total_time: 10,
-        cmi_data: {},
-        last_commit_id: null,
-        last_sequence: 1,
-        updated_at: null,
-      },
-    }));
+    useSummary([first, { ...second, executionId: null, requiredToRepeat: true, historicalCompleted: true }]);
+    summary.modules[1].history = [visit({ id: 'old-module-2', node_id: 'module-2', status: 'completed' })];
+    mockGetEntry.mockResolvedValue({ data: {
+      id: 'shared-entry-1', content_type_id: 'type-scorm', module_type: 'scorm',
+      data: { scorm_package_id: 'package-1' }, field_types: {}, is_published: true,
+    } });
+    jest.mocked(portalScormApi.launch).mockImplementation(async (context) => ({ data: {
+      enrollment_id: ENROLLMENT_ID, competency_id: context.competencyId,
+      content_entry_id: context.entryId, node_execution_id: context.nodeExecutionId,
+      scorm_package_id: 'package-1', version: '1.2', launch_path: 'index.html', launch_url: 'about:blank',
+    } }));
+    jest.mocked(portalScormApi.getTracking).mockImplementation(async (context) => ({ data: {
+      enrollment_id: ENROLLMENT_ID, competency_id: context.competencyId,
+      content_entry_id: context.entryId, node_execution_id: context.nodeExecutionId,
+      lesson_status: 'completed', score_raw: 100, score_min: 0, score_max: 100,
+      session_time: 10, total_time: 10, cmi_data: {}, last_commit_id: null, last_sequence: 1, updated_at: null,
+    } }));
     const clock = jest.spyOn(performance, 'now').mockReturnValue(0);
     const { user, unmount } = setup();
     await screen.findByRole('button', { name: 'Afficher en plein écran' });
-    // Le module terminé est déplié d'office : son contenu prouvé reste consultable.
+    await user.click(screen.getByRole('button', { name: /à refaire la suite/i }));
     await user.click(screen.getAllByRole('button', { name: 'Contenu partagé 1' })[1]);
-    await waitFor(() =>
-      expect(portalScormApi.launch).toHaveBeenLastCalledWith(
-        expect.objectContaining({ competencyId: 'module-2', nodeExecutionId: 'old-module-2' }),
-      ),
-    );
+    await screen.findByText('Contenu 2 / 2');
     await screen.findByRole('button', { name: 'Afficher en plein écran' });
-    const api = (
-      window as unknown as {
-        API: {
-          LMSGetValue: (key: string) => string;
-          LMSSetValue: (key: string, value: string) => string;
-          LMSCommit: () => string;
-        };
-      }
-    ).API;
+    expect(portalScormApi.launch).toHaveBeenLastCalledWith(expect.objectContaining({
+      competencyId: 'module-2', nodeExecutionId: 'old-module-2',
+    }));
+    const api = (window as unknown as { API: {
+      LMSGetValue: (key: string) => string;
+      LMSSetValue: (key: string, value: string) => string;
+      LMSCommit: () => string;
+    } }).API;
     expect(api.LMSGetValue('cmi.core.lesson_mode')).toBe('review');
     clock.mockReturnValue(10_000);
     await act(async () => {

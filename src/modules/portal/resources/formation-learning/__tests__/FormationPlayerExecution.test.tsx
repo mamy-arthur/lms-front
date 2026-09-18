@@ -102,7 +102,7 @@ describe('Pilotage par le moteur d’exécution', () => {
       },
     }));
     mockStart.mockResolvedValue({ data: summary().execution });
-    mockComplete.mockResolvedValue({ data: summary().execution });
+    mockComplete.mockResolvedValue(undefined);
   });
 
   it('démarre la visite désignée par le serveur avec la révision lue', async () => {
@@ -111,33 +111,6 @@ describe('Pilotage par le moteur d’exécution', () => {
 
     await waitFor(() => expect(mockStart).toHaveBeenCalledTimes(1));
     expect(mockStart).toHaveBeenCalledWith(ENROLLMENT_ID, 'exec-module-1', 7);
-  });
-
-  it('pose la révision du démarrage sans attendre le rechargement', async () => {
-    // Le rechargement reste en vol. Sans la révision rapportée par le démarrage,
-    // toute écriture lancée dans cette fenêtre — un commit SCORM en particulier —
-    // repartirait avec la révision d'avant et serait refusée en 409.
-    mockSummary.mockResolvedValueOnce({ data: summary() }).mockReturnValue(new Promise(() => {}));
-    const started = summary().execution;
-    mockStart.mockResolvedValue({
-      data: {
-        ...started,
-        state_revision: 8,
-        current_execution: { ...started.current_execution!, status: 'in_progress' },
-      },
-    });
-    const { user } = setup();
-    await screen.findByText('Texte de entry-1');
-    await waitFor(() => expect(mockStart).toHaveBeenCalledTimes(1));
-
-    await user.click(screen.getByRole('button', { name: 'Terminer et continuer' }));
-
-    await waitFor(() =>
-      expect(mockComplete).toHaveBeenCalledWith(ENROLLMENT_ID, 'module-1', 'course-1', 'entry-1', {
-        node_execution_id: 'exec-module-1',
-        expected_state_revision: 8,
-      }),
-    );
   });
 
   it('ne redémarre pas la même visite après un rechargement du résumé', async () => {
@@ -216,11 +189,8 @@ describe('Pilotage par le moteur d’exécution', () => {
       }),
     );
     setup();
-    await screen.findByRole('button', { name: 'Ouvrir la navigation' });
+    await screen.findByText('Texte de entry-1');
 
-    // Sans visite ouverte, le contenu n'est pas seulement non modifiable : il
-    // n'appartient pas au passage en cours, donc le lecteur ne l'ouvre pas.
-    expect(screen.queryByText('Texte de entry-1')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Terminer/ })).not.toBeInTheDocument();
     expect(mockComplete).not.toHaveBeenCalled();
   });

@@ -16,7 +16,7 @@ interface Props {
   onEvaluationComplete: (score: number, passed: boolean) => void;
   portalEntry: ApiPortalContentEntry | null;
   portalEntryLoading: boolean;
-  onMarkComplete: () => void;
+  onMarkComplete: (onDone?: () => void) => void;
   isCompleting: boolean;
   enrollmentId: string;
   /** Contexte du nœud actif ; `null` quand aucune visite n'est ouverte. */

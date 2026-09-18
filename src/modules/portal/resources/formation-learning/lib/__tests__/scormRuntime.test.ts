@@ -199,28 +199,21 @@ describe('ScormSession — parsing des temps', () => {
 });
 
 describe('ScormSession — commit', () => {
-  it.each(['1.2', '2004'] as const)(
-    'consulte un historique %s sans commit ni notification',
-    async (version) => {
-      mockApi.getTracking.mockResolvedValue({ data: BASE_STATE });
-      const onCompleted = jest.fn();
-      const session = makeSession(version, onCompleted, { readOnly: () => true });
-      await session.preload();
-      expect(session.apiGetValue(version === '1.2' ? 'cmi.core.lesson_mode' : 'cmi.mode')).toBe(
-        'review',
-      );
-      expect(session.apiGetValue(version === '1.2' ? 'cmi.core.credit' : 'cmi.credit')).toBe(
-        'no-credit',
-      );
-      expect(session.apiSetValue('cmi.core.lesson_status', 'completed')).toBe('true');
-      expect(session.apiCommit()).toBe('true');
-      expect(session.apiFinish()).toBe('true');
-      await flush();
-      expect(mockApi.commitTracking).not.toHaveBeenCalled();
-      expect(mockApi.getTrackingSequence).not.toHaveBeenCalled();
-      expect(onCompleted).not.toHaveBeenCalled();
-    },
-  );
+  it.each(['1.2', '2004'] as const)('consulte un historique %s sans commit ni notification', async (version) => {
+    mockApi.getTracking.mockResolvedValue({ data: BASE_STATE });
+    const onCompleted = jest.fn();
+    const session = makeSession(version, onCompleted, { readOnly: () => true });
+    await session.preload();
+    expect(session.apiGetValue(version === '1.2' ? 'cmi.core.lesson_mode' : 'cmi.mode')).toBe('review');
+    expect(session.apiGetValue(version === '1.2' ? 'cmi.core.credit' : 'cmi.credit')).toBe('no-credit');
+    expect(session.apiSetValue('cmi.core.lesson_status', 'completed')).toBe('true');
+    expect(session.apiCommit()).toBe('true');
+    expect(session.apiFinish()).toBe('true');
+    await flush();
+    expect(mockApi.commitTracking).not.toHaveBeenCalled();
+    expect(mockApi.getTrackingSequence).not.toHaveBeenCalled();
+    expect(onCompleted).not.toHaveBeenCalled();
+  });
 
   it('abandonne un commit en file si la visite est devenue non modifiable', async () => {
     mockApi.getTracking.mockResolvedValue({ data: BASE_STATE });
