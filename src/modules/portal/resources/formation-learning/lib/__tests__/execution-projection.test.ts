@@ -135,13 +135,21 @@ describe('Projection du snapshot d’exécution', () => {
       'locked',
       'locked',
     ]);
-    expect(module.courses[0].sections[0].contents.every((content) => !content.completed)).toBe(true);
+    expect(module.courses[0].sections[0].contents.every((content) => !content.completed)).toBe(
+      true,
+    );
   });
 
   it('verrouille l’historique incomplet sans bloquer la séquence du module actif', () => {
     const data = summary({
       modules: [
-        { ...LOOPED_MODULE, actionable: false, executionId: null, historicalCompleted: false, requiredToRepeat: false },
+        {
+          ...LOOPED_MODULE,
+          actionable: false,
+          executionId: null,
+          historicalCompleted: false,
+          requiredToRepeat: false,
+        },
         { ...LOOPED_MODULE, id: 'module-2' },
       ],
     });
@@ -156,42 +164,50 @@ describe('Projection du snapshot d’exécution', () => {
     expect(historical.execution.readExecutionId).toBe('old-visit');
     expect(buildExecutionContext(formation, historical.id)).toBeNull();
     expect(active.courses[0].sections[0].contents.map((content) => content.status)).toEqual([
-      'retry', 'locked',
+      'retry',
+      'locked',
     ]);
   });
 
-  it.each([false, true])('respecte la même séquence au premier passage et au repassage (repassage=%s)', (repeat) => {
-    const module: ModuleSpec = {
-      ...LOOPED_MODULE,
-      requiredToRepeat: repeat,
-      historicalCompleted: repeat,
-      visitStatus: 'in_progress',
-      courses: [{
-        id: 'course-1',
-        name: 'Découverte',
-        entries: [
-          { id: 'entry-1', title: 'Terminé', completed: true, historicalCompleted: repeat },
-          { id: 'entry-2', title: 'En cours', historicalCompleted: repeat },
-          { id: 'entry-3', title: 'Suivant', historicalCompleted: repeat },
+  it.each([false, true])(
+    'respecte la même séquence au premier passage et au repassage (repassage=%s)',
+    (repeat) => {
+      const module: ModuleSpec = {
+        ...LOOPED_MODULE,
+        requiredToRepeat: repeat,
+        historicalCompleted: repeat,
+        visitStatus: 'in_progress',
+        courses: [
+          {
+            id: 'course-1',
+            name: 'Découverte',
+            entries: [
+              { id: 'entry-1', title: 'Terminé', completed: true, historicalCompleted: repeat },
+              { id: 'entry-2', title: 'En cours', historicalCompleted: repeat },
+              { id: 'entry-3', title: 'Suivant', historicalCompleted: repeat },
+            ],
+          },
         ],
-      }],
-    };
-    const data = summary({ modules: [module] });
-    const formation = mapSummaryToFormation(data);
-    const contents = (formation.nodes[0] as FormationModule).courses[0].sections[0].contents;
-    expect(contents.map((content) => content.status)).toEqual([
-      'completed', repeat ? 'retry' : 'available', 'locked',
-    ]);
-    expect(resolveActive(formation, contents[0].id)?.kind).toBe('content');
-    expect(resolveActive(formation, contents[1].id)?.kind).toBe('content');
-    expect(resolveActive(formation, contents[2].id)).toBeNull();
-    expect(getDefaultActiveId(formation)).toBe(contents[1].id);
+      };
+      const data = summary({ modules: [module] });
+      const formation = mapSummaryToFormation(data);
+      const contents = (formation.nodes[0] as FormationModule).courses[0].sections[0].contents;
+      expect(contents.map((content) => content.status)).toEqual([
+        'completed',
+        repeat ? 'retry' : 'available',
+        'locked',
+      ]);
+      expect(resolveActive(formation, contents[0].id)?.kind).toBe('content');
+      expect(resolveActive(formation, contents[1].id)?.kind).toBe('content');
+      expect(resolveActive(formation, contents[2].id)).toBeNull();
+      expect(getDefaultActiveId(formation)).toBe(contents[1].id);
 
-    data.modules[0].courses[0].sections[0].content_entries[1].completed = true;
-    expect(mapModule(data).courses[0].sections[0].contents.map((content) => content.status)).toEqual([
-      'completed', 'completed', repeat ? 'retry' : 'available',
-    ]);
-  });
+      data.modules[0].courses[0].sections[0].content_entries[1].completed = true;
+      expect(
+        mapModule(data).courses[0].sections[0].contents.map((content) => content.status),
+      ).toEqual(['completed', 'completed', repeat ? 'retry' : 'available']);
+    },
+  );
 
   it('laisse l’historique lisible sans le rendre modifiable', () => {
     const module = mapModule(

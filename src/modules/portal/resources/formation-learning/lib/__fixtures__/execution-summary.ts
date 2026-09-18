@@ -61,6 +61,9 @@ export interface EvaluationSpec {
   title: string;
   actionable?: boolean;
   readable?: boolean;
+  requiredToRepeat?: boolean;
+  historicalCompleted?: boolean;
+  currentScore?: number | null;
   minScorePercentage?: number;
   maxAttempts?: number | null;
   attemptsUsed?: number;
@@ -165,10 +168,10 @@ function buildEvaluation(evaluation: EvaluationSpec): ApiPortalEvalSummary {
     actionable,
     current: actionable,
     completed: false,
-    score: null,
-    required_to_repeat: false,
-    historical_completed: false,
-    current_score: null,
+    score: evaluation.currentScore ?? null,
+    required_to_repeat: evaluation.requiredToRepeat ?? false,
+    historical_completed: evaluation.historicalCompleted ?? false,
+    current_score: evaluation.currentScore ?? null,
     current_result: null,
     current_execution: actionable
       ? visit({ id: `exec-${evaluation.id}`, node_type: 'evaluation', node_id: evaluation.id })

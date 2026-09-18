@@ -15,6 +15,8 @@ import type { FormationNode } from '../lib/types';
 interface Props {
   score: number;
   passingScore: number;
+  /** Statut de l'inscription renvoyé par le serveur, indépendant du budget du round. */
+  formationFailed: boolean;
   /** Nœud que le moteur rend actionable après l'échec ; `null` si le parcours est terminé. */
   target: FormationNode | null;
   remainingAttempts: number | null;
@@ -31,6 +33,7 @@ interface Props {
 export default function EvaluationFailureDialog({
   score,
   passingScore,
+  formationFailed,
   target,
   remainingAttempts,
   onConfirm,
@@ -45,14 +48,18 @@ export default function EvaluationFailureDialog({
           <div className="mb-2 flex size-10 items-center justify-center rounded-full bg-amber-100">
             <AlertTriangle className="size-5 text-amber-600" />
           </div>
-          <DialogTitle>Évaluation non validée</DialogTitle>
+          <DialogTitle>
+            {formationFailed ? 'Formation non validée' : 'Évaluation non validée'}
+          </DialogTitle>
           <DialogDescription asChild>
             <div className="space-y-2">
               <p>
                 Vous avez obtenu <span className="font-semibold text-slate-900">{score}%</span>, en
                 dessous du seuil requis de {passingScore}%.
               </p>
-              {target ? (
+              {formationFailed ? (
+                <p>Vous avez échoué à cette formation. Votre parcours est terminé.</p>
+              ) : target ? (
                 <p>
                   Votre parcours vous ramène {isModule ? 'au module' : 'à l’évaluation'}{' '}
                   <span className="font-semibold text-slate-900">{target.title}</span>
@@ -61,7 +68,7 @@ export default function EvaluationFailureDialog({
               ) : (
                 <p>Votre parcours a été mis à jour.</p>
               )}
-              {remainingAttempts !== null && (
+              {!formationFailed && remainingAttempts !== null && (
                 <p>
                   Il vous reste{' '}
                   <span className="font-semibold text-slate-900">{remainingAttempts}</span>{' '}
@@ -73,8 +80,8 @@ export default function EvaluationFailureDialog({
         </DialogHeader>
         <DialogFooter>
           <Button onClick={onConfirm} className="w-full gap-2 sm:w-auto">
-            <RotateCcw className="size-4" />
-            {target ? action : 'Continuer'}
+            {!formationFailed && <RotateCcw className="size-4" />}
+            {formationFailed ? 'Fermer' : target ? action : 'Continuer'}
           </Button>
         </DialogFooter>
       </DialogContent>

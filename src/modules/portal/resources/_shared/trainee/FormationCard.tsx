@@ -4,7 +4,6 @@ import { ImageIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { cn } from '@/lib/utils';
 import type { TraineeFormation } from './types';
 
 interface FormationCardProps {
@@ -21,13 +20,6 @@ export function FormationCard({ formation }: FormationCardProps) {
         : formation.status === 'in_progress'
           ? { label: 'En cours', className: 'bg-(--color-primary)/10 text-(--color-primary)' }
           : { label: 'À commencer', className: 'bg-slate-100 text-slate-600' };
-
-  const progressTone =
-    formation.status === 'failed'
-      ? { bar: 'bg-red-500', text: 'text-red-600' }
-      : formation.status === 'completed'
-        ? { bar: 'bg-emerald-500', text: 'text-emerald-600' }
-        : { bar: 'bg-(--color-primary)', text: 'text-(--color-primary)' };
 
   const navigate = () => router.push(`/my-learning-paths/${formation.slug}`);
 
@@ -65,7 +57,9 @@ export function FormationCard({ formation }: FormationCardProps) {
         )}
       </div>
       <CardHeader>
-        <Badge className={`w-fit rounded-sm text-xs ${status.className}`}>{status.label}</Badge>
+        <Badge className={`w-fit rounded-sm px-1 py-0 text-[0.7rem] ${status.className}`}>
+          {status.label}
+        </Badge>
         <CardTitle className="line-clamp-2 text-sm leading-snug">{formation.title}</CardTitle>
         {formation.description && (
           <p className="line-clamp-2 text-[12px] text-muted-foreground">{formation.description}</p>
@@ -75,11 +69,11 @@ export function FormationCard({ formation }: FormationCardProps) {
         <div className="space-y-1">
           <div className="h-1 w-full overflow-hidden rounded-full bg-muted">
             <div
-              className={cn('h-full rounded-full transition-all duration-700', progressTone.bar)}
+              className="h-full rounded-full bg-(--color-primary) transition-all duration-700"
               style={{ width: `${formation.progress}%` }}
             />
           </div>
-          <p className={cn('text-right text-xs font-semibold', progressTone.text)}>
+          <p className="text-right text-xs font-semibold text-(--color-primary)">
             {formation.progress}%
           </p>
         </div>

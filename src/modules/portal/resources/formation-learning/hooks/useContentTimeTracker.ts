@@ -182,7 +182,10 @@ async function postRecord(
  * montage et à chaque sauvegarde périodique, elle est le seul chemin de reprise
  * après un échec réseau ou une page fermée avant l'acquittement.
  */
-function retryPending(excludedSessionId: string | null, onExecutionConflict: ConflictHandler): void {
+function retryPending(
+  excludedSessionId: string | null,
+  onExecutionConflict: ConflictHandler,
+): void {
   const now = Date.now();
   const pending = readPending();
   const fresh = pending.filter((record) => now - record.queuedAt < PENDING_MAX_AGE_MS);

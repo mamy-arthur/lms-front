@@ -174,12 +174,11 @@ export default function FormationPlayer({ enrollmentId }: Props) {
   async function handleEvaluationComplete(score: number, passed: boolean) {
     if (resolved?.kind !== 'evaluation') return;
     const evaluation = resolved.node;
-    // Le budget et le seuil sont lus AVANT le rafraîchissement : ensuite le nœud
-    // n'est plus celui que l'apprenant vient de passer.
+    // Garder le score et le seuil de l'évaluation soumise, même si le moteur
+    // déplace ensuite la visite sur un autre nœud.
     const outcome = {
       score: Math.round(score),
       passingScore: evaluation.passingScore,
-      remainingAttempts: evaluation.execution.round?.remaining_attempts ?? null,
     };
     // Épingler l'évaluation : sans cela, le nœud redevenu actionable prendrait la
     // main dès l'actualisation et l'écran de résultat disparaîtrait aussitôt.
@@ -188,7 +187,17 @@ export default function FormationPlayer({ enrollmentId }: Props) {
     // On attend l'état actualisé : la cible du rebouclage est décidée par le
     // moteur, et la lire avant le rafraîchissement désignerait l'ancienne étape.
     await queryClient.invalidateQueries({ queryKey: portalLearningPathKeys.summary(enrollmentId) });
-    if (!passed) setFailure(outcome);
+    if (!passed) {
+      const refreshed = queryClient.getQueryData<Formation>(
+        portalLearningPathKeys.summary(enrollmentId),
+      );
+      // Relire le budget de l'évaluation soumise, pas celui de la cible de reprise.
+      const failedEvaluation = refreshed?.nodes.find((node) => node.id === evaluation.id);
+      setFailure({
+        ...outcome,
+        remainingAttempts: failedEvaluation?.execution.round?.remaining_attempts ?? null,
+      });
+    }
   }
 
   function handleFailureAcknowledged() {
@@ -264,6 +273,7 @@ export default function FormationPlayer({ enrollmentId }: Props) {
         <EvaluationFailureDialog
           score={failure.score}
           passingScore={failure.passingScore}
+          formationFailed={formation.execution.status === 'failed'}
           target={formation.nodes.find((node) => node.execution.actionable) ?? null}
           remainingAttempts={failure.remainingAttempts}
           onConfirm={handleFailureAcknowledged}

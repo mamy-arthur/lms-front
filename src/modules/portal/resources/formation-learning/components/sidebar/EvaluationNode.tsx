@@ -17,7 +17,8 @@ interface Props {
  */
 export default function EvaluationNode({ node, active, onSelect }: Props) {
   const isLocked = node.status === 'locked';
-  const isRetry = node.status === 'retry';
+  // L'obligation de repassage reste visible avant le déverrouillage du nœud.
+  const isRetry = node.execution.requiredToRepeat;
   const isDone = node.status === 'completed';
   const typeLabel = node.evaluationType === 'intermediate' ? 'Intermédiaire' : 'Finale';
   const remaining = node.execution.round?.remaining_attempts ?? null;
@@ -67,7 +68,7 @@ export default function EvaluationNode({ node, active, onSelect }: Props) {
             isRetry ? 'text-amber-600' : 'text-slate-400',
           )}
         >
-          {isRetry ? 'À repasser' : `Évaluation ${typeLabel}`}
+          {isRetry ? 'À refaire' : `Évaluation ${typeLabel}`}
         </span>
         <span
           className={cn(
@@ -81,7 +82,7 @@ export default function EvaluationNode({ node, active, onSelect }: Props) {
         </span>
       </span>
 
-      {isRetry && remaining !== null && (
+      {!isLocked && isRetry && remaining !== null && (
         <span className="shrink-0 rounded-full border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-amber-700">
           {remaining} restante{remaining > 1 ? 's' : ''}
         </span>

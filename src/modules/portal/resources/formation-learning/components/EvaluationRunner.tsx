@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Loader2 } from 'lucide-react';
+import { ClipboardCheck, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Quiz } from '@/modules/quizzes';
 import { evaluationAttemptsApi } from '@/shared/api/portal.api';
@@ -169,12 +169,44 @@ export default function EvaluationRunner({
         maxAttempts={quota.maxAttempts}
         attemptsUsed={quota.attemptsUsed}
         attemptsRemaining={quota.attemptsRemaining}
-        onRetry={() => {
-          setAttempt(null);
-          setFinalScore(null);
-          setPhase('splash');
-        }}
+        onRetry={
+          evaluation.execution.actionable
+            ? () => {
+                setAttempt(null);
+                setFinalScore(null);
+                setPhase('splash');
+              }
+            : undefined
+        }
       />
+    );
+  }
+
+  // Un passage acquis se consulte sans réafficher les consignes de démarrage.
+  // L'historique seul ne suffit pas : un nœud à refaire reste en retry/locked.
+  if (evaluation.status === 'completed') {
+    const score = evaluation.execution.currentScore;
+
+    return (
+      <div className="mx-auto flex w-full max-w-2xl flex-col items-center px-4 py-12 text-center">
+        <div className="mb-6 flex size-16 items-center justify-center rounded-full bg-primary/10">
+          <ClipboardCheck className="size-8 text-primary" />
+        </div>
+        <p className="text-sm font-medium text-muted-foreground">{evaluation.title}</p>
+        <h1 className="mt-2 text-3xl font-bold tracking-tight">Évaluation terminée</h1>
+        <p className="mt-3 text-sm text-muted-foreground">
+          Vous avez terminé cette évaluation. Ce passage est consultable en lecture seule.
+        </p>
+        {score !== null && (
+          <div className="mt-8 w-full rounded-2xl border bg-card p-6 shadow-sm">
+            <p className="text-sm text-muted-foreground">Votre score</p>
+            <p className="mt-2 text-4xl font-bold">{score}%</p>
+            <p className="mt-3 text-sm text-muted-foreground">
+              Score requis : {evaluation.passingScore}%
+            </p>
+          </div>
+        )}
+      </div>
     );
   }
 

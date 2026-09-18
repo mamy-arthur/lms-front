@@ -32,7 +32,8 @@ export default function ModuleNode({ node, activeId, onSelect, index }: Props) {
   );
 
   const isLocked = node.status === 'locked';
-  const isRetry = node.status === 'retry';
+  // L'obligation de repassage reste visible avant le déverrouillage du nœud.
+  const isRetry = node.execution.requiredToRepeat;
   const isDone = !isRetry && node.progress === 100;
 
   return (

@@ -1,8 +1,12 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { toast } from 'sonner';
-import { portalContentEntriesApi, portalContentTimeApi, portalLearningPathsApi } from '@/shared/api/portal.api';
+import {
+  portalContentEntriesApi,
+  portalContentTimeApi,
+  portalLearningPathsApi,
+} from '@/shared/api/portal.api';
 import { progressionApi } from '@/shared/api/progression.api';
 import type { ApiPortalLearningPathSummary } from '@/shared/types/portal.types';
 import FormationPlayer from '../FormationPlayer';
@@ -33,6 +37,13 @@ jest.mock('@/shared/api/portal-scorm.api', () => ({
   },
 }));
 jest.mock('sonner', () => ({ toast: { error: jest.fn(), success: jest.fn() } }));
+
+jest.mock('../components/EvaluationRunner', () => ({
+  __esModule: true,
+  default: ({ onComplete }: { onComplete: (score: number, passed: boolean) => void }) => (
+    <button onClick={() => onComplete(0, false)}>Soumettre l’évaluation</button>
+  ),
+}));
 
 const mockSummary = jest.mocked(portalLearningPathsApi.summary);
 const mockGetEntry = jest.mocked(portalContentEntriesApi.get);
@@ -119,32 +130,41 @@ describe('Pilotage par le moteur d’exécution', () => {
   it('attend la confirmation de /start avant de compter le temps ou proposer la complétion', async () => {
     const clock = jest.spyOn(performance, 'now').mockReturnValue(0);
     let acknowledgeStart!: () => void;
-    mockStart.mockImplementationOnce(() => new Promise((resolve) => {
-      acknowledgeStart = () => {
-        const started = summary({
-          stateRevision: 8,
-          modules: [{ ...LOOPED_MODULE, visitStatus: 'in_progress' }],
-        });
-        useSummary(started);
-        resolve({ data: started.execution });
-      };
-    }));
+    mockStart.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          acknowledgeStart = () => {
+            const started = summary({
+              stateRevision: 8,
+              modules: [{ ...LOOPED_MODULE, visitStatus: 'in_progress' }],
+            });
+            useSummary(started);
+            resolve({ data: started.execution });
+          };
+        }),
+    );
     const { user, unmount } = setup();
     await screen.findByText('Texte de entry-1');
     await waitFor(() => expect(mockStart).toHaveBeenCalledTimes(1));
     expect(screen.queryByRole('button', { name: /Terminer/ })).not.toBeInTheDocument();
     clock.mockReturnValue(10_000);
-    await act(async () => { window.dispatchEvent(new Event('pagehide')); });
+    await act(async () => {
+      window.dispatchEvent(new Event('pagehide'));
+    });
     expect(mockRecordTime).not.toHaveBeenCalled();
     expect(mockComplete).not.toHaveBeenCalled();
 
-    await act(async () => { acknowledgeStart(); });
+    await act(async () => {
+      acknowledgeStart();
+    });
     const complete = await screen.findByRole('button', { name: 'Terminer et continuer' });
     clock.mockReturnValue(15_000);
     await user.click(complete);
     await waitFor(() => expect(mockComplete).toHaveBeenCalledTimes(1));
     expect(mockRecordTime.mock.calls[0][4]).toMatchObject({
-      node_execution_id: 'exec-module-1', expected_state_revision: 8, time_spent: 5,
+      node_execution_id: 'exec-module-1',
+      expected_state_revision: 8,
+      time_spent: 5,
     });
     unmount();
   });
@@ -156,7 +176,9 @@ describe('Pilotage par le moteur d’exécution', () => {
     const callsBefore = mockSummary.mock.calls.length;
     mockRecordTime.mockRejectedValueOnce(executionConflict());
     clock.mockReturnValue(10_000);
-    await act(async () => { window.dispatchEvent(new Event('pagehide')); });
+    await act(async () => {
+      window.dispatchEvent(new Event('pagehide'));
+    });
     await waitFor(() => expect(mockSummary.mock.calls.length).toBeGreaterThan(callsBefore));
     expect(window.localStorage.getItem('learneo:content-time:pending')).toBeNull();
     expect(toast.error).not.toHaveBeenCalled();
@@ -232,6 +254,88 @@ describe('Pilotage par le moteur d’exécution', () => {
     expect(mockStart).not.toHaveBeenCalled();
   });
 
+  it.each([0, 1])(
+    'annonce l’échec de la formation après actualisation, même avec %i tentative restante',
+    async (remainingAttempts) => {
+      const evaluation = {
+        id: 'evaluation-1',
+        title: 'Évaluation finale',
+        actionable: true,
+        minScorePercentage: 50,
+        remainingAttempts: 2,
+      };
+      useSummary(summary({ modules: [], finalEvaluations: [evaluation] }));
+      const { user } = setup();
+      const submit = await screen.findByRole('button', { name: 'Soumettre l’évaluation' });
+
+      let resolveSummary!: (value: { data: ApiPortalLearningPathSummary }) => void;
+      mockSummary.mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveSummary = resolve;
+          }),
+      );
+      await user.click(submit);
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+      await act(async () => {
+        resolveSummary({
+          data: summary({
+            status: 'failed',
+            currentExecution: null,
+            stateRevision: 8,
+            modules: [],
+            finalEvaluations: [{ ...evaluation, actionable: false, remainingAttempts }],
+          }),
+        });
+      });
+
+      const dialog = within(await screen.findByRole('dialog', { name: 'Formation non validée' }));
+      expect(
+        dialog.getByText('Vous avez échoué à cette formation. Votre parcours est terminé.'),
+      ).toBeInTheDocument();
+      expect(
+        dialog.queryByText(/tentative|Votre parcours a été mis à jour/),
+      ).not.toBeInTheDocument();
+
+      await user.click(dialog.getByRole('button', { name: 'Fermer' }));
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(screen.getByText('Parcours en échec')).toBeInTheDocument();
+      expect(mockStart).not.toHaveBeenCalled();
+    },
+  );
+
+  it('conserve le rebouclage et affiche le budget actualisé de l’évaluation échouée', async () => {
+    const evaluation = {
+      id: 'evaluation-1',
+      title: 'Évaluation finale',
+      actionable: true,
+      minScorePercentage: 50,
+      remainingAttempts: 2,
+    };
+    useSummary(summary({ modules: [], finalEvaluations: [evaluation] }));
+    const { user } = setup();
+    const submit = await screen.findByRole('button', { name: 'Soumettre l’évaluation' });
+
+    useSummary(
+      summary({
+        stateRevision: 8,
+        modules: [{ ...LOOPED_MODULE, visitStatus: 'in_progress' }],
+        finalEvaluations: [{ ...evaluation, actionable: false, remainingAttempts: 1 }],
+      }),
+    );
+    await user.click(submit);
+
+    const dialog = within(await screen.findByRole('dialog', { name: 'Évaluation non validée' }));
+    expect(dialog.getByText(/Il vous reste/)).toHaveTextContent('Il vous reste 1 tentative.');
+    expect(dialog.getByText('Les bases')).toBeInTheDocument();
+    expect(dialog.queryByText(/Vous avez échoué à cette formation/)).not.toBeInTheDocument();
+
+    await user.click(dialog.getByRole('button', { name: 'Revoir le module' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    await screen.findByText('Texte de entry-1');
+  });
+
   it('affiche l’obligation de refaire un module déjà suivi', async () => {
     setup();
 
@@ -243,16 +347,18 @@ describe('Pilotage par le moteur d’exécution', () => {
   it('laisse consulter les contenus terminés sans nouvelle écriture', async () => {
     useSummary(
       summary({
-        modules: [{
-          ...LOOPED_MODULE,
-          actionable: false,
-          requiredToRepeat: false,
-          visitStatus: 'completed',
-          courses: LOOPED_MODULE.courses.map((course) => ({
-            ...course,
-            entries: course.entries.map((entry) => ({ ...entry, completed: true })),
-          })),
-        }],
+        modules: [
+          {
+            ...LOOPED_MODULE,
+            actionable: false,
+            requiredToRepeat: false,
+            visitStatus: 'completed',
+            courses: LOOPED_MODULE.courses.map((course) => ({
+              ...course,
+              entries: course.entries.map((entry) => ({ ...entry, completed: true })),
+            })),
+          },
+        ],
         currentExecution: null,
       }),
     );
