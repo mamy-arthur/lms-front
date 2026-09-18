@@ -43,7 +43,7 @@ export function mapSummaryToFormation(summary: ApiPortalLearningPathSummary): Fo
             : !hasPendingContent && mod.accessible
               ? 'available'
               : 'locked';
-          if (!entry.completed) hasPendingContent = true;
+          if (!entry.completed && !entry.read_only) hasPendingContent = true;
 
           return {
             // A shared course has an independent progression in each module.
@@ -55,6 +55,7 @@ export function mapSummaryToFormation(summary: ApiPortalLearningPathSummary): Fo
             title: entry.title ?? '',
             status,
             completed: entry.completed,
+            ...(entry.read_only ? { readOnly: true } : {}),
           };
         }),
       })),

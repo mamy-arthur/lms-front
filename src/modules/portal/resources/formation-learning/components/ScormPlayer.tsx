@@ -6,6 +6,7 @@ import { AlertCircle, Loader2, Maximize2, Minimize2 } from 'lucide-react';
 import { portalScormApi } from '@/shared/api/portal-scorm.api';
 import { portalScormLaunchKeys } from '@/shared/queries/keys';
 import { ScormSession, bindScormWindowApi } from '../lib/scormRuntime';
+import { ScormPreviewSession, getScormPreviewLaunchUrl } from '../lib/scormPreviewRuntime';
 import { useAuthStore } from '@/shared/stores/auth.store';
 import { useSimulationStore } from '@/shared/simulation/simulation.store';
 
@@ -55,7 +56,8 @@ export default function ScormPlayer({
     staleTime: 0,
   });
 
-  const [isReady, setIsReady] = useState(false);
+  const [readySessionKey, setReadySessionKey] = useState<string | null>(null);
+  const [failedSessionKey, setFailedSessionKey] = useState<string | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const onCompletedRef = useRef(onCompleted);
@@ -69,7 +71,27 @@ export default function ScormPlayer({
   const expanded = nativeFullscreen || overlay;
 
   const launch = launchQuery.data;
-  const ready = simulatedRole ? !!launch : isReady;
+  const readOnly = launch?.read_only === true;
+  const demo = !!simulatedRole && !readOnly;
+  const previewUrl =
+    simulatedRole && readOnly && typeof window !== 'undefined'
+      ? getScormPreviewLaunchUrl(launch.launch_url, window.location.origin)
+      : null;
+  const invalidPreview = readOnly && (!previewUrl || !['1.2', '2004'].includes(launch.version));
+  // A new package/context must never reuse readiness from the previous adapter.
+  const sessionKey = JSON.stringify([
+    enrollmentId,
+    competencyId,
+    courseId,
+    entryId,
+    launch?.scorm_package_id,
+    launch?.version,
+    launch?.launch_url,
+    readOnly,
+    simulatedRole,
+  ]);
+  const failed = launchQuery.isError || invalidPreview || failedSessionKey === sessionKey;
+  const ready = demo ? !!launch : readySessionKey === sessionKey;
 
   // The SCORM content can request fullscreen on itself, in which case the
   // fullscreen element is the iframe, not our container — only our own container
@@ -121,9 +143,19 @@ export default function ScormPlayer({
   }, [expanded, nativeFullscreen, simulatedRole]);
 
   useEffect(() => {
-    if (!launch || simulatedRole) return;
+    if (!launch || failed || demo) return;
+
+    if (readOnly) {
+      const preview = new ScormPreviewSession(launch.version);
+      const dispose = preview.bind(window);
+      setReadySessionKey(sessionKey);
+      return () => {
+        setReadySessionKey(null);
+        dispose();
+      };
+    }
+
     let cancelled = false;
-    setIsReady(false);
     const epoch = useSimulationStore.getState().epoch;
 
     const session = new ScormSession({
@@ -148,11 +180,12 @@ export default function ScormPlayer({
     const unbind = bindScormWindowApi(window, session, launch.version);
 
     session.preload().then((ok) => {
-      if (!cancelled && ok) setIsReady(true);
+      if (!cancelled && ok) setReadySessionKey(sessionKey);
     });
 
     return () => {
       cancelled = true;
+      setReadySessionKey(null);
       session.apiFinish();
       unbind();
     };
@@ -164,6 +197,10 @@ export default function ScormPlayer({
     launch?.scorm_package_id,
     launch?.version,
     simulatedRole,
+    sessionKey,
+    failed,
+    demo,
+    readOnly,
   ]);
 
   if (launchQuery.isLoading) {
@@ -174,7 +211,7 @@ export default function ScormPlayer({
     );
   }
 
-  if (launchQuery.isError || !launch) {
+  if (failed || !launch) {
     return (
       <div className="flex h-40 flex-col items-center justify-center gap-2 text-slate-500">
         <AlertCircle className="h-6 w-6 text-red-400" />
@@ -190,9 +227,16 @@ export default function ScormPlayer({
     <div
       ref={containerRef}
       className={`relative flex flex-col gap-2 ${
-        expanded ? 'fixed inset-0 z-50 gap-0 bg-white' : ''
+        expanded
+          ? `fixed ${simulatedRole ? 'inset-x-0 bottom-0 top-16' : 'inset-0'} z-50 gap-0 bg-white`
+          : ''
       }`}
     >
+      {readOnly && (
+        <p role="status" className="shrink-0 bg-amber-50 px-3 py-2 pr-14 text-sm text-amber-950">
+          Lecture seule — aucun score, temps ou progression enregistré.
+        </p>
+      )}
       {ready && (
         <button
           type="button"
@@ -214,34 +258,43 @@ export default function ScormPlayer({
         The effective sandbox is the INTERSECTION of this attribute and the `sandbox`
         directive in the Content-Security-Policy the backend sends with the asset
         (learneo-be config/scorm.php → asset_csp_directives.sandbox). A token granted
-        on only one side has no effect, so the two lists must stay in sync — read that
-        config for why each token is granted and why bare `allow-top-navigation` is not.
+        on only one side has no effect. Normal playback matches the backend config;
+        previews deliberately withhold forms, popups and top navigation. Scripts and
+        same-origin are still needed for synchronous API discovery: this does NOT
+        isolate hostile packages from the parent origin.
 
         `allow` carries the Permissions Policy the iframe needs to delegate: fullscreen
         video is standard in SCORM content and is gated by this attribute, not by the
         sandbox. Camera/microphone are intentionally NOT delegated to untrusted content.
       */}
       <iframe
-        key={launch.scorm_package_id}
+        key={sessionKey}
         title="Contenu SCORM"
-        src={!simulatedRole && ready ? launch.launch_url : undefined}
+        src={!demo && ready ? (previewUrl ?? launch.launch_url) : undefined}
         srcDoc={
-          simulatedRole
+          demo
             ? '<!doctype html><html lang="fr"><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src &apos;none&apos;; form-action &apos;none&apos;"><h1>Activité SCORM de démonstration</h1><p>Explorez ce contenu fictif, puis terminez l’activité. Votre progression reste locale.</p></html>'
             : undefined
         }
         sandbox={
-          simulatedRole
+          demo
             ? ''
-            : 'allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals allow-downloads allow-presentation allow-pointer-lock allow-orientation-lock allow-top-navigation-by-user-activation'
+            : readOnly
+              ? 'allow-scripts allow-same-origin'
+              : 'allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals allow-downloads allow-presentation allow-pointer-lock allow-orientation-lock allow-top-navigation-by-user-activation'
         }
-        allow="fullscreen; autoplay; encrypted-media; picture-in-picture; clipboard-write"
-        allowFullScreen
+        allow={
+          readOnly
+            ? "fullscreen 'none'; autoplay; encrypted-media"
+            : 'fullscreen; autoplay; encrypted-media; picture-in-picture; clipboard-write'
+        }
+        allowFullScreen={!readOnly}
+        onErrorCapture={readOnly ? () => setFailedSessionKey(sessionKey) : undefined}
         className={`w-full bg-white ${
           expanded ? 'h-full border-0' : 'h-[70vh] rounded-lg border border-slate-200'
         } ${ready ? '' : 'hidden'}`}
       />
-      {simulatedRole && (
+      {demo && (
         <button
           type="button"
           className="self-end rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground"

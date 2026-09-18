@@ -1,15 +1,31 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { toast } from 'sonner';
-import { portalContentEntriesApi, portalLearningPathsApi } from '@/shared/api/portal.api';
-import { portalScormApi, type ApiScormTrackingState } from '@/shared/api/portal-scorm.api';
-import type { ApiPortalLearningPathSummary } from '@/shared/types/portal.types';
+import {
+  portalContentEntriesApi,
+  portalContentTimeApi,
+  portalLearningPathsApi,
+} from '@/shared/api/portal.api';
+import {
+  portalScormApi,
+  type ApiScormLaunch,
+  type ApiScormTrackingState,
+} from '@/shared/api/portal-scorm.api';
+import { Role } from '@/shared/constants/roles';
+import { portalLearningPathKeys } from '@/shared/queries/keys';
+import { useAuthStore } from '@/shared/stores/auth.store';
+import type {
+  ApiPortalContentEntry,
+  ApiPortalLearningPathSummary,
+} from '@/shared/types/portal.types';
+import type { Formation } from '../lib/types';
 import FormationPlayer from '../FormationPlayer';
 
 jest.mock('@/shared/api/portal.api', () => ({
   portalLearningPathsApi: { summary: jest.fn(), learnerEvaluations: jest.fn() },
   portalContentEntriesApi: { get: jest.fn(), markComplete: jest.fn() },
+  portalContentTimeApi: { record: jest.fn() },
   evaluationAttemptsApi: { start: jest.fn(), answer: jest.fn(), submit: jest.fn() },
 }));
 jest.mock('@/shared/api/portal-scorm.api', () => ({
@@ -153,7 +169,7 @@ function setup() {
       <FormationPlayer enrollmentId={ENROLLMENT_ID} />
     </QueryClientProvider>,
   );
-  return { ...view, user: userEvent.setup() };
+  return { ...view, client, user: userEvent.setup() };
 }
 
 describe('Progression séquentielle du stagiaire', () => {
@@ -504,5 +520,218 @@ describe('Progression séquentielle du stagiaire', () => {
       [ENROLLMENT_ID, 'module-1', 'shared-course', 'shared-entry-1'],
       [ENROLLMENT_ID, 'module-2', 'shared-course', 'shared-entry-1'],
     ]);
+  });
+
+  describe('SCORM en lecture seule pendant la simulation stagiaire', () => {
+    const initialAuth = useAuthStore.getState();
+    const clients: QueryClient[] = [];
+    const assetUrl =
+      '/api/v1/role-simulation/training/learning-paths/12345678-1234-4123-8123-123456789abc/entries/12345678-1234-4123-8123-123456789def/scorm/assets/payload.signature/index.html';
+    const scormEntry: ApiPortalContentEntry = {
+      id: 'entry-2',
+      content_type_id: 'type-scorm',
+      module_type: 'scorm',
+      data: { scorm_package_id: 'package-preview' },
+      field_types: {},
+      is_published: true,
+    };
+    const launch: ApiScormLaunch = {
+      enrollment_id: ENROLLMENT_ID,
+      competency_id: 'module-1',
+      content_entry_id: scormEntry.id,
+      scorm_package_id: 'package-preview',
+      version: '1.2',
+      launch_path: 'index.html',
+      launch_url: assetUrl,
+      read_only: true,
+    };
+
+    function setActor(realRole: Role, simulatedRole: Role | null = Role.TRAINEE) {
+      useAuthStore.setState({
+        user: {
+          id: 'real-actor',
+          name: 'Acteur réel',
+          email: 'actor@example.test',
+          role: realRole,
+        },
+        role: simulatedRole ?? realRole,
+        simulatedRole,
+      });
+    }
+
+    function deferScormEntry() {
+      let resolve!: (value: { data: ApiPortalContentEntry }) => void;
+      mockGetEntry.mockReturnValueOnce(
+        new Promise((done) => {
+          resolve = done;
+        }),
+      );
+      return () => resolve({ data: scormEntry });
+    }
+
+    function expectNoTrackingOrCompletion() {
+      expect(portalScormApi.getTracking).not.toHaveBeenCalled();
+      expect(portalScormApi.commitTracking).not.toHaveBeenCalled();
+      expect(portalScormApi.getTrackingSequence).not.toHaveBeenCalled();
+      expect(portalContentTimeApi.record).not.toHaveBeenCalled();
+      expect(mockComplete).not.toHaveBeenCalled();
+    }
+
+    afterEach(() => {
+      cleanup();
+      for (const client of clients.splice(0)) client.clear();
+      useAuthStore.setState(initialAuth, true);
+    });
+
+    it.each([Role.EDITOR, Role.CLIENT_MANAGER])(
+      '%s lit le vrai SCORM sans validation ni suivi et navigue au suivant sans changer la progression',
+      async (realRole) => {
+        setActor(realRole);
+        summary.modules[0].courses[0].sections[0].content_entries[1].read_only = true;
+        const summaryBefore = JSON.parse(JSON.stringify(summary)) as ApiPortalLearningPathSummary;
+        const finishEntry = deferScormEntry();
+        let finishLaunch!: (value: { data: ApiScormLaunch }) => void;
+        jest.mocked(portalScormApi.launch).mockReturnValueOnce(
+          new Promise((resolve) => {
+            finishLaunch = resolve;
+          }),
+        );
+        const { client, user, unmount } = setup();
+        clients.push(client);
+        await screen.findByRole('heading', { name: 'Contenu 2' });
+        await waitFor(() =>
+          expect(mockGetEntry).toHaveBeenCalledWith(ENROLLMENT_ID, 'course-1', 'entry-2'),
+        );
+
+        // The summary alone must hide completion while the portal entry is still loading.
+        expect(screen.queryByRole('button', { name: /^Terminer/ })).not.toBeInTheDocument();
+        expect(screen.queryByTitle('Contenu SCORM')).not.toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Suivant' })).toBeEnabled();
+        expect(screen.getByRole('button', { name: 'Contenu 3' })).toBeEnabled();
+        const formationBefore = JSON.parse(
+          JSON.stringify(
+            client.getQueryData<Formation>(portalLearningPathKeys.summary(ENROLLMENT_ID)),
+          ),
+        ) as Formation;
+        expect(formationBefore.progress).toBe(20);
+
+        await act(async () => finishEntry());
+        await waitFor(() =>
+          expect(portalScormApi.launch).toHaveBeenCalledWith(
+            ENROLLMENT_ID,
+            'module-1',
+            'course-1',
+            'entry-2',
+          ),
+        );
+        expect(screen.queryByRole('button', { name: /^Terminer/ })).not.toBeInTheDocument();
+        expect(screen.queryByTitle('Contenu SCORM')).not.toBeInTheDocument();
+        expectNoTrackingOrCompletion();
+
+        await act(async () => finishLaunch({ data: launch }));
+        await waitFor(() =>
+          expect(screen.getByTitle('Contenu SCORM')).toHaveAttribute('src', assetUrl),
+        );
+        const frame = screen.getByTitle<HTMLIFrameElement>('Contenu SCORM');
+        expect(frame).not.toHaveAttribute('srcdoc');
+        expect(frame.contentWindow?.parent).toBe(window);
+        expect(screen.getByRole('status')).toHaveTextContent(
+          'Lecture seule — aucun score, temps ou progression enregistré.',
+        );
+        expect(screen.queryByRole('button', { name: /^Terminer/ })).not.toBeInTheDocument();
+
+        // Exercise the real parent adapter, not a mocked ScormPlayer completion callback.
+        const parent = frame.contentWindow!.parent as unknown as {
+          API: {
+            LMSInitialize: (value: string) => string;
+            LMSSetValue: (key: string, value: string) => string;
+            LMSGetValue: (key: string) => string;
+            LMSCommit: (value: string) => string;
+            LMSFinish: (value: string) => string;
+          };
+        };
+        const api = parent.API;
+        expect(api).toBeDefined();
+        await act(async () => {
+          expect(api.LMSInitialize('')).toBe('true');
+          expect(api.LMSSetValue('cmi.core.score.raw', '100')).toBe('true');
+          expect(api.LMSSetValue('cmi.core.lesson_status', 'completed')).toBe('true');
+          expect(api.LMSSetValue('cmi.core.session_time', '00:05:00')).toBe('true');
+          expect(api.LMSCommit('')).toBe('true');
+          expect(api.LMSGetValue('cmi.core.score.raw')).toBe('100');
+          expect(api.LMSGetValue('cmi.core.lesson_status')).toBe('completed');
+          expect(api.LMSFinish('')).toBe('true');
+        });
+        expectNoTrackingOrCompletion();
+        expect(screen.getByRole('heading', { name: 'Contenu 2' })).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /^Terminer/ })).not.toBeInTheDocument();
+        expect(screen.queryByText('Terminé')).not.toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Suivant' })).toBeEnabled();
+        expect(client.getQueryData(portalLearningPathKeys.summary(ENROLLMENT_ID))).toEqual(
+          formationBefore,
+        );
+
+        await user.click(screen.getByRole('button', { name: 'Suivant' }));
+        await screen.findByText('Texte de entry-3');
+        expect(mockGetEntry.mock.calls.map((call) => call[2])).toEqual(['entry-2', 'entry-3']);
+        expect(parent.API).toBeUndefined();
+        expect(screen.getByRole('button', { name: /module les bases/i })).toHaveTextContent('25%');
+        expect(client.getQueryData(portalLearningPathKeys.summary(ENROLLMENT_ID))).toEqual(
+          formationBefore,
+        );
+        expect(summary).toEqual(summaryBefore);
+        expect(mockSummary).toHaveBeenCalledTimes(1);
+        unmount();
+        expectNoTrackingOrCompletion();
+      },
+    );
+
+    it.each([Role.EDITOR, Role.CLIENT_MANAGER])(
+      '%s masque aussi la validation pendant le chargement puis en SCORM sans marqueur dans le résumé',
+      async (realRole) => {
+        setActor(realRole);
+        const finishEntry = deferScormEntry();
+        jest.mocked(portalScormApi.launch).mockResolvedValue({ data: launch });
+        const { client } = setup();
+        clients.push(client);
+        await screen.findByRole('heading', { name: 'Contenu 2' });
+        expect(
+          summary.modules[0].courses[0].sections[0].content_entries[1].read_only,
+        ).toBeUndefined();
+        expect(screen.queryByRole('button', { name: /^Terminer/ })).not.toBeInTheDocument();
+        expect(screen.queryByTitle('Contenu SCORM')).not.toBeInTheDocument();
+
+        await act(async () => finishEntry());
+        await waitFor(() =>
+          expect(screen.getByTitle('Contenu SCORM')).toHaveAttribute('src', assetUrl),
+        );
+        expect(screen.queryByRole('button', { name: /^Terminer/ })).not.toBeInTheDocument();
+        // The role fallback suppresses writes; it does not override summary sequencing.
+        expect(screen.getByRole('button', { name: 'Suivant' })).toBeDisabled();
+        expect(screen.getByRole('button', { name: 'Contenu 3' })).toBeDisabled();
+        expectNoTrackingOrCompletion();
+      },
+    );
+
+    it.each([true, undefined])(
+      'respecte read_only=%s dès le chargement sans dépendre du rôle simulé',
+      async (readOnly) => {
+        setActor(Role.TRAINEE, null);
+        summary.modules[0].courses[0].sections[0].content_entries[1].read_only = readOnly;
+        deferScormEntry();
+        const { client } = setup();
+        clients.push(client);
+        await screen.findByRole('heading', { name: 'Contenu 2' });
+        expect(screen.queryByTitle('Contenu SCORM')).not.toBeInTheDocument();
+        if (readOnly) {
+          expect(screen.queryByRole('button', { name: /^Terminer/ })).not.toBeInTheDocument();
+          expect(screen.getByRole('button', { name: 'Suivant' })).toBeEnabled();
+        } else {
+          expect(screen.getByRole('button', { name: 'Terminer et continuer' })).toBeEnabled();
+          expect(screen.getByRole('button', { name: 'Contenu 3' })).toBeDisabled();
+        }
+        expect(mockComplete).not.toHaveBeenCalled();
+      },
+    );
   });
 });

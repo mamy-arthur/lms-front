@@ -141,4 +141,99 @@ describe('mapSummaryToFormation', () => {
     };
     expect(mapSummaryToFormation(empty).nodes).toHaveLength(0);
   });
+
+  describe('read-only SCORM entries', () => {
+    function previewSummary(): ApiPortalLearningPathSummary {
+      const summary = JSON.parse(JSON.stringify(SUMMARY)) as ApiPortalLearningPathSummary;
+      summary.progress = { percent: 0, completed: 0, total: 4 };
+      summary.final_evaluation = null;
+      for (const module of summary.modules) {
+        module.accessible = true;
+        module.progress = { percent: 0, completed: 0, total: 2 };
+        module.evaluation = null;
+        for (const course of module.courses) {
+          for (const section of course.sections) {
+            for (const entry of section.content_entries) entry.completed = false;
+          }
+        }
+      }
+      for (const entry of summary.modules[0].courses[0].sections[0].content_entries) {
+        entry.read_only = true;
+      }
+      return summary;
+    }
+
+    it('maps read_only to readOnly and unlocks the next entry across modules without inventing completion or progress', () => {
+      const summary = previewSummary();
+      const before = JSON.parse(JSON.stringify(summary)) as ApiPortalLearningPathSummary;
+      const result = mapSummaryToFormation(summary);
+      const modules = result.nodes.filter(
+        (node): node is FormationModule => node.type === 'module',
+      );
+      const contents = modules.flatMap((module) =>
+        module.courses.flatMap((course) => course.sections.flatMap((section) => section.contents)),
+      );
+
+      expect(
+        contents.map(({ entryId, readOnly, completed, status }) => ({
+          entryId,
+          readOnly,
+          completed,
+          status,
+        })),
+      ).toEqual([
+        { entryId: 'entry-1', readOnly: true, completed: false, status: 'available' },
+        { entryId: 'entry-2', readOnly: true, completed: false, status: 'available' },
+        { entryId: 'entry-3', readOnly: undefined, completed: false, status: 'available' },
+        { entryId: 'entry-4', readOnly: undefined, completed: false, status: 'locked' },
+      ]);
+      expect(result.progress).toBe(0);
+      expect(modules.map((module) => module.progress)).toEqual([0, 0]);
+      expect(summary).toEqual(before);
+    });
+
+    it.each([undefined, false])(
+      'does not clear an earlier ordinary unmet prerequisite (read_only=%s)',
+      (readOnly) => {
+        const summary = previewSummary();
+        summary.modules[0].courses[0].sections[0].content_entries[0].read_only = readOnly;
+        const result = mapSummaryToFormation(summary);
+        const firstModule = result.nodes[0] as FormationModule;
+        const nextModule = result.nodes[1] as FormationModule;
+
+        expect(firstModule.courses[0].sections[0].contents[0]).toMatchObject({
+          completed: false,
+          status: 'available',
+        });
+        expect(firstModule.courses[0].sections[0].contents[0].readOnly).toBeUndefined();
+        expect(firstModule.courses[0].sections[0].contents[1]).toMatchObject({
+          readOnly: true,
+          completed: false,
+          status: 'locked',
+        });
+        expect(nextModule.courses[0].sections[0].contents.map((content) => content.status)).toEqual(
+          ['locked', 'locked'],
+        );
+        expect(result.progress).toBe(0);
+        expect(firstModule.progress).toBe(0);
+        expect(nextModule.progress).toBe(0);
+      },
+    );
+
+    it('does not override a server-locked module after read-only entries', () => {
+      const summary = previewSummary();
+      summary.modules[1].accessible = false;
+      const result = mapSummaryToFormation(summary);
+      const nextModule = result.nodes[1] as FormationModule;
+
+      expect(nextModule.status).toBe('locked');
+      expect(
+        nextModule.courses[0].sections[0].contents.every(
+          (content) => content.status === 'locked' && content.completed === false,
+        ),
+      ).toBe(true);
+      expect(nextModule.progress).toBe(0);
+      expect(result.progress).toBe(0);
+    });
+  });
 });

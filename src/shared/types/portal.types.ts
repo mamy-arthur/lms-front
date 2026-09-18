@@ -13,6 +13,8 @@ export interface ApiPortalSummaryEntry {
   id: string;
   title: string | null;
   completed: boolean;
+  /** Simulation-only SCORM preview: browse without completing or tracking. */
+  read_only?: boolean;
 }
 
 export interface ApiPortalSummarySection {

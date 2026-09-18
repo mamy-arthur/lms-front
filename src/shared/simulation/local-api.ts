@@ -1,4 +1,5 @@
 import { Role } from '@/shared/constants/roles';
+import { createTrainingSource, type TrainingReader } from '@/shared/simulation/training-source';
 import type { ApiAttemptQuiz } from '@/shared/types/evaluation-attempt.types';
 import type { ApiPortalLearningPathSummary, ApiProgressCounts } from '@/shared/types/portal.types';
 import type { PaymentMethod } from '@/shared/types/order.types';
@@ -154,16 +155,18 @@ export const SIMULATION_LIMITATIONS = [
   'Login/logout/session replacement, auth identity/challenges, role-simulation and impersonation remain forbidden; the session owner handles them. Password/reset/2FA settings are visual local success only; no secrets are retained or security changed.',
   'Shop transport belongs to the caller. rememberShopData retains product IDs, prices, currencies and authorized shop covers for the local cart, never training content.',
   'Wallet, invoices and the dashboard messaging dialog currently use direct frontend mocks/callbacks, not messaging API calls; those UI behaviors are outside this engine.',
-  'SCORM launch is a fixed scriptless inline demonstration, not an interactive package. Local tracking commits/completion work; ZIP extraction, real runtime execution, signed uploads and remote launch URLs never occur. Browser CSP may block the inline iframe.',
+  'Fictional SCORM stays inert. Authorized Client/Editor trainee training previews launch the actual package through dedicated signed GETs, with a disposable no-I/O SCORM adapter and no tracking, time or completion writes. Package scripts follow the existing SCORM trust/CSP model; third-party telemetry is not prevented.',
   'Uploads return an inert inline placeholder, not the uploaded file. Template preview never executes HTML or sends email.',
   'Progression recomputes course-level all/any, evaluation completion/score and failure/exhaustion branches from current local completions/latest attempts. No time-based expiry or certificate issuance. Quiz scoring is exact-match, not weighted. Reports are fictional summaries only.',
-  'No payments, mail delivery, DNS changes, remote assets, browser persistence or network fallback exist.',
+  'No payments, mail delivery, DNS changes, browser persistence or network fallback exist. Authorized training definitions/media are read-only exceptions for Client/Editor trainee previews; enrollments and results stay local.',
 ] as const;
 
 let state: SimulationData | null = null;
+let training: { key: string; source: ReturnType<typeof createTrainingSource> } | null = null;
 
 export function resetSimulationData(role: Role): void {
   if (!Object.values(Role).includes(role)) throw new Error('Invalid simulation role');
+  training = null;
   state = createSimulationFixtures(role);
 }
 
@@ -173,7 +176,25 @@ export function hasSimulationData(role: Role): boolean {
 }
 
 export function clearSimulationData(): void {
+  training = null;
   state = null;
+}
+
+/** Called only after the server has confirmed the real actor's simulation context. */
+export function configureSimulationTraining(key: string | null, read: TrainingReader): void {
+  if (key === null) {
+    training = null;
+    return;
+  }
+  if (training?.key === key) return;
+  if (!state || state.role !== Role.TRAINEE) return;
+  if (training) resetSimulationData(Role.TRAINEE);
+  const data = state!;
+  const context: NonNullable<typeof training> = {
+    key,
+    source: createTrainingSource(data, read, () => state === data && training === context),
+  };
+  training = context;
 }
 
 const object = (value: unknown): JsonObject =>
@@ -675,8 +696,8 @@ function listResponse(rows: readonly JsonObject[], params: URLSearchParams): Sim
   const sort = params.get('sort_by');
   if (sort)
     filtered.sort((a, b) => {
-      const left = a[sort];
-      const right = b[sort];
+      const left = a[sort] ?? (sort === 'title' ? object(a.learning_path).name : undefined);
+      const right = b[sort] ?? (sort === 'title' ? object(b.learning_path).name : undefined);
       const direction = (params.get('sort_dir') ?? params.get('sort_order')) === 'desc' ? -1 : 1;
       return (
         direction *
@@ -956,6 +977,7 @@ function summary(data: SimulationData, enrollmentId: string): ApiPortalLearningP
                   id: entry.id,
                   title: text(object(entry.data).title) || 'Contenu démonstration',
                   completed: completed(competency.id, entry.id),
+                  ...(training?.source.isReadOnlyScorm(entry.id) ? { read_only: true } : {}),
                 })),
             })),
         },
@@ -1055,7 +1077,9 @@ function progressionAccess(
         const courses = modules.find((module) => module.id === source.id)?.courses ?? [];
         const completedCourses = courses.map((course) => {
           const entries = course.sections.flatMap((section) => section.content_entries);
-          return entries.length > 0 && entries.every((entry) => entry.completed);
+          // A read-only SCORM must not block the rest of the preview. This is
+          // navigation permission only: progress/completed remain unchanged.
+          return entries.length > 0 && entries.every((entry) => entry.completed || entry.read_only);
         });
         if (
           completedCourses.length &&
@@ -1849,6 +1873,8 @@ function handleScorm(
   if (action === 'tracking/sequence')
     return response({ data: { last_sequence: current.last_sequence } });
   if (method === 'GET') return response({ data: current });
+  // Real preview packages are read-only even if a stale caller tries a local commit.
+  if (training?.source.isReadOnlyScorm(entryId)) return response({ data: current });
   if (
     !text(payload.commit_id) ||
     !Number.isInteger(payload.sequence) ||
@@ -1939,8 +1965,36 @@ export async function handleSimulationRequest(
       'Les données de simulation ne sont plus disponibles. Rechargez la page puis réessayez.',
       'SIMULATION_INACTIVE',
     );
+  if (training) {
+    await training.source.prepare(path, options.signal);
+    if (state !== data)
+      throw new DOMException('Changement de contexte de simulation', 'AbortError');
+  }
   if (!['GET', 'POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) return unsupported(method, path);
   const params = parsed.searchParams;
+
+  const previewLaunch =
+    /^enrollments\/([^/]+)\/courses\/([^/]+)\/entries\/([^/]+)\/scorm\/launch$/.exec(path);
+  if (training && previewLaunch && method === 'GET') {
+    const [, enrollmentId, courseId, entryId] = previewLaunch;
+    const competencyId = params.get('competency_id') ?? '';
+    if (!competencyId) invalid('competency_id est requis.');
+    const entry = validateEntry(data, enrollmentId, courseId, entryId, competencyId);
+    const pkg = scormPackage(data, text(object(entry.data).scorm_package_id));
+    if (pkg.content_entry_id !== entryId) fail(404, 'Simulation : package absent de ce contenu.');
+    const launch = await training.source.launchScorm(enrollmentId, entryId, options.signal);
+    if (state !== data)
+      throw new DOMException('Changement de contexte de simulation', 'AbortError');
+    return response({
+      data: {
+        ...launch,
+        enrollment_id: enrollmentId,
+        competency_id: competencyId,
+        content_entry_id: entryId,
+        scorm_package_id: pkg.id,
+      },
+    });
+  }
 
   if (path === 'platform/scorm-packages' && method === 'POST')
     return uploadScorm(data, options.body);
@@ -2005,7 +2059,9 @@ export async function handleSimulationRequest(
               category_learning_path: learningPath.category_id
                 ? { id: learningPath.category_id, name: learningPath.category_name }
                 : null,
-              totalModules: objects(learningPath.competencies).length,
+              totalModules: training
+                ? number(find(data, 'learning-paths', row.learning_path_id).competencies_count)
+                : objects(learningPath.competencies).length,
             },
           };
         }),
@@ -2054,6 +2110,7 @@ export async function handleSimulationRequest(
     if (match[4]) {
       if (!payload.competency_id || number(payload.time_spent, -1) < 0)
         invalid('Période de consultation invalide.');
+      if (training?.source.isReadOnlyScorm(match[3])) return response(null, 204);
       data.timeSessions.set(`${match[1]}:${text(payload.competency_id)}:${match[3]}:${match[4]}`, {
         competency_id: text(payload.competency_id),
         started_at: text(safeValue(payload.started_at)),
@@ -2093,6 +2150,7 @@ export async function handleSimulationRequest(
     );
   if (match && method === 'POST') {
     validateEntry(data, match[1], match[3], match[4], match[2]);
+    if (training?.source.isReadOnlyScorm(match[4])) return response(null, 204);
     data.completedEntries.add(`${match[1]}:${match[2]}:${match[4]}`);
     refreshEnrollment(data, match[1]);
     return response(null, 204);

@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { LoadingSpinner } from '@/shared/components/feedback/LoadingSpinner';
 import { useAuthStore } from '@/shared/stores/auth.store';
+import { Role } from '@/shared/constants/roles';
 import { clearSimulationContext, endSimulation, synchronizeSimulation } from './service';
 import { SIMULATION_ROLE_LABELS, useSimulationStore } from './simulation.store';
 
@@ -14,6 +15,9 @@ export function SimulationProvider({ children }: { children: React.ReactNode }) 
   const router = useRouter();
   const userId = useAuthStore((s) => s.user?.id);
   const role = useAuthStore((s) => s.simulatedRole);
+  const realRole = useAuthStore((s) => s.user?.role);
+  const trainingPreview =
+    role === Role.TRAINEE && (realRole === Role.EDITOR || realRole === Role.CLIENT_MANAGER);
   const { phase, error, epoch } = useSimulationStore();
   const [hydrated, setHydrated] = useState(() => useAuthStore.persist.hasHydrated());
   const [checkedUserId, setCheckedUserId] = useState(() =>
@@ -106,7 +110,9 @@ export function SimulationProvider({ children }: { children: React.ReactNode }) 
                   Mode simulation : rôle {SIMULATION_ROLE_LABELS[role]}
                 </p>
                 <p className="hidden text-xs sm:block">
-                  Données fictives · Actions et achats sans effet réel
+                  {trainingPreview
+                    ? 'Formations réelles en aperçu · Progression et actions sans effet réel'
+                    : 'Données fictives · Actions et achats sans effet réel'}
                 </p>
               </div>
             </div>

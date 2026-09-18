@@ -112,6 +112,16 @@ it('rejects chaining and forbidden targets without making even a control request
   expect(fetch).toHaveBeenCalledTimes(1);
 });
 
+it.each([Role.SUPER_ADMIN, Role.EDITOR, Role.CLIENT_MANAGER])(
+  'starts trainee simulation from %s directly on formations and restores the original page on exit',
+  async (realRole) => {
+    setup(realRole);
+    const originalPath = window.location.pathname + window.location.search;
+    await expect(startSimulation(Role.TRAINEE)).resolves.toBe('/trainee/formations');
+    await expect(endSimulation()).resolves.toBe(originalPath);
+  },
+);
+
 it('resumes an active server simulation after reload without replacing the real login', async () => {
   const user = setup();
   server = { ...server, simulated_role: Role.EDITOR };

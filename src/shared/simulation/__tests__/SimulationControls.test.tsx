@@ -32,10 +32,10 @@ const labels: Record<Role, string> = {
 const directTransitions = [
   [Role.SUPER_ADMIN, Role.EDITOR, '/admin/programs'],
   [Role.SUPER_ADMIN, Role.CLIENT_MANAGER, '/dashboard'],
-  [Role.SUPER_ADMIN, Role.TRAINEE, '/trainee'],
+  [Role.SUPER_ADMIN, Role.TRAINEE, '/trainee/formations'],
   [Role.EDITOR, Role.CLIENT_MANAGER, '/dashboard'],
-  [Role.EDITOR, Role.TRAINEE, '/trainee'],
-  [Role.CLIENT_MANAGER, Role.TRAINEE, '/trainee'],
+  [Role.EDITOR, Role.TRAINEE, '/trainee/formations'],
+  [Role.CLIENT_MANAGER, Role.TRAINEE, '/trainee/formations'],
 ] as const;
 
 function authorize(realRole: Role, overrides: Partial<SimulationSession> = {}) {
@@ -159,7 +159,7 @@ describe('SimulationControls', () => {
 
   it('passes the selected server-provided shop tenant to the start service', async () => {
     authorize(Role.SUPER_ADMIN, { shop_tenants: [{ id: 'tenant-id', name: 'Catalogue école' }] });
-    mockStart.mockResolvedValueOnce('/trainee');
+    mockStart.mockResolvedValueOnce('/trainee/formations');
     const user = userEvent.setup();
     render(<SimulationControls />);
 
@@ -175,7 +175,7 @@ describe('SimulationControls', () => {
     await user.click(screen.getByRole('button', { name: 'Démarrer la simulation' }));
 
     expect(mockStart).toHaveBeenCalledWith(Role.TRAINEE, 'tenant-id');
-    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/trainee'));
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/trainee/formations'));
   });
 
   it.each(['checking', 'transition'] as const)(

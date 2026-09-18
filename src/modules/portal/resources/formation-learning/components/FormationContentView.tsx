@@ -8,6 +8,8 @@ import type { Formation } from '../lib/types';
 import type { Resolved } from '../lib/course-utils';
 import type { ApiPortalContentEntry } from '@/shared/types/portal.types';
 import ContentNavigationBar from './ContentNavigationBar';
+import { useAuthStore } from '@/shared/stores/auth.store';
+import { Role } from '@/shared/constants/roles';
 
 interface Props {
   formation: Formation;
@@ -34,6 +36,13 @@ export default function FormationContentView({
   isCompleting,
   enrollmentId,
 }: Props) {
+  const simulatedRole = useAuthStore((state) => state.simulatedRole);
+  const actorRole = useAuthStore((state) => state.user?.role);
+  const readOnlyScorm =
+    (resolved?.kind === 'content' && resolved.content.readOnly === true) ||
+    (simulatedRole === Role.TRAINEE &&
+      (actorRole === Role.EDITOR || actorRole === Role.CLIENT_MANAGER) &&
+      (portalEntry?.module_type === 'scorm' || portalEntryLoading === true));
   if (!resolved) {
     return (
       <div className="flex min-h-0 flex-1 items-center justify-center text-sm text-slate-400">
@@ -92,7 +101,9 @@ export default function FormationContentView({
               enrollmentId={enrollmentId}
               competencyId={content.competencyId}
               courseId={content.courseId}
-              onScormCompleted={onMarkComplete ? () => onMarkComplete() : undefined}
+              onScormCompleted={
+                !readOnlyScorm && onMarkComplete ? () => onMarkComplete() : undefined
+              }
             />
           ) : (
             <ContentRenderer content={content} />
@@ -108,7 +119,7 @@ export default function FormationContentView({
         isNextLocked={resolved.isNextLocked}
         onNavigate={onNavigate}
         isCompleted={content.completed === true}
-        onMarkComplete={onMarkComplete}
+        onMarkComplete={readOnlyScorm ? undefined : onMarkComplete}
         isCompleting={isCompleting}
       />
     </div>

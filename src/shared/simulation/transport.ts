@@ -1,4 +1,5 @@
 import { useAuthStore } from '@/shared/stores/auth.store';
+import { Role } from '@/shared/constants/roles';
 import { useSimulationStore } from './simulation.store';
 import { handleSimulationRequest, rememberShopData } from './local-api';
 
@@ -32,7 +33,7 @@ export function trackSimulationRequest(signal?: AbortSignal | null) {
   };
 }
 
-/** The only network business reads allowed in simulation are explicit shop routes. */
+/** Only explicit shop and authorized training-preview GETs may reach the network. */
 export function simulationTransport(url: string, options: RequestInit) {
   const parsed = new URL(
     url,
@@ -62,6 +63,17 @@ export function simulationTransport(url: string, options: RequestInit) {
   if (sameOrigin && method === 'GET' && /^\/api\/v1\/(?:platform\/)?auth\/me$/.test(path)) {
     return { url, local: null, shop: false };
   }
+  const actorRole = useAuthStore.getState().user?.role;
+  if (
+    sameOrigin &&
+    method === 'GET' &&
+    role === Role.TRAINEE &&
+    (actorRole === Role.EDITOR || actorRole === Role.CLIENT_MANAGER) &&
+    /^\/api\/v1\/role-simulation\/training\/learning-paths(?:\/[a-zA-Z0-9-]+(?:\/entries\/[a-zA-Z0-9-]+\/scorm\/launch)?)?$/.test(
+      path,
+    )
+  )
+    return { url, local: null, shop: false };
   const shop =
     /^\/api\/v1\/(?:platform\/|role-simulation\/)?shop\/(learning-paths(?:\/[a-zA-Z0-9-]+)?|learning-path-categories)$/.exec(
       path,

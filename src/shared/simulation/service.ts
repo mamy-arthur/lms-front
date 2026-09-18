@@ -2,7 +2,12 @@ import { apiDelete, apiGet, apiPost } from '@/shared/lib/apiClient';
 import { queryClient } from '@/shared/lib/query-client';
 import { useAuthStore } from '@/shared/stores/auth.store';
 import { Role } from '@/shared/constants/roles';
-import { clearSimulationData, hasSimulationData, resetSimulationData } from './local-api';
+import {
+  clearSimulationData,
+  configureSimulationTraining,
+  hasSimulationData,
+  resetSimulationData,
+} from './local-api';
 import { cancelSimulationRequests } from './transport';
 import { roleHome, type SimulationSession, useSimulationStore } from './simulation.store';
 
@@ -32,6 +37,14 @@ function applySession(session: SimulationSession) {
     if (session.simulated_role) resetSimulationData(session.simulated_role);
     else clearSimulationData();
   }
+  const { user, sessionId } = useAuthStore.getState();
+  const trainingPreview =
+    session.simulated_role === Role.TRAINEE &&
+    (user?.role === Role.EDITOR || user?.role === Role.CLIENT_MANAGER);
+  configureSimulationTraining(
+    trainingPreview ? JSON.stringify([user!.id, user!.role, sessionId, session.tenant_id]) : null,
+    apiGet,
+  );
   useAuthStore.getState().setSimulatedRole(session.simulated_role);
   useSimulationStore.setState((state) => ({
     session,

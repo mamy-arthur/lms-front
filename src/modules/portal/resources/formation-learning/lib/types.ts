@@ -19,6 +19,7 @@ export interface CourseContent {
   title: string;
   status: ProgressStatus;
   completed?: boolean;
+  readOnly?: boolean;
   durationMin?: number;
   data?: Record<string, unknown>;
 }

@@ -13,6 +13,7 @@ export interface ApiScormLaunch {
   version: ScormVersion;
   launch_path: string;
   launch_url: string;
+  read_only?: boolean;
 }
 
 export interface ApiScormTrackingState {

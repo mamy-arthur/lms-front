@@ -35,5 +35,5 @@ export const SIMULATION_ROLE_LABELS: Record<Role, string> = {
 export function roleHome(role: Role | null): string {
   if (role === Role.EDITOR) return '/admin/programs';
   if (role === Role.SUPER_ADMIN) return '/admin';
-  return role === Role.TRAINEE ? '/trainee' : '/dashboard';
+  return role === Role.TRAINEE ? '/trainee/formations' : '/dashboard';
 }
