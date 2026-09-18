@@ -143,9 +143,7 @@ export function SimulationProvider({ children }: { children: React.ReactNode }) 
           <LoadingSpinner className="h-screen" />
         )
       ) : (
-        <div data-simulation={role ? 'active' : undefined}>
-          {children}
-        </div>
+        <div data-simulation={role ? 'active' : undefined}>{children}</div>
       )}
     </>
   );

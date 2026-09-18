@@ -84,7 +84,9 @@ describe('PortalContentRenderer external URLs', () => {
     expect(iframe).toHaveAttribute('allowfullscreen');
     // Browsers do not reliably emit iframe errors for framing refusals; keep this advice visible.
     expect(
-      screen.getByText('Si le site refuse l’affichage intégré, ouvrez le lien dans un nouvel onglet.'),
+      screen.getByText(
+        'Si le site refuse l’affichage intégré, ouvrez le lien dans un nouvel onglet.',
+      ),
     ).toBeVisible();
     expect(screen.queryByText('Aucun contenu disponible.')).not.toBeInTheDocument();
     expect(screen.queryByText('Titre affiché dans l’en-tête')).not.toBeInTheDocument();
@@ -141,7 +143,11 @@ describe('PortalContentRenderer ordinary pages', () => {
         introduction: 'Une introduction sans lien.',
         notes: 'Première ligne\nDeuxième ligne',
         body: '<h2>Notions importantes</h2><p>Un <strong>exemple enrichi</strong>.</p>',
-        illustration: { id: 'image-1', url: 'https://example.test/diagram.png', mime_type: 'image/png' },
+        illustration: {
+          id: 'image-1',
+          url: 'https://example.test/diagram.png',
+          mime_type: 'image/png',
+        },
       },
       field_types: {
         title: 'text',
@@ -162,7 +168,10 @@ describe('PortalContentRenderer ordinary pages', () => {
     );
     expect(screen.getByRole('heading', { level: 2, name: 'Notions importantes' })).toBeVisible();
     expect(screen.getByText('exemple enrichi').tagName).toBe('STRONG');
-    expect(container.querySelector('img')).toHaveAttribute('src', 'https://example.test/diagram.png');
+    expect(container.querySelector('img')).toHaveAttribute(
+      'src',
+      'https://example.test/diagram.png',
+    );
     expect(screen.queryByText('Titre affiché dans l’en-tête')).not.toBeInTheDocument();
     expect(screen.queryByText('Description réservée à l’en-tête')).not.toBeInTheDocument();
     expect(screen.queryByText('Autre description réservée à l’en-tête')).not.toBeInTheDocument();
@@ -190,7 +199,9 @@ describe('PortalContentRenderer ordinary pages', () => {
     const media = container.querySelector(selector);
     expect(media).toHaveAttribute(selector === 'a' ? 'href' : 'src', url);
     if (selector === 'a') {
-      expect(screen.getByRole('link', { name: 'Télécharger le fichier' })).toHaveAttribute('download');
+      expect(screen.getByRole('link', { name: 'Télécharger le fichier' })).toHaveAttribute(
+        'download',
+      );
     } else if (selector === 'iframe') {
       expect(screen.getByTitle('PDF')).toBe(media);
     } else {
