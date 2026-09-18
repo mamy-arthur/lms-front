@@ -502,6 +502,63 @@ describe('importTrainingPreview', () => {
 
 describe('training preview safety', () => {
   it.each([
+    ['url', 'text', 'https://www.youtube.com/watch?v=abc123&t=30'],
+    ['resource', 'text', 'https://example.test/formation?chapter=2#section'],
+    ['custom', 'url', 'http://example.test/formation'],
+    ['url', 'text', '  HTTPS://example.test/formation  '],
+  ])('preserves declared external URL content %s (%s): %s', async (name, fieldType, url) => {
+    const { data, preview } = setup();
+    const detail = graph();
+    const type = detail['content-types']![0];
+    type.module_type = 'url';
+    type.fields = [
+      { field_id: real.field, name: 'title', type: 'text' },
+      { field_id: realId(23), name, type: fieldType },
+    ];
+    detail.entries![0].data = { title: 'Ressource externe', [name]: url };
+    detail['progression-rules'] = [];
+    importTrainingPreview(data, preview, real.path, detail);
+    const expected = new URL(url.trim()).href;
+    expect(record(data.resources.entries[0].data)[name]).toBe(expected);
+
+    // Exercise the serializer actually consumed by PortalContentRenderer too.
+    jest.mocked(createSimulationFixtures).mockReturnValueOnce(data);
+    resetSimulationData(Role.TRAINEE);
+    const response = await handleSimulationRequest(
+      `/api/v1/enrollments/${data.enrollments[0].id}/courses/${data.resources.courses[0].id}/entries/${data.resources.entries[0].id}`,
+    );
+    expect(response.json).toMatchObject({
+      data: { module_type: 'url', data: { [name]: expected }, field_types: { [name]: fieldType } },
+    });
+  });
+
+  it.each([
+    'javascript:alert(1)',
+    'data:text/html,<script>alert(1)</script>',
+    'blob:https://example.test/id',
+    'file:///etc/passwd',
+    '//example.test/formation',
+    '/api/v1/auth/logout',
+    '/api/v1/platform/media/private',
+    '../admin',
+    '#simulation',
+    'https://name:password@example.test/course',
+    'https://example.test/\\course',
+    'https://example.test/\ncourse',
+    'http accidental embed',
+    `${window.location.origin}/api/v1/auth/logout`,
+    `https://${window.location.hostname}:8443/api/v1/auth/logout`,
+    `https://${window.location.hostname}./api/v1/auth/logout`,
+  ])('still rejects unsafe/internal URL module content: %s', (url) => {
+    const { data, preview } = setup();
+    const detail = graph();
+    detail['content-types']![0].module_type = 'url';
+    record(detail.entries![0].data).url = url;
+    importTrainingPreview(data, preview, real.path, detail);
+    expect(record(data.resources.entries[0].data).url).toBe('');
+  });
+
+  it.each([
     'https://evil.test/image.png',
     '//evil.test/image.png',
     '/api/v1/platform/media/image',

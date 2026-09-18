@@ -218,6 +218,54 @@ it('keeps the existing fictitious training for superadmin simulation', async () 
   expect(fetch).toHaveBeenCalledTimes(1);
 });
 
+it.each([Role.CLIENT_MANAGER, Role.EDITOR])(
+  '%s keeps the real external URL through the simulation transport without a backend proxy',
+  async (role) => {
+    setup(role);
+    await startSimulation(Role.TRAINEE);
+    const list = await apiGet<ApiMeEnrollmentsResponse>('me/enrollments');
+    const url = 'https://www.youtube.com/watch?v=abc123';
+    (fetch as jest.Mock).mockResolvedValueOnce(
+      network({
+        data: {
+          resources: {
+            ...resources,
+            entries: [{ ...resources.entries[0], data: { title: 'Vidéo externe', url } }],
+            'content-types': [{
+              ...resources['content-types'][0],
+              module_type: 'url',
+              fields: [{ name: 'title', type: 'text' }, { name: 'url', type: 'text' }],
+            }],
+          },
+        },
+      }),
+    );
+    const enrollmentId = list.data[0].id;
+    const summary = await apiGet<{ data: ApiPortalLearningPathSummary }>(
+      `enrollments/${enrollmentId}/summary`,
+    );
+    const course = summary.data.modules[0].courses[0];
+    const entry = course.sections[0].content_entries[0];
+    const content = await apiGet<{ data: ApiPortalContentEntry }>(
+      `enrollments/${enrollmentId}/courses/${course.id}/entries/${entry.id}`,
+    );
+    expect(content.data).toMatchObject({
+      module_type: 'url',
+      data: { url },
+      field_types: { url: 'text' },
+    });
+    expect(entry.id).toMatch(synthetic);
+    expect(fetch).toHaveBeenCalledTimes(3); // lifecycle, catalog and authorized graph only
+    expect((fetch as jest.Mock).mock.calls.map(([requestUrl]) => requestUrl)).toEqual([
+      '/api/v1/role-simulation',
+      `${base}?page=1&per_page=100`,
+      `${base}/${path.id}`,
+    ]);
+    await expect(httpClient(url)).rejects.toBeDefined(); // no API allowlist expansion
+    expect(fetch).toHaveBeenCalledTimes(3);
+  },
+);
+
 it('never substitutes fictitious formations for an empty authorized catalog', async () => {
   await startSimulation(Role.TRAINEE);
   (fetch as jest.Mock).mockResolvedValueOnce(

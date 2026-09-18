@@ -18,7 +18,7 @@ export function SimulationProvider({ children }: { children: React.ReactNode }) 
   const realRole = useAuthStore((s) => s.user?.role);
   const trainingPreview =
     role === Role.TRAINEE && (realRole === Role.EDITOR || realRole === Role.CLIENT_MANAGER);
-  const { phase, error, epoch } = useSimulationStore();
+  const { phase, error } = useSimulationStore();
   const [hydrated, setHydrated] = useState(() => useAuthStore.persist.hasHydrated());
   const [checkedUserId, setCheckedUserId] = useState(() =>
     phase === 'ready' ? userId : undefined,
@@ -143,7 +143,7 @@ export function SimulationProvider({ children }: { children: React.ReactNode }) 
           <LoadingSpinner className="h-screen" />
         )
       ) : (
-        <div key={epoch} data-simulation={role ? 'active' : undefined}>
+        <div data-simulation={role ? 'active' : undefined}>
           {children}
         </div>
       )}

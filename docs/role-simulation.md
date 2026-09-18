@@ -29,7 +29,7 @@ Les restrictions d'interface habituelles sont conservées : le rôle Éditeur pr
 - **Super admin → Stagiaire** : démonstration fictive inchangée.
 - Le catalogue autorisé est chargé en lecture seule puis le contenu à l’ouverture de la formation. Une liste vide reste vide ; une erreur propose de réessayer, sans remplacer les formations par des exemples.
 - `training-data.ts` transforme les identifiants réels en identifiants de simulation. Les inscriptions, réponses aux évaluations et progressions sont uniquement locales ; aucun crédit, résultat, inscription réelle ou identité de stagiaire n’est importé ou modifié.
-- Les images et médias compatibles passent par un GET dédié limité aux médias référencés par la formation autorisée. Les liens externes et scripts des champs éditoriaux sont neutralisés. Le SCORM fait l'objet d'un lancement dédié en lecture seule.
+- Les images et médias compatibles passent par un GET dédié limité aux médias référencés par la formation autorisée. Les scripts et liens incorporés au texte riche restent neutralisés. Les contenus de type **URL** conservent leurs liens externes HTTP(S), affichés dans une iframe avec sandbox et sans référent, avec un lien d'ouverture si le site interdit l'intégration. Les schémas exécutables, URL avec identifiants, chemins relatifs et adresses du même hôte restent bloqués en simulation. Aucun droit d'accès aux API métier n'est ajouté ; le site externe peut toutefois effectuer ses propres requêtes ou mesures d'audience. Le SCORM fait l'objet d'un lancement dédié en lecture seule.
 - Les données importées ne sont pas persistées et sont supprimées à la sortie. Les GET sont annulés et leurs réponses tardives rejetées lors d’un changement de contexte.
 
 ### SCORM réel en lecture seule

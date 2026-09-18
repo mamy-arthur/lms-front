@@ -1,4 +1,5 @@
 import DOMPurify from 'dompurify';
+import { getHttpContentUrl } from '@/lib/utils';
 import {
   newSimulationEntity,
   simulationId,
@@ -428,6 +429,19 @@ export function importTrainingPreview(
         fields[name] = Array.isArray(value)
           ? refs('relations', value)
           : id('relations', typeof value === 'string' ? value : object(value).id) || null;
+      } else if (
+        type?.module_type === 'url' &&
+        (field.type === 'url' ||
+          (field.type === 'text' &&
+            name !== 'title' &&
+            (name === 'url' || /^\s*https?:/i.test(text(value)))))
+      ) {
+        // Only the URL module may embed a declared external web resource. Keep
+        // richtext, arbitrary text and media under their existing stricter policy.
+        const url = getHttpContentUrl(value);
+        const host = url ? new URL(url).hostname.replace(/\.$/, '') : '';
+        fields[name] =
+          host && host !== window.location.hostname.replace(/\.$/, '') ? url : '';
       } else {
         fields[name] = field.type === 'url' ? mediaUrl(value, realPathId) : safe(value, name);
       }

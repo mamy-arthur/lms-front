@@ -1,7 +1,7 @@
 import type { ApiPortalContentEntry } from '@/shared/types/portal.types';
 import { RichTextRenderer } from '@/shared/components/RichTextRenderer';
 import { Loader2, FileDown, ExternalLink, FolderOpen } from 'lucide-react';
-import { toYouTubeEmbedUrl } from '@/lib/utils';
+import { getHttpContentUrl, toYouTubeEmbedUrl } from '@/lib/utils';
 import { getMediaCategory } from '@/modules/shared/components/courses/contents/forms/fields/media-utils';
 import ScormPlayer from './ScormPlayer';
 
@@ -114,15 +114,18 @@ function FieldsRenderer({
       continue;
     }
 
-    if (type === 'text' && typeof value === 'string' && value) {
+    if ((type === 'text' || type === 'url') && typeof value === 'string' && value) {
       // 'title' is already rendered in the FormationContentView header — skip it here.
       if (key === 'title') continue;
       // URL fields — try to embed as iframe
-      if (key === 'url' || value.startsWith('http')) {
+      if (type === 'url' || key === 'url' || /^\s*https?:/i.test(value)) {
+        const url = getHttpContentUrl(value);
+        if (!url) continue;
+        const href = secureUrl(url);
         rendered.push(
           <div key={key} className="flex flex-col gap-3">
             <a
-              href={secureUrl(value)}
+              href={href}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1.5 text-sm text-blue-600 hover:underline"
@@ -130,11 +133,15 @@ function FieldsRenderer({
               <ExternalLink className="h-4 w-4 shrink-0" />
               {value}
             </a>
+            <p className="text-xs text-slate-500">
+              Si le site refuse l’affichage intégré, ouvrez le lien dans un nouvel onglet.
+            </p>
             <iframe
               title="Contenu externe"
-              src={toYouTubeEmbedUrl(secureUrl(value))}
+              src={toYouTubeEmbedUrl(href)}
               className="w-full rounded-lg border border-slate-200 h-[60vh]"
               sandbox="allow-scripts allow-same-origin allow-presentation"
+              referrerPolicy="no-referrer"
               allowFullScreen
             />
           </div>,
