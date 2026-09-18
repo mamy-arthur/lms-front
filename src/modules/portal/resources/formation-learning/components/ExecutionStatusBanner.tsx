@@ -6,29 +6,28 @@ import type { FormationExecution } from '../lib/types';
 
 interface Props {
   execution: FormationExecution;
-  /** Progression du chemin actif, en pourcentage. */
-  activeProgressPercent: number;
   /** Motif d'échec renvoyé par le backend, quand il est connu. */
   failureReason?: string | null;
   /** Le nœud courant impose une nouvelle visite malgré une preuve historique. */
   requiresRepeat?: boolean;
 }
 
-/**
- * État d'exécution de l'inscription.
- *
- * `progress` (chemin actif) et `coverage` (historique cumulé) sont deux
- * projections distinctes : 100 % de couverture peut coexister avec une
- * obligation de rejouer un module, voire avec un parcours en échec. Les afficher
- * séparément évite de laisser croire qu'un module déjà vu est acquis.
- */
+/** Alertes d'état de l'inscription et obligation de repassage. */
 export default function ExecutionStatusBanner({
   execution,
-  activeProgressPercent,
   failureReason,
   requiresRepeat = false,
 }: Props) {
-  const { status, coveragePercent, completedCounts } = execution;
+  const { status } = execution;
+
+  if (
+    status !== 'failed' &&
+    status !== 'completed' &&
+    status !== 'expired' &&
+    !(requiresRepeat && !execution.terminal)
+  ) {
+    return null;
+  }
 
   return (
     <div className="flex flex-col gap-2 px-3 pb-2">
@@ -73,14 +72,6 @@ export default function ExecutionStatusBanner({
           </AlertDescription>
         </Alert>
       )}
-
-      <p className="text-xs text-slate-500">
-        Progression du parcours en cours :{' '}
-        <span className="font-semibold text-slate-700">{activeProgressPercent}%</span> · Couverture
-        historique : <span className="font-semibold text-slate-700">{coveragePercent}%</span> (
-        {completedCounts.historical} unité{completedCounts.historical > 1 ? 's' : ''} déjà vue
-        {completedCounts.historical > 1 ? 's' : ''})
-      </p>
     </div>
   );
 }

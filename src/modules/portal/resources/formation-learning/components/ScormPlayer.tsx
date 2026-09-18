@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { AlertCircle, Loader2, Maximize2, Minimize2 } from 'lucide-react';
 import { portalScormApi } from '@/shared/api/portal-scorm.api';
 import { portalScormLaunchKeys } from '@/shared/queries/keys';
-import { ScormSession, bindScormWindowApi } from '../lib/scormRuntime';
+import { ScormSession, bindScormWindowApi, type RegisterScormSession } from '../lib/scormRuntime';
 
 interface Props {
   enrollmentId: string;
@@ -19,6 +19,7 @@ interface Props {
   onCompleted?: () => void;
   /** Le contexte transmis n'est plus valide : l'appelant doit recharger l'état. */
   onExecutionConflict?: (error: unknown) => void;
+  registerSession?: RegisterScormSession;
 }
 
 /**
@@ -54,6 +55,7 @@ export default function ScormPlayer({
   readOnly,
   onCompleted,
   onExecutionConflict,
+  registerSession,
 }: Props) {
   const launchQuery = useQuery({
     queryKey: portalScormLaunchKeys.detail(
@@ -156,9 +158,14 @@ export default function ScormPlayer({
       expectedStateRevision: () => revisionRef.current,
       readOnly: () => readOnlyRef.current,
       version: launch.version,
-      onCompleted: () => onCompletedRef.current?.(),
-      onExecutionConflict: (error) => onExecutionConflictRef.current?.(error),
+      onCompleted: () => {
+        if (!cancelled) onCompletedRef.current?.();
+      },
+      onExecutionConflict: (error) => {
+        if (!cancelled) onExecutionConflictRef.current?.(error);
+      },
     });
+    const unregister = registerSession?.(session);
 
     // Bound *before* the iframe starts loading: SCORM content looks up
     // window.parent.API(_1484_11) as soon as it executes, not on "load".
@@ -170,7 +177,8 @@ export default function ScormPlayer({
 
     return () => {
       cancelled = true;
-      session.apiFinish();
+      session.dispose();
+      unregister?.();
       unbind();
     };
     // `nodeExecutionId` recrée délibérément la session : une nouvelle visite part
@@ -184,6 +192,7 @@ export default function ScormPlayer({
     nodeExecutionId,
     launch?.scorm_package_id,
     launch?.version,
+    registerSession,
   ]);
 
   if (launchQuery.isLoading) {

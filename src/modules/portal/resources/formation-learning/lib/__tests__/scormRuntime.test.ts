@@ -392,6 +392,171 @@ describe('ScormSession — notification de complétion', () => {
   });
 });
 
+describe('ScormSession — fermeture avant complétion', () => {
+  it('notifie une complétion acquittée même si le SCORM a modifié son temps pendant la requête', async () => {
+    mockApi.getTracking.mockResolvedValue({ data: BASE_STATE });
+    let acknowledge!: (value: { data: ApiScormTrackingState }) => void;
+    mockApi.commitTracking.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          acknowledge = resolve;
+        }),
+    );
+    mockApi.commitTracking.mockResolvedValue({
+      data: { ...BASE_STATE, lesson_status: 'completed', last_sequence: 5 },
+    });
+    const onCompleted = jest.fn();
+    const session = makeSession('1.2', onCompleted);
+    await session.preload();
+    session.apiSetValue('cmi.core.lesson_status', 'completed');
+    session.apiCommit();
+    await flush();
+    session.apiSetValue('cmi.core.session_time', '00:00:12');
+    acknowledge({ data: { ...BASE_STATE, lesson_status: 'completed', last_sequence: 4 } });
+    await flush();
+    expect(onCompleted).toHaveBeenCalledTimes(1);
+    await session.prepareCompletion();
+    expect(mockApi.commitTracking.mock.calls[1][1]).toMatchObject({
+      session_time: 12,
+      total_time: 132,
+    });
+    expect(onCompleted).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(['1.2', '2004'] as const)(
+    'fige %s et attend le commit en vol puis les dernières données',
+    async (version) => {
+      mockApi.getTracking.mockResolvedValue({ data: BASE_STATE });
+      let acknowledge!: (value: { data: ApiScormTrackingState }) => void;
+      mockApi.commitTracking.mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            acknowledge = resolve;
+          }),
+      );
+      mockApi.commitTracking.mockResolvedValue({ data: { ...BASE_STATE, last_sequence: 5 } });
+      const session = makeSession(version);
+      await session.preload();
+      session.apiSetValue('cmi.suspend_data', 'before');
+      session.apiSetValue('cmi.core.session_time', '00:00:10');
+      session.apiCommit();
+      await flush();
+      session.apiSetValue('cmi.suspend_data', 'latest');
+      session.apiSetValue('cmi.core.session_time', '00:00:15');
+      const closed = jest.fn();
+      const completion = session.prepareCompletion().then(closed);
+      expect(session.apiSetValue('cmi.suspend_data', 'too late')).toBe('false');
+      session.apiCommit();
+      session.apiFinish();
+      await flush();
+      expect(closed).not.toHaveBeenCalled();
+      acknowledge({
+        data: {
+          ...BASE_STATE,
+          last_sequence: 4,
+          total_time: 130,
+          cmi_data: { 'cmi.suspend_data': 'before' },
+        },
+      });
+      await completion;
+      expect(mockApi.commitTracking).toHaveBeenCalledTimes(2);
+      expect(mockApi.commitTracking.mock.calls[1][1]).toMatchObject({
+        sequence: 5,
+        session_time: 15,
+        total_time: 135,
+        cmi_data: { 'cmi.suspend_data': 'latest' },
+      });
+      session.dispose();
+      session.apiFinish();
+      await flush();
+      expect(mockApi.commitTracking).toHaveBeenCalledTimes(2);
+    },
+  );
+
+  it('sauvegarde les données non commitées sans déclencher une deuxième complétion', async () => {
+    mockApi.getTracking.mockResolvedValue({ data: BASE_STATE });
+    mockApi.commitTracking.mockResolvedValue({
+      data: { ...BASE_STATE, lesson_status: 'completed' },
+    });
+    const onCompleted = jest.fn();
+    const session = makeSession('1.2', onCompleted);
+    await session.preload();
+    session.apiSetValue('cmi.core.lesson_status', 'completed');
+    await session.prepareCompletion();
+    expect(mockApi.commitTracking).toHaveBeenCalledTimes(1);
+    expect(onCompleted).not.toHaveBeenCalled();
+  });
+
+  it('remonte un échec de sauvegarde et permet la reprise sans fermer la visite', async () => {
+    mockApi.getTracking.mockResolvedValue({ data: BASE_STATE });
+    mockApi.commitTracking.mockRejectedValueOnce(new Error('offline'));
+    const session = makeSession();
+    await session.preload();
+    session.apiSetValue('cmi.suspend_data', 'progress');
+    await expect(session.prepareCompletion()).rejects.toThrow('offline');
+    session.resumeAfterFailure();
+    expect(session.apiSetValue('cmi.suspend_data', 'resumed')).toBe('true');
+    mockApi.commitTracking.mockResolvedValueOnce({ data: BASE_STATE });
+    await expect(session.prepareCompletion()).resolves.toBeUndefined();
+    expect(mockApi.commitTracking.mock.calls[1][1].cmi_data).toEqual({
+      'cmi.suspend_data': 'resumed',
+    });
+  });
+
+  it('ne répète pas les commits en file sur une révision rejetée', async () => {
+    mockApi.getTracking.mockResolvedValue({ data: BASE_STATE });
+    mockApi.commitTracking.mockRejectedValue(
+      Object.assign(new Error('stale'), {
+        status: 409,
+        json: { error_code: 'execution_conflict' },
+      }),
+    );
+    let revision = 7;
+    const onExecutionConflict = jest.fn();
+    const session = makeSession('1.2', jest.fn(), {
+      expectedStateRevision: () => revision,
+      onExecutionConflict,
+    });
+    await session.preload();
+    session.apiSetValue('cmi.suspend_data', 'progress');
+    session.apiCommit();
+    session.apiCommit();
+    session.apiFinish();
+    await flush();
+    expect(mockApi.commitTracking).toHaveBeenCalledTimes(1);
+    expect(onExecutionConflict).toHaveBeenCalledTimes(1);
+    await expect(session.prepareCompletion()).rejects.toThrow('stale');
+    expect(mockApi.commitTracking).toHaveBeenCalledTimes(1);
+    revision = 8;
+    mockApi.commitTracking.mockResolvedValueOnce({ data: BASE_STATE });
+    session.resumeAfterFailure();
+    session.apiCommit();
+    await flush();
+    expect(mockApi.commitTracking).toHaveBeenCalledTimes(2);
+    expect(mockApi.commitTracking.mock.calls[1][1]).toMatchObject({
+      node_execution_id: 'execution-1',
+      expected_state_revision: 8,
+    });
+  });
+
+  it('ne réactive pas un runtime démonté pendant son préchargement', async () => {
+    let acknowledge!: (value: { data: ApiScormTrackingState }) => void;
+    mockApi.getTracking.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          acknowledge = resolve;
+        }),
+    );
+    const session = makeSession();
+    const preloading = session.preload();
+    session.dispose();
+    acknowledge({ data: BASE_STATE });
+    expect(await preloading).toBe(false);
+    expect(session.apiSetValue('cmi.suspend_data', 'late')).toBe('false');
+    expect(mockApi.commitTracking).not.toHaveBeenCalled();
+  });
+});
+
 describe('bindScormWindowApi', () => {
   it('exposes window.API for SCORM 1.2 and unbinds on cleanup', async () => {
     mockApi.getTracking.mockResolvedValue({ data: BASE_STATE });

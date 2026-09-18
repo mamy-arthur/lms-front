@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Loader2, AlertCircle, Menu } from 'lucide-react';
 import { toast } from 'sonner';
@@ -8,6 +8,7 @@ import { getDefaultActiveId, resolveActive } from './lib/course-utils';
 import { buildExecutionContext, findNodeExecutionState } from './lib/execution-context';
 import { EXECUTION_CONFLICT_MESSAGE } from './lib/constants';
 import type { Formation } from './lib/types';
+import type { RegisterScormSession, ScormSession } from './lib/scormRuntime';
 import { useFormationSummaryQuery } from './hooks/useFormationSummaryQuery';
 import { usePortalContentEntryQuery } from './hooks/usePortalContentEntryQuery';
 import { useMarkContentCompleteMutation } from './hooks/useMarkContentCompleteMutation';
@@ -56,6 +57,16 @@ export default function FormationPlayer({ enrollmentId }: Props) {
     useMarkContentCompleteMutation(enrollmentId);
   const [isFlushingTime, setIsFlushingTime] = useState(false);
   const completingRef = useRef(false);
+  const scormSessionRef = useRef<ScormSession | null>(null);
+  const registerScormSession = useCallback<RegisterScormSession>((session) => {
+    scormSessionRef.current = session;
+    // A launch may resolve while completion is already flushing the time session.
+    // The freshly constructed runtime has no dirty data yet, so freeze it now.
+    if (completingRef.current) void session.prepareCompletion();
+    return () => {
+      if (scormSessionRef.current === session) scormSessionRef.current = null;
+    };
+  }, []);
   const isCompleting = isSaving || isFlushingTime;
 
   const recoverFromConflict = useExecutionConflictRecovery(enrollmentId);
@@ -124,8 +135,19 @@ export default function FormationPlayer({ enrollmentId }: Props) {
     completingRef.current = true;
     setIsFlushingTime(true);
     try {
+      await scormSessionRef.current?.prepareCompletion();
+    } catch (err) {
+      scormSessionRef.current?.resumeAfterFailure();
+      completingRef.current = false;
+      setIsFlushingTime(false);
+      if (recoverFromConflict(err)) toast.error(EXECUTION_CONFLICT_MESSAGE);
+      else toast.error('Impossible de sauvegarder le contenu SCORM. Veuillez réessayer.');
+      return;
+    }
+    try {
       await flushBeforeComplete();
     } catch (err) {
+      scormSessionRef.current?.resumeAfterFailure();
       resumeAfterFailure();
       completingRef.current = false;
       setIsFlushingTime(false);
@@ -149,6 +171,7 @@ export default function FormationPlayer({ enrollmentId }: Props) {
       if (refreshed) setActiveId(getDefaultActiveId(refreshed));
     } catch {
       // The mutation hook reports the error; keep measuring the unfinished content.
+      scormSessionRef.current?.resumeAfterFailure();
       resumeAfterFailure();
     } finally {
       completingRef.current = false;
@@ -249,7 +272,6 @@ export default function FormationPlayer({ enrollmentId }: Props) {
         <main className="flex h-[85vh] flex-col overflow-hidden">
           <ExecutionStatusBanner
             execution={formation.execution}
-            activeProgressPercent={formation.progress}
             requiresRepeat={activeNodeExecution?.requiredToRepeat ?? false}
           />
           <FormationContentView
@@ -265,6 +287,7 @@ export default function FormationPlayer({ enrollmentId }: Props) {
             executionContext={executionContext}
             canMutate={canMutate}
             onExecutionConflict={handleExecutionConflict}
+            registerScormSession={registerScormSession}
           />
         </main>
       </div>

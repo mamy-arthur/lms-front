@@ -8,6 +8,7 @@ import {
   portalLearningPathsApi,
 } from '@/shared/api/portal.api';
 import { progressionApi } from '@/shared/api/progression.api';
+import { portalScormApi, type ApiScormTrackingState } from '@/shared/api/portal-scorm.api';
 import type { ApiPortalLearningPathSummary } from '@/shared/types/portal.types';
 import FormationPlayer from '../FormationPlayer';
 import {
@@ -50,6 +51,91 @@ const mockGetEntry = jest.mocked(portalContentEntriesApi.get);
 const mockComplete = jest.mocked(portalContentEntriesApi.markComplete);
 const mockStart = jest.mocked(progressionApi.startNodeExecution);
 const mockRecordTime = jest.mocked(portalContentTimeApi.record);
+const mockScorm = jest.mocked(portalScormApi);
+
+function configureScorm() {
+  const module: ModuleSpec = {
+    ...LOOPED_MODULE,
+    visitStatus: 'in_progress',
+    courses: [{ ...LOOPED_MODULE.courses[0], entries: [LOOPED_MODULE.courses[0].entries[0]] }],
+  };
+  useSummary(summary({ stateRevision: 8, modules: [module] }));
+  mockGetEntry.mockResolvedValue({
+    data: {
+      id: 'entry-1',
+      content_type_id: 'type-scorm',
+      module_type: 'scorm',
+      data: { scorm_package_id: 'package-1' },
+      field_types: {},
+      is_published: true,
+    },
+  });
+  mockScorm.launch.mockResolvedValue({
+    data: {
+      enrollment_id: ENROLLMENT_ID,
+      competency_id: 'module-1',
+      content_entry_id: 'entry-1',
+      node_execution_id: 'exec-module-1',
+      scorm_package_id: 'package-1',
+      version: '1.2',
+      launch_path: 'index.html',
+      launch_url: 'about:blank',
+    },
+  });
+  const tracking: ApiScormTrackingState = {
+    enrollment_id: ENROLLMENT_ID,
+    competency_id: 'module-1',
+    content_entry_id: 'entry-1',
+    node_execution_id: 'exec-module-1',
+    lesson_status: 'incomplete',
+    score_raw: null,
+    score_min: null,
+    score_max: null,
+    session_time: 0,
+    total_time: 0,
+    cmi_data: {},
+    last_sequence: 0,
+    last_commit_id: null,
+    updated_at: null,
+  };
+  mockScorm.getTracking.mockResolvedValue({ data: tracking });
+  mockComplete.mockImplementation(async () => {
+    const completed = summary({
+      status: 'completed',
+      currentExecution: null,
+      stateRevision: 9,
+      modules: [
+        {
+          ...module,
+          actionable: false,
+          visitStatus: 'completed',
+          requiredToRepeat: false,
+          courses: [
+            {
+              ...module.courses[0],
+              entries: [{ ...module.courses[0].entries[0], completed: true }],
+            },
+          ],
+        },
+      ],
+    });
+    useSummary(completed);
+    return { data: completed.execution };
+  });
+  return tracking;
+}
+
+function scormWindowApi() {
+  return (
+    window as unknown as {
+      API: {
+        LMSSetValue: (name: string, value: string) => string;
+        LMSCommit: () => string;
+        LMSFinish: () => string;
+      };
+    }
+  ).API;
+}
 
 function executionConflict() {
   return Object.assign(new Error('Conflict'), {
@@ -126,6 +212,147 @@ describe('Pilotage par le moteur d’exécution', () => {
   });
 
   afterEach(() => jest.restoreAllMocks());
+
+  it('attend les commits SCORM avant de terminer, sans nouvelle écriture au démontage', async () => {
+    const tracking = configureScorm();
+    let acknowledge!: (value: { data: ApiScormTrackingState }) => void;
+    mockScorm.commitTracking.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          acknowledge = resolve;
+        }),
+    );
+    mockScorm.commitTracking.mockResolvedValue({ data: { ...tracking, last_sequence: 2 } });
+    const { user, unmount } = setup();
+    await screen.findByRole('button', { name: 'Afficher en plein écran' });
+    const api = scormWindowApi();
+    act(() => {
+      api.LMSSetValue('cmi.suspend_data', 'loading');
+      api.LMSCommit();
+    });
+    await waitFor(() => expect(mockScorm.commitTracking).toHaveBeenCalledTimes(1));
+    api.LMSSetValue('cmi.suspend_data', 'latest');
+    await user.click(screen.getByRole('button', { name: 'Terminer' }));
+    expect(mockComplete).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Terminer' })).toBeDisabled();
+    expect(api.LMSSetValue('cmi.suspend_data', 'late')).toBe('false');
+    await act(async () => {
+      acknowledge({ data: { ...tracking, last_sequence: 1 } });
+    });
+    await waitFor(() => expect(mockComplete).toHaveBeenCalledTimes(1));
+    expect(mockScorm.commitTracking).toHaveBeenCalledTimes(2);
+    expect(mockScorm.commitTracking.mock.calls[1][1].cmi_data).toEqual({
+      'cmi.suspend_data': 'latest',
+    });
+    expect(mockScorm.commitTracking.mock.invocationCallOrder[1]).toBeLessThan(
+      mockComplete.mock.invocationCallOrder[0],
+    );
+    unmount();
+    await act(async () => {
+      api.LMSFinish();
+      api.LMSCommit();
+    });
+    expect(mockScorm.commitTracking).toHaveBeenCalledTimes(2);
+    expect(toast.error).not.toHaveBeenCalled();
+  });
+
+  it('annule la complétion si le tracking SCORM ne peut pas être sauvegardé puis autorise une reprise', async () => {
+    const tracking = configureScorm();
+    mockScorm.commitTracking.mockRejectedValueOnce(new Error('offline'));
+    const { user } = setup();
+    await screen.findByRole('button', { name: 'Afficher en plein écran' });
+    const api = scormWindowApi();
+    api.LMSSetValue('cmi.suspend_data', 'progress');
+    await user.click(screen.getByRole('button', { name: 'Terminer' }));
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(
+        'Impossible de sauvegarder le contenu SCORM. Veuillez réessayer.',
+      ),
+    );
+    expect(mockComplete).not.toHaveBeenCalled();
+    expect(api.LMSSetValue('cmi.suspend_data', 'resumed')).toBe('true');
+    mockScorm.commitTracking.mockResolvedValue({ data: { ...tracking, last_sequence: 1 } });
+    await user.click(screen.getByRole('button', { name: 'Terminer' }));
+    await waitFor(() => expect(mockComplete).toHaveBeenCalledTimes(1));
+    expect(mockScorm.commitTracking.mock.calls[1][1].cmi_data).toEqual({
+      'cmi.suspend_data': 'resumed',
+    });
+  });
+
+  it('conserve la complétion automatique SCORM sans doublon ni interblocage', async () => {
+    const tracking = configureScorm();
+    mockScorm.commitTracking.mockResolvedValue({
+      data: { ...tracking, lesson_status: 'completed', last_sequence: 1 },
+    });
+    const { unmount } = setup();
+    await screen.findByRole('button', { name: 'Afficher en plein écran' });
+    const api = scormWindowApi();
+    act(() => {
+      api.LMSSetValue('cmi.core.lesson_status', 'completed');
+      api.LMSCommit();
+    });
+    await waitFor(() => expect(mockComplete).toHaveBeenCalledTimes(1));
+    unmount();
+    await act(async () => {
+      api.LMSFinish();
+    });
+    expect(mockScorm.commitTracking).toHaveBeenCalledTimes(1);
+  });
+
+  it('fige aussi un SCORM dont le lancement arrive après le clic sur Terminer', async () => {
+    configureScorm();
+    const launch = await mockScorm.launch({
+      enrollmentId: ENROLLMENT_ID,
+      competencyId: 'module-1',
+      courseId: 'course-1',
+      entryId: 'entry-1',
+      nodeExecutionId: 'exec-module-1',
+    });
+    let acknowledgeLaunch!: (value: typeof launch) => void;
+    mockScorm.launch.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          acknowledgeLaunch = resolve;
+        }),
+    );
+    let acknowledgeCompletion!: () => void;
+    const complete = mockComplete.getMockImplementation()!;
+    mockComplete.mockImplementationOnce(async (...args) => {
+      await new Promise<void>((resolve) => {
+        acknowledgeCompletion = resolve;
+      });
+      return complete(...args);
+    });
+    const { user, unmount } = setup();
+    await user.click(await screen.findByRole('button', { name: 'Terminer' }));
+    await waitFor(() => expect(mockComplete).toHaveBeenCalledTimes(1));
+    await act(async () => {
+      acknowledgeLaunch(launch);
+    });
+    await screen.findByRole('button', { name: 'Afficher en plein écran' });
+    const api = scormWindowApi();
+    expect(api.LMSSetValue('cmi.suspend_data', 'late')).toBe('false');
+    await act(async () => {
+      api.LMSCommit();
+      acknowledgeCompletion();
+    });
+    unmount();
+    expect(mockScorm.commitTracking).not.toHaveBeenCalled();
+  });
+
+  it('réactive le runtime si la complétion échoue après la sauvegarde SCORM', async () => {
+    const tracking = configureScorm();
+    mockScorm.commitTracking.mockResolvedValue({ data: { ...tracking, last_sequence: 1 } });
+    mockComplete.mockRejectedValueOnce(new Error('offline'));
+    const { user } = setup();
+    await screen.findByRole('button', { name: 'Afficher en plein écran' });
+    const api = scormWindowApi();
+    api.LMSSetValue('cmi.suspend_data', 'progress');
+    await user.click(screen.getByRole('button', { name: 'Terminer' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Terminer' })).toBeEnabled());
+    expect(mockComplete).toHaveBeenCalledTimes(1);
+    expect(api.LMSSetValue('cmi.suspend_data', 'resumed')).toBe('true');
+  });
 
   it('attend la confirmation de /start avant de compter le temps ou proposer la complétion', async () => {
     const clock = jest.spyOn(performance, 'now').mockReturnValue(0);
@@ -340,8 +567,8 @@ describe('Pilotage par le moteur d’exécution', () => {
     setup();
 
     await screen.findByText('Nouveau passage requis');
-    // La couverture historique reste visible sans valoir progression.
-    expect(screen.getByText(/Couverture historique/)).toBeInTheDocument();
+    expect(screen.queryByText(/Progression du parcours en cours/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Couverture historique/)).not.toBeInTheDocument();
   });
 
   it('laisse consulter les contenus terminés sans nouvelle écriture', async () => {

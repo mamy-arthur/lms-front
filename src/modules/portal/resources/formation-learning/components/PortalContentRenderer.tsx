@@ -4,6 +4,7 @@ import { Loader2, FileDown, ExternalLink, FolderOpen } from 'lucide-react';
 import { toYouTubeEmbedUrl } from '@/lib/utils';
 import { getMediaCategory } from '@/modules/shared/components/courses/contents/forms/fields/media-utils';
 import ScormPlayer from './ScormPlayer';
+import type { RegisterScormSession } from '../lib/scormRuntime';
 
 interface Props {
   entry: ApiPortalContentEntry | undefined;
@@ -18,6 +19,7 @@ interface Props {
   readOnly: boolean;
   onScormCompleted?: () => void;
   onScormExecutionConflict?: (error: unknown) => void;
+  registerScormSession?: RegisterScormSession;
 }
 
 // Extra utility classes for portal richtext content.
@@ -189,6 +191,7 @@ export default function PortalContentRenderer({
   readOnly,
   onScormCompleted,
   onScormExecutionConflict,
+  registerScormSession,
 }: Props) {
   if (isLoading) {
     return (
@@ -228,6 +231,7 @@ export default function PortalContentRenderer({
         readOnly={readOnly}
         onCompleted={onScormCompleted}
         onExecutionConflict={onScormExecutionConflict}
+        registerSession={registerScormSession}
       />
     );
   }

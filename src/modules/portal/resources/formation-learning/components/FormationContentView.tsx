@@ -8,6 +8,7 @@ import type { Resolved } from '../lib/course-utils';
 import type { ApiPortalContentEntry } from '@/shared/types/portal.types';
 import type { ExecutionMutationContext } from '@/shared/types/progression.types';
 import ContentNavigationBar from './ContentNavigationBar';
+import type { RegisterScormSession } from '../lib/scormRuntime';
 
 interface Props {
   formation: Formation;
@@ -27,6 +28,7 @@ interface Props {
    */
   canMutate: boolean;
   onExecutionConflict: (error: unknown) => void;
+  registerScormSession?: RegisterScormSession;
 }
 
 export default function FormationContentView({
@@ -42,6 +44,7 @@ export default function FormationContentView({
   executionContext,
   canMutate,
   onExecutionConflict,
+  registerScormSession,
 }: Props) {
   if (!resolved) {
     return (
@@ -106,6 +109,7 @@ export default function FormationContentView({
             readOnly={!canMutate || content.completed}
             onScormCompleted={canMutate ? () => onMarkComplete() : undefined}
             onScormExecutionConflict={onExecutionConflict}
+            registerScormSession={registerScormSession}
           />
         </div>
       </div>

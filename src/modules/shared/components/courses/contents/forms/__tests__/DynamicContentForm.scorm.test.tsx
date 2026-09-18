@@ -198,4 +198,29 @@ describe('DynamicContentForm — module_type scorm', () => {
     // Un package est déjà connu dès le montage — la soumission n'est pas bloquée.
     expect(screen.getByRole('button', { name: /enregistrer/i })).toBeEnabled();
   });
+
+  it('attend le statut ready quand l’enregistrement doit publier le contenu', async () => {
+    const onSubmit = jest.fn();
+    const user = userEvent.setup();
+    const { container } = render(
+      <DynamicContentForm
+        contentType={SCORM_CONTENT_TYPE}
+        onSubmit={onSubmit}
+        onCancel={jest.fn()}
+        requireReadyScorm
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: /enregistrer/i })).toBeDisabled();
+    await user.click(screen.getByText('Simuler upload (pending)'));
+    expect(screen.getByRole('button', { name: /enregistrer/i })).toBeDisabled();
+    expect(screen.getByRole('status')).toHaveTextContent('Le package SCORM doit être prêt');
+    fireEvent.submit(container.querySelector('form')!);
+    expect(onSubmit).not.toHaveBeenCalled();
+
+    await user.click(screen.getByText('Simuler upload (ready)'));
+    expect(screen.getByRole('button', { name: /enregistrer/i })).toBeEnabled();
+    await user.click(screen.getByRole('button', { name: /enregistrer/i }));
+    expect(onSubmit).toHaveBeenCalledWith({});
+  });
 });
