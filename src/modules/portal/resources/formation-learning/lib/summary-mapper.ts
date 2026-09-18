@@ -178,10 +178,10 @@ function entryStatus(
   node: NodeExecutionState,
   sequence: { pending: boolean },
 ): ProgressStatus {
+  if (!node.readable) return 'locked';
   if (entry.completed) return 'completed';
-  // Hors de la visite en cours, rien ne s'ouvre : un nœud franchi sans être
-  // terminé ne doit pas davantage se rouvrir qu'un nœud encore à venir.
-  if (!node.readable || !node.actionable) return 'locked';
+  // Une preuve historique ne permet pas de sauter la séquence du repassage.
+  if (!node.actionable) return 'locked';
   if (sequence.pending) return 'locked';
   sequence.pending = true;
 
@@ -189,9 +189,8 @@ function entryStatus(
 }
 
 /**
- * Un nœud non `readable` n'a aucune visite : il reste verrouillé. Un nœud
- * `readable` mais non `actionable` reste consultable en lecture seule — la
- * désactivation des actions se joue sur `actionable`, jamais sur ce statut.
+ * Un nœud non lisible ou encore à venir reste verrouillé, même au repassage.
+ * Un nœud acquis sans obligation de rejouer reste consultable en lecture seule.
  */
 function executionNodeStatus(state: NodeExecutionState): ProgressStatus {
   if (!state.readable) return 'locked';
@@ -201,7 +200,5 @@ function executionNodeStatus(state: NodeExecutionState): ProgressStatus {
 
     return state.currentVisit?.status === 'in_progress' ? 'in_progress' : 'available';
   }
-  // Hors de la visite en cours, seul un nœud déjà acquis reste consultable : un
-  // nœud à venir — fût-il déjà parcouru avant — attend son tour.
   return state.historicalCompleted && !state.requiredToRepeat ? 'completed' : 'locked';
 }

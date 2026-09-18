@@ -1,15 +1,14 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { toast } from 'sonner';
-import { portalContentEntriesApi, portalLearningPathsApi } from '@/shared/api/portal.api';
+import { portalContentEntriesApi, portalContentTimeApi, portalLearningPathsApi } from '@/shared/api/portal.api';
 import { progressionApi } from '@/shared/api/progression.api';
 import type { ApiPortalLearningPathSummary } from '@/shared/types/portal.types';
 import FormationPlayer from '../FormationPlayer';
 import {
   ENROLLMENT_ID,
   buildExecutionSummary,
-  visit,
   type ModuleSpec,
   type SummarySpec,
 } from '../lib/__fixtures__/execution-summary';
@@ -39,6 +38,7 @@ const mockSummary = jest.mocked(portalLearningPathsApi.summary);
 const mockGetEntry = jest.mocked(portalContentEntriesApi.get);
 const mockComplete = jest.mocked(portalContentEntriesApi.markComplete);
 const mockStart = jest.mocked(progressionApi.startNodeExecution);
+const mockRecordTime = jest.mocked(portalContentTimeApi.record);
 
 function executionConflict() {
   return Object.assign(new Error('Conflict'), {
@@ -90,6 +90,8 @@ function setup() {
 describe('Pilotage par le moteur d’exécution', () => {
   beforeEach(() => {
     jest.resetAllMocks();
+    window.localStorage.clear();
+    mockRecordTime.mockResolvedValue(undefined);
     useSummary(summary());
     mockGetEntry.mockImplementation(async (_enrollmentId, _courseId, entryId) => ({
       data: {
@@ -101,8 +103,65 @@ describe('Pilotage par le moteur d’exécution', () => {
         is_published: true,
       },
     }));
-    mockStart.mockResolvedValue({ data: summary().execution });
-    mockComplete.mockResolvedValue(undefined);
+    const started = summary({
+      stateRevision: 8,
+      modules: [{ ...LOOPED_MODULE, visitStatus: 'in_progress' }],
+    });
+    mockStart.mockImplementation(async () => {
+      useSummary(started);
+      return { data: started.execution };
+    });
+    mockComplete.mockResolvedValue({ data: started.execution });
+  });
+
+  afterEach(() => jest.restoreAllMocks());
+
+  it('attend la confirmation de /start avant de compter le temps ou proposer la complétion', async () => {
+    const clock = jest.spyOn(performance, 'now').mockReturnValue(0);
+    let acknowledgeStart!: () => void;
+    mockStart.mockImplementationOnce(() => new Promise((resolve) => {
+      acknowledgeStart = () => {
+        const started = summary({
+          stateRevision: 8,
+          modules: [{ ...LOOPED_MODULE, visitStatus: 'in_progress' }],
+        });
+        useSummary(started);
+        resolve({ data: started.execution });
+      };
+    }));
+    const { user, unmount } = setup();
+    await screen.findByText('Texte de entry-1');
+    await waitFor(() => expect(mockStart).toHaveBeenCalledTimes(1));
+    expect(screen.queryByRole('button', { name: /Terminer/ })).not.toBeInTheDocument();
+    clock.mockReturnValue(10_000);
+    await act(async () => { window.dispatchEvent(new Event('pagehide')); });
+    expect(mockRecordTime).not.toHaveBeenCalled();
+    expect(mockComplete).not.toHaveBeenCalled();
+
+    await act(async () => { acknowledgeStart(); });
+    const complete = await screen.findByRole('button', { name: 'Terminer et continuer' });
+    clock.mockReturnValue(15_000);
+    await user.click(complete);
+    await waitFor(() => expect(mockComplete).toHaveBeenCalledTimes(1));
+    expect(mockRecordTime.mock.calls[0][4]).toMatchObject({
+      node_execution_id: 'exec-module-1', expected_state_revision: 8, time_spent: 5,
+    });
+    unmount();
+  });
+
+  it('recharge silencieusement le parcours après un conflit du suivi de temps automatique', async () => {
+    const clock = jest.spyOn(performance, 'now').mockReturnValue(0);
+    const { unmount } = setup();
+    await screen.findByRole('button', { name: 'Terminer et continuer' });
+    const callsBefore = mockSummary.mock.calls.length;
+    mockRecordTime.mockRejectedValueOnce(executionConflict());
+    clock.mockReturnValue(10_000);
+    await act(async () => { window.dispatchEvent(new Event('pagehide')); });
+    await waitFor(() => expect(mockSummary.mock.calls.length).toBeGreaterThan(callsBefore));
+    expect(window.localStorage.getItem('learneo:content-time:pending')).toBeNull();
+    expect(toast.error).not.toHaveBeenCalled();
+    expect(mockComplete).not.toHaveBeenCalled();
+    unmount();
   });
 
   it('démarre la visite désignée par le serveur avec la révision lue', async () => {
@@ -135,7 +194,7 @@ describe('Pilotage par le moteur d’exécution', () => {
     await waitFor(() =>
       expect(mockComplete).toHaveBeenCalledWith(ENROLLMENT_ID, 'module-1', 'course-1', 'entry-1', {
         node_execution_id: 'exec-module-1',
-        expected_state_revision: 7,
+        expected_state_revision: 8,
       }),
     );
   });
@@ -181,17 +240,27 @@ describe('Pilotage par le moteur d’exécution', () => {
     expect(screen.getByText(/Couverture historique/)).toBeInTheDocument();
   });
 
-  it('n’autorise aucune écriture sur un nœud lisible mais non actionable', async () => {
+  it('laisse consulter les contenus terminés sans nouvelle écriture', async () => {
     useSummary(
       summary({
-        modules: [{ ...LOOPED_MODULE, actionable: false, visitStatus: 'in_progress' }],
-        currentExecution: visit({ status: 'in_progress' }),
+        modules: [{
+          ...LOOPED_MODULE,
+          actionable: false,
+          requiredToRepeat: false,
+          visitStatus: 'completed',
+          courses: LOOPED_MODULE.courses.map((course) => ({
+            ...course,
+            entries: course.entries.map((entry) => ({ ...entry, completed: true })),
+          })),
+        }],
+        currentExecution: null,
       }),
     );
     setup();
-    await screen.findByText('Texte de entry-1');
+    await screen.findByText('Texte de entry-2');
 
     expect(screen.queryByRole('button', { name: /Terminer/ })).not.toBeInTheDocument();
     expect(mockComplete).not.toHaveBeenCalled();
+    expect(mockRecordTime).not.toHaveBeenCalled();
   });
 });

@@ -116,6 +116,7 @@ describe('Parcours du stagiaire piloté par le snapshot d’exécution', () => {
     }));
     mockComplete.mockImplementation(async (_enrollmentId, competencyId, _courseId, entryId) => {
       completeEntry(entryId, competencyId);
+      return { data: summary.execution };
     });
   });
 
@@ -191,15 +192,18 @@ describe('Parcours du stagiaire piloté par le snapshot d’exécution', () => {
     ]);
   });
 
-  it('n’autorise aucune écriture sur l’occurrence d’un module non actionable', async () => {
+  it.each([false, true])('verrouille le module suivant, même déjà parcouru (repassage=%s)', async (repeat) => {
+    const [first, second] = sharedCourseModules();
+    useSummary([first, { ...second, requiredToRepeat: repeat, historicalCompleted: repeat }]);
     const { user } = setup();
     await screen.findByText('Texte de shared-entry-1');
 
-    await user.click(screen.getByRole('button', { name: /module la suite/i }));
-    await user.click(screen.getAllByRole('button', { name: 'Contenu partagé 1' })[1]);
-    await screen.findByText('Contenu 3 / 4');
+    const nextModule = screen.getByRole('button', { name: /module la suite/i });
+    expect(nextModule).toBeDisabled();
+    await user.click(nextModule);
+    expect(screen.getByText('Contenu 1 / 4')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Contenu partagé 2' })).toBeDisabled();
 
-    expect(screen.queryByRole('button', { name: /Terminer/ })).not.toBeInTheDocument();
     expect(mockComplete).not.toHaveBeenCalled();
   });
 
@@ -233,10 +237,10 @@ describe('Parcours du stagiaire piloté par le snapshot d’exécution', () => {
     let finishRefresh!: () => void;
     mockComplete.mockImplementation(
       () =>
-        new Promise<void>((resolve) => {
+        new Promise((resolve) => {
           finishSave = () => {
             completeEntry('shared-entry-1', 'module-1');
-            resolve();
+            resolve({ data: summary.execution });
           };
         }),
     );
@@ -277,7 +281,7 @@ describe('Parcours du stagiaire piloté par le snapshot d’exécution', () => {
     expect(mockComplete).toHaveBeenCalledTimes(2);
   });
 
-  it('permet de naviguer vers l’occurrence du second module depuis le tiroir mobile', async () => {
+  it('verrouille aussi le module suivant dans le tiroir mobile', async () => {
     const { user } = setup();
     await screen.findByText('Texte de shared-entry-1');
 
@@ -285,10 +289,12 @@ describe('Parcours du stagiaire piloté par le snapshot d’exécution', () => {
     const mobileNavigation = within(
       screen.getAllByRole('navigation', { name: 'Sommaire de la formation' })[1],
     );
-    await user.click(mobileNavigation.getByRole('button', { name: /module la suite/i }));
-    await user.click(mobileNavigation.getAllByRole('button', { name: 'Contenu partagé 1' })[1]);
+    const nextModule = mobileNavigation.getByRole('button', { name: /module la suite/i });
+    expect(nextModule).toBeDisabled();
+    await user.click(nextModule);
+    expect(mobileNavigation.getByRole('button', { name: 'Contenu partagé 2' })).toBeDisabled();
 
-    await screen.findByText('Contenu 3 / 4');
+    expect(screen.getByText('Contenu 1 / 4')).toBeInTheDocument();
     expect(mockComplete).not.toHaveBeenCalled();
   });
 
@@ -371,9 +377,17 @@ describe('Parcours du stagiaire piloté par le snapshot d’exécution', () => {
     );
   });
 
-  it('lance la visite SCORM historique après une boucle sans écriture ni nouveau temps', async () => {
+  it('laisse consulter un SCORM terminé sans obligation de rejouer, sans écriture ni nouveau temps', async () => {
     const [first, second] = sharedCourseModules(1);
-    useSummary([first, { ...second, executionId: null, requiredToRepeat: true, historicalCompleted: true }]);
+    useSummary([first, {
+      ...second,
+      executionId: null,
+      historicalCompleted: true,
+      courses: second.courses.map((course) => ({
+        ...course,
+        entries: course.entries.map((entry) => ({ ...entry, completed: true, historicalCompleted: true })),
+      })),
+    }]);
     summary.modules[1].history = [visit({ id: 'old-module-2', node_id: 'module-2', status: 'completed' })];
     mockGetEntry.mockResolvedValue({ data: {
       id: 'shared-entry-1', content_type_id: 'type-scorm', module_type: 'scorm',
@@ -393,7 +407,6 @@ describe('Parcours du stagiaire piloté par le snapshot d’exécution', () => {
     const clock = jest.spyOn(performance, 'now').mockReturnValue(0);
     const { user, unmount } = setup();
     await screen.findByRole('button', { name: 'Afficher en plein écran' });
-    await user.click(screen.getByRole('button', { name: /à refaire la suite/i }));
     await user.click(screen.getAllByRole('button', { name: 'Contenu partagé 1' })[1]);
     await screen.findByText('Contenu 2 / 2');
     await screen.findByRole('button', { name: 'Afficher en plein écran' });

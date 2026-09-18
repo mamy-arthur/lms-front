@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { type ContentTimeSessionPayload, portalContentTimeApi } from '@/shared/api/portal.api';
+import { isExecutionContextRejection } from '@/shared/lib/execution-conflict';
 import type { ExecutionMutationContext } from '@/shared/types/progression.types';
 
 /** Au-delà, on considère l'apprenant parti et le chrono se met en pause. */
@@ -144,7 +145,14 @@ function isPermanentFailure(error: unknown): boolean {
  * la réponse arrive. Le rejeu est sans risque, la route est idempotente sur
  * l'identifiant de période et le serveur ne retient que la valeur la plus haute.
  */
-async function postRecord(record: PendingRecord, keepalive: boolean, required = false): Promise<void> {
+type ConflictHandler = (error: unknown, record: PendingRecord) => void;
+
+async function postRecord(
+  record: PendingRecord,
+  keepalive: boolean,
+  onExecutionConflict: ConflictHandler,
+  required = false,
+): Promise<void> {
   try {
     await portalContentTimeApi.record(
       record.enrollmentId,
@@ -157,7 +165,14 @@ async function postRecord(record: PendingRecord, keepalive: boolean, required = 
 
     forgetPending(record);
   } catch (error) {
-    if (isPermanentFailure(error)) forgetPending(record);
+    if (isExecutionContextRejection(error)) {
+      // Le refus invalide toute la période, y compris un flush plus récent en
+      // vol. Contrairement à un acquittement, il ne faut pas conserver ce dernier.
+      writePending(readPending().filter((pending) => pending.sessionId !== record.sessionId));
+      onExecutionConflict(error, record);
+    } else if (isPermanentFailure(error)) {
+      forgetPending(record);
+    }
     if (required) throw error;
   }
 }
@@ -167,7 +182,7 @@ async function postRecord(record: PendingRecord, keepalive: boolean, required = 
  * montage et à chaque sauvegarde périodique, elle est le seul chemin de reprise
  * après un échec réseau ou une page fermée avant l'acquittement.
  */
-function retryPending(excludedSessionId: string | null): void {
+function retryPending(excludedSessionId: string | null, onExecutionConflict: ConflictHandler): void {
   const now = Date.now();
   const pending = readPending();
   const fresh = pending.filter((record) => now - record.queuedAt < PENDING_MAX_AGE_MS);
@@ -179,7 +194,7 @@ function retryPending(excludedSessionId: string | null): void {
       (record) =>
         record.sessionId !== excludedSessionId && now - record.queuedAt > PENDING_GRACE_MS,
     )
-    .forEach((record) => void postRecord(record, false));
+    .forEach((record) => void postRecord(record, false, onExecutionConflict));
 }
 
 interface Options {
@@ -204,6 +219,8 @@ interface Options {
    * contenus, seule la visibilité de l'onglet fait foi.
    */
   idleDetection: boolean;
+  /** Recharge le parcours après un refus du contexte, sans rejouer la période. */
+  onExecutionConflict?: (error: unknown) => void;
 }
 
 /**
@@ -229,6 +246,7 @@ export function useContentTimeTracker({
   competencyId,
   context,
   idleDetection,
+  onExecutionConflict,
 }: Options) {
   // Tout est en refs : ce hook ne doit jamais provoquer de rendu.
   const sessionIdRef = useRef<string | null>(null);
@@ -247,17 +265,19 @@ export function useContentTimeTracker({
   const revisionRef = useRef(context?.expected_state_revision);
   revisionRef.current = context?.expected_state_revision;
   /**
-   * Révision lue à l'ouverture de la période. Elle sert de repli quand la visite
-   * se referme au moment même du flush : sans elle, le temps accumulé serait
-   * abandonné précisément à l'instant où il faut l'enregistrer. Le serveur tolère
-   * la révision d'origine sur le rejeu exact d'une période (API.md §27.3).
+   * Révision lue à l'ouverture de la période, prioritaire à sa clôture : le
+   * nouveau rendu peut déjà avoir remplacé revisionRef par celle d'une autre
+   * visite. Les flushs actifs continuent à utiliser la révision courante.
    */
   const sessionRevisionRef = useRef<number | undefined>(undefined);
+  const onExecutionConflictRef = useRef(onExecutionConflict);
+  onExecutionConflictRef.current = onExecutionConflict;
 
   const nodeExecutionId = context?.node_execution_id ?? null;
   const completionControlRef = useRef<{
     flush: () => Promise<void>;
     resume: () => void;
+    refresh: () => void;
   } | null>(null);
 
   const flushBeforeComplete = useCallback(
@@ -269,6 +289,8 @@ export function useContentTimeTracker({
   useEffect(() => {
     if (!courseId || !entryId || !competencyId || !nodeExecutionId) return;
     let completing = false;
+    let disposed = false;
+    let rejection: { error: unknown; revision: number } | null = null;
 
     const resetSession = () => {
       sessionIdRef.current = null;
@@ -289,6 +311,10 @@ export function useContentTimeTracker({
 
     const resume = () => {
       if (completing || activeSinceRef.current !== null) return;
+      if (rejection) {
+        if (revisionRef.current === rejection.revision) return;
+        rejection = null;
+      }
       if (sessionIdRef.current === null) openSession();
       activeSinceRef.current = performance.now();
     };
@@ -300,7 +326,19 @@ export function useContentTimeTracker({
       lastActiveAtRef.current = new Date();
     };
 
+    const handleConflict: ConflictHandler = (error, record) => {
+      // Un ancien envoi peut échouer après le changement de visite : il ne doit
+      // jamais arrêter ni remettre à zéro le chrono de la nouvelle période.
+      if (!disposed && record.sessionId === sessionIdRef.current) {
+        pause();
+        resetSession();
+        rejection = { error, revision: record.payload.expected_state_revision };
+      }
+      onExecutionConflictRef.current?.(error);
+    };
+
     const send = (close: boolean, keepalive: boolean, required = false): Promise<void> => {
+      if (rejection) return required ? Promise.reject(rejection.error) : Promise.resolve();
       // Replie la plage active en cours sans arrêter le chrono, pour que la
       // sauvegarde périodique reflète le temps jusqu'à maintenant.
       if (activeSinceRef.current !== null) {
@@ -314,7 +352,9 @@ export function useContentTimeTracker({
       const startedAt = startedAtRef.current;
       const endedAt = lastActiveAtRef.current ?? startedAt;
       const accumulatedMs = accumulatedMsRef.current;
-      const revision = revisionRef.current ?? sessionRevisionRef.current;
+      const revision = close
+        ? (sessionRevisionRef.current ?? revisionRef.current)
+        : (revisionRef.current ?? sessionRevisionRef.current);
 
       if (close) resetSession();
 
@@ -344,7 +384,7 @@ export function useContentTimeTracker({
       // Seul le flush préalable à la complétion remonte les erreurs à l'appelant.
       rememberPending(record);
 
-      return postRecord(record, keepalive, required);
+      return postRecord(record, keepalive, handleConflict, required);
     };
 
     const completionControl = {
@@ -359,6 +399,9 @@ export function useContentTimeTracker({
         completing = false;
         lastActivityRef.current = performance.now();
         if (document.visibilityState === 'visible') resume();
+      },
+      refresh: () => {
+        if (rejection && document.visibilityState === 'visible') resume();
       },
     };
     completionControlRef.current = completionControl;
@@ -400,7 +443,7 @@ export function useContentTimeTracker({
     if (document.visibilityState === 'visible') resume();
 
     // Les périodes des contenus précédents qui n'ont jamais été acquittées.
-    retryPending(sessionIdRef.current);
+    retryPending(sessionIdRef.current, handleConflict);
 
     document.addEventListener('visibilitychange', onVisibilityChange);
     window.addEventListener('pagehide', onPageHide);
@@ -413,7 +456,7 @@ export function useContentTimeTracker({
 
     const flushTimer = window.setInterval(() => {
       if (completing) return;
-      retryPending(sessionIdRef.current);
+      retryPending(sessionIdRef.current, handleConflict);
       send(false, false);
     }, FLUSH_INTERVAL_MS);
 
@@ -424,6 +467,7 @@ export function useContentTimeTracker({
       : undefined;
 
     return () => {
+      disposed = true;
       document.removeEventListener('visibilitychange', onVisibilityChange);
       window.removeEventListener('pagehide', onPageHide);
       window.removeEventListener('pageshow', onPageShow);
@@ -453,6 +497,12 @@ export function useContentTimeTracker({
     // à chaque transition du parcours, et la mettre ici clôturerait la période en
     // cours à chaque fois. Elle est relue via une ref à l'envoi.
   }, [enrollmentId, courseId, entryId, competencyId, nodeExecutionId, idleDetection]);
+
+  // Un conflit de révision peut se résoudre sans changer de visite. Reprendre
+  // alors une période neuve, sans réattribuer les mesures du contexte rejeté.
+  useEffect(() => {
+    completionControlRef.current?.refresh();
+  }, [context?.expected_state_revision]);
 
   return { flushBeforeComplete, resumeAfterFailure };
 }

@@ -77,12 +77,13 @@ export default function FormationPlayer({ enrollmentId }: Props) {
   const activeNodeExecution = findNodeExecutionState(formation, activeNodeId);
   const executionContext = buildExecutionContext(formation, activeNodeId);
 
-  // `actionable` est la seule autorité, et sans visite ouverte le serveur
-  // refuserait la requête faute de contexte obligatoire.
+  // Une visite actionable peut encore attendre /start : aucune mutation de
+  // contenu ni période de temps avant que le serveur la confirme in_progress.
   const canMutate =
     !!formation &&
     !formation.execution.terminal &&
     (activeNodeExecution?.actionable ?? false) &&
+    activeNodeExecution?.currentVisit?.status === 'in_progress' &&
     executionContext !== null;
 
   // Historical reads never create a time session. Completion explicitly flushes
@@ -104,6 +105,7 @@ export default function FormationPlayer({ enrollmentId }: Props) {
     competencyId: activeCompetencyId,
     context: executionContext,
     idleDetection: entryQuery.data?.module_type !== 'scorm',
+    onExecutionConflict: recoverFromConflict,
   });
 
   async function handleMarkComplete() {

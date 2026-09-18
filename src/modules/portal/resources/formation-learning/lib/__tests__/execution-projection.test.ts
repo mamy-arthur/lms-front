@@ -1,6 +1,6 @@
 import { mapSummaryToFormation } from '../summary-mapper';
 import { buildExecutionContext, pendingStartExecutionId } from '../execution-context';
-import { getDefaultActiveId } from '../course-utils';
+import { getDefaultActiveId, resolveActive } from '../course-utils';
 import {
   buildExecutionSummary,
   visit,
@@ -116,6 +116,8 @@ describe('Projection du snapshot d’exécution', () => {
       'locked',
     ]);
     expect(second.execution.requiredToRepeat).toBe(true);
+    expect(second.execution.actionable).toBe(false);
+    expect(second.status).toBe('locked');
     expect(second.courses[0].sections[0].contents.map((content) => content.status)).toEqual([
       'locked',
     ]);
@@ -132,6 +134,62 @@ describe('Projection du snapshot d’exécution', () => {
     expect(module.courses[0].sections[0].contents.map((content) => content.status)).toEqual([
       'locked',
       'locked',
+    ]);
+    expect(module.courses[0].sections[0].contents.every((content) => !content.completed)).toBe(true);
+  });
+
+  it('verrouille l’historique incomplet sans bloquer la séquence du module actif', () => {
+    const data = summary({
+      modules: [
+        { ...LOOPED_MODULE, actionable: false, executionId: null, historicalCompleted: false, requiredToRepeat: false },
+        { ...LOOPED_MODULE, id: 'module-2' },
+      ],
+    });
+    data.modules[0].history = [visit({ id: 'old-visit', status: 'cancelled' })];
+    const formation = mapSummaryToFormation(data);
+    const [historical, active] = formation.nodes as FormationModule[];
+    expect(historical.status).toBe('locked');
+    const contents = historical.courses[0].sections[0].contents;
+    for (const content of contents) {
+      expect(resolveActive(formation, content.id)).toBeNull();
+    }
+    expect(historical.execution.readExecutionId).toBe('old-visit');
+    expect(buildExecutionContext(formation, historical.id)).toBeNull();
+    expect(active.courses[0].sections[0].contents.map((content) => content.status)).toEqual([
+      'retry', 'locked',
+    ]);
+  });
+
+  it.each([false, true])('respecte la même séquence au premier passage et au repassage (repassage=%s)', (repeat) => {
+    const module: ModuleSpec = {
+      ...LOOPED_MODULE,
+      requiredToRepeat: repeat,
+      historicalCompleted: repeat,
+      visitStatus: 'in_progress',
+      courses: [{
+        id: 'course-1',
+        name: 'Découverte',
+        entries: [
+          { id: 'entry-1', title: 'Terminé', completed: true, historicalCompleted: repeat },
+          { id: 'entry-2', title: 'En cours', historicalCompleted: repeat },
+          { id: 'entry-3', title: 'Suivant', historicalCompleted: repeat },
+        ],
+      }],
+    };
+    const data = summary({ modules: [module] });
+    const formation = mapSummaryToFormation(data);
+    const contents = (formation.nodes[0] as FormationModule).courses[0].sections[0].contents;
+    expect(contents.map((content) => content.status)).toEqual([
+      'completed', repeat ? 'retry' : 'available', 'locked',
+    ]);
+    expect(resolveActive(formation, contents[0].id)?.kind).toBe('content');
+    expect(resolveActive(formation, contents[1].id)?.kind).toBe('content');
+    expect(resolveActive(formation, contents[2].id)).toBeNull();
+    expect(getDefaultActiveId(formation)).toBe(contents[1].id);
+
+    data.modules[0].courses[0].sections[0].content_entries[1].completed = true;
+    expect(mapModule(data).courses[0].sections[0].contents.map((content) => content.status)).toEqual([
+      'completed', 'completed', repeat ? 'retry' : 'available',
     ]);
   });
 
