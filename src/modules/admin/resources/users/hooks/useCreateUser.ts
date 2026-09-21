@@ -1,5 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { ADMIN_CLIENTS_QUERY_KEY } from '@/modules/admin/resources/clients';
+import { Role } from '@/shared/constants/roles';
 import { adminUsersApi } from '../api';
 import type { CreateUserPayload } from '../types';
 import { ADMIN_USERS_QUERY_KEY } from './useUsersQuery';
@@ -9,8 +11,11 @@ export function useCreateUser() {
 
   return useMutation({
     mutationFn: (data: CreateUserPayload) => adminUsersApi.create(data),
-    onSuccess: () => {
+    onSuccess: (_response, payload) => {
       queryClient.invalidateQueries({ queryKey: ADMIN_USERS_QUERY_KEY });
+      if (payload.role === Role.CLIENT_MANAGER) {
+        queryClient.invalidateQueries({ queryKey: ADMIN_CLIENTS_QUERY_KEY });
+      }
       toast.success('Utilisateur créé');
     },
     onError: () => toast.error("Échec de la création de l'utilisateur"),

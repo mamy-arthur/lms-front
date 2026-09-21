@@ -5,7 +5,7 @@ import { UserForm } from '@modules/shared/components/users/user-form';
 import { UserPhotoField } from '@modules/shared/components/users/user-photo-field';
 import { UserProfileFields } from '@modules/shared/components/users/user-profile-fields';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { memo, useCallback, useEffect, useMemo, useRef } from 'react';
+import { memo, useCallback, useMemo, useRef } from 'react';
 import { toast } from 'sonner';
 import { z } from 'zod';
 import { FieldContent, FieldError, FieldGroup, FieldLabel, FieldRoot } from '@/components/ui/field';
@@ -302,21 +302,6 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
     isSuperAdmin ? selectedTenantId : null,
   );
 
-  // Changer de tenant invalide le client retenu : il appartient a l'ancien.
-  const previousTenantIdRef = useRef<string | null | undefined>(undefined);
-  useEffect(() => {
-    if (previousTenantIdRef.current === undefined) {
-      previousTenantIdRef.current = selectedTenantId;
-      return;
-    }
-
-    if (previousTenantIdRef.current !== selectedTenantId) {
-      previousTenantIdRef.current = selectedTenantId;
-      formState.form.setValue('client_id', null);
-      formState.form.setValue('client_name', null);
-    }
-  }, [selectedTenantId, formState.form]);
-
   // Submit avec upload photo si fichier sélectionné
   const onSubmitWithPhoto = useCallback(
     async (values: Record<string, unknown>) => {
@@ -331,6 +316,9 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
               email: values.email as string,
               role: values.role as UpdateUserPayload['role'],
               tenant_id: (values.tenant_id as string | null) ?? null,
+              ...(canReassignClient && (values.client_id ?? null) !== (user?.client_id ?? null)
+                ? { client_id: (values.client_id as string | null) ?? null }
+                : {}),
               is_active: values.is_active as boolean,
               address: (values.address as string | null) ?? null,
               zip_code: (values.zip_code as string | null) ?? null,
@@ -404,7 +392,17 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
         formState.onSubmit(values);
       }
     },
-    [isEdit, user, createMutation, updateMutation, formState, queryClient, onSuccess, onClose],
+    [
+      isEdit,
+      user,
+      canReassignClient,
+      createMutation,
+      updateMutation,
+      formState,
+      queryClient,
+      onSuccess,
+      onClose,
+    ],
   );
 
   // Champ is_active — toggle actif/inactif
@@ -437,7 +435,15 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
         <FieldGroup>
           <FieldLabel className="text-xs">Tenant</FieldLabel>
           <Select
-            onValueChange={(v) => field.onChange(v === '__none__' ? null : v)}
+            onValueChange={(value) => {
+              if (!value) return;
+              const tenantId = value === '__none__' ? null : value;
+              if (tenantId === (field.value ?? null)) return;
+
+              field.onChange(tenantId);
+              formState.form.setValue('client_id', null);
+              formState.form.setValue('client_name', null);
+            }}
             value={field.value ?? '__none__'}
           >
             <FieldContent>
@@ -509,7 +515,12 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
       render={({ field }) => (
         <FieldGroup>
           <FieldLabel className="text-xs">Client</FieldLabel>
-          <Select onValueChange={field.onChange} value={field.value ?? undefined}>
+          <Select
+            onValueChange={(value) => {
+              if (value) field.onChange(value);
+            }}
+            value={field.value ?? ''}
+          >
             <FieldContent>
               <SelectTrigger size="default" aria-label="Client" className="w-full">
                 <SelectValue placeholder="Sélectionner un client" />

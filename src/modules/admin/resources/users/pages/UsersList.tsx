@@ -88,6 +88,12 @@ export function UsersList() {
   const handleTenantFilter = (id: string | null) => {
     setTenantFilter(id);
     setClientFilter(null);
+    handlePageChange(0);
+  };
+
+  const handleClientFilter = (id: string | null) => {
+    setClientFilter(id);
+    handlePageChange(0);
   };
 
   const scopedParams = useMemo(
@@ -264,7 +270,7 @@ export function UsersList() {
                         <Checkbox
                           checked={clientFilter === c.id}
                           onCheckedChange={() =>
-                            setClientFilter(clientFilter === c.id ? null : c.id)
+                            handleClientFilter(clientFilter === c.id ? null : c.id)
                           }
                           className="data-[state=checked]:bg-(--color-primary) data-[state=checked]:border-(--color-primary)"
                         />
@@ -275,7 +281,7 @@ export function UsersList() {
                   {clientFilter ? (
                     <button
                       className="mt-1.5 w-full rounded px-2 py-1 text-center text-xs text-muted-foreground hover:bg-muted"
-                      onClick={() => setClientFilter(null)}
+                      onClick={() => handleClientFilter(null)}
                     >
                       Effacer
                     </button>
@@ -334,7 +340,7 @@ export function UsersList() {
         <AdminUsersTable
           users={data?.data ?? []}
           isLoading={isLoading}
-          hasQuery={hasQuery}
+          hasQuery={hasQuery || clientFilter !== null || (canSelectTenant && tenantFilter !== null)}
           page={page}
           pageSize={pageSize}
           total={data?.total ?? 0}
