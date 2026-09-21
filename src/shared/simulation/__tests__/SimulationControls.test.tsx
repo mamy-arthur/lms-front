@@ -1,18 +1,19 @@
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { toast } from 'sonner';
 import { Role } from '@/shared/constants/roles';
 import { useAuthStore } from '@/shared/stores/auth.store';
 import { SimulationControls } from '../SimulationControls';
-import { startSimulation } from '../service';
+import { endSimulation, startSimulation } from '../service';
 import { useSimulationStore, type SimulationSession } from '../simulation.store';
 
 const mockReplace = jest.fn();
 jest.mock('next/navigation', () => ({ useRouter: () => ({ replace: mockReplace }) }));
 jest.mock('sonner', () => ({ toast: { error: jest.fn() } }));
-jest.mock('../service', () => ({ startSimulation: jest.fn() }));
+jest.mock('../service', () => ({ startSimulation: jest.fn(), endSimulation: jest.fn() }));
 
 const mockStart = jest.mocked(startSimulation);
+const mockEnd = jest.mocked(endSimulation);
 const initialAuth = useAuthStore.getState();
 const initialSimulation = useSimulationStore.getState();
 
@@ -55,6 +56,24 @@ function authorize(realRole: Role, overrides: Partial<SimulationSession> = {}) {
   useSimulationStore.setState({ session, phase: 'ready', returnPath: null, epoch: 0, error: null });
 }
 
+type User = ReturnType<typeof userEvent.setup>;
+
+/**
+ * Radix monte ses options dans un portail, et seulement menu ouvert : on passe donc
+ * par le trigger, jamais par `selectOptions` qui suppose un <select> natif.
+ */
+async function openSelect(user: User, name: string) {
+  await user.click(screen.getByRole('combobox', { name }));
+  return screen.findByRole('listbox');
+}
+
+async function chooseOption(user: User, name: string, option: string | RegExp) {
+  await openSelect(user, name);
+  await user.click(await screen.findByRole('option', { name: option }));
+  // Le menu rend le reste du dialogue inerte : on attend sa fermeture avant la suite.
+  await waitFor(() => expect(screen.queryByRole('listbox')).not.toBeInTheDocument());
+}
+
 beforeEach(() => {
   jest.resetAllMocks();
   authorize(Role.SUPER_ADMIN);
@@ -68,6 +87,80 @@ afterEach(() => {
 });
 
 describe('SimulationControls', () => {
+  it.each([
+    {
+      realRole: Role.CLIENT_MANAGER,
+      targetRole: null,
+      message:
+        'Seules les formations que vous avez achetées seront visibles dans la simulation stagiaire.',
+    },
+    {
+      realRole: Role.CLIENT_MANAGER,
+      targetRole: Role.TRAINEE,
+      message:
+        'Seules les formations que vous avez achetées seront visibles dans la simulation stagiaire.',
+    },
+    {
+      realRole: Role.EDITOR,
+      targetRole: null,
+      message:
+        'Seules les formations publiées seront présentes dans la Boutique. Aucun paiement ne sera effectué.',
+    },
+    {
+      realRole: Role.EDITOR,
+      targetRole: Role.CLIENT_MANAGER,
+      message:
+        'Seules les formations publiées seront présentes dans la Boutique. Aucun paiement ne sera effectué.',
+    },
+    {
+      realRole: Role.EDITOR,
+      targetRole: Role.TRAINEE,
+      message:
+        'Seules les formations que vous avez publiées seront visibles dans la simulation stagiaire.',
+    },
+    {
+      realRole: Role.SUPER_ADMIN,
+      targetRole: Role.TRAINEE,
+      message: 'Seule la Boutique affiche des données réelles. Aucun paiement ne sera effectué.',
+    },
+  ])('shows the notice for $realRole → $targetRole', async ({ realRole, targetRole, message }) => {
+    authorize(realRole);
+    const user = userEvent.setup();
+    render(<SimulationControls />);
+
+    await user.click(screen.getByRole('button', { name: 'Simuler un rôle' }));
+    if (targetRole) {
+      await chooseOption(user, 'Rôle à simuler', labels[targetRole]);
+    }
+
+    expect(screen.getByText(message)).toBeVisible();
+    expect(mockStart).not.toHaveBeenCalled();
+  });
+
+  it('updates the editor notice when switching between client and trainee', async () => {
+    authorize(Role.EDITOR);
+    const user = userEvent.setup();
+    render(<SimulationControls />);
+    await user.click(screen.getByRole('button', { name: 'Simuler un rôle' }));
+
+    const shopMessage =
+      'Seules les formations publiées seront présentes dans la Boutique. Aucun paiement ne sera effectué.';
+    const traineeMessage =
+      'Seules les formations que vous avez publiées seront visibles dans la simulation stagiaire.';
+
+    await chooseOption(user, 'Rôle à simuler', 'Client');
+    expect(screen.getByText(shopMessage)).toBeVisible();
+    expect(screen.queryByText(traineeMessage)).not.toBeInTheDocument();
+
+    await chooseOption(user, 'Rôle à simuler', 'Stagiaire');
+    expect(screen.getByText(traineeMessage)).toBeVisible();
+    expect(screen.queryByText(shopMessage)).not.toBeInTheDocument();
+
+    await chooseOption(user, 'Rôle à simuler', 'Client');
+    expect(screen.getByText(shopMessage)).toBeVisible();
+    expect(screen.queryByText(traineeMessage)).not.toBeInTheDocument();
+  });
+
   it.each(Object.values(Role))(
     'shows only server-authorized role options for %s',
     async (realRole) => {
@@ -83,15 +176,15 @@ describe('SimulationControls', () => {
       }
 
       await user.click(screen.getByRole('button', { name: 'Simuler un rôle' }));
-      const selector = screen.getByRole('combobox', { name: 'Rôle à simuler' });
+      const listbox = await openSelect(user, 'Rôle à simuler');
       expect(
-        within(selector)
+        within(listbox)
           .getAllByRole('option')
-          .map((option) => (option as HTMLOptionElement).value),
-      ).toEqual(['', ...allowedRoles[realRole]]);
-      for (const role of allowedRoles[realRole]) {
-        expect(within(selector).getByRole('option', { name: labels[role] })).toHaveValue(role);
-      }
+          .map((option) => option.textContent),
+      ).toEqual(allowedRoles[realRole].map((role) => labels[role]));
+
+      await user.keyboard('{Escape}');
+      await waitFor(() => expect(screen.queryByRole('listbox')).not.toBeInTheDocument());
       expect(screen.getByRole('button', { name: 'Démarrer la simulation' })).toBeDisabled();
     },
   );
@@ -102,11 +195,11 @@ describe('SimulationControls', () => {
     render(<SimulationControls />);
     await user.click(screen.getByRole('button', { name: 'Simuler un rôle' }));
 
-    const selector = screen.getByRole('combobox', { name: 'Rôle à simuler' });
-    expect(within(selector).getAllByRole('option')).toHaveLength(2);
-    expect(within(selector).getByRole('option', { name: 'Stagiaire' })).toBeInTheDocument();
-    expect(within(selector).queryByRole('option', { name: 'Éditeur' })).not.toBeInTheDocument();
-    expect(within(selector).queryByRole('option', { name: 'Client' })).not.toBeInTheDocument();
+    const listbox = await openSelect(user, 'Rôle à simuler');
+    expect(within(listbox).getAllByRole('option')).toHaveLength(1);
+    expect(within(listbox).getByRole('option', { name: 'Stagiaire' })).toBeInTheDocument();
+    expect(within(listbox).queryByRole('option', { name: 'Éditeur' })).not.toBeInTheDocument();
+    expect(within(listbox).queryByRole('option', { name: 'Client' })).not.toBeInTheDocument();
   });
 
   it('hides the entry point when the server grants no simulated roles', () => {
@@ -122,16 +215,104 @@ describe('SimulationControls', () => {
   });
 
   it.each(directTransitions)(
-    'prevents chaining when %s is already simulating %s',
+    'offers only a compact exit when %s is already simulating %s',
     (realRole, simulatedRole) => {
       authorize(realRole, { simulated_role: simulatedRole });
       render(<SimulationControls />);
 
       expect(screen.queryByRole('button', { name: 'Simuler un rôle' })).not.toBeInTheDocument();
       expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+      const exit = screen.getByRole('button', { name: 'Quitter la simulation' });
+      expect(exit).toBeEnabled();
+      expect(exit).toHaveClass('h-7');
+      expect(exit).toHaveAttribute('title', `Mode simulation : rôle ${labels[simulatedRole]}`);
       expect(mockStart).not.toHaveBeenCalled();
     },
   );
+
+  it('keeps exit available even when no new simulations are allowed', () => {
+    authorize(Role.EDITOR, { simulated_role: Role.TRAINEE, allowed_roles: [] });
+    render(<SimulationControls />);
+
+    expect(screen.getByRole('button', { name: 'Quitter la simulation' })).toBeEnabled();
+    expect(screen.queryByRole('button', { name: 'Simuler un rôle' })).not.toBeInTheDocument();
+  });
+
+  it('waits for a confirmed exit before returning without logging out', async () => {
+    authorize(Role.EDITOR, { simulated_role: Role.TRAINEE });
+    const realUser = useAuthStore.getState().user;
+    const clearAuth = jest.spyOn(useAuthStore.getState(), 'clearAuth');
+    const destination = '/admin/programs?page=2';
+    let resolve!: (value: string) => void;
+    const result = new Promise<string>((done) => {
+      resolve = done;
+    });
+    mockEnd.mockImplementationOnce(() => {
+      useSimulationStore.setState({ phase: 'transition' });
+      return result;
+    });
+    const user = userEvent.setup();
+    render(<SimulationControls />);
+
+    await user.click(screen.getByRole('button', { name: 'Quitter la simulation' }));
+    expect(mockEnd).toHaveBeenCalledTimes(1);
+    expect(mockReplace).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Quitter la simulation' })).toBeDisabled();
+    await user.click(screen.getByRole('button', { name: 'Quitter la simulation' }));
+    expect(mockEnd).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      // Complete the state restoration normally performed by endSimulation.
+      authorize(Role.EDITOR);
+      resolve(destination);
+      await result;
+    });
+
+    expect(mockReplace).toHaveBeenCalledWith(destination);
+    expect(mockReplace).toHaveBeenCalledTimes(1);
+    expect(clearAuth).not.toHaveBeenCalled();
+    expect(useAuthStore.getState()).toMatchObject({
+      user: realUser,
+      role: Role.EDITOR,
+      simulatedRole: null,
+      sessionId: 'real-session',
+    });
+    expect(screen.getByRole('button', { name: 'Simuler un rôle' })).toBeEnabled();
+    expect(screen.queryByRole('button', { name: 'Quitter la simulation' })).not.toBeInTheDocument();
+    clearAuth.mockRestore();
+  });
+
+  it.each(['checking', 'transition'] as const)('disables exit during %s', async (phase) => {
+    authorize(Role.CLIENT_MANAGER, { simulated_role: Role.TRAINEE });
+    useSimulationStore.setState({ phase });
+    const user = userEvent.setup();
+    render(<SimulationControls />);
+
+    const exit = screen.getByRole('button', { name: 'Quitter la simulation' });
+    expect(exit).toBeDisabled();
+    await user.click(exit);
+    expect(mockEnd).not.toHaveBeenCalled();
+    expect(mockReplace).not.toHaveBeenCalled();
+  });
+
+  it('keeps the simulation and exit button when exit cannot be confirmed', async () => {
+    authorize(Role.EDITOR, { simulated_role: Role.TRAINEE });
+    mockEnd.mockRejectedValueOnce(new Error('Exit could not be confirmed'));
+    const user = userEvent.setup();
+    render(<SimulationControls />);
+
+    await user.click(screen.getByRole('button', { name: 'Quitter la simulation' }));
+
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(
+        'La sortie n’a pas pu être confirmée. La simulation reste isolée.',
+      ),
+    );
+    expect(mockReplace).not.toHaveBeenCalled();
+    expect(useAuthStore.getState().simulatedRole).toBe(Role.TRAINEE);
+    expect(screen.getByRole('button', { name: 'Quitter la simulation' })).toBeEnabled();
+    expect(screen.queryByRole('button', { name: 'Simuler un rôle' })).not.toBeInTheDocument();
+  });
 
   it.each(directTransitions)(
     'starts %s → %s directly and redirects to %s',
@@ -142,10 +323,7 @@ describe('SimulationControls', () => {
       render(<SimulationControls />);
 
       await user.click(screen.getByRole('button', { name: 'Simuler un rôle' }));
-      await user.selectOptions(
-        screen.getByRole('combobox', { name: 'Rôle à simuler' }),
-        targetRole,
-      );
+      await chooseOption(user, 'Rôle à simuler', labels[targetRole]);
       await user.click(screen.getByRole('button', { name: 'Démarrer la simulation' }));
 
       expect(mockStart).toHaveBeenCalledTimes(1);
@@ -164,14 +342,8 @@ describe('SimulationControls', () => {
     render(<SimulationControls />);
 
     await user.click(screen.getByRole('button', { name: 'Simuler un rôle' }));
-    await user.selectOptions(
-      screen.getByRole('combobox', { name: 'Rôle à simuler' }),
-      Role.TRAINEE,
-    );
-    await user.selectOptions(
-      screen.getByRole('combobox', { name: 'Catalogue réel de la Boutique' }),
-      'tenant-id',
-    );
+    await chooseOption(user, 'Rôle à simuler', 'Stagiaire');
+    await chooseOption(user, 'Catalogue réel de la Boutique', 'Catalogue école');
     await user.click(screen.getByRole('button', { name: 'Démarrer la simulation' }));
 
     expect(mockStart).toHaveBeenCalledWith(Role.TRAINEE, 'tenant-id');
@@ -185,10 +357,7 @@ describe('SimulationControls', () => {
       const user = userEvent.setup();
       render(<SimulationControls />);
       await user.click(screen.getByRole('button', { name: 'Simuler un rôle' }));
-      await user.selectOptions(
-        screen.getByRole('combobox', { name: 'Rôle à simuler' }),
-        Role.EDITOR,
-      );
+      await chooseOption(user, 'Rôle à simuler', 'Éditeur');
 
       const start = screen.getByRole('button', { name: 'Démarrer la simulation' });
       expect(start).toBeDisabled();
@@ -203,10 +372,7 @@ describe('SimulationControls', () => {
     const user = userEvent.setup();
     render(<SimulationControls />);
     await user.click(screen.getByRole('button', { name: 'Simuler un rôle' }));
-    await user.selectOptions(
-      screen.getByRole('combobox', { name: 'Rôle à simuler' }),
-      Role.CLIENT_MANAGER,
-    );
+    await chooseOption(user, 'Rôle à simuler', 'Client');
     await user.click(screen.getByRole('button', { name: 'Démarrer la simulation' }));
 
     await waitFor(() =>
@@ -215,8 +381,7 @@ describe('SimulationControls', () => {
     expect(mockStart).toHaveBeenCalledWith(Role.CLIENT_MANAGER, '');
     expect(mockReplace).not.toHaveBeenCalled();
     expect(screen.getByRole('dialog')).toBeVisible();
-    expect(screen.getByRole('combobox', { name: 'Rôle à simuler' })).toHaveValue(
-      Role.CLIENT_MANAGER,
-    );
+    // Le trigger Radix est un <button> : la sélection se lit dans son libellé, pas dans `value`.
+    expect(screen.getByRole('combobox', { name: 'Rôle à simuler' })).toHaveTextContent('Client');
   });
 });

@@ -9,6 +9,7 @@ import { ScormSession, bindScormWindowApi } from '../lib/scormRuntime';
 import { ScormPreviewSession, getScormPreviewLaunchUrl } from '../lib/scormPreviewRuntime';
 import { useAuthStore } from '@/shared/stores/auth.store';
 import { useSimulationStore } from '@/shared/simulation/simulation.store';
+import { SimulationControls } from '@/shared/simulation/SimulationControls';
 
 interface Props {
   enrollmentId: string;
@@ -129,18 +130,12 @@ export default function ScormPlayer({
       return;
     }
 
-    // Native fullscreen would hide the persistent simulation banner.
-    if (simulatedRole) {
-      setOverlay(true);
-      return;
-    }
-
     try {
       await (element.requestFullscreen?.() ?? element.webkitRequestFullscreen?.());
     } catch {
       setOverlay(true);
     }
-  }, [expanded, nativeFullscreen, simulatedRole]);
+  }, [expanded, nativeFullscreen]);
 
   useEffect(() => {
     if (!launch || failed || demo) return;
@@ -223,31 +218,39 @@ export default function ScormPlayer({
   return (
     // `fixed inset-0` is what makes the overlay fallback work; in native
     // fullscreen the element is already promoted to the top layer, where those
-    // same classes are harmless.
+    // same classes are harmless. `relative` must not coexist with `fixed`: both
+    // set `position` and Tailwind emits `relative` last, so it would win.
     <div
       ref={containerRef}
-      className={`relative flex flex-col gap-2 ${
-        expanded
-          ? `fixed ${simulatedRole ? 'inset-x-0 bottom-0 top-16' : 'inset-0'} z-50 gap-0 bg-white`
-          : ''
-      }`}
+      className={`flex flex-col ${expanded ? 'fixed inset-0 z-50 bg-white' : 'relative gap-2'}`}
     >
       {readOnly && (
-        <p role="status" className="shrink-0 bg-amber-50 px-3 py-2 pr-14 text-sm text-amber-950">
+        <p
+          role="status"
+          className={`shrink-0 bg-amber-50 px-3 py-2 text-sm text-amber-950 ${
+            expanded && simulatedRole ? 'pr-72' : 'pr-14'
+          }`}
+        >
           Lecture seule — aucun score, temps ou progression enregistré.
         </p>
       )}
       {ready && (
-        <button
-          type="button"
-          onClick={toggleFullscreen}
-          aria-label={expanded ? 'Quitter le plein écran' : 'Afficher en plein écran'}
-          className={`rounded-md p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 ${
-            expanded ? 'absolute right-3 top-3 z-10 bg-white/90 shadow-sm' : 'self-end'
-          }`}
+        <div
+          className={expanded ? 'absolute right-3 top-3 z-10 flex items-center gap-2' : 'self-end'}
         >
-          {expanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-        </button>
+          {/* The header — and its simulation exit button — is hidden while expanded. */}
+          {expanded && simulatedRole && <SimulationControls />}
+          <button
+            type="button"
+            onClick={toggleFullscreen}
+            aria-label={expanded ? 'Quitter le plein écran' : 'Afficher en plein écran'}
+            className={`rounded-md p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 ${
+              expanded ? 'bg-white/90 shadow-sm' : ''
+            }`}
+          >
+            {expanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+          </button>
+        </div>
       )}
       {!ready && (
         <div className="flex h-40 items-center justify-center text-slate-400">
@@ -291,7 +294,7 @@ export default function ScormPlayer({
         allowFullScreen={!readOnly}
         onErrorCapture={readOnly ? () => setFailedSessionKey(sessionKey) : undefined}
         className={`w-full bg-white ${
-          expanded ? 'h-full border-0' : 'h-[70vh] rounded-lg border border-slate-200'
+          expanded ? 'min-h-0 flex-1 border-0' : 'h-[70vh] rounded-lg border border-slate-200'
         } ${ready ? '' : 'hidden'}`}
       />
       {demo && (

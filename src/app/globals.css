@@ -6,12 +6,6 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* Keep fixed desktop navigation below the always-visible simulation banner. */
-[data-simulation='active'] [data-slot='sidebar-container'] {
-  top: 4rem;
-  height: calc(100svh - 4rem);
-}
-
 :root {
   --color-primary: #2563eb;
   --color-secondary: #64748b;

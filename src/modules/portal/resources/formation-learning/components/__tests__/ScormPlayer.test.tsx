@@ -254,7 +254,7 @@ describe('ScormPlayer read-only real packages', () => {
     noTracking();
   });
 
-  it('uses the overlay below the persistent simulation banner, not native fullscreen', async () => {
+  it('uses the overlay below the simulation exit header, not native fullscreen', async () => {
     const view = mount();
     const button = await screen.findByRole('button', { name: 'Afficher en plein écran' });
     const container = button.parentElement!;

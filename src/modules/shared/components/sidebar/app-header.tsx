@@ -52,10 +52,7 @@ export function AppHeader({ onLogout }: AppHeaderProps) {
 
   return (
     <>
-      <header
-        style={{ top: simulatedRole ? '4rem' : 0 }}
-        className="sticky top-0 z-40 flex h-15 shrink-0 items-center justify-between gap-2 px-4 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 border-b border-border/60 bg-background/80 backdrop-blur-md"
-      >
+      <header className="sticky top-0 z-40 flex h-15 shrink-0 items-center justify-between gap-2 px-4 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 border-b border-border/60 bg-background/80 backdrop-blur-md">
         {/* LEFT */}
         <div className="flex items-center gap-2">
           <SidebarTrigger className="-ml-1" />
@@ -119,7 +116,7 @@ export function AppHeader({ onLogout }: AppHeaderProps) {
           {/* USER MENU */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button className="h-9 max-w-45 rounded-full px-1.5 py-2 bg-transparent hover:bg-gray-100 sm:gap-2 sm:px-2">
+              <Button className="h-9 max-w-45 rounded-sm px-1.5 py-5 bg-transparent hover:bg-gray-100 sm:gap-2 sm:px-2">
                 <Avatar className="h-8 w-8 rounded-full">
                   <AvatarImage src={user?.avatar ?? undefined} alt={user?.name ?? ''} />
                   <AvatarFallback className="rounded-full bg-(--color-primary) text-[11px] font-semibold text-white">

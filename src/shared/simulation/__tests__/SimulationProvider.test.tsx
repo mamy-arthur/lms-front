@@ -6,6 +6,7 @@ import { Role } from '@/shared/constants/roles';
 import { apiGet } from '@/shared/lib/apiClient';
 import { queryClient } from '@/shared/lib/query-client';
 import { useAuthStore } from '@/shared/stores/auth.store';
+import { SimulationControls } from '../SimulationControls';
 import { SimulationProvider } from '../SimulationProvider';
 import { clearSimulationData } from '../local-api';
 import { endSimulation, synchronizeSimulation } from '../service';
@@ -97,11 +98,12 @@ describe('SimulationProvider', () => {
     [Role.CLIENT_MANAGER, 'Client'],
     [Role.TRAINEE, 'Stagiaire'],
   ] as const)(
-    'keeps the %s banner and exit available as arbitrary page children change',
+    'keeps the compact %s exit available across pages without a banner',
     (role, label) => {
       simulate(role);
       const { rerender } = render(
         <SimulationProvider>
+          <SimulationControls />
           <h1>Formations</h1>
         </SimulationProvider>,
       );
@@ -109,23 +111,26 @@ describe('SimulationProvider', () => {
       for (const page of ['Formations', 'Boutique', 'Profil']) {
         rerender(
           <SimulationProvider>
+            <SimulationControls />
             <h1>{page}</h1>
           </SimulationProvider>,
         );
         expect(screen.getByRole('heading', { name: page })).toBeVisible();
-        expect(screen.getByRole('complementary', { name: 'Mode simulation' })).toHaveTextContent(
-          `Mode simulation : rôle ${label}`,
-        );
-        expect(screen.getByRole('button', { name: 'Quitter la simulation' })).toBeEnabled();
+        expect(
+          screen.queryByRole('complementary', { name: 'Mode simulation' }),
+        ).not.toBeInTheDocument();
+        const exit = screen.getByRole('button', { name: 'Quitter la simulation' });
+        expect(exit).toBeEnabled();
+        expect(exit).toHaveAttribute('title', `Mode simulation : rôle ${label}`);
       }
       expect(useAuthStore.getState().user).toBe(realUser);
     },
   );
 
-  it('exits via the simulation service and restores its destination without logging out', async () => {
+  it('keeps an emergency exit on the error screen and restores the destination without logging out', async () => {
     simulate(Role.CLIENT_MANAGER);
     const returnPath = '/admin/users?page=3';
-    useSimulationStore.setState({ returnPath });
+    useSimulationStore.setState({ returnPath, phase: 'error', error: 'Vérification indisponible' });
     const clearAuth = jest.spyOn(useAuthStore.getState(), 'clearAuth');
     const result = deferred<string>();
     mockEnd.mockReturnValueOnce(result.promise);
@@ -136,6 +141,9 @@ describe('SimulationProvider', () => {
       </SimulationProvider>,
     );
 
+    await waitFor(() => expect(mockSynchronize).toHaveBeenCalledTimes(1));
+    expect(screen.queryByRole('heading', { name: 'Profil' })).not.toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent('Vérification indisponible');
     await user.click(screen.getByRole('button', { name: 'Quitter la simulation' }));
     expect(mockEnd).toHaveBeenCalledTimes(1);
     expect(mockReplace).not.toHaveBeenCalled();
@@ -143,7 +151,7 @@ describe('SimulationProvider', () => {
     await act(async () => {
       // The mocked service completes its documented state restoration.
       useAuthStore.getState().setSimulatedRole(null);
-      useSimulationStore.setState({ session, phase: 'ready', returnPath: null });
+      useSimulationStore.setState({ session, phase: 'ready', returnPath: null, error: null });
       result.resolve(returnPath);
       await result.promise;
     });
@@ -234,15 +242,10 @@ describe('SimulationProvider', () => {
       );
       expect(request).toHaveBeenCalledTimes(1);
       expect(request).toHaveBeenCalledWith(serverRole ?? Role.SUPER_ADMIN);
-      if (serverRole) {
-        expect(screen.getByRole('complementary', { name: 'Mode simulation' })).toHaveTextContent(
-          'rôle Client',
-        );
-      } else {
-        expect(
-          screen.queryByRole('complementary', { name: 'Mode simulation' }),
-        ).not.toBeInTheDocument();
-      }
+      expect(
+        screen.queryByRole('complementary', { name: 'Mode simulation' }),
+      ).not.toBeInTheDocument();
+      expect(useAuthStore.getState().simulatedRole).toBe(serverRole);
       expect(useAuthStore.getState().user).toBe(realUser);
       expect(useAuthStore.getState().sessionId).toBe('real-session');
       expect(mockReplace).not.toHaveBeenCalled();
@@ -278,8 +281,9 @@ describe('SimulationProvider', () => {
     expect(request).toHaveBeenCalledTimes(1);
   });
 
-  it('shows a rejected exit without navigating, logging out, or removing the simulation banner', async () => {
+  it('keeps the emergency exit after a rejected exit without navigating or logging out', async () => {
     simulate(Role.TRAINEE);
+    useSimulationStore.setState({ phase: 'error', error: 'Vérification indisponible' });
     mockEnd.mockRejectedValueOnce(new Error('Exit could not be confirmed'));
     const clearAuth = jest.spyOn(useAuthStore.getState(), 'clearAuth');
     const user = userEvent.setup();
@@ -299,8 +303,9 @@ describe('SimulationProvider', () => {
     expect(mockReplace).not.toHaveBeenCalled();
     expect(clearAuth).not.toHaveBeenCalled();
     expect(useAuthStore.getState().user).toBe(realUser);
-    expect(screen.getByRole('complementary', { name: 'Mode simulation' })).toHaveTextContent(
-      'rôle Stagiaire',
-    );
+    expect(useAuthStore.getState().simulatedRole).toBe(Role.TRAINEE);
+    expect(screen.getByRole('alert')).toHaveTextContent('Vérification indisponible');
+    expect(screen.getByRole('button', { name: 'Quitter la simulation' })).toBeEnabled();
+    expect(screen.queryByRole('heading', { name: 'Profil' })).not.toBeInTheDocument();
   });
 });

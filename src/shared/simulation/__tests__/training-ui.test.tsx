@@ -9,6 +9,7 @@ import type { usePurchasedLearningPathCategoriesQuery } from '@/modules/portal/r
 import type { TraineeFormation } from '@/modules/portal/resources/_shared/trainee/types';
 import { Role } from '@/shared/constants/roles';
 import { useAuthStore } from '@/shared/stores/auth.store';
+import { SimulationControls } from '../SimulationControls';
 import { SimulationProvider } from '../SimulationProvider';
 import { synchronizeSimulation } from '../service';
 import { useSimulationStore } from '../simulation.store';
@@ -40,6 +41,7 @@ jest.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockPush, replace: mockReplace }),
 }));
 jest.mock('../service', () => ({
+  startSimulation: jest.fn(),
   synchronizeSimulation: jest.fn(),
   clearSimulationContext: jest.fn(),
   endSimulation: jest.fn(),
@@ -48,8 +50,6 @@ jest.mock('../service', () => ({
 const mockSynchronize = jest.mocked(synchronizeSimulation);
 const initialAuth = useAuthStore.getState();
 const initialSimulation = useSimulationStore.getState();
-const realPreviewCopy = 'Formations réelles en aperçu · Progression et actions sans effet réel';
-const fictionalCopy = 'Données fictives · Actions et achats sans effet réel';
 const ordinaryDescription =
   'Retrouvez toutes vos formations, leur progression et vos attestations.';
 const previewActors = [
@@ -108,6 +108,7 @@ function setActor(realRole: Role, simulatedRole: Role | null = Role.TRAINEE) {
 function trainingUi() {
   return (
     <SimulationProvider>
+      <SimulationControls />
       <FormationListPage />
     </SimulationProvider>
   );
@@ -277,18 +278,19 @@ describe('FormationList training preview', () => {
   );
 });
 
-describe('SimulationProvider training copy', () => {
+describe('Training simulation controls', () => {
   it.each(previewActors)(
-    'labels real $role → TRAINEE training as a preview, not fictional data',
+    'offers a compact exit for $role → TRAINEE without a banner',
     async ({ role }) => {
       setActor(role);
       await renderTrainingUi();
 
-      const banner = screen.getByRole('complementary', { name: 'Mode simulation' });
-      expect(banner).toHaveTextContent('Mode simulation : rôle Stagiaire');
-      expect(within(banner).getByText(realPreviewCopy)).toBeInTheDocument();
-      expect(within(banner).queryByText(/Données fictives/)).not.toBeInTheDocument();
-      expect(within(banner).getByRole('button', { name: 'Quitter la simulation' })).toBeEnabled();
+      expect(
+        screen.queryByRole('complementary', { name: 'Mode simulation' }),
+      ).not.toBeInTheDocument();
+      const exit = screen.getByRole('button', { name: 'Quitter la simulation' });
+      expect(exit).toBeEnabled();
+      expect(exit).toHaveAttribute('title', 'Mode simulation : rôle Stagiaire');
       expect(useAuthStore.getState()).toMatchObject({
         user: { role },
         role: Role.TRAINEE,
@@ -298,7 +300,7 @@ describe('SimulationProvider training copy', () => {
     },
   );
 
-  it('retains Données fictives and ordinary list copy for SUPER_ADMIN → TRAINEE', async () => {
+  it('retains fictional formations and ordinary list copy for SUPER_ADMIN → TRAINEE', async () => {
     setActor(Role.SUPER_ADMIN);
     enrollmentQuery.data = {
       data: [
@@ -312,10 +314,10 @@ describe('SimulationProvider training copy', () => {
     };
     await renderTrainingUi();
 
-    const banner = screen.getByRole('complementary', { name: 'Mode simulation' });
-    expect(banner).toHaveTextContent('Mode simulation : rôle Stagiaire');
-    expect(within(banner).getByText(fictionalCopy)).toBeInTheDocument();
-    expect(within(banner).queryByText(realPreviewCopy)).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('complementary', { name: 'Mode simulation' }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Quitter la simulation' })).toBeEnabled();
     expect(screen.getByText(ordinaryDescription)).toBeVisible();
     expect(screen.queryByText(/Aperçu stagiaire/)).not.toBeInTheDocument();
     expect(screen.getByText('Formation de démonstration')).toBeVisible();
@@ -336,7 +338,9 @@ describe('SimulationProvider training copy', () => {
       ).not.toBeInTheDocument();
       expect(screen.getByText(ordinaryDescription)).toBeVisible();
       expect(screen.queryByText(/Aperçu stagiaire/)).not.toBeInTheDocument();
-      expect(screen.queryByText(realPreviewCopy)).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: 'Quitter la simulation' }),
+      ).not.toBeInTheDocument();
     },
   );
 });
