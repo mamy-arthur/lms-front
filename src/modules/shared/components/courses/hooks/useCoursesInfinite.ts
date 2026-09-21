@@ -33,5 +33,7 @@ export function useCoursesInfinite(params: Params, enabled = true) {
       return loaded < lastPage.total ? allPages.length + 1 : undefined;
     },
     enabled,
+    // Refresh eligibility when reopening the picker after editing course content.
+    staleTime: 0,
   });
 }

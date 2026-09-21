@@ -15,6 +15,8 @@ export interface ApiCourse {
   description: string | null;
   created_at: string;
   updated_at: string;
+  /** Number of content entries across all sections; returned by the course listing. */
+  content_count?: number;
   /**
    * Catalogue sale lock. Carried by the READ endpoints — `GET /platform/courses`
    * resolves it in batch for the whole page, `GET /platform/courses/{id}` and
