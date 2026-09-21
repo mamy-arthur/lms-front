@@ -43,7 +43,6 @@ const globals = window as unknown as Record<
   string,
   Record<string, (...args: string[]) => string> | undefined
 >;
-const notice = 'Lecture seule — aucun score, temps ou progression enregistré.';
 const errorText = 'Impossible de charger le contenu SCORM.';
 const props = {
   enrollmentId: 'demo-enrollment',
@@ -172,7 +171,6 @@ describe('ScormPlayer read-only real packages', () => {
       await waitFor(() => expect(screen.getByTitle('Contenu SCORM')).toHaveAttribute('src', url));
       expect(assignments).toContainEqual({ value: url, bound: true });
       expect(assignments.every(({ bound }) => bound)).toBe(true);
-      expect(screen.getByRole('status')).toHaveTextContent(notice);
       const frame = screen.getByTitle('Contenu SCORM');
       expect(frame).not.toHaveAttribute('srcdoc');
       expect(frame).toHaveAttribute('sandbox', 'allow-scripts allow-same-origin');
@@ -269,7 +267,6 @@ describe('ScormPlayer read-only real packages', () => {
     fireEvent.click(button);
     expect(requestFullscreen).not.toHaveBeenCalled();
     expect(container).toHaveClass('fixed', 'top-16', 'z-50');
-    expect(screen.getByRole('status')).toHaveTextContent(notice);
     expect(screen.getByRole('button', { name: 'Quitter le plein écran' })).toBeVisible();
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(container).not.toHaveClass('fixed');
@@ -329,7 +326,6 @@ describe('ScormPlayer read-only real packages', () => {
     );
     mount();
     expect(screen.queryByTitle('Contenu SCORM')).not.toBeInTheDocument();
-    expect(screen.queryByText(notice)).not.toBeInTheDocument();
     expect(globals.API).toBeUndefined();
     noTracking();
     await act(async () => resolve({ data: launch }));
@@ -378,7 +374,6 @@ describe('ScormPlayer unchanged demo and learner behavior', () => {
     expect(frame).not.toHaveAttribute('src');
     expect(frame.getAttribute('srcdoc')).toContain('Activité SCORM de démonstration');
     expect(frame).toHaveAttribute('sandbox', '');
-    expect(screen.queryByText(notice)).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Terminer l’activité simulée' }));
     expect(view.onCompleted).toHaveBeenCalledTimes(1);
     noTracking();
@@ -420,7 +415,6 @@ describe('ScormPlayer unchanged demo and learner behavior', () => {
     expect(screen.getByTitle('Contenu SCORM').getAttribute('sandbox')).toContain(
       'allow-forms allow-popups',
     );
-    expect(screen.queryByText(notice)).not.toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: 'Terminer l’activité simulée' }),
     ).not.toBeInTheDocument();

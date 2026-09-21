@@ -41,7 +41,7 @@ export interface ApiPortalSummaryEntry {
   completed: boolean;
   /** Preuve historique : n'autorise pas à sauter une visite obligatoire. */
   historical_completed: boolean;
-  /** Simulation-only SCORM preview: browse without completing or tracking. */
+  /** Simulation-only SCORM runtime: no tracking; manual completion is local only. */
   read_only?: boolean;
 }
 

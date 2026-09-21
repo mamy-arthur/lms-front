@@ -1,3 +1,9 @@
+import { createElement } from 'react';
+import { cleanup, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { renderWithQueryClient } from '@/shared/lib/test-utils';
+import FormationPlayer from '@/modules/portal/resources/formation-learning/FormationPlayer';
+import FormationList from '@/modules/portal/resources/formation-list/FormationList';
 import { Role } from '@/shared/constants/roles';
 import { apiGet, apiPost, apiPatch, httpClient } from '@/shared/lib/apiClient';
 import { queryClient } from '@/shared/lib/query-client';
@@ -7,12 +13,25 @@ import type {
   ApiPortalLearningPathSummary,
   ApiPortalContentEntry,
 } from '@/shared/types/portal.types';
-import type { ApiEvaluationAttempt } from '@/shared/types/evaluation-attempt.types';
 import { startSimulation, endSimulation, synchronizeSimulation } from '../service';
 import { clearSimulationData } from '../local-api';
 import { useSimulationStore, type SimulationSession } from '../simulation.store';
 import { cancelSimulationRequests } from '../transport';
 import { SIMULATION_IDS } from '../fixtures';
+import { mapSummaryToFormation } from '@/modules/portal/resources/formation-learning/lib/summary-mapper';
+import {
+  getDefaultActiveId,
+  resolveActive,
+} from '@/modules/portal/resources/formation-learning/lib/course-utils';
+import {
+  buildExecutionContext,
+  pendingStartExecutionId,
+} from '@/modules/portal/resources/formation-learning/lib/execution-context';
+import { adoptExecutionSnapshot } from '@/modules/portal/resources/formation-learning/lib/execution-cache';
+import { portalContentEntriesApi, evaluationAttemptsApi } from '@/shared/api/portal.api';
+import { portalLearningPathKeys } from '@/shared/queries/keys';
+
+jest.mock('next/navigation', () => ({ useRouter: () => ({ replace: jest.fn() }) }));
 
 const base = '/api/v1/role-simulation/training/learning-paths';
 const synthetic = /^d3e00000-0000-4000-8000-/;
@@ -124,6 +143,7 @@ function setup(role = Role.CLIENT_MANAGER) {
 
 beforeEach(() => setup());
 afterEach(() => {
+  cleanup();
   clearSimulationData();
   cancelSimulationRequests();
   queryClient.clear();
@@ -131,6 +151,38 @@ afterEach(() => {
   useSimulationStore.setState({ phase: 'idle', session: null });
   jest.restoreAllMocks();
 });
+
+it.each([Role.CLIENT_MANAGER, Role.EDITOR])(
+  '%s renders the actual formation list before opening and after completing a content',
+  async (role) => {
+    setup(role);
+    await startSimulation(Role.TRAINEE);
+    const view = renderWithQueryClient(createElement(FormationList));
+    try {
+      expect(await screen.findByRole('button', { name: new RegExp(path.name) })).toBeVisible();
+      expect(
+        screen.queryByText('Impossible de charger les formations. Réessayez.'),
+      ).not.toBeInTheDocument();
+      expect(fetch).toHaveBeenCalledTimes(2);
+
+      const list = await apiGet<ApiMeEnrollmentsResponse>('me/enrollments');
+      const enrollmentId = list.data[0].id;
+      view.rerender(createElement(FormationPlayer, { enrollmentId }));
+      await screen.findByText('Contenu réel autorisé');
+      await userEvent.setup().click(screen.getByRole('button', { name: 'Terminer et continuer' }));
+      await screen.findByRole('button', { name: "Commencer l'évaluation" });
+      view.rerender(createElement(FormationList));
+      expect(await screen.findByRole('button', { name: new RegExp(path.name) })).toBeVisible();
+      expect(
+        screen.queryByText('Impossible de charger les formations. Réessayez.'),
+      ).not.toBeInTheDocument();
+      expect(fetch).toHaveBeenCalledTimes(3);
+    } finally {
+      view.unmount();
+      view.queryClient.clear();
+    }
+  },
+);
 
 it.each([Role.CLIENT_MANAGER, Role.EDITOR])(
   '%s previews real training with only local progress and quiz attempts',
@@ -174,6 +226,16 @@ it.each([Role.CLIENT_MANAGER, Role.EDITOR])(
     const module = first.data.modules[0];
     const course = module.courses[0];
     const entry = course.sections[0].content_entries[0];
+    // Exercise the real player's projection, not just the legacy summary fields.
+    const formation = mapSummaryToFormation(first.data);
+    const active = resolveActive(formation, getDefaultActiveId(formation));
+    expect(active).toMatchObject({ kind: 'content', content: { entryId: entry.id } });
+    const context = buildExecutionContext(formation, module.id)!;
+    expect(context.node_execution_id).toMatch(synthetic);
+    const repeated = await apiGet<{ data: ApiPortalLearningPathSummary }>(summaryPath);
+    expect(repeated.data.execution).toEqual(first.data.execution);
+    expect(pendingStartExecutionId(formation)).toBeNull();
+    queryClient.setQueryData(portalLearningPathKeys.summary(registration.id), formation);
     expect(module.name).toBe('La sécurité');
     expect(course.name).toBe('Les bons gestes');
     const content = await apiGet<{ data: ApiPortalContentEntry }>(
@@ -181,17 +243,33 @@ it.each([Role.CLIENT_MANAGER, Role.EDITOR])(
     );
     expect(content.data.data.body).toBe('<p>Contenu réel autorisé</p>');
     expect(content.data.field_types.body).toBe('richtext');
-    await apiPost(
-      `enrollments/${registration.id}/competencies/${module.id}/courses/${course.id}/entries/${entry.id}/complete`,
+    const completed = await portalContentEntriesApi.markComplete(
+      registration.id,
+      module.id,
+      course.id,
+      entry.id,
+      context,
     );
-    const attempt = await apiPost<{ data: ApiEvaluationAttempt }>(
-      `enrollments/${registration.id}/evaluations/${first.data.final_evaluation!.id}/attempts`,
+    adoptExecutionSnapshot(queryClient, registration.id, completed.data);
+    expect(completed.data.state_revision).toBeGreaterThan(first.data.state_revision);
+    const refreshed = await apiGet<{ data: ApiPortalLearningPathSummary }>(summaryPath);
+    const evaluationId = first.data.final_evaluation!.id;
+    const evaluationContext = buildExecutionContext(
+      mapSummaryToFormation(refreshed.data),
+      evaluationId,
+    )!;
+    const attempt = await evaluationAttemptsApi.start(
+      registration.id,
+      evaluationId,
+      evaluationContext,
     );
     await apiPost(
       `evaluation-attempts/${attempt.data.id}/quizzes/${attempt.data.quizzes[0].id}/answer`,
       { answer: true },
     );
-    await apiPost(`evaluation-attempts/${attempt.data.id}/submit`);
+    const submitted = await evaluationAttemptsApi.submit(attempt.data.id);
+    adoptExecutionSnapshot(queryClient, registration.id, submitted.execution);
+    expect(submitted.execution.status).toBe('completed');
     expect(await apiGet(summaryPath)).toMatchObject({ data: { progress: { percent: 100 } } });
     expect(fetch).toHaveBeenCalledTimes(3);
     expect(useAuthStore.getState().user).toBe(actor);
@@ -210,11 +288,45 @@ it.each([Role.CLIENT_MANAGER, Role.EDITOR])(
   },
 );
 
+it.each([Role.CLIENT_MANAGER, Role.EDITOR])(
+  '%s can load content, complete it and open an evaluation in the actual player',
+  async (role) => {
+    setup(role);
+    await startSimulation(Role.TRAINEE);
+    const list = await apiGet<ApiMeEnrollmentsResponse>('me/enrollments');
+    const user = userEvent.setup();
+    const view = renderWithQueryClient(
+      createElement(FormationPlayer, {
+        enrollmentId: list.data[0].id,
+      }),
+    );
+    try {
+      expect(await screen.findByText('Contenu réel autorisé')).toBeVisible();
+      expect(screen.queryByText('Impossible de charger la formation.')).not.toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: 'Terminer et continuer' }));
+      const start = await screen.findByRole('button', { name: "Commencer l'évaluation" });
+      await waitFor(() => expect(start).toBeEnabled());
+      await user.click(start);
+      expect(await screen.findByText('Faut-il respecter les consignes ?')).toBeVisible();
+      // Only lifecycle + authorized catalog/graph GETs reach the network.
+      expect(fetch).toHaveBeenCalledTimes(3);
+    } finally {
+      view.unmount();
+      view.queryClient.clear();
+    }
+  },
+);
+
 it('keeps the existing fictitious training for superadmin simulation', async () => {
   setup(Role.SUPER_ADMIN);
   await startSimulation(Role.TRAINEE);
   const list = await apiGet<ApiMeEnrollmentsResponse>('me/enrollments');
   expect(list.data[0].learning_path.name).toContain('démonstration');
+  const summary = await apiGet<{ data: ApiPortalLearningPathSummary }>(
+    `enrollments/${list.data[0].id}/summary`,
+  );
+  const formation = mapSummaryToFormation(summary.data);
+  expect(resolveActive(formation, getDefaultActiveId(formation))?.kind).toBe('content');
   expect(fetch).toHaveBeenCalledTimes(1);
 });
 
@@ -231,11 +343,16 @@ it.each([Role.CLIENT_MANAGER, Role.EDITOR])(
           resources: {
             ...resources,
             entries: [{ ...resources.entries[0], data: { title: 'Vidéo externe', url } }],
-            'content-types': [{
-              ...resources['content-types'][0],
-              module_type: 'url',
-              fields: [{ name: 'title', type: 'text' }, { name: 'url', type: 'text' }],
-            }],
+            'content-types': [
+              {
+                ...resources['content-types'][0],
+                module_type: 'url',
+                fields: [
+                  { name: 'title', type: 'text' },
+                  { name: 'url', type: 'text' },
+                ],
+              },
+            ],
           },
         },
       }),

@@ -184,8 +184,9 @@ function entryStatus(
   // Une preuve historique ne permet pas de sauter la séquence du repassage.
   if (!node.actionable) return 'locked';
   if (sequence.pending) return 'locked';
-  // Un aperçu SCORM en lecture seule ne peut pas être terminé : il ne ferme pas la séquence.
-  if (!entry.read_only) sequence.pending = true;
+  // Read-only concerns the SCORM runtime, not its manual simulated completion.
+  // Every pending content closes the sequence until the summary confirms it.
+  sequence.pending = true;
 
   return entry.historical_completed ? 'retry' : 'available';
 }

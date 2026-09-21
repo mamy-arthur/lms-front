@@ -1,7 +1,14 @@
 import { Role } from '@/shared/constants/roles';
 import { createTrainingSource, type TrainingReader } from '@/shared/simulation/training-source';
 import type { ApiAttemptQuiz } from '@/shared/types/evaluation-attempt.types';
-import type { ApiPortalLearningPathSummary, ApiProgressCounts } from '@/shared/types/portal.types';
+import type {
+  ApiPortalEvalSummary,
+  ApiPortalExecutionProjection,
+  ApiPortalLearningPathSummary,
+  ApiPortalSummaryModule,
+  ApiProgressCounts,
+} from '@/shared/types/portal.types';
+import type { ApiExecutionSnapshot, ApiExecutionVisit } from '@/shared/types/progression.types';
 import type { PaymentMethod } from '@/shared/types/order.types';
 import type { ApiScormTrackingState } from '@/shared/api/portal-scorm.api';
 import type { FormationDetail, FormationSummary } from '@/modules/shared/lib/evaluation-notes';
@@ -163,6 +170,8 @@ export const SIMULATION_LIMITATIONS = [
 
 let state: SimulationData | null = null;
 let training: { key: string; source: ReturnType<typeof createTrainingSource> } | null = null;
+// Stable, synthetic visit IDs belong to this in-memory data set, never to real enrollments.
+const executionIds = new WeakMap<SimulationData, Map<string, string>>();
 
 export function resetSimulationData(role: Role): void {
   if (!Object.values(Role).includes(role)) throw new Error('Invalid simulation role');
@@ -938,51 +947,162 @@ function enrollment(data: SimulationData, id: string) {
   );
 }
 
+function simulationExecutionId(
+  data: SimulationData,
+  enrollmentId: string,
+  type: 'module' | 'evaluation',
+  nodeId: string,
+): string {
+  let ids = executionIds.get(data);
+  if (!ids) {
+    ids = new Map();
+    executionIds.set(data, ids);
+  }
+  const key = `${enrollmentId}:${type}:${nodeId}`;
+  let id = ids.get(key);
+  if (!id) {
+    id = nextId(data);
+    ids.set(key, id);
+  }
+  return id;
+}
+
+/** Project the local engine into the player's execution contract, not a real server visit. */
+function simulationNode(
+  data: SimulationData,
+  enrollmentId: string,
+  type: 'module' | 'evaluation',
+  nodeId: string,
+  counts: ApiProgressCounts,
+): ApiPortalExecutionProjection {
+  const completed = counts.total > 0 && counts.completed === counts.total;
+  const visit: ApiExecutionVisit = {
+    id: simulationExecutionId(data, enrollmentId, type, nodeId),
+    node_type: type,
+    node_id: nodeId,
+    visit_number: 1,
+    // The local engine starts accessible nodes immediately; no real /start request is needed.
+    status: completed ? 'completed' : 'in_progress',
+    validation_round_id: null,
+    score: null,
+    result: null,
+    available_at: SIMULATION_DATE,
+    started_at: SIMULATION_DATE,
+    completed_at: completed ? SIMULATION_DATE : null,
+  };
+  return {
+    type,
+    max_attempts: null,
+    current: !completed,
+    actionable: !completed,
+    readable: true,
+    required_to_repeat: false,
+    historical_completed: completed,
+    current_score: null,
+    current_result: null,
+    current_execution: visit,
+    round: null,
+    rounds: [],
+    history: [visit],
+    next_action: completed ? null : type === 'module' ? 'complete_content' : 'start_evaluation',
+  };
+}
+
 function summary(data: SimulationData, enrollmentId: string): ApiPortalLearningPathSummary {
   const registration = enrollment(data, enrollmentId);
   const path = find(data, 'learning-paths', registration.learning_path_id);
   const completed = (competencyId: string, entryId: string) =>
     data.completedEntries.has(`${enrollmentId}:${competencyId}:${entryId}`);
-  const evaluationSummary = (evaluation: SimulationEntity) => ({
-    id: evaluation.id,
-    title: text(evaluation.title),
-    accessible: true,
-    completed: data.attempts.some(
+  const evaluationSummary = (evaluation: SimulationEntity): ApiPortalEvalSummary => {
+    const attempts = data.attempts.filter(
       (attempt) =>
-        attempt.enrollment_id === enrollmentId &&
-        attempt.evaluation_id === evaluation.id &&
-        attempt.status === 'completed',
-    ),
-  });
-  const modules = objects(path.competencies).flatMap((link) => {
+        attempt.enrollment_id === enrollmentId && attempt.evaluation_id === evaluation.id,
+    );
+    const last = attempts.filter((attempt) => attempt.status === 'completed').at(-1);
+    const counts = progress(last ? 1 : 0, 1);
+    const rule = data.resources['progression-rules'].find(
+      (row) =>
+        row.learning_path_id === path.id &&
+        row.is_active &&
+        object(row.source).type === 'evaluation' &&
+        object(row.source).id === evaluation.id,
+    );
+    const condition = object(rule?.condition);
+    const maxAttempts = attemptLimit(data, evaluation);
+    const threshold = number(condition.min_score_percentage, 70);
+    const projection = simulationNode(data, enrollmentId, 'evaluation', evaluation.id, counts);
+    return {
+      ...projection,
+      id: evaluation.id,
+      title: text(evaluation.title),
+      evaluation_type: evaluation.type === 'PARTIAL' ? 'PARTIAL' : 'FINAL',
+      accessible: true,
+      completed: !!last,
+      score: last?.score ?? null,
+      current_score: last?.score ?? null,
+      current_result: last ? (number(last.score) >= threshold ? 'passed' : 'failed') : null,
+      max_attempts: maxAttempts,
+      condition: {
+        type:
+          condition.type === 'evaluation_completed' ? 'evaluation_completed' : 'evaluation_passed',
+        min_score_percentage: threshold,
+      },
+      progress: counts,
+      coverage: counts,
+    };
+  };
+  const modules: ApiPortalSummaryModule[] = objects(path.competencies).flatMap((link) => {
     const competency = data.resources.competencies.find((row) => row.id === link.competency_id);
     if (!competency) return [];
-    const courses = strings(competency.course_ids).flatMap((courseId) => {
-      const course = data.resources.courses.find((row) => row.id === courseId);
-      if (!course) return [];
-      return [
-        {
-          id: course.id,
-          name: text(course.full_name),
-          sections: data.resources.sections
-            .filter((section) => section.course_id === courseId && !section.is_hidden)
-            .sort((a, b) => number(a.rank) - number(b.rank))
-            .map((section) => ({
-              id: section.id,
-              name: text(section.name),
-              content_entries: data.resources.entries
-                .filter((entry) => entry.course_section_id === section.id && entry.is_published)
-                .sort((a, b) => number(a.rank) - number(b.rank))
-                .map((entry) => ({
-                  id: entry.id,
-                  title: text(object(entry.data).title) || 'Contenu démonstration',
-                  completed: completed(competency.id, entry.id),
-                  ...(training?.source.isReadOnlyScorm(entry.id) ? { read_only: true } : {}),
-                })),
-            })),
-        },
-      ];
-    });
+    const courses = strings(competency.course_ids)
+      .flatMap((courseId) => {
+        const course = data.resources.courses.find((row) => row.id === courseId);
+        if (!course) return [];
+        return [
+          {
+            id: course.id,
+            name: text(course.full_name),
+            sections: data.resources.sections
+              .filter((section) => section.course_id === courseId && !section.is_hidden)
+              .sort((a, b) => number(a.rank) - number(b.rank))
+              .map((section) => {
+                const entries = data.resources.entries
+                  .filter((entry) => entry.course_section_id === section.id && entry.is_published)
+                  .sort((a, b) => number(a.rank) - number(b.rank))
+                  .map((entry) => ({
+                    id: entry.id,
+                    title: text(object(entry.data).title) || 'Contenu démonstration',
+                    completed: completed(competency.id, entry.id),
+                    historical_completed: completed(competency.id, entry.id),
+                    ...(training?.source.isReadOnlyScorm(entry.id) ? { read_only: true } : {}),
+                  }));
+                const counts = progress(
+                  entries.filter((entry) => entry.completed).length,
+                  entries.length,
+                );
+                return {
+                  id: section.id,
+                  name: text(section.name),
+                  frozen: false,
+                  content_entries: entries,
+                  progress: counts,
+                  coverage: counts,
+                };
+              }),
+          },
+        ];
+      })
+      .map((course) => {
+        const entries = course.sections.flatMap((section) => section.content_entries);
+        const counts = progress(entries.filter((entry) => entry.completed).length, entries.length);
+        return {
+          ...course,
+          accessible: true,
+          actionable: counts.completed < counts.total,
+          progress: counts,
+          coverage: counts,
+        };
+      });
     const entries = courses.flatMap((course) =>
       course.sections.flatMap((section) => section.content_entries),
     );
@@ -1000,42 +1120,98 @@ function summary(data: SimulationData, enrollmentId: string): ApiPortalLearningP
               object(rule.target_on_success).id === row.id,
           )),
     );
+    const counts = progress(entries.filter((entry) => entry.completed).length, entries.length);
     return [
       {
+        ...simulationNode(data, enrollmentId, 'module', competency.id, counts),
         id: competency.id,
         name: text(competency.shortname),
         accessible: true,
         courses,
-        progress: progress(entries.filter((entry) => entry.completed).length, entries.length),
+        progress: counts,
+        coverage: counts,
         evaluation: evaluation ? evaluationSummary(evaluation) : null,
       },
     ];
   });
-  const final = data.resources.evaluations.find(
+  const finals = data.resources.evaluations.filter(
     (row) => row.learning_path_id === path.id && row.type === 'FINAL' && row.is_published,
   );
-  const finalEvaluation = final ? evaluationSummary(final) : null;
+  const finalEvaluations = finals.map(evaluationSummary);
   const evaluations = [
     ...modules.flatMap((module) => (module.evaluation ? [module.evaluation] : [])),
-    ...(finalEvaluation ? [finalEvaluation] : []),
+    ...finalEvaluations,
   ];
   const accessible = progressionAccess(data, enrollmentId, path.id, modules);
-  modules.forEach((module) => {
-    module.accessible = accessible.has(`module:${module.id}`);
-  });
-  evaluations.forEach((evaluation) => {
-    evaluation.accessible = accessible.has(`evaluation:${evaluation.id}`);
-  });
+  const nodes = [...modules, ...evaluations];
+  for (const node of nodes) {
+    node.accessible = accessible.has(`${node.type}:${node.id}`);
+    node.readable = node.accessible;
+    node.actionable = node.accessible && node.actionable;
+    node.current = node.actionable;
+    if (!node.actionable) node.next_action = null;
+    if (!node.readable) {
+      node.current_execution = null;
+      node.history = [];
+    }
+  }
+  for (const module of modules) {
+    for (const course of module.courses) {
+      course.accessible = module.readable;
+      course.actionable = module.actionable && course.actionable;
+    }
+  }
+  const counts = progress(
+    modules.reduce((sum, module) => sum + module.progress.completed, 0) +
+      evaluations.filter((evaluation) => evaluation.completed).length,
+    modules.reduce((sum, module) => sum + module.progress.total, 0) + evaluations.length,
+  );
+  const attempts = data.attempts.filter((attempt) => attempt.enrollment_id === enrollmentId);
+  const execution: ApiExecutionSnapshot = {
+    // A local stand-in for a definition; never a real frozen definition or enrollment.
+    definition_id: registration.id,
+    state_revision:
+      1 +
+      counts.completed +
+      attempts.length +
+      attempts.filter((attempt) => attempt.status === 'completed').length,
+    status:
+      counts.total > 0 && counts.completed === counts.total ? 'completed' : registration.status,
+    current_execution: nodes.find((node) => node.actionable)?.current_execution ?? null,
+    nodes: Object.fromEntries(
+      nodes.map((node) => [
+        `${node.type}:${node.id}`,
+        {
+          ...node,
+          progress: { completed: node.progress.completed, total: node.progress.total },
+          coverage: {
+            completed: node.coverage.completed,
+            total: node.coverage.total,
+            percentage: node.coverage.percent,
+          },
+        },
+      ]),
+    ),
+    pending_validation_rounds: {},
+    progress: { completed: counts.completed, total: counts.total },
+    coverage: { completed: counts.completed, total: counts.total, percentage: counts.percent },
+    completed_counts: { historical: counts.completed, active_route: counts.completed },
+    unlimited_attempts: evaluations.some((evaluation) => evaluation.max_attempts === null),
+  };
   return {
     id: path.id,
     name: text(path.name),
     modules,
-    final_evaluation: finalEvaluation,
-    progress: progress(
-      modules.reduce((sum, module) => sum + module.progress.completed, 0) +
-        evaluations.filter((evaluation) => evaluation.completed).length,
-      modules.reduce((sum, module) => sum + module.progress.total, 0) + evaluations.length,
-    ),
+    final_evaluation: finalEvaluations[0] ?? null,
+    final_evaluations: finalEvaluations,
+    progress: counts,
+    coverage: counts,
+    definition_id: execution.definition_id,
+    state_revision: execution.state_revision,
+    status: execution.status,
+    current_execution: execution.current_execution,
+    completed_counts: execution.completed_counts,
+    execution,
   };
 }
 
@@ -1077,9 +1253,7 @@ function progressionAccess(
         const courses = modules.find((module) => module.id === source.id)?.courses ?? [];
         const completedCourses = courses.map((course) => {
           const entries = course.sections.flatMap((section) => section.content_entries);
-          // A read-only SCORM must not block the rest of the preview. This is
-          // navigation permission only: progress/completed remain unchanged.
-          return entries.length > 0 && entries.every((entry) => entry.completed || entry.read_only);
+          return entries.length > 0 && entries.every((entry) => entry.completed);
         });
         if (
           completedCourses.length &&
@@ -1842,6 +2016,7 @@ function handleScorm(
   const entry = validateEntry(data, enrollmentId, courseId, entryId, competencyId);
   const pkg = scormPackage(data, text(object(entry.data).scorm_package_id));
   if (pkg.content_entry_id !== entryId) fail(404, 'Simulation : package absent de ce contenu.');
+  const nodeExecutionId = simulationExecutionId(data, enrollmentId, 'module', competencyId);
   if (action === 'launch')
     return response({
       data: {
@@ -1852,6 +2027,7 @@ function handleScorm(
         version: pkg.version,
         launch_path: 'simulation.html',
         launch_url: SIMULATION_SCORM_LAUNCH,
+        node_execution_id: nodeExecutionId,
       },
     });
   const key = `${enrollmentId}:${competencyId}:${entryId}`;
@@ -1859,6 +2035,7 @@ function handleScorm(
     enrollment_id: enrollmentId,
     competency_id: competencyId,
     content_entry_id: entryId,
+    node_execution_id: nodeExecutionId,
     lesson_status: 'not_attempted',
     score_raw: null,
     score_min: null,
@@ -1871,7 +2048,14 @@ function handleScorm(
     updated_at: null,
   };
   if (action === 'tracking/sequence')
-    return response({ data: { last_sequence: current.last_sequence } });
+    return response({
+      data: {
+        last_sequence: current.last_sequence,
+        enrollment_id: enrollmentId,
+        competency_id: competencyId,
+        node_execution_id: nodeExecutionId,
+      },
+    });
   if (method === 'GET') return response({ data: current });
   // Real preview packages are read-only even if a stale caller tries a local commit.
   if (training?.source.isReadOnlyScorm(entryId)) return response({ data: current });
@@ -1992,6 +2176,7 @@ export async function handleSimulationRequest(
         competency_id: competencyId,
         content_entry_id: entryId,
         scorm_package_id: pkg.id,
+        node_execution_id: simulationExecutionId(data, enrollmentId, 'module', competencyId),
       },
     });
   }
@@ -2150,10 +2335,11 @@ export async function handleSimulationRequest(
     );
   if (match && method === 'POST') {
     validateEntry(data, match[1], match[3], match[4], match[2]);
-    if (training?.source.isReadOnlyScorm(match[4])) return response(null, 204);
+    // Includes manual SCORM completion: only synthetic, in-memory enrollment
+    // state changes. The package's tracking, scores and time remain discarded.
     data.completedEntries.add(`${match[1]}:${match[2]}:${match[4]}`);
     refreshEnrollment(data, match[1]);
-    return response(null, 204);
+    return response({ data: summary(data, match[1]).execution });
   }
   match = /^enrollments\/([^/]+)\/evaluations\/([^/]+)\/attempts$/.exec(path);
   if (match && method === 'POST') return startAttempt(data, match[1], match[2]);
@@ -2163,7 +2349,11 @@ export async function handleSimulationRequest(
     const attempt = data.attempts.find((row) => row.id === attemptId);
     if (!attempt) fail(404, 'Simulation : tentative introuvable.');
     if (attempt.status === 'completed') {
-      if (submit) return response({ data: attempt });
+      if (submit)
+        return response({
+          data: attempt,
+          execution: summary(data, attempt.enrollment_id).execution,
+        });
       invalid('Cette tentative est déjà terminée.');
     }
     if (attemptQuizId) {
@@ -2190,7 +2380,7 @@ export async function handleSimulationRequest(
     attempt.status = 'completed';
     attempt.completed_at = SIMULATION_DATE;
     refreshEnrollment(data, attempt.enrollment_id);
-    return response({ data: attempt });
+    return response({ data: attempt, execution: summary(data, attempt.enrollment_id).execution });
   }
 
   match = /^platform\/courses\/([^/]+)\/sections(?:\/([^/]+))?(?:\/(visibility))?$/.exec(path);

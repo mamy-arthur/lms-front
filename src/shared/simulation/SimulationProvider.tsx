@@ -6,7 +6,9 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { LoadingSpinner } from '@/shared/components/feedback/LoadingSpinner';
 import { useAuthStore } from '@/shared/stores/auth.store';
+import { queryClient } from '@/shared/lib/query-client';
 import { clearSimulationContext, endSimulation, synchronizeSimulation } from './service';
+import { hasSimulationData } from './local-api';
 import { useSimulationStore } from './simulation.store';
 
 export function SimulationProvider({ children }: { children: React.ReactNode }) {
@@ -79,6 +81,34 @@ export function SimulationProvider({ children }: { children: React.ReactNode }) 
       document.removeEventListener('visibilitychange', visible);
     };
   }, [userId, hydrated]);
+
+  useEffect(() => {
+    if (!hydrated || !userId) return;
+    const recoverMissingData = (failure: unknown) => {
+      const error = failure as { status?: number; json?: { code?: unknown } } | null;
+      if (error?.status !== 409 || error.json?.code !== 'SIMULATION_INACTIVE') return;
+      const role = useAuthStore.getState().simulatedRole;
+      if (!role || useSimulationStore.getState().phase !== 'ready' || hasSimulationData(role)) {
+        return;
+      }
+
+      // Fast Refresh can reset local-api memory while retaining stores and this
+      // provider. Retrying the same query cannot rebuild it. Reconfirm authority
+      // first: synchronizeSimulation blocks/unmounts pages, clears stale queries
+      // and restores the local engine only after the server response. Never
+      // replay mutations or fall back to a real enrollment request.
+      void synchronizeSimulation();
+    };
+    const cache = queryClient.getQueryCache();
+    const unsubscribe = cache.subscribe((event) => {
+      if (event.type === 'updated' && event.action.type === 'error') {
+        recoverMissingData(event.action.error);
+      }
+    });
+    // Covers errors already cached when this effect is installed/reloaded.
+    for (const query of cache.getAll()) recoverMissingData(query.state.error);
+    return unsubscribe;
+  }, [hydrated, userId]);
 
   const exit = async () => {
     try {

@@ -1,3 +1,9 @@
+import { createElement } from 'react';
+import { cleanup, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import FormationPlayer from '@/modules/portal/resources/formation-learning/FormationPlayer';
+import { renderWithQueryClient } from '@/shared/lib/test-utils';
+import { portalContentEntriesApi, portalContentTimeApi } from '@/shared/api/portal.api';
 import { Role } from '@/shared/constants/roles';
 import { apiGet, apiPost, apiPut, httpClient } from '@/shared/lib/apiClient';
 import { queryClient } from '@/shared/lib/query-client';
@@ -9,6 +15,14 @@ import { startSimulation, endSimulation } from '../service';
 import { clearSimulationData } from '../local-api';
 import { cancelSimulationRequests } from '../transport';
 import { useSimulationStore, type SimulationSession } from '../simulation.store';
+import { mapSummaryToFormation } from '@/modules/portal/resources/formation-learning/lib/summary-mapper';
+import {
+  flattenContents,
+  getDefaultActiveId,
+  resolveActive,
+} from '@/modules/portal/resources/formation-learning/lib/course-utils';
+
+jest.mock('next/navigation', () => ({ useRouter: () => ({ replace: jest.fn() }) }));
 
 const realPath = '33333333-3333-4333-8333-333333333333';
 const realEntry = '44444444-4444-4444-8444-444444444444';
@@ -105,16 +119,32 @@ async function openFormation() {
   );
   const module = summary.data.modules[0];
   const course = module.courses[0];
+  const formation = mapSummaryToFormation(summary.data);
+  expect(resolveActive(formation, getDefaultActiveId(formation))).toMatchObject({
+    kind: 'content',
+    content: { readOnly: true, completed: false },
+  });
   return {
     enrollment,
     competency: module.id,
     course: course.id,
     entry: course.sections[0].content_entries[0].id,
+    nodeExecutionId: module.current_execution!.id,
   };
 }
 
+const launchScorm = (ids: Awaited<ReturnType<typeof openFormation>>) =>
+  portalScormApi.launch({
+    enrollmentId: ids.enrollment,
+    competencyId: ids.competency,
+    courseId: ids.course,
+    entryId: ids.entry,
+    nodeExecutionId: ids.nodeExecutionId,
+  });
+
 beforeEach(() => setup());
 afterEach(() => {
+  cleanup();
   cancelSimulationRequests();
   clearSimulationData();
   queryClient.clear();
@@ -124,16 +154,133 @@ afterEach(() => {
 });
 
 it.each([Role.CLIENT_MANAGER, Role.EDITOR])(
+  '%s progresses through SCORM then three contents in order, with no real writes or tracking',
+  async (role) => {
+    setup(role);
+    const network = fetch as jest.Mock;
+    const original = network.getMockImplementation()!;
+    network.mockImplementation((url: string, options: RequestInit) => {
+      if (url === `${base}/${realPath}`) {
+        return Promise.resolve(
+          result({
+            data: {
+              resources: {
+                ...resources,
+                entries: [
+                  ...resources.entries,
+                  ...[2, 3, 4].map((index) => ({
+                    id: `page-${index}`,
+                    course_section_id: 'section',
+                    content_type_id: 'page-type',
+                    rank: index - 1,
+                    is_published: true,
+                    data: { title: `Contenu ${index}` },
+                  })),
+                ],
+                'content-types': [
+                  ...resources['content-types'],
+                  {
+                    id: 'page-type',
+                    module_type: 'page',
+                    fields: [{ name: 'title', type: 'text' }],
+                  },
+                ],
+              },
+            },
+          }),
+        );
+      }
+      return original(url, options);
+    });
+    const ids = await openFormation();
+    const summaryPath = `enrollments/${ids.enrollment}/summary`;
+    const before = await apiGet<{ data: ApiPortalLearningPathSummary }>(summaryPath);
+    const complete = jest.spyOn(portalContentEntriesApi, 'markComplete');
+    const record = jest.spyOn(portalContentTimeApi, 'record');
+    const tracking = jest.spyOn(portalScormApi, 'commitTracking');
+    const store = jest.spyOn(Storage.prototype, 'setItem');
+    const user = userEvent.setup();
+    const ui = () => createElement(FormationPlayer, { enrollmentId: ids.enrollment });
+    const view = renderWithQueryClient(ui());
+    try {
+      await waitFor(() =>
+        expect(screen.getByTitle('Contenu SCORM')).toHaveAttribute('src', launchUrl),
+      );
+      for (const index of [2, 3, 4]) {
+        expect(screen.getByRole('button', { name: `Contenu ${index}` })).toBeDisabled();
+      }
+      await user.click(screen.getByRole('button', { name: 'Contenu 2' }));
+      expect(screen.getByRole('heading', { name: 'Activité réelle' })).toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: 'Ouvrir la navigation' }));
+      for (const row of screen.getAllByRole('button', { name: 'Contenu 2' })) {
+        expect(row).toBeDisabled();
+      }
+      await user.click(screen.getByRole('button', { name: 'Fermer la navigation' }));
+
+      expect(
+        screen.queryByRole('button', { name: 'Marquer comme terminé' }),
+      ).not.toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: 'Terminer et continuer' }));
+      await screen.findByRole('heading', { name: 'Contenu 2' });
+      expect(complete).toHaveBeenCalledWith(ids.enrollment, ids.competency, ids.course, ids.entry, {
+        node_execution_id: ids.nodeExecutionId,
+        expected_state_revision: before.data.state_revision,
+      });
+      expect(
+        screen.getByRole('button', { name: 'Activité réelle' }).querySelector('.lucide-check'),
+      ).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Contenu 3' })).toBeDisabled();
+      expect(await apiGet(summaryPath)).toMatchObject({ data: { progress: { percent: 25 } } });
+
+      // Completing each ordinary content must advance, never jump back to SCORM 1.
+      for (const index of [2, 3]) {
+        await user.click(screen.getByRole('button', { name: 'Terminer et continuer' }));
+        await screen.findByRole('heading', { name: `Contenu ${index + 1}` });
+        expect(await apiGet(summaryPath)).toMatchObject({
+          data: { progress: { percent: index * 25 } },
+        });
+      }
+      await user.click(screen.getByRole('button', { name: 'Terminer' }));
+      await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Terminé'));
+      expect(screen.getByRole('heading', { name: 'Contenu 4' })).toBeInTheDocument();
+      expect(await apiGet(summaryPath)).toMatchObject({
+        data: { progress: { completed: 4, total: 4, percent: 100 } },
+      });
+      expect(before.data.progress.percent).toBe(0);
+      expect(complete).toHaveBeenCalledTimes(4);
+      expect(record).not.toHaveBeenCalled();
+      expect(tracking).not.toHaveBeenCalled();
+      expect(store).not.toHaveBeenCalled();
+      expect(fetch).toHaveBeenCalledTimes(4); // lifecycle, catalog, graph, signed launch GET
+    } finally {
+      view.unmount();
+      view.queryClient.clear();
+    }
+
+    // The local summary, not the mounted player, now owns all completion state.
+    const reopened = renderWithQueryClient(ui());
+    try {
+      await screen.findByRole('heading', { name: 'Contenu 4' });
+      expect(screen.getByRole('status')).toHaveTextContent('Terminé');
+      expect(await apiGet(summaryPath)).toMatchObject({ data: { progress: { percent: 100 } } });
+    } finally {
+      reopened.unmount();
+      reopened.queryClient.clear();
+    }
+    await endSimulation();
+    const restarted = await openFormation();
+    expect(await apiGet(`enrollments/${restarted.enrollment}/summary`)).toMatchObject({
+      data: { progress: { completed: 0, total: 4, percent: 0 } },
+    });
+  },
+);
+
+it.each([Role.CLIENT_MANAGER, Role.EDITOR])(
   '%s launches an actual package via a dedicated GET with synthetic learner identifiers',
   async (role) => {
     setup(role);
     const ids = await openFormation();
-    const response = await portalScormApi.launch(
-      ids.enrollment,
-      ids.competency,
-      ids.course,
-      ids.entry,
-    );
+    const response = await launchScorm(ids);
     expect(response.data).toMatchObject({
       read_only: true,
       launch_url: launchUrl,
@@ -141,13 +288,14 @@ it.each([Role.CLIENT_MANAGER, Role.EDITOR])(
       enrollment_id: ids.enrollment,
       competency_id: ids.competency,
       scorm_package_id: expect.stringMatching(/^d3e00000-/),
+      node_execution_id: ids.nodeExecutionId,
     });
     expect(fetch).toHaveBeenCalledTimes(4); // start, catalog, graph, launch only
     expect((fetch as jest.Mock).mock.calls.at(-1)[0]).toBe(launchEndpoint);
     expect(JSON.stringify(response)).not.toContain('Private identity');
     expect(JSON.stringify(response)).not.toContain('real-session');
 
-    // Even old queued callers cannot mutate the local preview's tracking or completion.
+    // Tracking and time remain discarded; explicit completion affects only local progression.
     const root = `enrollments/${ids.enrollment}/courses/${ids.course}/entries/${ids.entry}`;
     await apiPut(`${root}/scorm/tracking`, {
       competency_id: ids.competency,
@@ -176,7 +324,7 @@ it.each([Role.CLIENT_MANAGER, Role.EDITOR])(
       },
     });
     expect(await apiGet(`enrollments/${ids.enrollment}/summary`)).toMatchObject({
-      data: { progress: { percent: 0 } },
+      data: { progress: { percent: 100 } },
     });
     expect(fetch).toHaveBeenCalledTimes(4);
   },
@@ -185,24 +333,19 @@ it.each([Role.CLIENT_MANAGER, Role.EDITOR])(
 it('uses the real package version instead of the imported placeholder version', async () => {
   const ids = await openFormation();
   launch.version = '2004';
-  expect(
-    (await portalScormApi.launch(ids.enrollment, ids.competency, ids.course, ids.entry)).data
-      .version,
-  ).toBe('2004');
+  expect((await launchScorm(ids)).data.version).toBe('2004');
 });
 
 it('validates enrollment, module, course and entry membership before requesting a real launch', async () => {
   const ids = await openFormation();
   for (const key of ['enrollment', 'competency', 'course', 'entry'] as const) {
     const invalid = { ...ids, [key]: 'd3e00000-0000-4000-8000-ffffffffffff' };
-    await expect(
-      portalScormApi.launch(invalid.enrollment, invalid.competency, invalid.course, invalid.entry),
-    ).rejects.toBeDefined();
+    await expect(launchScorm(invalid)).rejects.toBeDefined();
   }
   expect(fetch).toHaveBeenCalledTimes(3);
 });
 
-it('permits preview navigation past SCORM prerequisites without recording completion', async () => {
+it('unlocks the next module only after local SCORM completion', async () => {
   const network = fetch as jest.Mock;
   const original = network.getMockImplementation()!;
   network.mockImplementation((url: string, options: RequestInit) => {
@@ -279,9 +422,29 @@ it('permits preview navigation past SCORM prerequisites without recording comple
     completed: false,
     read_only: true,
   });
-  expect(summary.modules[1].accessible).toBe(true);
+  expect(summary.modules[1].accessible).toBe(false);
+  const contents = flattenContents(mapSummaryToFormation(summary));
+  expect(contents.map((entry) => entry.status)).toEqual(['available', 'locked']);
+  expect(contents[0].readOnly).toBe(true);
   const course = summary.modules[1].courses[0];
   const entry = course.sections[0].content_entries[0];
+  await expect(
+    apiGet(`enrollments/${ids.enrollment}/courses/${course.id}/entries/${entry.id}`),
+  ).rejects.toMatchObject({ status: 403 });
+  await apiPost(
+    `enrollments/${ids.enrollment}/competencies/${ids.competency}/courses/${ids.course}/entries/${ids.entry}/complete`,
+  );
+  const { data: updated } = await apiGet<{ data: ApiPortalLearningPathSummary }>(
+    `enrollments/${ids.enrollment}/summary`,
+  );
+  expect(updated.progress).toEqual({ completed: 1, total: 2, percent: 50 });
+  expect(updated.modules[1].accessible).toBe(true);
+  const formation = mapSummaryToFormation(updated);
+  expect(flattenContents(formation).map((content) => content.status)).toEqual([
+    'completed',
+    'available',
+  ]);
+  expect(getDefaultActiveId(formation)).toBe(`${updated.modules[1].id}:${course.id}:${entry.id}`);
   await expect(
     apiGet(`enrollments/${ids.enrollment}/courses/${course.id}/entries/${entry.id}`),
   ).resolves.toMatchObject({ data: { id: entry.id } });
@@ -300,17 +463,13 @@ it.each([
 ])('rejects an invalid launch response: %j', async (patch) => {
   const ids = await openFormation();
   Object.assign(launch, patch);
-  await expect(
-    portalScormApi.launch(ids.enrollment, ids.competency, ids.course, ids.entry),
-  ).rejects.toThrow('Lancement SCORM de simulation invalide');
+  await expect(launchScorm(ids)).rejects.toThrow('Lancement SCORM de simulation invalide');
 });
 
 it('does not silently show a fictitious player when launch is no longer authorized', async () => {
   const ids = await openFormation();
   (fetch as jest.Mock).mockResolvedValueOnce(result({ message: 'Forbidden' }, 403));
-  await expect(
-    portalScormApi.launch(ids.enrollment, ids.competency, ids.course, ids.entry),
-  ).rejects.toMatchObject({ status: 403 });
+  await expect(launchScorm(ids)).rejects.toMatchObject({ status: 403 });
 });
 
 it('rejects a late launch response after exit and blocks stale synthetic callbacks', async () => {
@@ -324,14 +483,17 @@ it('rejects a late launch response after exit and blocks stale synthetic callbac
       });
     });
   });
-  const pending = portalScormApi.launch(ids.enrollment, ids.competency, ids.course, ids.entry);
+  const pending = launchScorm(ids);
   const rejected = expect(pending).rejects.toMatchObject({ name: 'AbortError' });
   await fetching;
   await endSimulation();
   resolve(result({ data: launch }));
   await rejected;
+  await expect(launchScorm(ids)).rejects.toMatchObject({ name: 'AbortError' });
   await expect(
-    portalScormApi.launch(ids.enrollment, ids.competency, ids.course, ids.entry),
+    apiPost(
+      `enrollments/${ids.enrollment}/competencies/${ids.competency}/courses/${ids.course}/entries/${ids.entry}/complete`,
+    ),
   ).rejects.toMatchObject({ name: 'AbortError' });
 });
 

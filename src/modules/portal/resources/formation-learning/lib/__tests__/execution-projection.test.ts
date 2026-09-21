@@ -341,7 +341,7 @@ describe('Visite à démarrer', () => {
 });
 
 describe('Aperçu SCORM en lecture seule', () => {
-  it('ne ferme pas la séquence et n’invente aucune complétion', () => {
+  it('ferme la séquence jusqu’à sa validation comme les autres contenus', () => {
     const preview = summary({
       modules: [
         {
@@ -374,8 +374,12 @@ describe('Aperçu SCORM en lecture seule', () => {
       })),
     ).toEqual([
       { entryId: 'entry-1', readOnly: true, completed: false, status: 'available' },
-      { entryId: 'entry-2', readOnly: undefined, completed: false, status: 'available' },
+      { entryId: 'entry-2', readOnly: undefined, completed: false, status: 'locked' },
       { entryId: 'entry-3', readOnly: undefined, completed: false, status: 'locked' },
     ]);
+    preview.modules[0].courses[0].sections[0].content_entries[0].completed = true;
+    expect(
+      mapModule(preview).courses[0].sections[0].contents.map((content) => content.status),
+    ).toEqual(['completed', 'available', 'locked']);
   });
 });

@@ -274,16 +274,6 @@ export default function ScormPlayer({
       ref={containerRef}
       className={`flex flex-col ${expanded ? 'fixed inset-0 z-50 bg-white' : 'relative gap-2'}`}
     >
-      {preview && (
-        <p
-          role="status"
-          className={`shrink-0 bg-amber-50 px-3 py-2 text-sm text-amber-950 ${
-            expanded && simulatedRole ? 'pr-72' : 'pr-14'
-          }`}
-        >
-          Lecture seule — aucun score, temps ou progression enregistré.
-        </p>
-      )}
       {ready && (
         <div
           className={expanded ? 'absolute right-3 top-3 z-10 flex items-center gap-2' : 'self-end'}

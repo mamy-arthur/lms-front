@@ -1110,7 +1110,12 @@ describe('isolated simulation business API', () => {
     expect(await request(`${base}/tracking`, 'PUT', commit)).toEqual(first);
     expect(await request(`${base}/tracking${query}`)).toEqual(first);
     expect(await request(`${base}/tracking/sequence${query}`)).toEqual({
-      data: { last_sequence: 1 },
+      data: {
+        last_sequence: 1,
+        enrollment_id: id.scormEnrollment,
+        competency_id: id.scormCompetency,
+        node_execution_id: launch.node_execution_id,
+      },
     });
     expect(
       (
