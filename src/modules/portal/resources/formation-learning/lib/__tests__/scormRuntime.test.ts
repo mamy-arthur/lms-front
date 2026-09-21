@@ -503,7 +503,7 @@ describe('ScormSession — fermeture avant complétion', () => {
     });
   });
 
-  it('ne répète pas les commits en file sur une révision rejetée', async () => {
+  it('ne répète jamais les commits en file après un conflit, même si la révision avance ailleurs', async () => {
     mockApi.getTracking.mockResolvedValue({ data: BASE_STATE });
     mockApi.commitTracking.mockRejectedValue(
       Object.assign(new Error('stale'), {
@@ -527,16 +527,17 @@ describe('ScormSession — fermeture avant complétion', () => {
     expect(onExecutionConflict).toHaveBeenCalledTimes(1);
     await expect(session.prepareCompletion()).rejects.toThrow('stale');
     expect(mockApi.commitTracking).toHaveBeenCalledTimes(1);
+
+    // La révision avance ailleurs dans le parcours (une autre visite a transitionné)
+    // et l'appelant relâche le gel de complétion : ce n'est PAS un signal de reprise
+    // pour autant, la visite refusée reste stale pour cette session.
     revision = 8;
     mockApi.commitTracking.mockResolvedValueOnce({ data: BASE_STATE });
     session.resumeAfterFailure();
     session.apiCommit();
     await flush();
-    expect(mockApi.commitTracking).toHaveBeenCalledTimes(2);
-    expect(mockApi.commitTracking.mock.calls[1][1]).toMatchObject({
-      node_execution_id: 'execution-1',
-      expected_state_revision: 8,
-    });
+    expect(mockApi.commitTracking).toHaveBeenCalledTimes(1);
+    await expect(session.prepareCompletion()).rejects.toThrow('stale');
   });
 
   it('ne réactive pas un runtime démonté pendant son préchargement', async () => {
