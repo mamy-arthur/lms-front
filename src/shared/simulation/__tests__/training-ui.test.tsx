@@ -288,9 +288,9 @@ describe('Training simulation controls', () => {
       expect(
         screen.queryByRole('complementary', { name: 'Mode simulation' }),
       ).not.toBeInTheDocument();
-      const exit = screen.getByRole('button', { name: 'Quitter la simulation' });
+      const exit = screen.getByRole('button', { name: 'Quitter la simulation du rôle Stagiaire' });
       expect(exit).toBeEnabled();
-      expect(exit).toHaveAttribute('title', 'Mode simulation : rôle Stagiaire');
+      expect(within(exit).getByText('Stagiaire')).toBeVisible();
       expect(useAuthStore.getState()).toMatchObject({
         user: { role },
         role: Role.TRAINEE,
@@ -317,7 +317,9 @@ describe('Training simulation controls', () => {
     expect(
       screen.queryByRole('complementary', { name: 'Mode simulation' }),
     ).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Quitter la simulation' })).toBeEnabled();
+    expect(
+      screen.getByRole('button', { name: 'Quitter la simulation du rôle Stagiaire' }),
+    ).toBeEnabled();
     expect(screen.getByText(ordinaryDescription)).toBeVisible();
     expect(screen.queryByText(/Aperçu stagiaire/)).not.toBeInTheDocument();
     expect(screen.getByText('Formation de démonstration')).toBeVisible();
@@ -339,7 +341,7 @@ describe('Training simulation controls', () => {
       expect(screen.getByText(ordinaryDescription)).toBeVisible();
       expect(screen.queryByText(/Aperçu stagiaire/)).not.toBeInTheDocument();
       expect(
-        screen.queryByRole('button', { name: 'Quitter la simulation' }),
+        screen.queryByRole('button', { name: /^Quitter la simulation/ }),
       ).not.toBeInTheDocument();
     },
   );

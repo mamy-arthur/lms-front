@@ -12,6 +12,8 @@ import { useSimulationStore } from '@/shared/simulation/simulation.store';
 import { ScormSession } from '../../lib/scormRuntime';
 import ScormPlayer from '../ScormPlayer';
 
+jest.mock('next/navigation', () => ({ useRouter: () => ({ replace: jest.fn() }) }));
+
 jest.mock('@/shared/api/portal-scorm.api', () => ({
   portalScormApi: {
     launch: jest.fn(),
@@ -36,6 +38,7 @@ const initialAuth = useAuthStore.getState();
 const initialSimulation = useSimulationStore.getState();
 const originalFetch = Object.getOwnPropertyDescriptor(global, 'fetch');
 const originalBeacon = Object.getOwnPropertyDescriptor(navigator, 'sendBeacon');
+const originalFullscreenElement = Object.getOwnPropertyDescriptor(document, 'fullscreenElement');
 const mockFetch = jest.fn();
 const mockBeacon = jest.fn();
 const queryClients: QueryClient[] = [];
@@ -146,6 +149,11 @@ afterEach(() => {
   else Reflect.deleteProperty(global, 'fetch');
   if (originalBeacon) Object.defineProperty(navigator, 'sendBeacon', originalBeacon);
   else Reflect.deleteProperty(navigator, 'sendBeacon');
+  if (originalFullscreenElement) {
+    Object.defineProperty(document, 'fullscreenElement', originalFullscreenElement);
+  } else {
+    Reflect.deleteProperty(document, 'fullscreenElement');
+  }
 });
 
 describe('ScormPlayer read-only real packages', () => {
@@ -258,18 +266,61 @@ describe('ScormPlayer read-only real packages', () => {
     noTracking();
   });
 
-  it('uses the overlay below the simulation exit header, not native fullscreen', async () => {
+  it('keeps the simulation exit inside native fullscreen', async () => {
     const view = mount();
     const button = await screen.findByRole('button', { name: 'Afficher en plein écran' });
-    const container = button.parentElement!;
-    const requestFullscreen = jest.fn();
+    const container = screen.getByTitle('Contenu SCORM').parentElement!;
+    const requestFullscreen = jest.fn().mockImplementation(async () => {
+      Object.defineProperty(document, 'fullscreenElement', {
+        configurable: true,
+        value: container,
+      });
+      document.dispatchEvent(new Event('fullscreenchange'));
+    });
     Object.defineProperty(container, 'requestFullscreen', { value: requestFullscreen });
-    fireEvent.click(button);
-    expect(requestFullscreen).not.toHaveBeenCalled();
-    expect(container).toHaveClass('fixed', 'top-16', 'z-50');
+    await act(async () => fireEvent.click(button));
+
+    expect(requestFullscreen).toHaveBeenCalledTimes(1);
+    expect(container).toHaveClass('fixed', 'inset-0', 'z-50');
     expect(screen.getByRole('button', { name: 'Quitter le plein écran' })).toBeVisible();
+    const exit = screen.getByRole('button', { name: 'Quitter la simulation du rôle Stagiaire' });
+    expect(exit).toBeEnabled();
+    expect(container).toContainElement(exit);
+
+    act(() => {
+      Object.defineProperty(document, 'fullscreenElement', { configurable: true, value: null });
+      document.dispatchEvent(new Event('fullscreenchange'));
+    });
+    expect(container).not.toHaveClass('fixed');
+    expect(screen.getByRole('button', { name: 'Afficher en plein écran' })).toBeVisible();
+    expect(
+      screen.queryByRole('button', { name: /^Quitter la simulation/ }),
+    ).not.toBeInTheDocument();
+    expect(view.onCompleted).not.toHaveBeenCalled();
+    noTracking();
+  });
+
+  it('falls back to an overlay with the simulation exit when native fullscreen is rejected', async () => {
+    const view = mount();
+    const button = await screen.findByRole('button', { name: 'Afficher en plein écran' });
+    const container = screen.getByTitle('Contenu SCORM').parentElement!;
+    const requestFullscreen = jest.fn().mockRejectedValue(new Error('Fullscreen unavailable'));
+    Object.defineProperty(container, 'requestFullscreen', { value: requestFullscreen });
+    await act(async () => fireEvent.click(button));
+
+    expect(requestFullscreen).toHaveBeenCalledTimes(1);
+    expect(container).toHaveClass('fixed', 'inset-0', 'z-50');
+    expect(screen.getByRole('button', { name: 'Quitter le plein écran' })).toBeVisible();
+    const exit = screen.getByRole('button', { name: 'Quitter la simulation du rôle Stagiaire' });
+    expect(exit).toBeEnabled();
+    expect(container).toContainElement(exit);
+
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(container).not.toHaveClass('fixed');
+    expect(screen.getByRole('button', { name: 'Afficher en plein écran' })).toBeVisible();
+    expect(
+      screen.queryByRole('button', { name: /^Quitter la simulation/ }),
+    ).not.toBeInTheDocument();
     expect(view.onCompleted).not.toHaveBeenCalled();
     noTracking();
   });

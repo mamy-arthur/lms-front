@@ -21,7 +21,10 @@ global.ResizeObserver = jest.fn().mockImplementation(() => ({
 
 // jsdom n'implémente ni l'API Pointer Capture ni scrollIntoView, dont Radix Select
 // a besoin pour ouvrir son menu et y déplacer le focus.
-Element.prototype.hasPointerCapture ??= jest.fn(() => false);
-Element.prototype.setPointerCapture ??= jest.fn();
-Element.prototype.releasePointerCapture ??= jest.fn();
-Element.prototype.scrollIntoView ??= jest.fn();
+// Les suites @jest-environment node n'ont pas de DOM.
+if (typeof Element !== 'undefined') {
+  Element.prototype.hasPointerCapture ??= jest.fn(() => false);
+  Element.prototype.setPointerCapture ??= jest.fn();
+  Element.prototype.releasePointerCapture ??= jest.fn();
+  Element.prototype.scrollIntoView ??= jest.fn();
+}

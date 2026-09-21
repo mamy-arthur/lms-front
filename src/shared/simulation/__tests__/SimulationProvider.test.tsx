@@ -119,9 +119,11 @@ describe('SimulationProvider', () => {
         expect(
           screen.queryByRole('complementary', { name: 'Mode simulation' }),
         ).not.toBeInTheDocument();
-        const exit = screen.getByRole('button', { name: 'Quitter la simulation' });
+        const exit = screen.getByRole('button', {
+          name: `Quitter la simulation du rôle ${label}`,
+        });
         expect(exit).toBeEnabled();
-        expect(exit).toHaveAttribute('title', `Mode simulation : rôle ${label}`);
+        expect(exit).toHaveTextContent(label);
       }
       expect(useAuthStore.getState().user).toBe(realUser);
     },

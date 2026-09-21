@@ -222,10 +222,12 @@ describe('SimulationControls', () => {
 
       expect(screen.queryByRole('button', { name: 'Simuler un rôle' })).not.toBeInTheDocument();
       expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
-      const exit = screen.getByRole('button', { name: 'Quitter la simulation' });
+      const exit = screen.getByRole('button', {
+        name: `Quitter la simulation du rôle ${labels[simulatedRole]}`,
+      });
       expect(exit).toBeEnabled();
       expect(exit).toHaveClass('h-7');
-      expect(exit).toHaveAttribute('title', `Mode simulation : rôle ${labels[simulatedRole]}`);
+      expect(within(exit).getByText(labels[simulatedRole])).toBeVisible();
       expect(mockStart).not.toHaveBeenCalled();
     },
   );
@@ -234,7 +236,9 @@ describe('SimulationControls', () => {
     authorize(Role.EDITOR, { simulated_role: Role.TRAINEE, allowed_roles: [] });
     render(<SimulationControls />);
 
-    expect(screen.getByRole('button', { name: 'Quitter la simulation' })).toBeEnabled();
+    expect(
+      screen.getByRole('button', { name: 'Quitter la simulation du rôle Stagiaire' }),
+    ).toBeEnabled();
     expect(screen.queryByRole('button', { name: 'Simuler un rôle' })).not.toBeInTheDocument();
   });
 
@@ -254,11 +258,12 @@ describe('SimulationControls', () => {
     const user = userEvent.setup();
     render(<SimulationControls />);
 
-    await user.click(screen.getByRole('button', { name: 'Quitter la simulation' }));
+    const exit = screen.getByRole('button', { name: 'Quitter la simulation du rôle Stagiaire' });
+    await user.click(exit);
     expect(mockEnd).toHaveBeenCalledTimes(1);
     expect(mockReplace).not.toHaveBeenCalled();
-    expect(screen.getByRole('button', { name: 'Quitter la simulation' })).toBeDisabled();
-    await user.click(screen.getByRole('button', { name: 'Quitter la simulation' }));
+    expect(exit).toBeDisabled();
+    await user.click(exit);
     expect(mockEnd).toHaveBeenCalledTimes(1);
 
     await act(async () => {
@@ -278,7 +283,9 @@ describe('SimulationControls', () => {
       sessionId: 'real-session',
     });
     expect(screen.getByRole('button', { name: 'Simuler un rôle' })).toBeEnabled();
-    expect(screen.queryByRole('button', { name: 'Quitter la simulation' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /^Quitter la simulation/ }),
+    ).not.toBeInTheDocument();
     clearAuth.mockRestore();
   });
 
@@ -288,7 +295,7 @@ describe('SimulationControls', () => {
     const user = userEvent.setup();
     render(<SimulationControls />);
 
-    const exit = screen.getByRole('button', { name: 'Quitter la simulation' });
+    const exit = screen.getByRole('button', { name: 'Quitter la simulation du rôle Stagiaire' });
     expect(exit).toBeDisabled();
     await user.click(exit);
     expect(mockEnd).not.toHaveBeenCalled();
@@ -301,7 +308,9 @@ describe('SimulationControls', () => {
     const user = userEvent.setup();
     render(<SimulationControls />);
 
-    await user.click(screen.getByRole('button', { name: 'Quitter la simulation' }));
+    await user.click(
+      screen.getByRole('button', { name: 'Quitter la simulation du rôle Stagiaire' }),
+    );
 
     await waitFor(() =>
       expect(toast.error).toHaveBeenCalledWith(
@@ -310,7 +319,9 @@ describe('SimulationControls', () => {
     );
     expect(mockReplace).not.toHaveBeenCalled();
     expect(useAuthStore.getState().simulatedRole).toBe(Role.TRAINEE);
-    expect(screen.getByRole('button', { name: 'Quitter la simulation' })).toBeEnabled();
+    expect(
+      screen.getByRole('button', { name: 'Quitter la simulation du rôle Stagiaire' }),
+    ).toBeEnabled();
     expect(screen.queryByRole('button', { name: 'Simuler un rôle' })).not.toBeInTheDocument();
   });
 
