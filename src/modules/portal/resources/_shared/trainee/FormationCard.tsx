@@ -12,6 +12,14 @@ interface FormationCardProps {
 
 export function FormationCard({ formation }: FormationCardProps) {
   const router = useRouter();
+  const status =
+    formation.status === 'failed'
+      ? { label: 'Échouée', className: 'bg-red-100 text-red-700' }
+      : formation.status === 'completed'
+        ? { label: 'Terminée', className: 'bg-emerald-100 text-emerald-700' }
+        : formation.status === 'in_progress'
+          ? { label: 'En cours', className: 'bg-(--color-primary)/10 text-(--color-primary)' }
+          : { label: 'À commencer', className: 'bg-slate-100 text-slate-600' };
 
   const navigate = () => router.push(`/my-learning-paths/${formation.slug}`);
 
@@ -49,6 +57,9 @@ export function FormationCard({ formation }: FormationCardProps) {
         )}
       </div>
       <CardHeader>
+        <Badge className={`w-fit rounded-sm px-1 py-0 text-[0.7rem] ${status.className}`}>
+          {status.label}
+        </Badge>
         <CardTitle className="line-clamp-2 text-sm leading-snug">{formation.title}</CardTitle>
         {formation.description && (
           <p className="line-clamp-2 text-[12px] text-muted-foreground">{formation.description}</p>
@@ -56,7 +67,7 @@ export function FormationCard({ formation }: FormationCardProps) {
       </CardHeader>
       <CardContent className="flex flex-1 flex-col gap-3 text-xs text-muted-foreground -mt-1">
         <div className="space-y-1">
-          <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+          <div className="h-1 w-full overflow-hidden rounded-full bg-muted">
             <div
               className="h-full rounded-full bg-(--color-primary) transition-all duration-700"
               style={{ width: `${formation.progress}%` }}

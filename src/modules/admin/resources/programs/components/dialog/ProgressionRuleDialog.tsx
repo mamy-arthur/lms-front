@@ -100,20 +100,23 @@ export function ProgressionRuleDialog({
     value: ProgressionRuleFormData[K],
   ) => setForm((f) => ({ ...f, [key]: value }));
 
-  const toggleFailurePath = (enabled: boolean) => {
-    if (!enabled) {
-      setForm((f) => ({
-        ...f,
-        failureTargetNodeId: null,
-        maxAttempts: null,
-        exhaustedTargetNodeId: null,
-      }));
-    } else {
-      setField('failureTargetNodeId', nodeOptions.find((n) => n.stepType !== 'email')?.id ?? null);
-    }
+  const setPassedCondition = () => {
+    const previousScore =
+      form.condition?.type === 'evaluation_passed' ? form.condition.min_score_percentage : 50;
+    setForm((currentForm) => ({
+      ...currentForm,
+      condition: {
+        type: 'evaluation_passed',
+        min_score_percentage: previousScore,
+      },
+      failureTargetNodeId:
+        currentForm.failureTargetNodeId ??
+        nodeOptions.find((node) => node.stepType !== 'email')?.id ??
+        null,
+    }));
   };
 
-  const hasFailurePath = form.failureTargetNodeId !== null;
+  const requiresFailureTarget = form.condition?.type === 'evaluation_passed';
   const hasMaxAttempts = form.maxAttempts !== null;
 
   return (
@@ -184,16 +187,7 @@ export function ProgressionRuleDialog({
                         className="data-checked:bg-(--color-primary)"
                         checked={form.condition?.type === 'evaluation_passed'}
                         onCheckedChange={(checked) => {
-                          if (checked) {
-                            const prevScore =
-                              form.condition?.type === 'evaluation_passed'
-                                ? form.condition.min_score_percentage
-                                : 50;
-                            setField('condition', {
-                              type: 'evaluation_passed',
-                              min_score_percentage: prevScore,
-                            });
-                          }
+                          if (checked) setPassedCondition();
                         }}
                       />
                     </div>
@@ -273,107 +267,96 @@ export function ProgressionRuleDialog({
           </section>
 
           {/* ── Failure path ── */}
-          {form.condition !== null &&
-            form.condition.type !== 'evaluation_completed' &&
-            sourceNodeType === 'evaluation' &&
-            nodeOptions.length > 0 && (
-              <section>
-                <Separator className="mb-4" />
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="font-semibold text-foreground">Chemin en cas d&apos;échec</p>
-                    <p className="mt-0.5 text-xs text-muted-foreground">
-                      Rediriger le stagiaire vers un autre nœud si la condition n&apos;est pas
-                      satisfaite
-                    </p>
-                  </div>
-                  <Switch
-                    checked={hasFailurePath}
-                    onCheckedChange={toggleFailurePath}
-                    className="data-checked:bg-(--color-primary)"
-                    aria-label="Activer le chemin d'échec"
-                  />
+          {requiresFailureTarget && (
+            <section>
+              <Separator className="mb-4" />
+              <div>
+                <p className="font-semibold text-foreground">Chemin en cas d&apos;échec</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Rediriger le stagiaire vers un autre nœud si le score minimum n&apos;est pas
+                  atteint
+                </p>
+              </div>
+
+              <div className="mt-4 space-y-4">
+                {/* Failure target */}
+                <div className="flex flex-col space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">
+                    Rediriger vers <span aria-hidden="true">*</span>
+                  </Label>
+                  <Select
+                    value={form.failureTargetNodeId ?? ''}
+                    onValueChange={(v) => setField('failureTargetNodeId', v)}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Choisir un nœud" className="w-full" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {nodeOptions
+                        .filter((n) => n.stepType !== 'email')
+                        .map((n) => (
+                          <SelectItem key={n.id} value={n.id}>
+                            {n.label}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
-                {hasFailurePath && (
-                  <div className="mt-4 space-y-4">
-                    {/* Failure target */}
-                    <div className="flex flex-col space-y-1.5">
-                      <Label className="text-xs text-muted-foreground">Rediriger vers</Label>
-                      <Select
-                        value={form.failureTargetNodeId ?? ''}
-                        onValueChange={(v) => setField('failureTargetNodeId', v)}
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Choisir un nœud" className="w-full" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {nodeOptions
-                            .filter((n) => n.stepType !== 'email')
-                            .map((n) => (
-                              <SelectItem key={n.id} value={n.id}>
-                                {n.label}
-                              </SelectItem>
-                            ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                {/* Max attempts */}
+                <div className="flex flex-col space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">
+                    Nombre maximum de tentatives
+                  </Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      min={1}
+                      placeholder="Illimité"
+                      value={form.maxAttempts ?? ''}
+                      onChange={(e) =>
+                        setField(
+                          'maxAttempts',
+                          e.target.value ? Math.max(1, Number(e.target.value)) : null,
+                        )
+                      }
+                      className="w-32"
+                    />
+                    <span className="text-xs text-muted-foreground">vide = illimité</span>
+                  </div>
+                </div>
 
-                    {/* Max attempts */}
-                    <div className="flex flex-col space-y-1.5">
-                      <Label className="text-xs text-muted-foreground">
-                        Nombre maximum de tentatives
-                      </Label>
-                      <div className="flex items-center gap-2">
-                        <Input
-                          type="number"
-                          min={1}
-                          placeholder="Illimité"
-                          value={form.maxAttempts ?? ''}
-                          onChange={(e) =>
-                            setField(
-                              'maxAttempts',
-                              e.target.value ? Math.max(1, Number(e.target.value)) : null,
-                            )
-                          }
-                          className="w-32"
-                        />
-                        <span className="text-xs text-muted-foreground">vide = illimité</span>
-                      </div>
-                    </div>
-
-                    {/* Exhausted target — only shown when maxAttempts is set */}
-                    {hasMaxAttempts && (
-                      <div className="flex flex-col space-y-1.5">
-                        <Label className="text-xs text-muted-foreground">
-                          Après épuisement des tentatives, rediriger vers
-                        </Label>
-                        <Select
-                          value={form.exhaustedTargetNodeId ?? '_none_'}
-                          onValueChange={(v) =>
-                            setField('exhaustedTargetNodeId', v === '_none_' ? null : v)
-                          }
-                        >
-                          <SelectTrigger className="w-full">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="_none_">Aucun</SelectItem>
-                            {nodeOptions
-                              .filter((n) => n.stepType !== 'email')
-                              .map((n) => (
-                                <SelectItem key={n.id} value={n.id}>
-                                  {n.label}
-                                </SelectItem>
-                              ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
+                {/* Exhausted target — only shown when maxAttempts is set */}
+                {hasMaxAttempts && (
+                  <div className="flex flex-col space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">
+                      Après épuisement des tentatives, rediriger vers
+                    </Label>
+                    <Select
+                      value={form.exhaustedTargetNodeId ?? '_formation_failed_'}
+                      onValueChange={(v) =>
+                        setField('exhaustedTargetNodeId', v === '_formation_failed_' ? null : v)
+                      }
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="_formation_failed_">Échec de la formation</SelectItem>
+                        {nodeOptions
+                          .filter((n) => n.stepType !== 'email')
+                          .map((n) => (
+                            <SelectItem key={n.id} value={n.id}>
+                              {n.label}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 )}
-              </section>
-            )}
+              </div>
+            </section>
+          )}
         </div>
 
         <DialogFooter>
@@ -385,6 +368,7 @@ export function ProgressionRuleDialog({
               onSave(form);
               onOpenChange(false);
             }}
+            disabled={requiresFailureTarget && !form.failureTargetNodeId}
             className="bg-(--color-primary) hover:bg-(--color-primary)/50"
           >
             <Plus />

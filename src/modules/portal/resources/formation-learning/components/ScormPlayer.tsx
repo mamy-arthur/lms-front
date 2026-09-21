@@ -5,13 +5,21 @@ import { useQuery } from '@tanstack/react-query';
 import { AlertCircle, Loader2, Maximize2, Minimize2 } from 'lucide-react';
 import { portalScormApi } from '@/shared/api/portal-scorm.api';
 import { portalScormLaunchKeys } from '@/shared/queries/keys';
-import { ScormSession, bindScormWindowApi } from '../lib/scormRuntime';
+import { ScormSession, bindScormWindowApi, type RegisterScormSession } from '../lib/scormRuntime';
 
 interface Props {
   enrollmentId: string;
+  competencyId: string;
   courseId: string;
   entryId: string;
+  /** Visite consultée, active ou historique — obligatoire sur les routes SCORM. */
+  nodeExecutionId: string;
+  expectedStateRevision: number;
+  readOnly: boolean;
   onCompleted?: () => void;
+  /** Le contexte transmis n'est plus valide : l'appelant doit recharger l'état. */
+  onExecutionConflict?: (error: unknown) => void;
+  registerSession?: RegisterScormSession;
 }
 
 /**
@@ -37,16 +45,53 @@ function fullscreenElement(): Element | null {
  * renders the launch page in a sandboxed same-origin iframe so the SCORM
  * content can find `window.parent.API`/`API_1484_11`.
  */
-export default function ScormPlayer({ enrollmentId, courseId, entryId, onCompleted }: Props) {
+export default function ScormPlayer({
+  enrollmentId,
+  competencyId,
+  courseId,
+  entryId,
+  nodeExecutionId,
+  expectedStateRevision,
+  readOnly,
+  onCompleted,
+  onExecutionConflict,
+  registerSession,
+}: Props) {
   const launchQuery = useQuery({
-    queryKey: portalScormLaunchKeys.detail(enrollmentId, courseId, entryId),
-    queryFn: async () => (await portalScormApi.launch(enrollmentId, courseId, entryId)).data,
+    queryKey: portalScormLaunchKeys.detail(
+      enrollmentId,
+      competencyId,
+      courseId,
+      entryId,
+      nodeExecutionId,
+    ),
+    queryFn: async () =>
+      (
+        await portalScormApi.launch({
+          enrollmentId,
+          competencyId,
+          courseId,
+          entryId,
+          nodeExecutionId,
+        })
+      ).data,
     staleTime: 0,
   });
 
   const [isReady, setIsReady] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const onCompletedRef = useRef(onCompleted);
+  onCompletedRef.current = onCompleted;
+  const onExecutionConflictRef = useRef(onExecutionConflict);
+  onExecutionConflictRef.current = onExecutionConflict;
+  // Lue par ref : la révision bouge à chaque transition du parcours et ne doit
+  // pas recréer la session RTE sous les pieds du contenu SCORM en cours.
+  const revisionRef = useRef(expectedStateRevision);
+  revisionRef.current = expectedStateRevision;
+  const readOnlyRef = useRef(readOnly);
+  readOnlyRef.current = readOnly;
+
   // Two distinct ways of being expanded: the real Fullscreen API, and a fixed
   // overlay used only when the API refuses (iPhone Safari, a restrictive
   // Permissions-Policy upstream). `expanded` is what the layout keys off.
@@ -106,11 +151,21 @@ export default function ScormPlayer({ enrollmentId, courseId, entryId, onComplet
 
     const session = new ScormSession({
       enrollmentId,
+      competencyId,
       courseId,
       entryId,
+      nodeExecutionId,
+      expectedStateRevision: () => revisionRef.current,
+      readOnly: () => readOnlyRef.current,
       version: launch.version,
-      onCompleted: () => onCompleted?.(),
+      onCompleted: () => {
+        if (!cancelled) onCompletedRef.current?.();
+      },
+      onExecutionConflict: (error) => {
+        if (!cancelled) onExecutionConflictRef.current?.(error);
+      },
     });
+    const unregister = registerSession?.(session);
 
     // Bound *before* the iframe starts loading: SCORM content looks up
     // window.parent.API(_1484_11) as soon as it executes, not on "load".
@@ -122,10 +177,23 @@ export default function ScormPlayer({ enrollmentId, courseId, entryId, onComplet
 
     return () => {
       cancelled = true;
-      session.apiFinish();
+      session.dispose();
+      unregister?.();
       unbind();
     };
-  }, [launch?.scorm_package_id, launch?.version]);
+    // `nodeExecutionId` recrée délibérément la session : une nouvelle visite part
+    // d'un runtime vierge, sans reprise du score, de `suspend_data`, du temps ni
+    // de la séquence de la précédente.
+  }, [
+    enrollmentId,
+    competencyId,
+    courseId,
+    entryId,
+    nodeExecutionId,
+    launch?.scorm_package_id,
+    launch?.version,
+    registerSession,
+  ]);
 
   if (launchQuery.isLoading) {
     return (

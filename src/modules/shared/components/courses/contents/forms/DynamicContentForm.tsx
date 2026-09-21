@@ -18,6 +18,8 @@ interface DynamicContentFormProps {
   onSubmit: (data: Record<string, unknown>) => void;
   onCancel: () => void;
   isSubmitting?: boolean;
+  /** Si la publication est choisie, attendre un package exploitable avant l'enregistrement. */
+  requireReadyScorm?: boolean;
   /** Package déjà attaché à l'entrée (édition), absent pour une entrée pas encore créée. */
   attachedScormPackageId?: string | null;
   /** Notifié en continu (upload + statut temps réel) pour le rattachement au clic Enregistrer
@@ -31,6 +33,7 @@ export function DynamicContentForm({
   onSubmit,
   onCancel,
   isSubmitting = false,
+  requireReadyScorm = false,
   attachedScormPackageId,
   onScormStateChange,
 }: DynamicContentFormProps) {
@@ -63,6 +66,7 @@ export function DynamicContentForm({
   });
   const [showScormRequiredError, setShowScormRequiredError] = useState(false);
   const scormPackageMissing = isScorm && !scormState.packageId;
+  const scormNotReady = isScorm && requireReadyScorm && scormState.status !== 'ready';
 
   const handleScormStateChange = (state: ScormPackageFieldState) => {
     setScormState(state);
@@ -86,6 +90,7 @@ export function DynamicContentForm({
       setShowScormRequiredError(true);
       return;
     }
+    if (isSubmitting || scormNotReady) return;
     const schema = buildContentSchema(activeFields);
     const result = schema.safeParse(fieldValues);
     if (!result.success) {
@@ -143,13 +148,18 @@ export function DynamicContentForm({
           Un package SCORM doit être uploadé avant de pouvoir enregistrer.
         </p>
       )}
+      {scormNotReady && !scormPackageMissing && (
+        <p className="text-xs text-muted-foreground" role="status">
+          Le package SCORM doit être prêt avant de pouvoir enregistrer et publier.
+        </p>
+      )}
       <div className="flex justify-end gap-2">
         <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
           Annuler
         </Button>
         <Button
           type="submit"
-          disabled={isSubmitting}
+          disabled={isSubmitting || scormNotReady}
           className="bg-(--color-primary) hover:bg-(--color-primary)/80"
         >
           {isSubmitting ? (

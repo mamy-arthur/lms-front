@@ -1,5 +1,45 @@
 import { getDefaultActiveId, resolveActive } from '../course-utils';
-import type { Formation, CourseContent } from '../types';
+import type { Formation, CourseContent, FormationExecution, NodeExecutionState } from '../types';
+
+const NODE_EXECUTION: NodeExecutionState = {
+  currentExecutionId: 'exec-m1',
+  readExecutionId: 'exec-m1',
+  currentVisit: null,
+  current: true,
+  actionable: true,
+  readable: true,
+  requiredToRepeat: false,
+  historicalCompleted: false,
+  currentScore: null,
+  currentResult: null,
+  round: null,
+  nextAction: 'complete_content',
+  progressPercent: 0,
+  coveragePercent: 0,
+};
+
+const EXECUTION: FormationExecution = {
+  definitionId: 'definition-1',
+  stateRevision: 7,
+  status: 'in_progress',
+  currentExecution: null,
+  terminal: false,
+  coveragePercent: 0,
+  completedCounts: { historical: 0, activeRoute: 0 },
+  unlimitedAttempts: false,
+  snapshot: {
+    definition_id: 'definition-1',
+    state_revision: 7,
+    status: 'in_progress',
+    current_execution: null,
+    nodes: {},
+    pending_validation_rounds: {},
+    progress: { total: 0, completed: 0 },
+    coverage: { total: 0, completed: 0 },
+    completed_counts: { historical: 0, active_route: 0 },
+    unlimited_attempts: false,
+  },
+};
 
 function makeContent(id: string, completed: boolean, locked = false): CourseContent {
   return {
@@ -9,6 +49,7 @@ function makeContent(id: string, completed: boolean, locked = false): CourseCont
     title: id,
     status: locked ? 'locked' : completed ? 'completed' : 'available',
     completed,
+    historicalCompleted: completed,
   };
 }
 
@@ -18,6 +59,7 @@ function makeFormation(contents: CourseContent[]): Formation {
     slug: 'f1',
     title: 'Formation',
     progress: 0,
+    execution: EXECUTION,
     nodes: [
       {
         id: 'm1',
@@ -27,6 +69,7 @@ function makeFormation(contents: CourseContent[]): Formation {
         status: 'available',
         progress: 0,
         order: 1,
+        execution: NODE_EXECUTION,
         courses: [
           {
             id: 'course-1',
@@ -78,7 +121,14 @@ describe('getDefaultActiveId', () => {
   });
 
   it('returns empty string when formation has no nodes', () => {
-    const empty: Formation = { id: 'f1', slug: 'f1', title: 'F', progress: 0, nodes: [] };
+    const empty: Formation = {
+      id: 'f1',
+      slug: 'f1',
+      title: 'F',
+      progress: 0,
+      nodes: [],
+      execution: EXECUTION,
+    };
     expect(getDefaultActiveId(empty)).toBe('');
   });
 });
@@ -110,7 +160,7 @@ describe('Résolution des destinations de navigation', () => {
       status: 'locked',
       order: 2,
       passingScore: 70,
-      questions: [],
+      execution: { ...NODE_EXECUTION, actionable: false, readable: false, current: false },
     });
     expect(resolveActive(formation, 'eval-1')).toBeNull();
   });

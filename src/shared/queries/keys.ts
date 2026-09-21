@@ -144,8 +144,24 @@ export const portalLearnerEvaluationKeys = {
 
 export const portalScormLaunchKeys = {
   all: ['portal', 'scorm-launch'] as const,
-  detail: (enrollmentId: string, courseId: string, entryId: string) =>
-    [...portalScormLaunchKeys.all, enrollmentId, courseId, entryId] as const,
+  // `nodeExecutionId` fait partie de la clé : chaque visite a son propre runtime
+  // SCORM, et réutiliser le lancement d'un passage précédent ressusciterait son
+  // `suspend_data`, son score et sa séquence.
+  detail: (
+    enrollmentId: string,
+    competencyId: string,
+    courseId: string,
+    entryId: string,
+    nodeExecutionId: string,
+  ) =>
+    [
+      ...portalScormLaunchKeys.all,
+      enrollmentId,
+      competencyId,
+      courseId,
+      entryId,
+      nodeExecutionId,
+    ] as const,
 };
 
 export const questionBankKeys = {

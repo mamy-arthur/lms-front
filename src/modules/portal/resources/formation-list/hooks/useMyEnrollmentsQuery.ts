@@ -35,6 +35,7 @@ const STATUS_MAP: Record<string, FormationStatus> = {
   in_progress: 'in_progress',
   completed: 'completed',
   expired: 'not_started',
+  failed: 'failed',
 };
 
 function normalizeEnrollment(api: ApiMeEnrollment): TraineeFormation {
@@ -54,6 +55,14 @@ function normalizeEnrollment(api: ApiMeEnrollment): TraineeFormation {
     lastActivity: formatRelativeDate(api.created_at),
     completedDate: api.completed_at
       ? new Date(api.completed_at).toLocaleDateString('fr-FR', {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
+        })
+      : undefined,
+    failureReason: api.failure_reason,
+    failedAt: api.failed_at
+      ? new Date(api.failed_at).toLocaleDateString('fr-FR', {
           day: 'numeric',
           month: 'long',
           year: 'numeric',
