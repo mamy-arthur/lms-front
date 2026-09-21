@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useAddEntry } from '../hooks/useCourseContentApi';
+import { useRef, useState } from 'react';
+import { useAddEntry, useUpdateEntry } from '../hooks/useCourseContentApi';
 import type { ApiContentEntry } from '../hooks/useCourseContentApi';
 import type { ContentTypeResource } from '@/shared/types/content-type.types';
 import { DynamicContentForm } from './forms/DynamicContentForm';
@@ -9,15 +9,19 @@ import type { ScormPackageFieldState } from './forms/fields/ScormPackageField';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { CatalogLockAlert } from '@/shared/components/CatalogLockAlert';
 import { toast } from 'sonner';
+import { apiMessage } from '@/shared/utils/api-error';
 
 /**
  * Right-panel component shown when the user has picked a ContentType but
  * hasn't saved the entry yet (local / pending state).
  *
  * No API call is made until the user clicks "Enregistrer".
- * On submit  → POST /platform/course-sections/{sectionId}/entries
+ * On submit  → create, then publish only if the publication switch is checked.
+ * The create endpoint does not accept is_published, so publication uses a PUT.
  * On cancel  → the pending entry is discarded (parent removes it from local state)
  */
 export function NewEntrySection({
@@ -45,12 +49,17 @@ export function NewEntrySection({
   lockReason?: string;
 }) {
   const addEntry = useAddEntry(sectionId);
+  const updateEntry = useUpdateEntry();
+  const savingRef = useRef(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isPublished, setIsPublished] = useState(true);
   const [scormState, setScormState] = useState<ScormPackageFieldState>({
     packageId: null,
     status: null,
   });
 
   const handleSave = async (data: Record<string, unknown>) => {
+    if (savingRef.current) return;
     // Defence in depth: the form below is replaced by a notice when `locked`, but the
     // flag can flip between a render and this submit.
     if (locked) {
@@ -60,18 +69,51 @@ export function NewEntrySection({
       return;
     }
 
+    if (
+      isPublished &&
+      contentType.module_type === 'scorm' &&
+      (!scormState.packageId || scormState.status !== 'ready')
+    ) {
+      toast.error('Le package SCORM doit être prêt avant de pouvoir enregistrer et publier.');
+      return;
+    }
+
+    savingRef.current = true;
+    setIsSaving(true);
+    let createdEntry: ApiContentEntry | undefined;
     try {
-      // The SCORM package may still be `pending`/processing — attaching it right
-      // away (instead of waiting) is explicitly supported by the create endpoint.
       const { data: entry } = await addEntry.mutateAsync({
         contentTypeId: contentType.id,
         data,
         scormPackageId: scormState.packageId ?? undefined,
       });
-      toast.success('Contenu créé');
-      onCreated(entry);
-    } catch {
-      toast.error('Erreur lors de la création du contenu');
+      createdEntry = entry;
+      if (isPublished) {
+        const { data: publishedEntry } = await updateEntry.mutateAsync({
+          entryId: entry.id,
+          sectionId,
+          isPublished: true,
+        });
+        toast.success('Contenu créé et publié');
+        onCreated(publishedEntry);
+      } else {
+        toast.success('Contenu créé');
+        onCreated(entry);
+      }
+    } catch (err) {
+      if (createdEntry) {
+        // Keep the successfully created entry selected: retrying must update it,
+        // not create a duplicate after a failed publication request.
+        toast.error(
+          `Contenu créé, mais non publié. ${apiMessage(err, 'Réessayez avec le bouton de publication.')}`,
+        );
+        onCreated(createdEntry);
+      } else {
+        toast.error(apiMessage(err, 'Erreur lors de la création du contenu'));
+      }
+    } finally {
+      savingRef.current = false;
+      setIsSaving(false);
     }
   };
 
@@ -86,9 +128,24 @@ export function NewEntrySection({
         </div>
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="text-muted-foreground">
-            Brouillon
+            Non enregistré
           </Badge>
           <Badge className="bg-blue-400">{contentType.title}</Badge>
+          <div className="ml-2 flex items-center gap-1.5">
+            <Switch
+              id={`publish-new-${sectionId}`}
+              checked={isPublished}
+              onCheckedChange={setIsPublished}
+              disabled={isSaving || locked}
+              className="data-[state=checked]:bg-(--color-primary)"
+            />
+            <Label
+              htmlFor={`publish-new-${sectionId}`}
+              className="cursor-pointer text-xs text-muted-foreground"
+            >
+              {isPublished ? 'Publié' : 'Brouillon'}
+            </Label>
+          </div>
         </div>
       </div>
       <Separator />
@@ -111,7 +168,8 @@ export function NewEntrySection({
             contentType={contentType}
             onCancel={onCancel}
             onSubmit={handleSave}
-            isSubmitting={addEntry.isPending}
+            isSubmitting={isSaving}
+            requireReadyScorm={isPublished}
             onScormStateChange={setScormState}
           />
         )}

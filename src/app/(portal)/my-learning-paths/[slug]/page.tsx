@@ -33,6 +33,7 @@ export default function FormationDetailPage({ params }: Props) {
     title: trainee.title,
     enrollmentId: trainee.id, // the enrollmentId is used to access the learning path
     status: trainee.status,
+    failureReason: trainee.failureReason,
     category: trainee.category,
     level: 'Tous niveaux',
     description: trainee.description ?? '',

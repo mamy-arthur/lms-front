@@ -1,5 +1,7 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { type ContentTimeSessionPayload, portalContentTimeApi } from '@/shared/api/portal.api';
+import { isExecutionContextRejection } from '@/shared/lib/execution-conflict';
+import type { ExecutionMutationContext } from '@/shared/types/progression.types';
 import { useAuthStore } from '@/shared/stores/auth.store';
 import { useSimulationStore } from '@/shared/simulation/simulation.store';
 
@@ -119,13 +121,12 @@ function rememberPending(record: Omit<PendingRecord, 'queuedAt'>): void {
 }
 
 function forgetPending(record: PendingRecord): void {
-  // An older in-flight flush must not acknowledge a newer final measurement.
+  // An older periodic acknowledgement must not erase the final, larger flush.
   writePending(
     readPending().filter(
       (pending) =>
         pending.sessionId !== record.sessionId ||
-        pending.payload.time_spent !== record.payload.time_spent ||
-        pending.payload.ended_at !== record.payload.ended_at,
+        JSON.stringify(pending.payload) !== JSON.stringify(record.payload),
     ),
   );
 }
@@ -151,7 +152,14 @@ function isPermanentFailure(error: unknown): boolean {
  * la réponse arrive. Le rejeu est sans risque, la route est idempotente sur
  * l'identifiant de période et le serveur ne retient que la valeur la plus haute.
  */
-async function postRecord(record: PendingRecord, keepalive: boolean): Promise<void> {
+type ConflictHandler = (error: unknown, record: PendingRecord) => void;
+
+async function postRecord(
+  record: PendingRecord,
+  keepalive: boolean,
+  onExecutionConflict: ConflictHandler,
+  required = false,
+): Promise<void> {
   if (trackingBlocked()) return;
   const epoch = useSimulationStore.getState().epoch;
   const canAcknowledge = () => !trackingBlocked() && useSimulationStore.getState().epoch === epoch;
@@ -167,7 +175,17 @@ async function postRecord(record: PendingRecord, keepalive: boolean): Promise<vo
 
     if (canAcknowledge()) forgetPending(record);
   } catch (error) {
-    if (canAcknowledge() && isPermanentFailure(error)) forgetPending(record);
+    if (!canAcknowledge()) {
+      // Changement de contexte réel/simulé pendant l'envoi : ni acquittement ni conflit.
+    } else if (isExecutionContextRejection(error)) {
+      // Le refus invalide toute la période, y compris un flush plus récent en
+      // vol. Contrairement à un acquittement, il ne faut pas conserver ce dernier.
+      writePending(readPending().filter((pending) => pending.sessionId !== record.sessionId));
+      onExecutionConflict(error, record);
+    } else if (isPermanentFailure(error)) {
+      forgetPending(record);
+    }
+    if (required) throw error;
   }
 }
 
@@ -176,7 +194,10 @@ async function postRecord(record: PendingRecord, keepalive: boolean): Promise<vo
  * montage et à chaque sauvegarde périodique, elle est le seul chemin de reprise
  * après un échec réseau ou une page fermée avant l'acquittement.
  */
-function retryPending(excludedSessionId: string | null): void {
+function retryPending(
+  excludedSessionId: string | null,
+  onExecutionConflict: ConflictHandler,
+): void {
   // Do not even read/prune the real queue while viewing demo contents.
   if (trackingBlocked()) return;
   const now = Date.now();
@@ -190,15 +211,24 @@ function retryPending(excludedSessionId: string | null): void {
       (record) =>
         record.sessionId !== excludedSessionId && now - record.queuedAt > PENDING_GRACE_MS,
     )
-    .forEach((record) => void postRecord(record, false));
+    .forEach((record) => void postRecord(record, false, onExecutionConflict));
 }
 
 interface Options {
-  enrollmentId: string | null;
+  enrollmentId: string;
   courseId: string | null;
   entryId: string | null;
   /** Module depuis lequel le contenu est consulté. */
   competencyId: string | null;
+  /**
+   * Visite et révision. `null` quand aucune visite n'est ouverte : le chrono ne
+   * démarre pas plutôt que d'envoyer une période sans contexte.
+   *
+   * La visite fait partie de l'identité de la période : en changer doit clore la
+   * période en cours et en ouvrir une nouvelle, sinon le temps d'un ancien
+   * passage serait recompté dans le nouveau.
+   */
+  context: ExecutionMutationContext | null;
   /**
    * `false` pour les contenus en iframe (SCORM) : nos écouteurs ne voient pas
    * les interactions à l'intérieur du cadre, donc la détection d'inactivité
@@ -206,6 +236,8 @@ interface Options {
    * contenus, seule la visibilité de l'onglet fait foi.
    */
   idleDetection: boolean;
+  /** Recharge le parcours après un refus du contexte, sans rejouer la période. */
+  onExecutionConflict?: (error: unknown) => void;
 }
 
 /**
@@ -229,7 +261,9 @@ export function useContentTimeTracker({
   courseId,
   entryId,
   competencyId,
+  context,
   idleDetection,
+  onExecutionConflict,
 }: Options) {
   const simulatedRole = useAuthStore((s) => s.simulatedRole);
   const phase = useSimulationStore((s) => s.phase);
@@ -243,22 +277,67 @@ export function useContentTimeTracker({
   const lastActivityRef = useRef(0);
   /** Instant réel de fin de la dernière plage active — sert de `ended_at`. */
   const lastActiveAtRef = useRef<Date | null>(null);
+  /**
+   * La révision bouge à chaque transition du parcours. La lire par ref évite de
+   * remonter ces changements dans les dépendances de l'effet, dont le cleanup
+   * clôturerait la période en cours à chaque avancement.
+   */
+  const revisionRef = useRef(context?.expected_state_revision);
+  revisionRef.current = context?.expected_state_revision;
+  /**
+   * Révision lue à l'ouverture de la période, prioritaire à sa clôture : le
+   * nouveau rendu peut déjà avoir remplacé revisionRef par celle d'une autre
+   * visite. Les flushs actifs continuent à utiliser la révision courante.
+   */
+  const sessionRevisionRef = useRef<number | undefined>(undefined);
+  const onExecutionConflictRef = useRef(onExecutionConflict);
+  onExecutionConflictRef.current = onExecutionConflict;
+
+  const nodeExecutionId = context?.node_execution_id ?? null;
+  const completionControlRef = useRef<{
+    flush: () => Promise<void>;
+    resume: () => void;
+    refresh: () => void;
+  } | null>(null);
+
+  const flushBeforeComplete = useCallback(
+    () => completionControlRef.current?.flush() ?? Promise.resolve(),
+    [],
+  );
+  const resumeAfterFailure = useCallback(() => completionControlRef.current?.resume(), []);
 
   useEffect(() => {
-    if (blocked || trackingBlocked() || !enrollmentId || !courseId || !entryId || !competencyId)
+    if (blocked || trackingBlocked() || !courseId || !entryId || !competencyId || !nodeExecutionId)
       return;
     let stopped = false;
+    let completing = false;
+    let disposed = false;
+    let rejection: { error: unknown; revision: number } | null = null;
+
+    const resetSession = () => {
+      sessionIdRef.current = null;
+      startedAtRef.current = null;
+      accumulatedMsRef.current = 0;
+      activeSinceRef.current = null;
+      lastActiveAtRef.current = null;
+      sessionRevisionRef.current = undefined;
+    };
 
     const openSession = () => {
       sessionIdRef.current = newSessionId();
       startedAtRef.current = new Date();
       accumulatedMsRef.current = 0;
       lastActiveAtRef.current = null;
+      sessionRevisionRef.current = revisionRef.current;
     };
 
     const resume = () => {
       if (stopped || trackingBlocked()) return;
-      if (activeSinceRef.current !== null) return;
+      if (completing || activeSinceRef.current !== null) return;
+      if (rejection) {
+        if (revisionRef.current === rejection.revision) return;
+        rejection = null;
+      }
       if (sessionIdRef.current === null) openSession();
       activeSinceRef.current = performance.now();
     };
@@ -270,8 +349,20 @@ export function useContentTimeTracker({
       lastActiveAtRef.current = new Date();
     };
 
-    const send = (close: boolean, keepalive: boolean) => {
-      if (!close && (stopped || trackingBlocked())) return;
+    const handleConflict: ConflictHandler = (error, record) => {
+      // Un ancien envoi peut échouer après le changement de visite : il ne doit
+      // jamais arrêter ni remettre à zéro le chrono de la nouvelle période.
+      if (!disposed && record.sessionId === sessionIdRef.current) {
+        pause();
+        resetSession();
+        rejection = { error, revision: record.payload.expected_state_revision };
+      }
+      onExecutionConflictRef.current?.(error);
+    };
+
+    const send = (close: boolean, keepalive: boolean, required = false): Promise<void> => {
+      if (!close && (stopped || trackingBlocked())) return Promise.resolve();
+      if (rejection) return required ? Promise.reject(rejection.error) : Promise.resolve();
       // Replie la plage active en cours sans arrêter le chrono, pour que la
       // sauvegarde périodique reflète le temps jusqu'à maintenant.
       if (activeSinceRef.current !== null) {
@@ -285,16 +376,16 @@ export function useContentTimeTracker({
       const startedAt = startedAtRef.current;
       const endedAt = lastActiveAtRef.current ?? startedAt;
       const accumulatedMs = accumulatedMsRef.current;
+      const revision = close
+        ? (sessionRevisionRef.current ?? revisionRef.current)
+        : (revisionRef.current ?? sessionRevisionRef.current);
 
-      if (close) {
-        sessionIdRef.current = null;
-        startedAtRef.current = null;
-        accumulatedMsRef.current = 0;
-        activeSinceRef.current = null;
-        lastActiveAtRef.current = null;
+      if (close) resetSession();
+
+      if (!sessionId || !startedAt || !endedAt || accumulatedMs < MIN_REPORTABLE_MS) {
+        return Promise.resolve();
       }
-
-      if (!sessionId || !startedAt || !endedAt || accumulatedMs < MIN_REPORTABLE_MS) return;
+      if (revision === undefined) return Promise.resolve();
 
       const record: PendingRecord = {
         enrollmentId,
@@ -303,6 +394,8 @@ export function useContentTimeTracker({
         sessionId,
         payload: {
           competency_id: competencyId,
+          node_execution_id: nodeExecutionId,
+          expected_state_revision: revision,
           started_at: startedAt.toISOString(),
           ended_at: endedAt.toISOString(),
           time_spent: Math.floor(accumulatedMs / 1000),
@@ -311,13 +404,31 @@ export function useContentTimeTracker({
       };
 
       // Mise en file AVANT l'envoi : si celui-ci échoue, ou si la page disparaît
-      // avant l'acquittement, la période est rejouée au montage suivant. Le
-      // tracking ne doit jamais dégrader la consultation, donc rien n'est
-      // remonté à l'appelant ici.
+      // avant l'acquittement, la période est rejouée au montage suivant.
+      // Seul le flush préalable à la complétion remonte les erreurs à l'appelant.
       rememberPending(record);
 
-      void postRecord(record, keepalive);
+      return postRecord(record, keepalive, handleConflict, required);
     };
+
+    const completionControl = {
+      flush: () => {
+        completing = true;
+        pause();
+        // Keep the period identity until completion succeeds. A failed request
+        // can resume it, but no timer/activity may extend it while closing the visit.
+        return send(false, false, true);
+      },
+      resume: () => {
+        completing = false;
+        lastActivityRef.current = performance.now();
+        if (document.visibilityState === 'visible') resume();
+      },
+      refresh: () => {
+        if (rejection && document.visibilityState === 'visible') resume();
+      },
+    };
+    completionControlRef.current = completionControl;
 
     const onActivity = () => {
       lastActivityRef.current = performance.now();
@@ -325,6 +436,7 @@ export function useContentTimeTracker({
     };
 
     const onVisibilityChange = () => {
+      if (completing) return;
       if (document.visibilityState === 'visible') {
         lastActivityRef.current = performance.now();
         resume();
@@ -335,6 +447,7 @@ export function useContentTimeTracker({
     };
 
     const onPageHide = () => {
+      if (completing) return;
       pause();
       // Pas de clôture : un `pagehide` peut venir du bfcache et la page revenir.
       // Si elle ne revient pas, cet envoi est le dernier et il a tout persisté.
@@ -354,7 +467,7 @@ export function useContentTimeTracker({
     if (document.visibilityState === 'visible') resume();
 
     // Les périodes des contenus précédents qui n'ont jamais été acquittées.
-    retryPending(sessionIdRef.current);
+    retryPending(sessionIdRef.current, handleConflict);
 
     document.addEventListener('visibilitychange', onVisibilityChange);
     window.addEventListener('pagehide', onPageHide);
@@ -366,7 +479,8 @@ export function useContentTimeTracker({
     }
 
     const flushTimer = window.setInterval(() => {
-      retryPending(sessionIdRef.current);
+      if (completing) return;
+      retryPending(sessionIdRef.current, handleConflict);
       send(false, false);
     }, FLUSH_INTERVAL_MS);
 
@@ -379,6 +493,7 @@ export function useContentTimeTracker({
     const stop = () => {
       if (stopped) return;
       stopped = true;
+      disposed = true;
       document.removeEventListener('visibilitychange', onVisibilityChange);
       window.removeEventListener('pagehide', onPageHide);
       window.removeEventListener('pageshow', onPageShow);
@@ -391,10 +506,15 @@ export function useContentTimeTracker({
       // Ce cleanup EST la détection de changement de contenu : FormationPlayer
       // garde le contenu actif en state local, sans changement de route, donc
       // aucun composant ne se démonte quand l'apprenant passe au module suivant.
-      pause();
-      // This period was opened in real mode. Persist its final measurement,
-      // but postRecord will not send it while transitioning/simulating.
-      send(true, true);
+      if (!completing) {
+        pause();
+        // This period was opened in real mode. Persist its final measurement,
+        // but postRecord will not send it while transitioning/simulating.
+        void send(true, true);
+      } else {
+        resetSession();
+      }
+      if (completionControlRef.current === completionControl) completionControlRef.current = null;
     };
     // Freeze the real period at the boundary, not at a later React cleanup.
     const stopIfBlocked = () => {
@@ -410,5 +530,19 @@ export function useContentTimeTracker({
     };
     // `competencyId` fait partie des dépendances : changer de module change le
     // contexte de la période, donc la période en cours doit être close.
-  }, [enrollmentId, courseId, entryId, competencyId, idleDetection, blocked]);
+    // `nodeExecutionId` pour la même raison : une nouvelle visite du même module
+    // est un autre passage, avec son propre temps.
+    //
+    // `expectedStateRevision` en est volontairement absent : la révision change
+    // à chaque transition du parcours, et la mettre ici clôturerait la période en
+    // cours à chaque fois. Elle est relue via une ref à l'envoi.
+  }, [enrollmentId, courseId, entryId, competencyId, nodeExecutionId, idleDetection, blocked]);
+
+  // Un conflit de révision peut se résoudre sans changer de visite. Reprendre
+  // alors une période neuve, sans réattribuer les mesures du contexte rejeté.
+  useEffect(() => {
+    completionControlRef.current?.refresh();
+  }, [context?.expected_state_revision]);
+
+  return { flushBeforeComplete, resumeAfterFailure };
 }

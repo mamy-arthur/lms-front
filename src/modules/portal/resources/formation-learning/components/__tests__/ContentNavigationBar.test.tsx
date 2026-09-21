@@ -71,24 +71,24 @@ describe('ContentNavigationBar', () => {
 
   // ── Action de validation ───────────────────────────────────────────────────
 
-  it('enchaîne sur le contenu suivant après validation quand il y en a un', async () => {
+  it('valide sans décider de la suite quand une étape reste à faire', async () => {
     const props = setup();
 
     await userEvent.click(screen.getByRole('button', { name: /terminer et continuer/i }));
 
+    // La destination appartient au moteur, qui peut renvoyer ailleurs que sur
+    // l'étape suivante du sommaire : la barre ne la choisit pas.
     expect(props.onMarkComplete).toHaveBeenCalledTimes(1);
-    // Le callback de continuation est passé à l'appelant, qui l'exécute onSuccess.
-    const onDone = props.onMarkComplete.mock.calls[0][0] as () => void;
-    onDone();
-    expect(props.onNavigate).toHaveBeenCalledWith('entry-4');
+    expect(props.onNavigate).not.toHaveBeenCalled();
   });
 
-  it('ne passe aucune continuation sur le dernier contenu', async () => {
+  it('annonce la fin du parcours sur la dernière étape', async () => {
     const props = setup({ next: null });
 
     await userEvent.click(screen.getByRole('button', { name: /^terminer$/i }));
 
-    expect(props.onMarkComplete).toHaveBeenCalledWith(undefined);
+    expect(props.onMarkComplete).toHaveBeenCalledTimes(1);
+    expect(props.onNavigate).not.toHaveBeenCalled();
   });
 
   // ── Contenu déjà terminé ───────────────────────────────────────────────────

@@ -6,6 +6,10 @@ import type {
   ApiPortalContentEntry,
   ApiPortalLearningPathSummary,
 } from '@/shared/types/portal.types';
+import type {
+  ApiExecutionSnapshot,
+  ExecutionMutationContext,
+} from '@/shared/types/progression.types';
 
 export const portalLearningPathsApi = {
   summary: (enrollmentId: string) =>
@@ -26,18 +30,24 @@ export const portalContentEntriesApi = {
       `enrollments/${enrollmentId}/courses/${courseId}/entries/${entryId}`,
     ),
 
+  /**
+   * `context` porte la visite et la révision lue : le serveur refuse la preuve
+   * sans elles (422) et rejette une visite périmée (409).
+   */
   markComplete: (
     enrollmentId: string,
     competencyId: string,
     courseId: string,
     entryId: string,
-  ): Promise<void> =>
-    apiPost<void>(
+    context: ExecutionMutationContext,
+  ): Promise<{ data: ApiExecutionSnapshot }> =>
+    apiPost<{ data: ApiExecutionSnapshot }, ExecutionMutationContext>(
       `enrollments/${enrollmentId}/competencies/${competencyId}/courses/${courseId}/entries/${entryId}/complete`,
+      context,
     ),
 };
 
-export interface ContentTimeSessionPayload {
+export interface ContentTimeSessionPayload extends ExecutionMutationContext {
   /**
    * Module (compétence) depuis lequel le contenu est consulté. Un même contenu
    * pourra être atteint depuis plusieurs modules : le couple inscription +
@@ -83,16 +93,21 @@ export const portalContentTimeApi = {
 };
 
 export const evaluationAttemptsApi = {
-  start: (enrollmentId: string, evaluationId: string) =>
-    apiPost<{ data: ApiEvaluationAttempt }>(
+  start: (enrollmentId: string, evaluationId: string, context: ExecutionMutationContext) =>
+    apiPost<{ data: ApiEvaluationAttempt }, ExecutionMutationContext>(
       `enrollments/${enrollmentId}/evaluations/${evaluationId}/attempts`,
+      context,
     ),
 
+  // Answer et submit dérivent leur contexte de la tentative persistée côté
+  // serveur : le client ne doit jamais leur imposer une visite.
   answer: (attemptId: string, attemptQuizId: string, payload: Record<string, unknown>) =>
     apiPost<unknown>(`evaluation-attempts/${attemptId}/quizzes/${attemptQuizId}/answer`, payload),
 
   submit: (attemptId: string) =>
-    apiPost<{ data: ApiEvaluationAttempt }>(`evaluation-attempts/${attemptId}/submit`),
+    apiPost<{ data: ApiEvaluationAttempt; execution: ApiExecutionSnapshot }>(
+      `evaluation-attempts/${attemptId}/submit`,
+    ),
 };
 
 export const meApi = {

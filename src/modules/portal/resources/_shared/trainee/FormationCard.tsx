@@ -57,18 +57,17 @@ export function FormationCard({ formation }: FormationCardProps) {
         )}
       </div>
       <CardHeader>
-        <Badge className={`w-fit rounded-sm text-xs ${status.className}`}>{status.label}</Badge>
+        <Badge className={`w-fit rounded-sm px-1 py-0 text-[0.7rem] ${status.className}`}>
+          {status.label}
+        </Badge>
         <CardTitle className="line-clamp-2 text-sm leading-snug">{formation.title}</CardTitle>
         {formation.description && (
           <p className="line-clamp-2 text-[12px] text-muted-foreground">{formation.description}</p>
         )}
-        {formation.failureReason && (
-          <p className="line-clamp-2 text-[12px] text-red-700">{formation.failureReason}</p>
-        )}
       </CardHeader>
       <CardContent className="flex flex-1 flex-col gap-3 text-xs text-muted-foreground -mt-1">
         <div className="space-y-1">
-          <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+          <div className="h-1 w-full overflow-hidden rounded-full bg-muted">
             <div
               className="h-full rounded-full bg-(--color-primary) transition-all duration-700"
               style={{ width: `${formation.progress}%` }}

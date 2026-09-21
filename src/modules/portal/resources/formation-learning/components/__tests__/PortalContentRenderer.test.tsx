@@ -19,6 +19,14 @@ function createEntry(overrides: Partial<ApiPortalContentEntry> = {}): ApiPortalC
   };
 }
 
+const rendererProps = {
+  isLoading: false,
+  enrollmentId: 'enrollment-1',
+  nodeExecutionId: null,
+  expectedStateRevision: null,
+  readOnly: false,
+};
+
 describe('PortalContentRenderer external URLs', () => {
   it.each([
     {
@@ -69,7 +77,7 @@ describe('PortalContentRenderer external URLs', () => {
       field_types: { title: 'text', [name]: type },
     });
 
-    render(<PortalContentRenderer entry={entry} isLoading={false} />);
+    render(<PortalContentRenderer {...rendererProps} entry={entry} />);
 
     const link = screen.getByRole('link', { name: value.trim() });
     expect(link).toHaveAttribute('href', expected);
@@ -106,8 +114,8 @@ describe('PortalContentRenderer external URLs', () => {
   ])('embeds a YouTube $label URL while keeping the original link', ({ url, embed }) => {
     render(
       <PortalContentRenderer
+        {...rendererProps}
         entry={createEntry({ data: { url }, field_types: { url: 'text' } })}
-        isLoading={false}
       />,
     );
 
@@ -120,8 +128,8 @@ describe('PortalContentRenderer external URLs', () => {
     (title) => {
       const { container } = render(
         <PortalContentRenderer
+          {...rendererProps}
           entry={createEntry({ data: { title }, field_types: { title: 'text' } })}
-          isLoading={false}
         />,
       );
 
@@ -160,7 +168,7 @@ describe('PortalContentRenderer ordinary pages', () => {
       },
     });
 
-    const { container } = render(<PortalContentRenderer entry={entry} isLoading={false} />);
+    const { container } = render(<PortalContentRenderer {...rendererProps} entry={entry} />);
 
     expect(screen.getByText('Une introduction sans lien.')).toBeVisible();
     expect(screen.getByText('Première ligne Deuxième ligne').textContent).toBe(
@@ -187,12 +195,12 @@ describe('PortalContentRenderer ordinary pages', () => {
   ])('preserves the $mime media renderer', ({ mime, url, selector }) => {
     const { container } = render(
       <PortalContentRenderer
+        {...rendererProps}
         entry={createEntry({
           module_type: 'page',
           data: { attachment: { id: 'media-1', url, mime_type: mime } },
           field_types: { attachment: 'media' },
         })}
-        isLoading={false}
       />,
     );
 
@@ -243,11 +251,11 @@ describe.each([
   ])('does not create an iframe or link for %s input', (_label, value) => {
     const { container } = render(
       <PortalContentRenderer
+        {...rendererProps}
         entry={createEntry({
           data: { [name]: value, notes: 'Le contenu sûr reste visible.' },
           field_types: { [name]: type, notes: 'textarea' },
         })}
-        isLoading={false}
       />,
     );
 

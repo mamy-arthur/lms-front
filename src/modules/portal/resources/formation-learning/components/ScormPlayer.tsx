@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { AlertCircle, Loader2, Maximize2, Minimize2 } from 'lucide-react';
 import { portalScormApi } from '@/shared/api/portal-scorm.api';
 import { portalScormLaunchKeys } from '@/shared/queries/keys';
-import { ScormSession, bindScormWindowApi } from '../lib/scormRuntime';
+import { ScormSession, bindScormWindowApi, type RegisterScormSession } from '../lib/scormRuntime';
 import { ScormPreviewSession, getScormPreviewLaunchUrl } from '../lib/scormPreviewRuntime';
 import { useAuthStore } from '@/shared/stores/auth.store';
 import { useSimulationStore } from '@/shared/simulation/simulation.store';
@@ -16,7 +16,14 @@ interface Props {
   competencyId: string;
   courseId: string;
   entryId: string;
+  /** Visite consultée, active ou historique — obligatoire sur les routes SCORM. */
+  nodeExecutionId: string;
+  expectedStateRevision: number;
+  readOnly: boolean;
   onCompleted?: () => void;
+  /** Le contexte transmis n'est plus valide : l'appelant doit recharger l'état. */
+  onExecutionConflict?: (error: unknown) => void;
+  registerSession?: RegisterScormSession;
 }
 
 /**
@@ -47,13 +54,32 @@ export default function ScormPlayer({
   competencyId,
   courseId,
   entryId,
+  nodeExecutionId,
+  expectedStateRevision,
+  readOnly,
   onCompleted,
+  onExecutionConflict,
+  registerSession,
 }: Props) {
   const simulatedRole = useAuthStore((state) => state.simulatedRole);
   const launchQuery = useQuery({
-    queryKey: portalScormLaunchKeys.detail(enrollmentId, competencyId, courseId, entryId),
+    queryKey: portalScormLaunchKeys.detail(
+      enrollmentId,
+      competencyId,
+      courseId,
+      entryId,
+      nodeExecutionId,
+    ),
     queryFn: async () =>
-      (await portalScormApi.launch(enrollmentId, competencyId, courseId, entryId)).data,
+      (
+        await portalScormApi.launch({
+          enrollmentId,
+          competencyId,
+          courseId,
+          entryId,
+          nodeExecutionId,
+        })
+      ).data,
     staleTime: 0,
   });
 
@@ -63,6 +89,14 @@ export default function ScormPlayer({
   const containerRef = useRef<HTMLDivElement>(null);
   const onCompletedRef = useRef(onCompleted);
   onCompletedRef.current = onCompleted;
+  const onExecutionConflictRef = useRef(onExecutionConflict);
+  onExecutionConflictRef.current = onExecutionConflict;
+  // Lue par ref : la révision bouge à chaque transition du parcours et ne doit
+  // pas recréer la session RTE sous les pieds du contenu SCORM en cours.
+  const revisionRef = useRef(expectedStateRevision);
+  revisionRef.current = expectedStateRevision;
+  const readOnlyRef = useRef(readOnly);
+  readOnlyRef.current = readOnly;
 
   // Two distinct ways of being expanded: the real Fullscreen API, and a fixed
   // overlay used only when the API refuses (iPhone Safari, a restrictive
@@ -72,23 +106,24 @@ export default function ScormPlayer({
   const expanded = nativeFullscreen || overlay;
 
   const launch = launchQuery.data;
-  const readOnly = launch?.read_only === true;
-  const demo = !!simulatedRole && !readOnly;
+  const preview = launch?.read_only === true;
+  const demo = !!simulatedRole && !preview;
   const previewUrl =
-    simulatedRole && readOnly && typeof window !== 'undefined'
+    simulatedRole && preview && typeof window !== 'undefined'
       ? getScormPreviewLaunchUrl(launch.launch_url, window.location.origin)
       : null;
-  const invalidPreview = readOnly && (!previewUrl || !['1.2', '2004'].includes(launch.version));
+  const invalidPreview = preview && (!previewUrl || !['1.2', '2004'].includes(launch.version));
   // A new package/context must never reuse readiness from the previous adapter.
   const sessionKey = JSON.stringify([
     enrollmentId,
     competencyId,
     courseId,
     entryId,
+    nodeExecutionId,
     launch?.scorm_package_id,
     launch?.version,
     launch?.launch_url,
-    readOnly,
+    preview,
     simulatedRole,
   ]);
   const failed = launchQuery.isError || invalidPreview || failedSessionKey === sessionKey;
@@ -140,9 +175,9 @@ export default function ScormPlayer({
   useEffect(() => {
     if (!launch || failed || demo) return;
 
-    if (readOnly) {
-      const preview = new ScormPreviewSession(launch.version);
-      const dispose = preview.bind(window);
+    if (preview) {
+      const previewSession = new ScormPreviewSession(launch.version);
+      const dispose = previewSession.bind(window);
       setReadySessionKey(sessionKey);
       return () => {
         setReadySessionKey(null);
@@ -158,6 +193,9 @@ export default function ScormPlayer({
       competencyId,
       courseId,
       entryId,
+      nodeExecutionId,
+      expectedStateRevision: () => revisionRef.current,
+      readOnly: () => readOnlyRef.current,
       version: launch.version,
       isContextCurrent: () => {
         const context = useSimulationStore.getState();
@@ -167,8 +205,14 @@ export default function ScormPlayer({
           !useAuthStore.getState().simulatedRole
         );
       },
-      onCompleted: () => onCompletedRef.current?.(),
+      onCompleted: () => {
+        if (!cancelled) onCompletedRef.current?.();
+      },
+      onExecutionConflict: (error) => {
+        if (!cancelled) onExecutionConflictRef.current?.(error);
+      },
     });
+    const unregister = registerSession?.(session);
 
     // Bound *before* the iframe starts loading: SCORM content looks up
     // window.parent.API(_1484_11) as soon as it executes, not on "load".
@@ -181,21 +225,27 @@ export default function ScormPlayer({
     return () => {
       cancelled = true;
       setReadySessionKey(null);
-      session.apiFinish();
+      session.dispose();
+      unregister?.();
       unbind();
     };
+    // `nodeExecutionId` recrée délibérément la session : une nouvelle visite part
+    // d'un runtime vierge, sans reprise du score, de `suspend_data`, du temps ni
+    // de la séquence de la précédente.
   }, [
     enrollmentId,
     competencyId,
     courseId,
     entryId,
+    nodeExecutionId,
     launch?.scorm_package_id,
     launch?.version,
+    registerSession,
     simulatedRole,
     sessionKey,
     failed,
     demo,
-    readOnly,
+    preview,
   ]);
 
   if (launchQuery.isLoading) {
@@ -224,7 +274,7 @@ export default function ScormPlayer({
       ref={containerRef}
       className={`flex flex-col ${expanded ? 'fixed inset-0 z-50 bg-white' : 'relative gap-2'}`}
     >
-      {readOnly && (
+      {preview && (
         <p
           role="status"
           className={`shrink-0 bg-amber-50 px-3 py-2 text-sm text-amber-950 ${
@@ -282,17 +332,17 @@ export default function ScormPlayer({
         sandbox={
           demo
             ? ''
-            : readOnly
+            : preview
               ? 'allow-scripts allow-same-origin'
               : 'allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals allow-downloads allow-presentation allow-pointer-lock allow-orientation-lock allow-top-navigation-by-user-activation'
         }
         allow={
-          readOnly
+          preview
             ? "fullscreen 'none'; autoplay; encrypted-media"
             : 'fullscreen; autoplay; encrypted-media; picture-in-picture; clipboard-write'
         }
-        allowFullScreen={!readOnly}
-        onErrorCapture={readOnly ? () => setFailedSessionKey(sessionKey) : undefined}
+        allowFullScreen={!preview}
+        onErrorCapture={preview ? () => setFailedSessionKey(sessionKey) : undefined}
         className={`w-full bg-white ${
           expanded ? 'min-h-0 flex-1 border-0' : 'h-[70vh] rounded-lg border border-slate-200'
         } ${ready ? '' : 'hidden'}`}

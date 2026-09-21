@@ -26,6 +26,12 @@ interface EvaluationSplashProps {
   maxAttempts?: number | null;
   attemptsUsed?: number;
   attemptsRemaining?: number | null;
+  /**
+   * Le nœud n'est pas `actionable` : le serveur refuserait la tentative. Distinct
+   * de « tentatives épuisées », qui décrit un budget consommé.
+   */
+  isLocked?: boolean;
+  lockedReason?: string;
 }
 
 export default function EvaluationSplash({
@@ -38,6 +44,8 @@ export default function EvaluationSplash({
   onRetryAttempts,
   maxAttempts,
   attemptsRemaining,
+  isLocked = false,
+  lockedReason,
 }: EvaluationSplashProps) {
   const typLabel = evaluationType === 'intermediate' ? 'Intermédiaire' : 'Finale';
 
@@ -53,7 +61,7 @@ export default function EvaluationSplash({
     attemptsRemaining <= 0;
 
   // The button is only offered once we know it can actually succeed.
-  const canStart = attemptsKnown && !exhausted;
+  const canStart = attemptsKnown && !exhausted && !isLocked;
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col px-4 py-10">
@@ -191,6 +199,14 @@ export default function EvaluationSplash({
             <AlertTitle>Tentatives épuisées</AlertTitle>
             <AlertDescription>
               Vous avez utilisé toutes vos tentatives pour cette évaluation.
+            </AlertDescription>
+          </Alert>
+        ) : isLocked ? (
+          <Alert>
+            <AlertCircleIcon />
+            <AlertTitle>Évaluation indisponible</AlertTitle>
+            <AlertDescription>
+              {lockedReason ?? "Cette évaluation n'est pas ouverte pour le moment."}
             </AlertDescription>
           </Alert>
         ) : (

@@ -1,13 +1,14 @@
 'use client';
 
-import ContentRenderer from './ContentRenderer';
 import PortalContentRenderer from './PortalContentRenderer';
 import EvaluationRunner from './EvaluationRunner';
 import { getContentPosition } from '../lib/course-utils';
 import type { Formation } from '../lib/types';
 import type { Resolved } from '../lib/course-utils';
 import type { ApiPortalContentEntry } from '@/shared/types/portal.types';
+import type { ExecutionMutationContext } from '@/shared/types/progression.types';
 import ContentNavigationBar from './ContentNavigationBar';
+import type { RegisterScormSession } from '../lib/scormRuntime';
 import { useAuthStore } from '@/shared/stores/auth.store';
 import { Role } from '@/shared/constants/roles';
 
@@ -16,13 +17,20 @@ interface Props {
   resolved: Resolved;
   onNavigate: (id: string | null) => void;
   onEvaluationComplete: (score: number, passed: boolean) => void;
-  /** When provided, uses the real API entry instead of mock content.data. */
-  portalEntry?: ApiPortalContentEntry | null;
-  portalEntryLoading?: boolean;
-  onMarkComplete?: (onDone?: () => void) => void;
-  isCompleting?: boolean;
-  /** Required (with the resolved content's courseId) to play 'scorm' entries. */
-  enrollmentId?: string;
+  portalEntry: ApiPortalContentEntry | null;
+  portalEntryLoading: boolean;
+  onMarkComplete: (onDone?: () => void) => void;
+  isCompleting: boolean;
+  enrollmentId: string;
+  /** Contexte du nœud actif ; `null` quand aucune visite n'est ouverte. */
+  executionContext: ExecutionMutationContext | null;
+  /**
+   * `false` quand le nœud n'est pas `actionable` : l'historique reste lisible,
+   * mais aucune écriture n'est proposée.
+   */
+  canMutate: boolean;
+  onExecutionConflict: (error: unknown) => void;
+  registerScormSession?: RegisterScormSession;
 }
 
 export default function FormationContentView({
@@ -35,6 +43,10 @@ export default function FormationContentView({
   onMarkComplete,
   isCompleting,
   enrollmentId,
+  executionContext,
+  canMutate,
+  onExecutionConflict,
+  registerScormSession,
 }: Props) {
   const simulatedRole = useAuthStore((state) => state.simulatedRole);
   const actorRole = useAuthStore((state) => state.user?.role);
@@ -61,6 +73,7 @@ export default function FormationContentView({
           key={resolved.node.id}
           evaluation={resolved.node}
           enrollmentId={enrollmentId}
+          executionContext={executionContext}
           onComplete={onEvaluationComplete}
         />
       </div>
@@ -69,7 +82,7 @@ export default function FormationContentView({
 
   const { content, prev, next } = resolved;
   const pos = getContentPosition(formation, content.id);
-  const usePortal = portalEntry !== undefined || portalEntryLoading;
+  const readExecutionId = resolved.node.execution.readExecutionId;
 
   return (
     <div className="flex flex-1 flex-col min-h-0">
@@ -93,21 +106,20 @@ export default function FormationContentView({
         </div>
 
         <div className="flex-1 px-6 ">
-          {usePortal ? (
-            <PortalContentRenderer
-              key={`${enrollmentId}:${content.id}`}
-              entry={portalEntry ?? undefined}
-              isLoading={portalEntryLoading ?? false}
-              enrollmentId={enrollmentId}
-              competencyId={content.competencyId}
-              courseId={content.courseId}
-              onScormCompleted={
-                !readOnlyScorm && onMarkComplete ? () => onMarkComplete() : undefined
-              }
-            />
-          ) : (
-            <ContentRenderer content={content} />
-          )}
+          <PortalContentRenderer
+            key={`${enrollmentId}:${content.id}:${readExecutionId ?? ''}`}
+            entry={portalEntry ?? undefined}
+            isLoading={portalEntryLoading}
+            enrollmentId={enrollmentId}
+            competencyId={content.competencyId}
+            courseId={content.courseId}
+            nodeExecutionId={readExecutionId}
+            expectedStateRevision={formation.execution.stateRevision}
+            readOnly={!canMutate || content.completed || readOnlyScorm}
+            onScormCompleted={canMutate && !readOnlyScorm ? () => onMarkComplete() : undefined}
+            onScormExecutionConflict={onExecutionConflict}
+            registerScormSession={registerScormSession}
+          />
         </div>
       </div>
 
@@ -119,7 +131,7 @@ export default function FormationContentView({
         isNextLocked={resolved.isNextLocked}
         onNavigate={onNavigate}
         isCompleted={content.completed === true}
-        onMarkComplete={readOnlyScorm ? undefined : onMarkComplete}
+        onMarkComplete={canMutate && !readOnlyScorm ? onMarkComplete : undefined}
         isCompleting={isCompleting}
       />
     </div>

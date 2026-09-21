@@ -258,7 +258,7 @@ export default function FormationListPage() {
                   disabled={isFetching}
                   className="gap-2"
                 >
-                  Voir plus
+                  Voir plus...
                   <span className="text-muted-foreground text-xs">
                     ({total - formations.length} restante{total - formations.length > 1 ? 's' : ''})
                   </span>

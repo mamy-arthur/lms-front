@@ -50,6 +50,9 @@ const props = {
   competencyId: 'demo-competency',
   courseId: 'demo-course',
   entryId: 'demo-entry',
+  nodeExecutionId: 'demo-execution',
+  expectedStateRevision: 1,
+  readOnly: false,
 };
 const assetUrl =
   '/api/v1/role-simulation/training/learning-paths/12345678-1234-4123-8123-123456789abc/entries/12345678-1234-4123-8123-123456789def/scorm/assets/payload.signature/index.html';
@@ -61,6 +64,7 @@ const launch: ApiScormLaunch = {
   version: '1.2',
   launch_path: 'index.html',
   launch_url: assetUrl,
+  node_execution_id: props.nodeExecutionId,
   read_only: true,
 };
 const tracking: ApiScormTrackingState = {
@@ -77,6 +81,7 @@ const tracking: ApiScormTrackingState = {
   last_commit_id: null,
   last_sequence: 0,
   updated_at: null,
+  node_execution_id: 'real-execution',
 };
 
 function setActor(simulatedRole: Role | null = Role.TRAINEE, realRole = Role.EDITOR) {
@@ -176,12 +181,13 @@ describe('ScormPlayer read-only real packages', () => {
       expect(
         screen.queryByRole('button', { name: 'Terminer l’activité simulée' }),
       ).not.toBeInTheDocument();
-      expect(mockApi.launch).toHaveBeenCalledWith(
-        props.enrollmentId,
-        props.competencyId,
-        props.courseId,
-        props.entryId,
-      );
+      expect(mockApi.launch).toHaveBeenCalledWith({
+        enrollmentId: props.enrollmentId,
+        competencyId: props.competencyId,
+        courseId: props.courseId,
+        entryId: props.entryId,
+        nodeExecutionId: props.nodeExecutionId,
+      });
       const api = globals[property]!;
       const prefix = version === '1.2' ? 'LMS' : '';
       const core = version === '1.2' ? 'cmi.core.' : 'cmi.';

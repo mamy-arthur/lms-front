@@ -27,11 +27,13 @@ const PENDING_GRACE_MS = 5_000;
 const PENDING_STORAGE_KEY = 'learneo:content-time:pending';
 
 interface Props {
-  enrollmentId: string | null;
+  enrollmentId: string;
   courseId: string | null;
   entryId: string | null;
   competencyId: string | null;
+  context: { node_execution_id: string; expected_state_revision: number } | null;
   idleDetection: boolean;
+  onExecutionConflict?: (error: unknown) => void;
 }
 
 function props(entryId: string, overrides: Partial<Props> = {}): Props {
@@ -40,6 +42,7 @@ function props(entryId: string, overrides: Partial<Props> = {}): Props {
     courseId: 'course-1',
     entryId,
     competencyId: 'competency-1',
+    context: { node_execution_id: 'execution-1', expected_state_revision: 7 },
     idleDetection: true,
     ...overrides,
   };
@@ -54,6 +57,13 @@ function callAt(index: number) {
 
 function lastCall() {
   return callAt(record.mock.calls.length - 1);
+}
+
+function executionConflict() {
+  return Object.assign(new Error('Conflict'), {
+    status: 409,
+    json: { error_code: 'execution_conflict' },
+  });
 }
 
 function setVisibility(state: DocumentVisibilityState): void {
@@ -220,6 +230,314 @@ describe('useContentTimeTracker', () => {
     const saved = JSON.parse(window.localStorage.getItem(PENDING_STORAGE_KEY)!);
     expect(saved).toHaveLength(1);
     expect(saved[0].payload.time_spent).toBe(35);
+  });
+
+  it('clôt l’ancienne visite avec sa révision et ouvre une période indépendante pour la suivante', async () => {
+    const { rerender, unmount } = renderHook((p: Props) => useContentTimeTracker(p), {
+      initialProps: props('entry-1'),
+    });
+    await advance(5_000);
+
+    rerender(
+      props('entry-1', {
+        context: { node_execution_id: 'execution-2', expected_state_revision: 12 },
+      }),
+    );
+    expect(callAt(0).payload).toMatchObject({
+      node_execution_id: 'execution-1',
+      expected_state_revision: 7,
+      time_spent: 5,
+    });
+
+    await advance(FLUSH_INTERVAL_MS);
+    expect(lastCall().sessionId).not.toBe(callAt(0).sessionId);
+    expect(lastCall().payload).toMatchObject({
+      node_execution_id: 'execution-2',
+      expected_state_revision: 12,
+      time_spent: 30,
+    });
+    unmount();
+  });
+
+  it('utilise la révision courante pour les flushs actifs sans recréer la période', async () => {
+    const { result, rerender, unmount } = renderHook((p: Props) => useContentTimeTracker(p), {
+      initialProps: props('entry-1'),
+    });
+    await advance(FLUSH_INTERVAL_MS);
+    const sessionId = lastCall().sessionId;
+    rerender(
+      props('entry-1', {
+        context: { node_execution_id: 'execution-1', expected_state_revision: 8 },
+      }),
+    );
+    expect(record).toHaveBeenCalledTimes(1);
+    await advance(FLUSH_INTERVAL_MS);
+    expect(lastCall().sessionId).toBe(sessionId);
+    expect(lastCall().payload.expected_state_revision).toBe(8);
+
+    rerender(
+      props('entry-1', {
+        context: { node_execution_id: 'execution-1', expected_state_revision: 9 },
+      }),
+    );
+    await act(async () => {
+      await result.current.flushBeforeComplete();
+    });
+    expect(lastCall().sessionId).toBe(sessionId);
+    expect(lastCall().payload.expected_state_revision).toBe(9);
+    unmount();
+  });
+
+  it('conserve la révision de clôture quand le contexte devient nul', async () => {
+    const { rerender, unmount } = renderHook((p: Props) => useContentTimeTracker(p), {
+      initialProps: props('entry-1'),
+    });
+    await advance(5_000);
+    rerender(props('entry-1', { context: null }));
+    expect(lastCall().payload).toMatchObject({
+      node_execution_id: 'execution-1',
+      expected_state_revision: 7,
+      time_spent: 5,
+    });
+    await advance(FLUSH_INTERVAL_MS);
+    expect(record).toHaveBeenCalledTimes(1);
+    unmount();
+  });
+
+  it('abandonne une période en conflit et attend un contexte actualisé sans la rejouer', async () => {
+    const conflict = executionConflict();
+    const onExecutionConflict = jest.fn();
+    record.mockRejectedValueOnce(conflict);
+    const { result, rerender, unmount } = renderHook((p: Props) => useContentTimeTracker(p), {
+      initialProps: props('entry-1', { onExecutionConflict }),
+    });
+    await advance(FLUSH_INTERVAL_MS);
+    const rejected = lastCall();
+    expect(onExecutionConflict).toHaveBeenCalledWith(conflict);
+    expect(window.localStorage.getItem('learneo:content-time:pending')).toBeNull();
+    window.dispatchEvent(new Event('pointerdown'));
+    await advance(2 * FLUSH_INTERVAL_MS);
+    expect(record).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      await expect(result.current.flushBeforeComplete()).rejects.toBe(conflict);
+    });
+    act(() => result.current.resumeAfterFailure());
+
+    rerender(
+      props('entry-1', {
+        onExecutionConflict,
+        context: { node_execution_id: 'execution-1', expected_state_revision: 8 },
+      }),
+    );
+    await advance(FLUSH_INTERVAL_MS);
+    expect(record).toHaveBeenCalledTimes(2);
+    expect(lastCall().sessionId).not.toBe(rejected.sessionId);
+    expect(lastCall().payload).toMatchObject({ expected_state_revision: 8, time_spent: 30 });
+    unmount();
+  });
+
+  it('remonte aussi le conflit du flush obligatoire après avoir retiré la période', async () => {
+    const conflict = executionConflict();
+    const onExecutionConflict = jest.fn();
+    const { result, unmount } = renderHook((p: Props) => useContentTimeTracker(p), {
+      initialProps: props('entry-1', { onExecutionConflict }),
+    });
+    await advance(5_000);
+    record.mockRejectedValueOnce(conflict);
+    await act(async () => {
+      await expect(result.current.flushBeforeComplete()).rejects.toBe(conflict);
+    });
+    expect(onExecutionConflict).toHaveBeenCalledWith(conflict);
+    expect(window.localStorage.getItem('learneo:content-time:pending')).toBeNull();
+    unmount();
+  });
+
+  it('retire un rejeu périmé sans lui substituer la visite courante ni arrêter son chrono', async () => {
+    record.mockRejectedValueOnce(new Error('network down'));
+    const first = renderHook((p: Props) => useContentTimeTracker(p), {
+      initialProps: props('entry-1'),
+    });
+    await advance(5_000);
+    first.unmount();
+    await settle();
+    const old = lastCall();
+    await advance(PENDING_GRACE_MS + 1_000);
+
+    const onExecutionConflict = jest.fn();
+    record.mockRejectedValueOnce(executionConflict());
+    const second = renderHook((p: Props) => useContentTimeTracker(p), {
+      initialProps: props('entry-2', {
+        onExecutionConflict,
+        context: { node_execution_id: 'execution-2', expected_state_revision: 12 },
+      }),
+    });
+    await settle();
+    expect(lastCall().sessionId).toBe(old.sessionId);
+    expect(lastCall().payload).toEqual(old.payload);
+    expect(onExecutionConflict).toHaveBeenCalledTimes(1);
+    expect(window.localStorage.getItem('learneo:content-time:pending')).toBeNull();
+    await advance(2 * FLUSH_INTERVAL_MS);
+    expect(record.mock.calls.filter((call) => call[3] === old.sessionId)).toHaveLength(2);
+    expect(lastCall().payload).toMatchObject({
+      node_execution_id: 'execution-2',
+      expected_state_revision: 12,
+      time_spent: 60,
+    });
+    second.unmount();
+    await settle();
+    await advance(PENDING_GRACE_MS + 1_000);
+    const calls = record.mock.calls.length;
+    const third = renderHook((p: Props) => useContentTimeTracker(p), {
+      initialProps: props('entry-3'),
+    });
+    await settle();
+    expect(record).toHaveBeenCalledTimes(calls);
+    third.unmount();
+  });
+
+  it('ignore pour la nouvelle période un conflit tardif de l’ancienne visite', async () => {
+    let rejectOld!: (error: unknown) => void;
+    record.mockImplementationOnce(
+      () =>
+        new Promise<void>((_resolve, reject) => {
+          rejectOld = reject;
+        }),
+    );
+    const onExecutionConflict = jest.fn();
+    const { rerender, unmount } = renderHook((p: Props) => useContentTimeTracker(p), {
+      initialProps: props('entry-1', { onExecutionConflict }),
+    });
+    await advance(FLUSH_INTERVAL_MS);
+    await advance(5_000);
+    record.mockRejectedValueOnce(new Error('network down'));
+    rerender(
+      props('entry-1', {
+        onExecutionConflict,
+        context: { node_execution_id: 'execution-2', expected_state_revision: 12 },
+      }),
+    );
+    await settle();
+    expect(window.localStorage.getItem('learneo:content-time:pending')).not.toBeNull();
+    await act(async () => {
+      rejectOld(executionConflict());
+    });
+    expect(onExecutionConflict).toHaveBeenCalledTimes(1);
+    expect(window.localStorage.getItem('learneo:content-time:pending')).toBeNull();
+    await advance(FLUSH_INTERVAL_MS);
+    expect(record).toHaveBeenCalledTimes(3);
+    expect(lastCall().payload).toMatchObject({
+      node_execution_id: 'execution-2',
+      expected_state_revision: 12,
+      time_spent: 30,
+    });
+    unmount();
+  });
+
+  it('actualise le callback de récupération sans clôturer la période', async () => {
+    const oldCallback = jest.fn();
+    const newCallback = jest.fn();
+    const { rerender, unmount } = renderHook((p: Props) => useContentTimeTracker(p), {
+      initialProps: props('entry-1', { onExecutionConflict: oldCallback }),
+    });
+    await advance(5_000);
+    rerender(props('entry-1', { onExecutionConflict: newCallback }));
+    expect(record).not.toHaveBeenCalled();
+    record.mockRejectedValueOnce(executionConflict());
+    await advance(FLUSH_INTERVAL_MS);
+    expect(oldCallback).not.toHaveBeenCalled();
+    expect(newCallback).toHaveBeenCalledTimes(1);
+    unmount();
+  });
+
+  it.each([10_000, 35_000])(
+    'acquitte le dernier segment à %i ms avant de fermer la visite',
+    async (duration) => {
+      const { result, rerender, unmount } = renderHook((p: Props) => useContentTimeTracker(p), {
+        initialProps: props('entry-1'),
+      });
+      await advance(duration);
+      let acknowledge!: () => void;
+      record.mockImplementationOnce(
+        () =>
+          new Promise<void>((resolve) => {
+            acknowledge = resolve;
+          }),
+      );
+      let done = false;
+      let flush!: Promise<void>;
+      act(() => {
+        flush = result.current.flushBeforeComplete().then(() => {
+          done = true;
+        });
+      });
+      const final = lastCall();
+      expect(final.payload.time_spent).toBe(duration / 1000);
+      if (duration > FLUSH_INTERVAL_MS) expect(final.sessionId).toBe(callAt(0).sessionId);
+      expect(done).toBe(false);
+
+      const calls = record.mock.calls.length;
+      await advance(FLUSH_INTERVAL_MS);
+      window.dispatchEvent(new Event('pointerdown'));
+      setVisibility('hidden');
+      setVisibility('visible');
+      window.dispatchEvent(new Event('pageshow'));
+      await advance(5_000);
+      expect(record).toHaveBeenCalledTimes(calls);
+      await act(async () => {
+        acknowledge();
+        await flush;
+      });
+      expect(done).toBe(true);
+      rerender(props('entry-1', { entryId: null }));
+      unmount();
+      expect(record).toHaveBeenCalledTimes(calls);
+      expect(window.localStorage.getItem('learneo:content-time:pending')).toBeNull();
+    },
+  );
+
+  it('remonte un échec du flush obligatoire et reprend la même période pour réessayer', async () => {
+    const { result, unmount } = renderHook((p: Props) => useContentTimeTracker(p), {
+      initialProps: props('entry-1'),
+    });
+    await advance(10_000);
+    record.mockRejectedValueOnce(new Error('network down'));
+    await act(async () => {
+      await expect(result.current.flushBeforeComplete()).rejects.toThrow('network down');
+    });
+    const first = lastCall();
+    act(() => result.current.resumeAfterFailure());
+    await advance(5_000);
+    await act(async () => {
+      await result.current.flushBeforeComplete();
+    });
+    expect(lastCall().sessionId).toBe(first.sessionId);
+    expect(lastCall().payload.time_spent).toBe(15);
+    unmount();
+  });
+
+  it('ne supprime pas un flush final non acquitté à la réception d’un ancien acquittement', async () => {
+    let acknowledgePeriodic!: () => void;
+    record.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          acknowledgePeriodic = resolve;
+        }),
+    );
+    const { result, unmount } = renderHook((p: Props) => useContentTimeTracker(p), {
+      initialProps: props('entry-1'),
+    });
+    await advance(35_000);
+    record.mockRejectedValueOnce(new Error('network down'));
+    await act(async () => {
+      await expect(result.current.flushBeforeComplete()).rejects.toThrow('network down');
+    });
+    await act(async () => {
+      acknowledgePeriodic();
+    });
+    const pending = JSON.parse(window.localStorage.getItem('learneo:content-time:pending') ?? '[]');
+    expect(pending).toHaveLength(1);
+    expect(pending[0].payload.time_spent).toBe(35);
+    unmount();
   });
 
   it('clôt la période en cours et en ouvre une nouvelle au changement de contenu', async () => {
