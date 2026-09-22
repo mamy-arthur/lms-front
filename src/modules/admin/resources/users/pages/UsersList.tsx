@@ -81,8 +81,10 @@ export function UsersList() {
   const tenants = tenantsData?.data ?? [];
 
   const tenantId = activeTenant?.id ?? tenantFilter;
-  // Un client n'existe que dans un tenant : sans tenant cible la liste reste vide.
-  const { data: clients } = useClientsQuery(canFilterByClient, tenantId);
+  const { data: clients } = useClientsQuery(
+    canFilterByClient && (!canSelectTenant || tenantId !== null),
+    tenantId,
+  );
 
   // Changer de tenant invalide le client retenu, qui appartient au precedent.
   const handleTenantFilter = (id: string | null) => {

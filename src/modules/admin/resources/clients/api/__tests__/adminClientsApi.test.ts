@@ -33,6 +33,18 @@ describe('adminClientsApi', () => {
     });
   });
 
+  it('transmet le nom brut au backend sans normalisation locale', async () => {
+    mockApiGet.mockResolvedValue({ data: [], meta: { name_slug: 'coeur' } });
+    await adminClientsApi.resolveName('Cœur', 't-1');
+    expect(mockApiGet).toHaveBeenCalledWith('platform/clients', { name: 'Cœur', tenant_id: 't-1' });
+  });
+
+  it('conserve le contexte implicite lors de la resolution du nom', async () => {
+    mockApiGet.mockResolvedValue({ data: [], meta: { name_slug: 'b-at-b' } });
+    await adminClientsApi.resolveName('B@B', null);
+    expect(mockApiGet).toHaveBeenCalledWith('platform/clients', { name: 'B@B' });
+  });
+
   it('retourne les clients renvoyés par le backend', async () => {
     mockApiGet.mockResolvedValue({
       data: [

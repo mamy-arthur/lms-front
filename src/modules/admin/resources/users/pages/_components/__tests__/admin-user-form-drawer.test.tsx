@@ -7,14 +7,23 @@ jest.mock('@/modules/admin/resources/tenants/api', () => ({
 }));
 
 jest.mock('@/modules/admin/resources/clients', () => ({
+  ...jest.requireActual('@/modules/admin/resources/clients'),
   useClientsQuery: (_enabled: boolean, tenantId?: string | null) => ({
-    data: mockClients.filter((client) => client.tenant_id === (tenantId ?? TENANT_A)),
-    isLoading: false,
+    data:
+      mockClientsState === 'success'
+        ? mockClients.filter((client) => client.tenant_id === (tenantId ?? TENANT_A))
+        : mockClientsState === 'empty'
+          ? []
+          : undefined,
+    isLoading: mockClientsState === 'loading',
+    isError: mockClientsState === 'error',
+    isFetching: mockClientsState === 'loading',
+    refetch: mockRefetchClients,
   }),
 }));
 
 jest.mock('../../../hooks/useCreateUser', () => ({
-  useCreateUser: () => ({ mutate: jest.fn(), reset: jest.fn(), isPending: false }),
+  useCreateUser: () => ({ mutate: mockCreate, reset: jest.fn(), isPending: false }),
 }));
 
 jest.mock('../../../hooks/useUpdateUser', () => ({
@@ -47,6 +56,9 @@ const mockClients = [
   { id: CLIENT_B, tenant_id: TENANT_B, name: 'Client Beta' },
 ];
 const mockUpdate = jest.fn();
+const mockCreate = jest.fn();
+const mockRefetchClients = jest.fn();
+let mockClientsState: 'success' | 'loading' | 'error' | 'empty' = 'success';
 let mockCallerRole: Role = Role.SUPER_ADMIN;
 
 const EXISTING_USER = normalizeUser({
@@ -75,12 +87,66 @@ describe('AdminUserFormDrawer - rattachement client', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockCallerRole = Role.SUPER_ADMIN;
+    mockClientsState = 'success';
     jest.mocked(tenantApi.getAll).mockResolvedValue({
       data: [
         { ...MOCK_TENANTS[0], id: TENANT_A, name: 'Tenant Alpha' },
         { ...MOCK_TENANTS[1], id: TENANT_B, name: 'Tenant Beta' },
       ],
     } as unknown as Awaited<ReturnType<typeof tenantApi.getAll>>);
+  });
+
+  it.each([
+    { caller: Role.SUPER_ADMIN, label: 'Super admin', forbidden: [] },
+    { caller: Role.EDITOR, label: 'Éditeur', forbidden: ['Super admin'] },
+    { caller: Role.CLIENT_MANAGER, label: 'Responsable', forbidden: ['Super admin', 'Éditeur'] },
+  ])(
+    'permet a $caller de creer un pair sans proposer de role superieur',
+    async ({ caller, label, forbidden }) => {
+      mockCallerRole = caller;
+      const interaction = userEvent.setup();
+      renderWithQueryClient(<AdminUserFormDrawer open onClose={jest.fn()} />);
+
+      fireEvent.keyDown(screen.getByRole('combobox', { name: 'Rôle' }), { key: 'ArrowDown' });
+      for (const forbiddenLabel of forbidden) {
+        expect(screen.queryByRole('option', { name: forbiddenLabel })).not.toBeInTheDocument();
+      }
+      expect(screen.getByRole('option', { name: 'Stagiaire' })).toBeInTheDocument();
+      fireEvent.click(await screen.findByRole('option', { name: label }));
+
+      await interaction.type(screen.getByRole('textbox', { name: 'Nom' }), 'Test');
+      await interaction.type(screen.getByRole('textbox', { name: 'Prénom' }), 'Alice');
+      await interaction.type(screen.getByRole('textbox', { name: 'Email' }), 'alice@example.test');
+      await interaction.type(screen.getByLabelText('Mot de passe', { exact: true }), 'Password123');
+      await interaction.click(screen.getByRole('button', { name: 'Enregistrer' }));
+
+      await waitFor(() => {
+        expect(mockCreate).toHaveBeenCalledWith(
+          expect.objectContaining({ role: caller, client_id: null, client_name: null }),
+          expect.any(Object),
+        );
+      });
+    },
+  );
+
+  it('refuse un role selectionne devenu superieur avant la soumission', async () => {
+    const interaction = userEvent.setup();
+    const view = renderWithQueryClient(<AdminUserFormDrawer open onClose={jest.fn()} />);
+    fireEvent.keyDown(screen.getByRole('combobox', { name: 'Rôle' }), { key: 'ArrowDown' });
+    fireEvent.click(await screen.findByRole('option', { name: 'Super admin' }));
+    await interaction.type(screen.getByRole('textbox', { name: 'Nom' }), 'Test');
+    await interaction.type(screen.getByRole('textbox', { name: 'Prénom' }), 'Alice');
+    await interaction.type(screen.getByRole('textbox', { name: 'Email' }), 'alice@example.test');
+    await interaction.type(screen.getByLabelText('Mot de passe', { exact: true }), 'Password123');
+
+    mockCallerRole = Role.EDITOR;
+    view.rerender(<AdminUserFormDrawer open onClose={jest.fn()} />);
+    await interaction.click(screen.getByRole('button', { name: 'Enregistrer' }));
+
+    expect(
+      await screen.findByText('Vous ne pouvez pas créer un utilisateur avec ce rôle.'),
+    ).toBeInTheDocument();
+    expect(mockCreate).not.toHaveBeenCalled();
   });
 
   it.each([Role.SUPER_ADMIN, Role.EDITOR])(
@@ -112,6 +178,76 @@ describe('AdminUserFormDrawer - rattachement client', () => {
       expect(mockUpdate.mock.calls[0][0].data).not.toHaveProperty('client_id');
     },
   );
+
+  it('associe le label et l erreur client au controle et le focalise apres validation', async () => {
+    mockCallerRole = Role.EDITOR;
+    const interaction = userEvent.setup();
+    renderWithQueryClient(<AdminUserFormDrawer open onClose={jest.fn()} />);
+    fireEvent.keyDown(screen.getByRole('combobox', { name: 'Rôle' }), { key: 'ArrowDown' });
+    fireEvent.click(await screen.findByRole('option', { name: 'Responsable' }));
+    await interaction.type(screen.getByRole('textbox', { name: 'Nom' }), 'Test');
+    await interaction.type(screen.getByRole('textbox', { name: 'Prénom' }), 'Alice');
+    await interaction.type(screen.getByRole('textbox', { name: 'Email' }), 'alice@example.test');
+    await interaction.type(screen.getByLabelText('Mot de passe', { exact: true }), 'Password123');
+
+    const control = screen.getByRole('combobox', { name: 'Client' });
+    const label = screen.getByText('Client', { selector: 'label' });
+    expect(label).toHaveAttribute('for', control.id);
+    expect(control.id).not.toBe('');
+
+    await interaction.click(screen.getByRole('button', { name: 'Enregistrer' }));
+
+    expect(await screen.findByText('Nom du client requis')).toBeInTheDocument();
+    expect(control).toHaveAttribute('aria-invalid', 'true');
+    expect(control).toHaveAccessibleDescription('Nom du client requis');
+    await waitFor(() => expect(control).toHaveFocus());
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  it.each(['stagiaire', 'responsable', 'edition'])(
+    'affiche une panne et permet de recharger les clients en %s',
+    async (mode) => {
+      mockCallerRole = Role.EDITOR;
+      mockClientsState = 'error';
+      const interaction = userEvent.setup();
+      const props = {
+        open: true,
+        onClose: jest.fn(),
+        user: mode === 'edition' ? EXISTING_USER : undefined,
+      };
+      const view = renderWithQueryClient(<AdminUserFormDrawer {...props} />);
+      if (mode === 'responsable') {
+        fireEvent.keyDown(screen.getByRole('combobox', { name: 'Rôle' }), { key: 'ArrowDown' });
+        fireEvent.click(await screen.findByRole('option', { name: 'Responsable' }));
+      }
+
+      expect(screen.getByRole('alert')).toHaveTextContent('Impossible de charger les clients.');
+      expect(screen.getByRole('combobox', { name: 'Client' })).toBeDisabled();
+      expect(screen.queryByText(/Aucun client/)).not.toBeInTheDocument();
+      await interaction.click(screen.getByRole('button', { name: 'Réessayer' }));
+      expect(mockRefetchClients).toHaveBeenCalledTimes(1);
+
+      mockClientsState = 'success';
+      view.rerender(<AdminUserFormDrawer {...props} onClose={jest.fn()} />);
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      expect(screen.getByRole('combobox', { name: 'Client' })).toBeEnabled();
+    },
+  );
+
+  it('distingue chargement et catalogue vide', () => {
+    mockCallerRole = Role.EDITOR;
+    mockClientsState = 'loading';
+    const props = { open: true, onClose: jest.fn() };
+    const view = renderWithQueryClient(<AdminUserFormDrawer {...props} />);
+    expect(screen.getByRole('status')).toHaveTextContent('Chargement des clients');
+    expect(screen.getByRole('combobox', { name: 'Client' })).toBeDisabled();
+    expect(screen.queryByText(/Aucun client/)).not.toBeInTheDocument();
+
+    mockClientsState = 'empty';
+    view.rerender(<AdminUserFormDrawer {...props} onClose={jest.fn()} />);
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(screen.getByText(/Aucun client dans ce tenant/)).toBeInTheDocument();
+  });
 
   it('conserve le client apres fermeture et reouverture', async () => {
     const interaction = userEvent.setup();

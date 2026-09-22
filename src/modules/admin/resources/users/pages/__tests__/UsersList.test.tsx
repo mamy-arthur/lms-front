@@ -1,6 +1,6 @@
 jest.mock('@/shared/stores/auth.store', () => ({
   useAuthStore: (selector: (state: { role: Role }) => unknown) =>
-    selector({ role: Role.SUPER_ADMIN }),
+    selector({ role: mockCallerRole }),
 }));
 
 jest.mock('@/shared/stores/tenant.store', () => ({
@@ -47,6 +47,7 @@ import type { AdminUsersTable } from '../_components/admin-users-table';
 import { UsersList } from '../UsersList';
 
 let mockActiveTenant: { id: string } | null = null;
+let mockCallerRole: Role = Role.SUPER_ADMIN;
 const TENANTS = [
   { ...MOCK_TENANTS[0], name: 'Tenant Alpha' },
   { ...MOCK_TENANTS[1], name: 'Tenant Beta' },
@@ -68,6 +69,7 @@ describe('UsersList - filtres tenant et client', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockActiveTenant = null;
+    mockCallerRole = Role.SUPER_ADMIN;
     jest.mocked(tenantApi.getAll).mockResolvedValue({ data: TENANTS });
     jest.mocked(adminClientsApi.list).mockResolvedValue({ data: [CLIENT] });
     jest.mocked(adminUsersApi.list).mockResolvedValue({ data: [], total: 0 });
@@ -77,6 +79,7 @@ describe('UsersList - filtres tenant et client', () => {
     'revient a la premiere page a la selection du filtre %s',
     async (filter) => {
       const interaction = userEvent.setup();
+      if (filter === 'client') mockActiveTenant = { id: String(TENANTS[0].id) };
       renderWithQueryClient(<UsersList />);
       await goToLaterPage(interaction);
 
@@ -110,6 +113,7 @@ describe('UsersList - filtres tenant et client', () => {
     'revient a la premiere page quand on efface le filtre %s',
     async (filter) => {
       const interaction = userEvent.setup();
+      if (filter === 'client') mockActiveTenant = { id: String(TENANTS[0].id) };
       renderWithQueryClient(<UsersList />);
       const isTenant = filter === 'tenant';
       const label = isTenant ? 'Tenant Alpha' : 'Client Alpha';
@@ -134,6 +138,26 @@ describe('UsersList - filtres tenant et client', () => {
       expect(screen.getByText('Aucun utilisateur')).toBeInTheDocument();
     },
   );
+
+  it('ne charge les clients du domaine central qu apres le choix du tenant', async () => {
+    const interaction = userEvent.setup();
+    renderWithQueryClient(<UsersList />);
+    await waitFor(() => expect(adminUsersApi.list).toHaveBeenCalled());
+    expect(adminClientsApi.list).not.toHaveBeenCalled();
+    await interaction.click(await screen.findByRole('button', { name: 'Tous les tenants' }));
+    await interaction.click(screen.getByRole('checkbox', { name: 'Tenant Alpha' }));
+    await waitFor(() => expect(adminClientsApi.list).toHaveBeenCalledWith(String(TENANTS[0].id)));
+    const calls = jest.mocked(adminClientsApi.list).mock.calls.length;
+    await interaction.click(screen.getByRole('button', { name: 'Effacer' }));
+    expect(adminClientsApi.list).toHaveBeenCalledTimes(calls);
+    expect(adminClientsApi.list).not.toHaveBeenCalledWith(null);
+  });
+
+  it('conserve le chargement implicite des clients pour un editeur', async () => {
+    mockCallerRole = Role.EDITOR;
+    renderWithQueryClient(<UsersList />);
+    await waitFor(() => expect(adminClientsApi.list).toHaveBeenCalledWith(null));
+  });
 
   it('retire le filtre client quand le tenant change', async () => {
     const interaction = userEvent.setup();

@@ -5,7 +5,17 @@ interface ClientListResponse {
   data: Client[];
 }
 
+interface ClientNameResponse extends ClientListResponse {
+  meta: { name_slug: string };
+}
+
 export const adminClientsApi = {
+  resolveName: (name: string, tenantId?: string | null) =>
+    apiGet<ClientNameResponse>('platform/clients', {
+      name,
+      ...(tenantId ? { tenant_id: tenantId } : {}),
+    }),
+
   /**
    * Clients du tenant courant. Le backend restreint la réponse au seul client
    * de l'appelant lorsqu'il est CLIENT_MANAGER, et ignore `tenantId` pour tout

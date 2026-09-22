@@ -5,9 +5,11 @@ import { UserForm } from '@modules/shared/components/users/user-form';
 import { UserPhotoField } from '@modules/shared/components/users/user-photo-field';
 import { UserProfileFields } from '@modules/shared/components/users/user-profile-fields';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { RefreshCw } from 'lucide-react';
 import { memo, useCallback, useMemo, useRef } from 'react';
 import { toast } from 'sonner';
 import { z } from 'zod';
+import { Button } from '@/components/ui/button';
 import { FieldContent, FieldError, FieldGroup, FieldLabel, FieldRoot } from '@/components/ui/field';
 import {
   Select,
@@ -68,8 +70,16 @@ const createSchemaShape = z
 
 // Un createur deja rattache a un client le transmet : il n'a aucun champ client
 // a remplir, et rien a choisir.
-const buildCreateSchema = (callerHasClient: boolean) =>
+const buildCreateSchema = (callerHasClient: boolean, allowedRoles: readonly Role[]) =>
   createSchemaShape.superRefine((values, ctx) => {
+    if (!allowedRoles.includes(values.role)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['role'],
+        message: 'Vous ne pouvez pas créer un utilisateur avec ce rôle.',
+      });
+    }
+
     if (callerHasClient) {
       return;
     }
@@ -135,6 +145,13 @@ const ROLE_LABELS: Record<string, string> = {
   [Role.TRAINEE]: 'Stagiaire',
 };
 
+const CREATABLE_ROLES: Record<Role, readonly Role[]> = {
+  [Role.SUPER_ADMIN]: [Role.SUPER_ADMIN, Role.EDITOR, Role.CLIENT_MANAGER, Role.TRAINEE],
+  [Role.EDITOR]: [Role.EDITOR, Role.CLIENT_MANAGER, Role.TRAINEE],
+  [Role.CLIENT_MANAGER]: [Role.CLIENT_MANAGER, Role.TRAINEE],
+  [Role.TRAINEE]: [],
+};
+
 const ROLE_DEFAULTS: z.infer<typeof createSchemaShape> = {
   first_name: '',
   last_name: '',
@@ -183,7 +200,15 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
   // Un createur rattache a un client transmet le sien : aucun champ a afficher.
   const callerHasClient = authUser?.role === Role.CLIENT_MANAGER;
 
-  const createSchema = useMemo(() => buildCreateSchema(callerHasClient), [callerHasClient]);
+  const creatableRoles = CREATABLE_ROLES[authUser?.role ?? Role.TRAINEE];
+  const roleLabels = isEdit
+    ? ROLE_LABELS
+    : Object.fromEntries(creatableRoles.map((role) => [role, ROLE_LABELS[role]]));
+
+  const createSchema = useMemo(
+    () => buildCreateSchema(callerHasClient, creatableRoles),
+    [callerHasClient, creatableRoles],
+  );
 
   const updateSchema = useMemo(
     () => buildUpdateSchema(canReassignClient, user),
@@ -294,7 +319,13 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
   const selectedTenantId = formState.form.watch('tenant_id') ?? null;
 
   // La liste n'est utile qu'a ceux qui choisissent reellement un client.
-  const { data: clients, isLoading: clientsLoading } = useClientsQuery(
+  const {
+    data: clients,
+    isLoading: clientsLoading,
+    isError: clientsError,
+    isFetching: clientsFetching,
+    refetch: refetchClients,
+  } = useClientsQuery(
     open &&
       !callerHasClient &&
       (!isEdit || canReassignClient) &&
@@ -473,6 +504,28 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
     !callerHasClient &&
     (isEdit ? canReassignClient && roleNeedsClient : selectedRole === Role.TRAINEE);
 
+  const clientsUnavailable = clientsLoading || clientsError || clients === undefined;
+  const clientQueryStatus = clientsError ? (
+    <div className="space-y-1">
+      <p role="alert" className="text-xs text-destructive">
+        Impossible de charger les clients.
+      </p>
+      <Button
+        type="button"
+        variant="outline"
+        disabled={clientsFetching}
+        onClick={() => void refetchClients()}
+      >
+        <RefreshCw className="size-3.5" />
+        Réessayer
+      </Button>
+    </div>
+  ) : clientsLoading ? (
+    <p role="status" className="text-xs text-muted-foreground">
+      Chargement des clients…
+    </p>
+  ) : null;
+
   const clientField = !selectedRole ? null : !isEdit &&
     !callerHasClient &&
     selectedRole === Role.CLIENT_MANAGER ? (
@@ -484,9 +537,14 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
           <FieldLabel className="text-xs">Client</FieldLabel>
           <FieldContent>
             <ClientNameCombobox
+              key={selectedTenantId ?? 'implicit-tenant'}
+              tenantId={isSuperAdmin ? selectedTenantId : null}
+              ref={field.ref}
+              name={field.name}
+              onBlur={field.onBlur}
               clients={clients ?? []}
               isLoading={clientsLoading}
-              disabled={isSuperAdmin && selectedTenantId === null}
+              disabled={clientsUnavailable || (isSuperAdmin && selectedTenantId === null)}
               clientId={formState.form.watch('client_id') ?? null}
               clientName={field.value ?? null}
               onSelectExisting={(client) => {
@@ -504,6 +562,7 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
               }}
             />
           </FieldContent>
+          {clientQueryStatus}
           <FieldError />
         </FieldGroup>
       )}
@@ -516,6 +575,7 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
         <FieldGroup>
           <FieldLabel className="text-xs">Client</FieldLabel>
           <Select
+            disabled={clientsUnavailable || (isSuperAdmin && selectedTenantId === null)}
             onValueChange={(value) => {
               if (value) field.onChange(value);
             }}
@@ -534,7 +594,8 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
               ))}
             </SelectContent>
           </Select>
-          {clients?.length === 0 ? (
+          {clientQueryStatus}
+          {!clientsUnavailable && clients?.length === 0 ? (
             <p className="text-[11px] text-muted-foreground">
               Aucun client dans ce tenant. Créez d’abord un responsable.
             </p>
@@ -563,7 +624,7 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
           onSubmit={onSubmitWithPhoto}
           showPassword={formState.showPassword}
           togglePasswordVisibility={formState.togglePasswordVisibility}
-          roleLabels={ROLE_LABELS}
+          roleLabels={roleLabels}
           topFields={
             <UserPhotoField
               currentPhotoUrl={user?.profile_photo?.url ?? null}

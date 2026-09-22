@@ -1,7 +1,7 @@
 'use client';
 
-import { Check, ChevronsUpDown, Plus } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { Check, ChevronsUpDown, Plus, RefreshCw } from 'lucide-react';
+import { useState, type ComponentProps } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Command,
@@ -14,24 +14,14 @@ import {
 } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
-import type { Client } from '@/modules/admin/resources/clients';
+import { useClientNameQuery, type Client } from '@/modules/admin/resources/clients';
 
-/**
- * Reprend l'identite d'un Client cote backend (Slug::fromString) : « Acme Corp »
- * et « ACME corp. » designent le meme client. Sans cette normalisation, l'ecran
- * proposerait de creer un doublon que le backend refuserait de creer.
- */
-function slugify(value: string): string {
-  return value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-}
-
-export interface ClientNameComboboxProps {
+export interface ClientNameComboboxProps extends Pick<
+  ComponentProps<'button'>,
+  'id' | 'aria-invalid' | 'aria-describedby' | 'ref' | 'name' | 'onBlur'
+> {
   clients: Client[];
+  tenantId: string | null;
   isLoading?: boolean;
   disabled?: boolean;
   /** Client existant retenu, null tant que le nom saisi n'en designe aucun. */
@@ -43,28 +33,32 @@ export interface ClientNameComboboxProps {
 
 export function ClientNameCombobox({
   clients,
+  tenantId,
   isLoading = false,
   disabled = false,
   clientId,
   clientName,
   onSelectExisting,
   onUseNewName,
+  ...controlProps
 }: ClientNameComboboxProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
 
   const query = search.trim();
-  const querySlug = slugify(query);
-
-  const matches = useMemo(
-    () => (querySlug === '' ? clients : clients.filter((c) => slugify(c.name).includes(querySlug))),
-    [clients, querySlug],
-  );
-
-  const existingWithSameName = useMemo(
-    () => (querySlug === '' ? undefined : clients.find((c) => slugify(c.name) === querySlug)),
-    [clients, querySlug],
-  );
+  const resolution = useClientNameQuery(query, tenantId, open && !disabled && !isLoading);
+  const resolved =
+    query !== '' && !resolution.isResolving && !resolution.isError ? resolution.data : undefined;
+  const matches =
+    query === ''
+      ? clients
+      : (resolved?.clients.filter(
+          (client) =>
+            client.slug.includes(resolved.slug) ||
+            client.name.toLocaleLowerCase().includes(query.toLocaleLowerCase()),
+        ) ?? []);
+  const existingWithSameName = resolved?.clients.find((client) => client.slug === resolved.slug);
+  const invalidName = (resolution.error as { status?: number } | null)?.status === 422;
 
   const selectedClient = clientId ? clients.find((c) => c.id === clientId) : undefined;
 
@@ -77,6 +71,7 @@ export function ClientNameCombobox({
   };
 
   const createWithTypedName = () => {
+    if (!resolved) return;
     if (existingWithSameName) {
       select(existingWithSameName);
       return;
@@ -89,15 +84,23 @@ export function ClientNameCombobox({
 
   return (
     <div className="space-y-1">
-      <Popover open={open} onOpenChange={(next) => !disabled && setOpen(next)}>
+      <Popover
+        open={open && !disabled && !isLoading}
+        onOpenChange={(next) => {
+          if (disabled || isLoading) return;
+          setOpen(next);
+          if (!next) setSearch('');
+        }}
+      >
         <PopoverTrigger asChild>
           <Button
+            {...controlProps}
             type="button"
             variant="outline"
             role="combobox"
-            aria-expanded={open}
+            aria-expanded={open && !disabled && !isLoading}
             aria-label="Client"
-            disabled={disabled}
+            disabled={disabled || isLoading}
             className="w-full justify-between font-normal text-xs"
           >
             <span className={cn('truncate', !label && 'text-muted-foreground')}>
@@ -114,7 +117,30 @@ export function ClientNameCombobox({
           <Command shouldFilter={false}>
             <CommandInput placeholder="Nom du client…" value={search} onValueChange={setSearch} />
             <CommandList>
-              {matches.length === 0 ? (
+              {query && resolution.isResolving ? (
+                <p role="status" className="p-3 text-xs text-muted-foreground">
+                  Vérification du nom…
+                </p>
+              ) : query && resolution.isError ? (
+                <div className="space-y-2 p-3">
+                  <p role="alert" className="text-xs text-destructive">
+                    {invalidName
+                      ? 'Ce nom de client est invalide.'
+                      : 'Impossible de vérifier ce nom de client.'}
+                  </p>
+                  {!invalidName && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={resolution.isFetching}
+                      onClick={() => void resolution.refetch()}
+                    >
+                      <RefreshCw className="size-3.5" />
+                      Réessayer
+                    </Button>
+                  )}
+                </div>
+              ) : matches.length === 0 ? (
                 <CommandEmpty>
                   {isLoading ? 'Chargement…' : 'Aucun client existant ne correspond.'}
                 </CommandEmpty>
@@ -133,7 +159,7 @@ export function ClientNameCombobox({
                   ))}
                 </CommandGroup>
               )}
-              {query && !existingWithSameName ? (
+              {resolved && !existingWithSameName ? (
                 <>
                   <CommandSeparator />
                   <CommandGroup>
@@ -152,7 +178,7 @@ export function ClientNameCombobox({
         {selectedClient
           ? 'Le responsable rejoint ce client existant.'
           : label
-            ? `Le client « ${label} » sera créé dans ce tenant.`
+            ? `Le client « ${label} » sera créé s’il n’existe pas déjà dans ce tenant.`
             : 'Saisissez un nom pour rechercher un client existant, ou en créer un nouveau.'}
       </p>
     </div>
