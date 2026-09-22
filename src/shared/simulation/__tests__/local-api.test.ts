@@ -31,6 +31,7 @@ import {
   clearSimulationData,
   handleSimulationRequest,
   rememberShopData,
+  hasSimulationChanges,
   resetSimulationData,
   SIMULATION_LIMITATIONS,
   SIMULATION_ROUTES,
@@ -634,13 +635,30 @@ describe('isolated simulation business API', () => {
     },
   );
 
-  it('remembers shop pricing without importing external assets or learning content', async () => {
+  it('tracks whether the demo data changed, so a reload can be warned about', async () => {
+    expect(hasSimulationChanges()).toBe(false);
+    await request('carts');
+    expect(hasSimulationChanges()).toBe(false);
+    await expect(
+      request('carts/items', 'POST', { learning_path_id: 'unknown-product' }),
+    ).rejects.toMatchObject({ status: 422 });
+    expect(hasSimulationChanges()).toBe(false);
+    await request('carts/items', 'POST', { learning_path_id: id.learningPath });
+    expect(hasSimulationChanges()).toBe(true);
+    resetSimulationData(Role.EDITOR);
+    expect(hasSimulationChanges()).toBe(false);
+    await request('carts/items', 'POST', { learning_path_id: id.learningPath });
+    clearSimulationData();
+    expect(hasSimulationChanges()).toBe(false);
+  });
+
+  it('keeps only public shop listing data, never external assets or learning content', async () => {
     const productId = simulationId(800);
     rememberShopData({
       data: [
         {
           id: productId,
-          name: 'REAL SECRET PRODUCT',
+          name: 'Real published product',
           price: '19.95',
           currency: 'EUR',
           image: { url: 'https://real.example.test/private.png' },
@@ -653,21 +671,105 @@ describe('isolated simulation business API', () => {
     ).data;
     expect(cart).toMatchObject({
       total: 19.95,
-      items: [
-        { name: 'Produit boutique démonstration', price: 19.95, image: SIMULATION_COVER_IMAGE },
-      ],
+      items: [{ name: 'Real published product', price: 19.95, image: SIMULATION_COVER_IMAGE }],
     });
-    expect(JSON.stringify(cart)).not.toMatch(/REAL SECRET|https?:|real-competency/);
+    expect(JSON.stringify(cart)).not.toMatch(/https?:|real-competency/);
     await expect(request(`platform/learning-paths/${productId}`)).rejects.toMatchObject({
       status: 404,
     });
-    const before = await request('purchased-learning-paths');
-    await request('orders', 'POST', { payment_method: 'card' });
-    expect(await request('purchased-learning-paths')).toEqual(before);
     resetSimulationData(Role.EDITOR);
     await expect(
       request('carts/items', 'POST', { learning_path_id: productId }),
     ).rejects.toMatchObject({ status: 422 });
+  });
+
+  it('lists and assigns a real shop product bought locally in the learning path management', async () => {
+    resetSimulationData(Role.CLIENT_MANAGER);
+    const productId = simulationId(801);
+    const categoryId = simulationId(802);
+    const image = `/api/v1/role-simulation/shop/learning-paths/${productId}/image`;
+    rememberShopData(
+      { data: [{ id: categoryId, name: 'Sécurité réelle' }] },
+      '/api/v1/role-simulation/shop/learning-path-categories',
+    );
+    rememberShopData(
+      {
+        data: {
+          id: productId,
+          name: 'Parcours réel acheté',
+          price: 30,
+          currency: 'EUR',
+          category_id: categoryId,
+          image: { url: image },
+          competencies: [{ id: 'real-competency' }],
+        },
+      },
+      '/api/v1/role-simulation/shop/learning-paths/' + productId,
+    );
+    const before = (await request<List>('purchased-learning-paths')).data.length;
+    const cart = await request<ApiCartResponse>('carts/items', 'POST', {
+      learning_path_id: productId,
+    });
+    await request(`carts/items/${cart.data.items[0].id}`, 'PATCH', { quantity: 3 });
+    await request('orders', 'POST', { payment_method: 'card' });
+
+    const list = await request<List>('purchased-learning-paths');
+    expect(list.data).toHaveLength(before + 1);
+    const bought = list.data.find((row) => (row.learning_path as Row).id === productId)!;
+    expect(bought).toMatchObject({
+      purchased: 3,
+      used: 0,
+      credits_available: 3,
+      learning_path: {
+        id: productId,
+        name: 'Parcours réel acheté',
+        image: { url: image },
+        category_id: categoryId,
+        category_name: 'Sécurité réelle',
+      },
+    });
+    expect(JSON.stringify(list)).not.toMatch(/real-competency/);
+    expect(
+      (await request<List>(`purchased-learning-paths?q=${encodeURIComponent('réel acheté')}`)).data,
+    ).toHaveLength(1);
+    expect(
+      (await request<List>(`purchased-learning-paths?category_ids=${categoryId}`)).data,
+    ).toHaveLength(1);
+
+    // Buying it again adds credits to the same purchase.
+    await request('carts/items', 'POST', { learning_path_id: productId });
+    await request('orders', 'POST', { payment_method: 'card' });
+    expect(
+      (await request<List>('purchased-learning-paths')).data.find(
+        (row) => (row.learning_path as Row).id === productId,
+      ),
+    ).toMatchObject({ purchased: 4 });
+
+    // Assigning it only simulates the assignment: credits and learners are local.
+    const assigned = await request<CreateEnrollmentResponse>('enrollments', 'POST', {
+      learning_path_id: productId,
+      learner_ids: [id.learner],
+    });
+    expect(assigned.meta).toMatchObject({ enrolled_count: 1, skipped_count: 0 });
+    expect(
+      (await request<List>('purchased-learning-paths')).data.find(
+        (row) => (row.learning_path as Row).id === productId,
+      ),
+    ).toMatchObject({
+      purchased: 4,
+      used: 1,
+      credits_available: 3,
+      enrollments_not_started_count: 1,
+    });
+    const learners = await request<List>(`purchased-learning-paths/${bought.id}/learners`);
+    expect(learners.data.find((row) => row.id === id.learner)?.enrollment).toMatchObject({
+      learning_path_id: productId,
+      status: 'not_started',
+    });
+    // Still no training content: the real path is not part of the fictional catalog.
+    await expect(request(`platform/learning-paths/${productId}`)).rejects.toMatchObject({
+      status: 404,
+    });
   });
 
   it('preserves the authorized shop cover in the cart and checkout without importing training data', async () => {

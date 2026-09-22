@@ -8,7 +8,7 @@ import { LoadingSpinner } from '@/shared/components/feedback/LoadingSpinner';
 import { selectSessionIdentity, useAuthStore } from '@/shared/stores/auth.store';
 import { queryClient } from '@/shared/lib/query-client';
 import { clearSimulationContext, endSimulation, synchronizeSimulation } from './service';
-import { hasSimulationData } from './local-api';
+import { hasSimulationChanges, hasSimulationData } from './local-api';
 import { useSimulationStore } from './simulation.store';
 
 export function SimulationProvider({ children }: { children: React.ReactNode }) {
@@ -49,6 +49,21 @@ export function SimulationProvider({ children }: { children: React.ReactNode }) 
       );
       document.title = title;
     };
+  }, [role]);
+
+  // Demo data only lives in memory: warn before a reload/close discards what the
+  // user did. Nothing to lose before the first change, nor after a normal exit
+  // (client-side navigation never fires beforeunload).
+  useEffect(() => {
+    if (!role) return;
+    const warn = (event: BeforeUnloadEvent) => {
+      if (!hasSimulationChanges()) return;
+      event.preventDefault();
+      // Older browsers only show the confirmation when returnValue is set.
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
   }, [role]);
 
   useEffect(() => {
