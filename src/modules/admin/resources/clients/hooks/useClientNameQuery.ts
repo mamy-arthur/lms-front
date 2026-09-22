@@ -22,6 +22,6 @@ export function useClientNameQuery(name: string, tenantId: string | null, enable
   return {
     ...query,
     data: isDebouncing ? undefined : query.data,
-    isResolving: isDebouncing || query.isPending,
+    isResolving: isDebouncing || query.isPending || query.isFetching,
   };
 }

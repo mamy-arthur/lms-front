@@ -4,7 +4,11 @@ jest.mock('@/modules/admin/resources/clients/api', () => ({
 
 import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { adminClientsApi, normalizeClient } from '@/modules/admin/resources/clients';
+import {
+  ADMIN_CLIENTS_QUERY_KEY,
+  adminClientsApi,
+  normalizeClient,
+} from '@/modules/admin/resources/clients';
 import { renderWithQueryClient } from '@/shared/lib/test-utils';
 import { ClientNameCombobox } from '../client-name-combobox';
 
@@ -99,6 +103,70 @@ describe('ClientNameCombobox - resolution canonique', () => {
     expect(
       await screen.findByRole('option', { name: /Cr.er le client.*Nouveau/ }),
     ).toBeInTheDocument();
+  });
+
+  it('attend le rafraichissement du cache invalide avant de proposer une creation', async () => {
+    const existing = normalizeClient({ ...CLIENT, name: 'Coeur', slug: 'coeur' });
+    let resolveRequest!: (value: Awaited<ReturnType<typeof adminClientsApi.resolveName>>) => void;
+    jest.mocked(adminClientsApi.resolveName).mockReturnValue(
+      new Promise((resolve) => {
+        resolveRequest = resolve;
+      }),
+    );
+    const { queryClient } = renderWithQueryClient(
+      <ClientNameCombobox {...PROPS} clients={[existing]} />,
+    );
+    queryClient.setQueryData(
+      [...ADMIN_CLIENTS_QUERY_KEY, 'resolve-name', PROPS.tenantId, 'Coeur'],
+      {
+        slug: 'coeur',
+        clients: [],
+      },
+    );
+    await queryClient.invalidateQueries({ queryKey: ADMIN_CLIENTS_QUERY_KEY });
+
+    const interaction = await search('Coeur');
+    await waitFor(() =>
+      expect(adminClientsApi.resolveName).toHaveBeenCalledWith('Coeur', PROPS.tenantId),
+    );
+    expect(screen.getByRole('status')).toHaveTextContent(/V.rification/);
+    expect(screen.queryByRole('option', { name: /^Cr.er le client/ })).not.toBeInTheDocument();
+    expect(onUseNewName).not.toHaveBeenCalled();
+
+    await act(async () => resolveRequest({ data: [existing], meta: { name_slug: 'coeur' } }));
+    await interaction.click(await screen.findByRole('option', { name: 'Coeur' }));
+    expect(onSelectExisting).toHaveBeenCalledWith(existing);
+    expect(onUseNewName).not.toHaveBeenCalled();
+  });
+
+  it('suspend les choix pendant un rafraichissement actif et apres son echec', async () => {
+    jest.mocked(adminClientsApi.resolveName).mockResolvedValueOnce({
+      data: [CLIENT],
+      meta: { name_slug: 'b-b' },
+    });
+    const { queryClient } = renderWithQueryClient(<ClientNameCombobox {...PROPS} />);
+    await search('B-B');
+    expect(await screen.findByRole('option', { name: CLIENT.name })).toBeInTheDocument();
+
+    let rejectRequest!: (error: Error) => void;
+    jest.mocked(adminClientsApi.resolveName).mockReturnValueOnce(
+      new Promise((_resolve, reject) => {
+        rejectRequest = reject;
+      }),
+    );
+    await act(async () => {
+      void queryClient.invalidateQueries({ queryKey: ADMIN_CLIENTS_QUERY_KEY });
+    });
+    await waitFor(() => expect(adminClientsApi.resolveName).toHaveBeenCalledTimes(2));
+    expect(screen.getByRole('status')).toHaveTextContent(/V.rification/);
+    expect(screen.queryByRole('option', { name: CLIENT.name })).not.toBeInTheDocument();
+
+    await act(async () => rejectRequest(new Error('Unavailable')));
+    expect(await screen.findByRole('alert')).toHaveTextContent(/Impossible de v.rifier/);
+    expect(screen.queryByRole('option', { name: CLIENT.name })).not.toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: /^Cr.er le client/ })).not.toBeInTheDocument();
+    expect(onSelectExisting).not.toHaveBeenCalled();
+    expect(onUseNewName).not.toHaveBeenCalled();
   });
 
   it('ne propose pas de creation pour un nom refuse par le backend', async () => {

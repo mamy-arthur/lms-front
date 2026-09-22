@@ -116,7 +116,7 @@ const updateSchemaShape = z
   })
   .merge(profileFieldsSchema);
 
-// Le backend n'exige un client que si ce PATCH en change la valeur ou le role :
+// Le backend exige un client si ce PATCH change le client, le role ou le tenant :
 // un compte anterieur au cloisonnement reste modifiable tel quel.
 const buildUpdateSchema = (canReassignClient: boolean, current?: User) =>
   updateSchemaShape.superRefine((values, ctx) => {
@@ -128,8 +128,9 @@ const buildUpdateSchema = (canReassignClient: boolean, current?: User) =>
 
     const clientCleared = (current?.client_id ?? null) !== null;
     const roleChanged = values.role !== current?.role;
+    const tenantChanged = (values.tenant_id ?? null) !== (current?.tenant_id ?? null);
 
-    if (clientCleared || roleChanged) {
+    if (clientCleared || roleChanged || tenantChanged) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['client_id'],

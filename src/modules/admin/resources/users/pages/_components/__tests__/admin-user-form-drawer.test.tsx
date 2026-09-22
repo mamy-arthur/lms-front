@@ -276,31 +276,65 @@ describe('AdminUserFormDrawer - rattachement client', () => {
     });
   });
 
-  it('exige un nouveau client apres un changement volontaire de tenant', async () => {
-    const interaction = userEvent.setup();
-    renderWithQueryClient(<AdminUserFormDrawer open onClose={jest.fn()} user={EXISTING_USER} />);
-    await waitFor(() => {
-      expect(screen.getByRole('combobox', { name: 'Tenant' })).toHaveTextContent('Tenant Alpha');
-    });
+  it.each([
+    { role: Role.CLIENT_MANAGER, clientId: CLIENT_A },
+    { role: Role.CLIENT_MANAGER, clientId: null },
+    { role: Role.TRAINEE, clientId: CLIENT_A },
+    { role: Role.TRAINEE, clientId: null },
+  ])(
+    'exige un client apres changement de tenant pour $role avec client initial $clientId',
+    async ({ role, clientId }) => {
+      const interaction = userEvent.setup();
+      const user = { ...EXISTING_USER, role, client_id: clientId };
+      renderWithQueryClient(<AdminUserFormDrawer open onClose={jest.fn()} user={user} />);
+      await waitFor(() => {
+        expect(screen.getByRole('combobox', { name: 'Tenant' })).toHaveTextContent('Tenant Alpha');
+      });
 
-    fireEvent.keyDown(screen.getByRole('combobox', { name: 'Tenant' }), { key: 'ArrowDown' });
-    fireEvent.click(await screen.findByRole('option', { name: 'Tenant Beta' }));
-    await interaction.click(screen.getByRole('button', { name: 'Enregistrer' }));
+      fireEvent.keyDown(screen.getByRole('combobox', { name: 'Tenant' }), { key: 'ArrowDown' });
+      fireEvent.click(await screen.findByRole('option', { name: 'Tenant Beta' }));
+      await interaction.click(screen.getByRole('button', { name: 'Enregistrer' }));
 
-    expect(await screen.findByText('Client requis')).toBeInTheDocument();
-    expect(mockUpdate).not.toHaveBeenCalled();
+      expect(await screen.findByText('Client requis')).toBeInTheDocument();
+      expect(mockUpdate).not.toHaveBeenCalled();
 
-    fireEvent.keyDown(screen.getByRole('combobox', { name: 'Client' }), { key: 'ArrowDown' });
-    fireEvent.click(await screen.findByRole('option', { name: 'Client Beta' }));
-    await interaction.click(screen.getByRole('button', { name: 'Enregistrer' }));
+      fireEvent.keyDown(screen.getByRole('combobox', { name: 'Client' }), { key: 'ArrowDown' });
+      fireEvent.click(await screen.findByRole('option', { name: 'Client Beta' }));
+      await interaction.click(screen.getByRole('button', { name: 'Enregistrer' }));
 
-    await waitFor(() => {
-      expect(mockUpdate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({ tenant_id: TENANT_B, client_id: CLIENT_B }),
-        }),
-        expect.any(Object),
-      );
-    });
-  });
+      await waitFor(() => {
+        expect(mockUpdate).toHaveBeenCalledWith(
+          expect.objectContaining({
+            data: expect.objectContaining({ role, tenant_id: TENANT_B, client_id: CLIENT_B }),
+          }),
+          expect.any(Object),
+        );
+      });
+    },
+  );
+
+  it.each([Role.CLIENT_MANAGER, Role.TRAINEE])(
+    'permet une edition simple du compte historique %s sans client',
+    async (role) => {
+      const interaction = userEvent.setup();
+      const user = { ...EXISTING_USER, role, client_id: null };
+      renderWithQueryClient(<AdminUserFormDrawer open onClose={jest.fn()} user={user} />);
+
+      await interaction.clear(screen.getByRole('textbox', { name: 'Nom' }));
+      await interaction.type(screen.getByRole('textbox', { name: 'Nom' }), 'Modifie');
+      await interaction.click(screen.getByRole('button', { name: 'Enregistrer' }));
+
+      await waitFor(() => {
+        expect(mockUpdate).toHaveBeenCalledWith(
+          expect.objectContaining({
+            id: user.id,
+            data: expect.objectContaining({ last_name: 'Modifie', role, tenant_id: TENANT_A }),
+          }),
+          expect.any(Object),
+        );
+      });
+      expect(mockUpdate.mock.calls[0][0].data).not.toHaveProperty('client_id');
+      expect(screen.queryByText('Client requis')).not.toBeInTheDocument();
+    },
+  );
 });
