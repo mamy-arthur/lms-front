@@ -8,7 +8,7 @@ import { queryClient } from '@/shared/lib/query-client';
 import { useAuthStore } from '@/shared/stores/auth.store';
 import { SimulationControls } from '../SimulationControls';
 import { SimulationProvider } from '../SimulationProvider';
-import { clearSimulationData } from '../local-api';
+import { clearSimulationData, handleSimulationRequest, resetSimulationData } from '../local-api';
 import { endSimulation, synchronizeSimulation } from '../service';
 import { useSimulationStore, type SimulationSession } from '../simulation.store';
 
@@ -193,6 +193,40 @@ describe('SimulationProvider', () => {
       }
     },
   );
+
+  it('warns before a reload only while simulating and once the demo data has changed', async () => {
+    const reloadIsBlocked = () => {
+      const event = new Event('beforeunload', { cancelable: true });
+      window.dispatchEvent(event);
+      return event.defaultPrevented;
+    };
+    const { unmount } = render(
+      <SimulationProvider>
+        <h1>Formations</h1>
+      </SimulationProvider>,
+    );
+    expect(reloadIsBlocked()).toBe(false);
+    unmount();
+
+    resetSimulationData(Role.CLIENT_MANAGER);
+    simulate(Role.CLIENT_MANAGER);
+    render(
+      <SimulationProvider>
+        <h1>Formations</h1>
+      </SimulationProvider>,
+    );
+    expect(reloadIsBlocked()).toBe(false);
+    await act(async () => {
+      await handleSimulationRequest('groups', {
+        method: 'POST',
+        body: JSON.stringify({ name: 'Groupe démonstration' }),
+      });
+    });
+    expect(reloadIsBlocked()).toBe(true);
+
+    act(() => useAuthStore.getState().setSimulatedRole(null));
+    expect(reloadIsBlocked()).toBe(false);
+  });
 
   it('does not mount business children before persisted authentication is hydrated', () => {
     jest.spyOn(useAuthStore.persist, 'hasHydrated').mockReturnValue(false);

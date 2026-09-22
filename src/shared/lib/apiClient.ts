@@ -89,7 +89,7 @@ export const httpClient = async (
     throw err;
   }
 
-  if (transport.shop) rememberShopData(json);
+  if (transport.shop) rememberShopData(json, transport.url);
   return { status: res.status, headers: res.headers, body, json };
 };
 
