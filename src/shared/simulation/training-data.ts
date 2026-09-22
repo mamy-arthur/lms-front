@@ -440,8 +440,7 @@ export function importTrainingPreview(
         // richtext, arbitrary text and media under their existing stricter policy.
         const url = getHttpContentUrl(value);
         const host = url ? new URL(url).hostname.replace(/\.$/, '') : '';
-        fields[name] =
-          host && host !== window.location.hostname.replace(/\.$/, '') ? url : '';
+        fields[name] = host && host !== window.location.hostname.replace(/\.$/, '') ? url : '';
       } else {
         fields[name] = field.type === 'url' ? mediaUrl(value, realPathId) : safe(value, name);
       }
