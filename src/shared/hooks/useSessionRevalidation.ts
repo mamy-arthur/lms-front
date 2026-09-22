@@ -30,17 +30,19 @@ export function useSessionRevalidation() {
   const pathname = usePathname();
   const user = useAuthStore((s) => s.user);
   const role = useAuthStore((s) => s.role);
+  // The token still belongs to the real user, not the simulated persona.
+  const realRole = user?.role ?? role;
   const lastProbeAt = useRef(0);
 
   useEffect(() => {
-    if (user === null || role === null) return;
+    if (user === null || realRole === null) return;
 
     const probe = () => {
       const now = Date.now();
       if (now - lastProbeAt.current < MIN_PROBE_INTERVAL_MS) return;
       lastProbeAt.current = now;
 
-      const revalidate = PLATFORM_ROLES.includes(role) ? authApi.platformMe : authApi.me;
+      const revalidate = PLATFORM_ROLES.includes(realRole) ? authApi.platformMe : authApi.me;
 
       // A rejected probe is already handled by httpClient (401 -> clearAuth +
       // redirect); any other failure must not disrupt a working session.
@@ -75,5 +77,5 @@ export function useSessionRevalidation() {
     document.addEventListener('visibilitychange', onVisible);
 
     return () => document.removeEventListener('visibilitychange', onVisible);
-  }, [user, role, router, pathname]);
+  }, [user, realRole, router, pathname]);
 }

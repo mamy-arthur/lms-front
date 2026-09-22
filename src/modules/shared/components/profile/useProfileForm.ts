@@ -3,6 +3,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAuthStore } from '@/shared/stores/auth.store';
+import { useSimulationUser } from '@/shared/simulation/useSimulationUser';
+import { useSimulationStore } from '@/shared/simulation/simulation.store';
 import { apiGet, apiPatch } from '@/shared/lib/apiClient';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { uploadUserProfilePhoto } from '@/modules/shared/lib/uploadUserProfilePhoto';
@@ -21,6 +23,17 @@ export const profileSchema = z.object({
 
 export type ProfileFormValues = z.infer<typeof profileSchema>;
 
+const EMPTY_PROFILE: ProfileFormValues = {
+  first_name: '',
+  last_name: '',
+  address: null,
+  zip_code: null,
+  city: null,
+  country: null,
+  timezone: null,
+  preferred_language: null,
+};
+
 interface UseProfileFormOptions {
   uploadPath?: 'platform/users' | 'users';
   patchPath?: string;
@@ -30,7 +43,8 @@ export function useProfileForm({
   uploadPath = 'platform/users',
   patchPath = 'platform/users',
 }: UseProfileFormOptions = {}) {
-  const { user, setAuth } = useAuthStore();
+  const user = useSimulationUser();
+  const simulatedRole = useAuthStore((s) => s.simulatedRole);
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const pendingPhotoRef = useRef<File | null>(null);
@@ -54,17 +68,17 @@ export function useProfileForm({
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
-    defaultValues: {
-      first_name: '',
-      last_name: '',
-      address: null,
-      zip_code: null,
-      city: null,
-      country: null,
-      timezone: null,
-      preferred_language: null,
-    },
+    defaultValues: EMPTY_PROFILE,
   });
+
+  useEffect(() => {
+    // Do not carry unsaved real details or an uploaded photo into another persona.
+    form.reset(EMPTY_PROFILE);
+    pendingPhotoRef.current = null;
+    photoJustUploadedRef.current = false;
+    setPhotoPreview(null);
+    setUploadError(null);
+  }, [form, user?.id]);
 
   // dataUpdatedAt est un timestamp qui change à chaque mise à jour des données,
   // garantissant que reset() s'exécute même si la référence profileData est identique
@@ -84,8 +98,15 @@ export function useProfileForm({
     // Sync avatar only when the API provides one — never clear an existing avatar
     const raw = data as ProfileFormValues & { profile_photo?: { url: string } | null };
     const freshAvatar = raw.profile_photo?.url ?? null;
-    const storeUser = useAuthStore.getState().user;
-    if (storeUser && freshAvatar && freshAvatar !== storeUser.avatar) {
+    const { user: storeUser, simulatedRole: currentSimulatedRole } = useAuthStore.getState();
+    if (
+      !simulatedRole &&
+      !currentSimulatedRole &&
+      storeUser &&
+      storeUser.id === user?.id &&
+      freshAvatar &&
+      freshAvatar !== storeUser.avatar
+    ) {
       useAuthStore.getState().setAuth({ ...storeUser, avatar: freshAvatar });
     }
     // Clear the preview only when the server has confirmed a new avatar URL.
@@ -93,7 +114,7 @@ export function useProfileForm({
       photoJustUploadedRef.current = false;
       setPhotoPreview(null);
     }
-  }, [dataUpdatedAt, form]);
+  }, [dataUpdatedAt, profileData, form, simulatedRole, user?.id]);
 
   const loadError = isProfileError ? 'Impossible de charger le profil. Veuillez réessayer.' : null;
 
@@ -102,18 +123,36 @@ export function useProfileForm({
     if (!file) return;
     pendingPhotoRef.current = file;
     const reader = new FileReader();
-    reader.onload = (ev) => setPhotoPreview(ev.target?.result as string);
+    const epoch = useSimulationStore.getState().epoch;
+    reader.onload = (ev) => {
+      if (pendingPhotoRef.current === file && useSimulationStore.getState().epoch === epoch) {
+        setPhotoPreview(ev.target?.result as string);
+      }
+    };
     reader.readAsDataURL(file);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const handleSave = async (values: ProfileFormValues) => {
     if (!user) return;
+    const epoch = useSimulationStore.getState().epoch;
+    const isCurrentContext = () => {
+      const currentAuth = useAuthStore.getState();
+      const simulation = useSimulationStore.getState();
+      return (
+        currentAuth.simulatedRole === simulatedRole &&
+        simulation.epoch === epoch &&
+        (simulation.phase === 'idle' || simulation.phase === 'ready') &&
+        (!!simulatedRole || currentAuth.user?.id === user.id)
+      );
+    };
+    if (!isCurrentContext()) return;
     setUploadError(null);
 
     if (pendingPhotoRef.current) {
       try {
         await uploadUserProfilePhoto(user.id, pendingPhotoRef.current, uploadPath);
+        if (!isCurrentContext()) return;
         pendingPhotoRef.current = null;
         // photoPreview is intentionally kept: it stays visible until the profile
         // query refetches and the useEffect confirms the server-side URL in the store.
@@ -136,7 +175,16 @@ export function useProfileForm({
         timezone: values.timezone || null,
         preferred_language: values.preferred_language || null,
       });
-      setAuth({ ...user, name: `${values.first_name} ${values.last_name}`.trim() });
+      if (!isCurrentContext()) return;
+      const currentAuth = useAuthStore.getState();
+      // A demo request may finish after simulation ends. Never copy its user
+      // into real auth, even when setAuth is no longer guarded by the store.
+      if (!simulatedRole && !currentAuth.simulatedRole && currentAuth.user?.id === user.id) {
+        currentAuth.setAuth({
+          ...currentAuth.user,
+          name: `${values.first_name} ${values.last_name}`.trim(),
+        });
+      }
       toast.success('Profil mis à jour');
       void queryClient.invalidateQueries({ queryKey: ['profile', patchPath, user.id] });
     } catch {

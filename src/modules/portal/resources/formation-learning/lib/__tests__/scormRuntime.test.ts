@@ -75,6 +75,57 @@ beforeEach(() => {
   jest.clearAllMocks();
 });
 
+describe('ScormSession — isolation de simulation', () => {
+  it('discards a queued commit after the execution context changes', async () => {
+    let current = true;
+    mockApi.getTracking.mockResolvedValue({ data: BASE_STATE });
+    const session = new ScormSession({
+      enrollmentId: 'demo',
+      competencyId: 'demo',
+      courseId: 'demo',
+      entryId: 'demo',
+      nodeExecutionId: 'demo-execution',
+      expectedStateRevision: () => 1,
+      version: '1.2',
+      isContextCurrent: () => current,
+    });
+    await session.preload();
+    session.apiSetValue('cmi.core.lesson_status', 'completed');
+    session.apiCommit();
+    current = false;
+    await flush();
+    expect(mockApi.commitTracking).not.toHaveBeenCalled();
+  });
+
+  it('never retries or notifies completion in a new real/simulated context', async () => {
+    let current = true;
+    const onCompleted = jest.fn();
+    mockApi.getTracking.mockResolvedValue({ data: BASE_STATE });
+    mockApi.commitTracking.mockImplementationOnce(async () => {
+      current = false;
+      throw { status: 409 };
+    });
+    const session = new ScormSession({
+      enrollmentId: 'demo',
+      competencyId: 'demo',
+      courseId: 'demo',
+      entryId: 'demo',
+      nodeExecutionId: 'demo-execution',
+      expectedStateRevision: () => 1,
+      version: '1.2',
+      isContextCurrent: () => current,
+      onCompleted,
+    });
+    await session.preload();
+    session.apiSetValue('cmi.core.lesson_status', 'completed');
+    session.apiCommit();
+    await flush();
+    expect(mockApi.commitTracking).toHaveBeenCalledTimes(1);
+    expect(mockApi.getTrackingSequence).not.toHaveBeenCalled();
+    expect(onCompleted).not.toHaveBeenCalled();
+  });
+});
+
 describe("ScormSession — garde d'initialisation", () => {
   it('GetValue/SetValue/Commit/Finish échouent avant preload()', () => {
     const session = makeSession();

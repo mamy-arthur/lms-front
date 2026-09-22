@@ -77,7 +77,7 @@ export function StorePage() {
     price_max: PRICE_RANGE_OPTIONS.find((o) => o.value === priceRange)?.max,
   });
 
-  const categoriesQuery = useLearningPathCategoriesQuery();
+  const categoriesQuery = useLearningPathCategoriesQuery(true);
 
   const items = shopQuery.data?.data ?? [];
   const total = shopQuery.data?.meta.total ?? 0;

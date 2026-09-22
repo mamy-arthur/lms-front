@@ -5,10 +5,12 @@ import { useAuthStore } from '@/shared/stores/auth.store';
 import { PLATFORM_ROLES } from '@/shared/constants/roles';
 import { ROUTES } from '@/shared/constants/routes';
 import { LoadingSpinner } from '@/shared/components/feedback/LoadingSpinner';
+import { roleHome } from '@/shared/simulation/simulation.store';
 
 export function PlatformGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
+  const role = useAuthStore((s) => s.role);
 
   const [hydrated, setHydrated] = useState(() => useAuthStore.persist.hasHydrated());
 
@@ -19,11 +21,13 @@ export function PlatformGuard({ children }: { children: React.ReactNode }) {
     return unsub;
   }, [hydrated]);
 
-  const isAuthorized = hydrated && !!user && PLATFORM_ROLES.includes(user.role);
+  const isAuthorized = hydrated && !!user && role !== null && PLATFORM_ROLES.includes(role);
 
   useEffect(() => {
-    if (hydrated && !isAuthorized) router.replace(ROUTES.platform.login);
-  }, [hydrated, isAuthorized, router]);
+    if (hydrated && !isAuthorized) {
+      router.replace(user ? roleHome(role) : ROUTES.platform.login);
+    }
+  }, [hydrated, isAuthorized, user, role, router]);
 
   if (!hydrated || !isAuthorized) return <LoadingSpinner className="h-screen" />;
 

@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/sheet';
 import { useUserFormDrawer } from '@modules/shared/components/users/use-user-form-drawer';
 import { UserForm } from '@modules/shared/components/users/user-form';
-import { useTenantStore } from '@/shared/stores/tenant.store';
+import { useTenant } from '@/shared/hooks/useTenant';
 import { useCreateClientUser } from '../hooks/useCreateClientUsers';
 import { useUpdateClientUser } from '../hooks/useUpdateClientUsers';
 import type { CreateClientUserPayload, ClientUser, UpdateClientUserPayload } from '../types';
@@ -94,7 +94,8 @@ function UserFormDrawerBase({ open, onClose, onSuccess, user }: UserFormDrawerPr
 
   const createMutation = useCreateClientUser();
   const updateMutation = useUpdateClientUser();
-  const tenantId = useTenantStore((s) => s.tenant?.id ?? null);
+  const { tenant } = useTenant();
+  const tenantId = tenant?.id ?? null;
   const pendingPhotoRef = useRef<File | null>(null);
   const queryClient = useQueryClient();
 

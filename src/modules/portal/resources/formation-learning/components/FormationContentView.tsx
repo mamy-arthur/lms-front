@@ -9,6 +9,9 @@ import type { ApiPortalContentEntry } from '@/shared/types/portal.types';
 import type { ExecutionMutationContext } from '@/shared/types/progression.types';
 import ContentNavigationBar from './ContentNavigationBar';
 import type { RegisterScormSession } from '../lib/scormRuntime';
+import { useAuthStore } from '@/shared/stores/auth.store';
+import { useSimulationStore } from '@/shared/simulation/simulation.store';
+import { Role } from '@/shared/constants/roles';
 
 interface Props {
   formation: Formation;
@@ -46,6 +49,15 @@ export default function FormationContentView({
   onExecutionConflict,
   registerScormSession,
 }: Props) {
+  const simulatedRole = useAuthStore((state) => state.simulatedRole);
+  const actorRole = useAuthStore((state) => state.user?.role);
+  const phase = useSimulationStore((state) => state.phase);
+  const readOnlyScorm =
+    (resolved?.kind === 'content' && resolved.content.readOnly === true) ||
+    (simulatedRole === Role.TRAINEE && portalEntryLoading) ||
+    (simulatedRole === Role.TRAINEE &&
+      (actorRole === Role.EDITOR || actorRole === Role.CLIENT_MANAGER) &&
+      (portalEntry?.module_type === 'scorm' || portalEntryLoading === true));
   if (!resolved) {
     return (
       <div className="flex min-h-0 flex-1 items-center justify-center text-sm text-slate-400">
@@ -74,6 +86,14 @@ export default function FormationContentView({
   const { content, prev, next } = resolved;
   const pos = getContentPosition(formation, content.id);
   const readExecutionId = resolved.node.execution.readExecutionId;
+  const simulatedScorm =
+    simulatedRole === Role.TRAINEE &&
+    !portalEntryLoading &&
+    portalEntry?.id === content.entryId &&
+    portalEntry?.module_type === 'scorm';
+  // The package runtime stays read-only. Manual completion uses the same
+  // in-memory simulation progression as other contents, not a separate UI flag.
+  const canComplete = canMutate && (simulatedScorm || !readOnlyScorm);
 
   return (
     <div className="flex flex-1 flex-col min-h-0">
@@ -106,8 +126,8 @@ export default function FormationContentView({
             courseId={content.courseId}
             nodeExecutionId={readExecutionId}
             expectedStateRevision={formation.execution.stateRevision}
-            readOnly={!canMutate || content.completed}
-            onScormCompleted={canMutate ? () => onMarkComplete() : undefined}
+            readOnly={!canMutate || content.completed || readOnlyScorm}
+            onScormCompleted={canComplete ? () => onMarkComplete() : undefined}
             onScormExecutionConflict={onExecutionConflict}
             registerScormSession={registerScormSession}
           />
@@ -122,8 +142,8 @@ export default function FormationContentView({
         isNextLocked={resolved.isNextLocked}
         onNavigate={onNavigate}
         isCompleted={content.completed === true}
-        onMarkComplete={canMutate ? onMarkComplete : undefined}
-        isCompleting={isCompleting}
+        onMarkComplete={canComplete ? onMarkComplete : undefined}
+        isCompleting={isCompleting || (simulatedScorm && phase !== 'ready')}
       />
     </div>
   );

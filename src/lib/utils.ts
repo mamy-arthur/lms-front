@@ -5,6 +5,27 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+/** Web content only: never execute a scheme or silently resolve a relative/internal path. */
+export function getHttpContentUrl(value: unknown): string | null {
+  if (
+    typeof value !== 'string' ||
+    value.includes('\\') ||
+    Array.from(value).some(
+      (character) => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127,
+    )
+  )
+    return null;
+  const candidate = value.trim();
+  if (!/^https?:\/\/[^/\s]/i.test(candidate)) return null;
+  try {
+    const url = new URL(candidate);
+    if (!url.hostname || url.username || url.password) return null;
+    return url.href;
+  } catch {
+    return null;
+  }
+}
+
 /** Converts a YouTube watch/short URL to an embed URL. Returns the original URL unchanged if not YouTube. */
 export function toYouTubeEmbedUrl(url: string): string {
   let parsed: URL;

@@ -1,5 +1,6 @@
 jest.mock('@/shared/stores/auth.store', () => ({
-  useAuthStore: () => ({ user: { role: mockCallerRole } }),
+  useAuthStore: (selector: (state: { role: Role; user: { role: Role } }) => unknown) =>
+    selector({ role: mockCallerRole, user: { role: Role.SUPER_ADMIN } }),
 }));
 
 jest.mock('@/modules/admin/resources/tenants/api', () => ({

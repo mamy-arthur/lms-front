@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540" fill="none">
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="960" y2="540" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#172554"/>
+      <stop offset="1" stop-color="#2563EB"/>
+    </linearGradient>
+  </defs>
+  <rect width="960" height="540" fill="url(#background)"/>
+  <circle cx="824" cy="64" r="178" fill="#60A5FA" opacity=".2"/>
+  <circle cx="900" cy="462" r="230" fill="#93C5FD" opacity=".15"/>
+  <rect x="64" y="62" width="220" height="42" rx="21" fill="#DBEAFE"/>
+  <text x="174" y="90" text-anchor="middle" font-family="Arial, sans-serif" font-size="19" font-weight="700" fill="#1E40AF">MODE SIMULATION</text>
+  <text x="64" y="226" font-family="Arial, sans-serif" font-size="53" font-weight="700" fill="white">Apprendre,</text>
+  <text x="64" y="290" font-family="Arial, sans-serif" font-size="53" font-weight="700" fill="white">tout simplement.</text>
+  <text x="64" y="350" font-family="Arial, sans-serif" font-size="23" fill="#BFDBFE">Votre formation de démonstration</text>
+  <path d="M665 206C699 193 728 198 754 218V343C728 323 699 318 665 331V206Z" fill="#DBEAFE"/>
+  <path d="M754 218C780 198 809 193 843 206V331C809 318 780 323 754 343V218Z" fill="white"/>
+  <path d="M684 229C702 224 717 227 732 235M684 252C702 247 717 250 732 258M778 235C793 227 808 224 824 229M778 258C793 250 808 247 824 252" stroke="#3B82F6" stroke-width="5" stroke-linecap="round"/>
+  <path d="M64 450H288" stroke="#93C5FD" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="310" cy="450" r="5" fill="#93C5FD"/>
+</svg>

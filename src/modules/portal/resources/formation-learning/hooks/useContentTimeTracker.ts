@@ -2,6 +2,13 @@ import { useCallback, useEffect, useRef } from 'react';
 import { type ContentTimeSessionPayload, portalContentTimeApi } from '@/shared/api/portal.api';
 import { isExecutionContextRejection } from '@/shared/lib/execution-conflict';
 import type { ExecutionMutationContext } from '@/shared/types/progression.types';
+import { useAuthStore } from '@/shared/stores/auth.store';
+import { useSimulationStore } from '@/shared/simulation/simulation.store';
+
+function trackingBlocked(): boolean {
+  const phase = useSimulationStore.getState().phase;
+  return !!useAuthStore.getState().simulatedRole || (phase !== 'idle' && phase !== 'ready');
+}
 
 /** Au-delà, on considère l'apprenant parti et le chrono se met en pause. */
 const IDLE_MS = 60_000;
@@ -153,6 +160,9 @@ async function postRecord(
   onExecutionConflict: ConflictHandler,
   required = false,
 ): Promise<void> {
+  if (trackingBlocked()) return;
+  const epoch = useSimulationStore.getState().epoch;
+  const canAcknowledge = () => !trackingBlocked() && useSimulationStore.getState().epoch === epoch;
   try {
     await portalContentTimeApi.record(
       record.enrollmentId,
@@ -163,9 +173,11 @@ async function postRecord(
       { keepalive },
     );
 
-    forgetPending(record);
+    if (canAcknowledge()) forgetPending(record);
   } catch (error) {
-    if (isExecutionContextRejection(error)) {
+    if (!canAcknowledge()) {
+      // Changement de contexte réel/simulé pendant l'envoi : ni acquittement ni conflit.
+    } else if (isExecutionContextRejection(error)) {
       // Le refus invalide toute la période, y compris un flush plus récent en
       // vol. Contrairement à un acquittement, il ne faut pas conserver ce dernier.
       writePending(readPending().filter((pending) => pending.sessionId !== record.sessionId));
@@ -186,6 +198,8 @@ function retryPending(
   excludedSessionId: string | null,
   onExecutionConflict: ConflictHandler,
 ): void {
+  // Do not even read/prune the real queue while viewing demo contents.
+  if (trackingBlocked()) return;
   const now = Date.now();
   const pending = readPending();
   const fresh = pending.filter((record) => now - record.queuedAt < PENDING_MAX_AGE_MS);
@@ -251,7 +265,10 @@ export function useContentTimeTracker({
   idleDetection,
   onExecutionConflict,
 }: Options) {
-  // Tout est en refs : ce hook ne doit jamais provoquer de rendu.
+  const simulatedRole = useAuthStore((s) => s.simulatedRole);
+  const phase = useSimulationStore((s) => s.phase);
+  const blocked = !!simulatedRole || (phase !== 'idle' && phase !== 'ready');
+  // Les mesures restent en refs : aucun rendu à chaque tick.
   const sessionIdRef = useRef<string | null>(null);
   const startedAtRef = useRef<Date | null>(null);
   const accumulatedMsRef = useRef(0);
@@ -290,7 +307,9 @@ export function useContentTimeTracker({
   const resumeAfterFailure = useCallback(() => completionControlRef.current?.resume(), []);
 
   useEffect(() => {
-    if (!courseId || !entryId || !competencyId || !nodeExecutionId) return;
+    if (blocked || trackingBlocked() || !courseId || !entryId || !competencyId || !nodeExecutionId)
+      return;
+    let stopped = false;
     let completing = false;
     let disposed = false;
     let rejection: { error: unknown; revision: number } | null = null;
@@ -313,6 +332,7 @@ export function useContentTimeTracker({
     };
 
     const resume = () => {
+      if (stopped || trackingBlocked()) return;
       if (completing || activeSinceRef.current !== null) return;
       if (rejection) {
         if (revisionRef.current === rejection.revision) return;
@@ -341,6 +361,7 @@ export function useContentTimeTracker({
     };
 
     const send = (close: boolean, keepalive: boolean, required = false): Promise<void> => {
+      if (!close && (stopped || trackingBlocked())) return Promise.resolve();
       if (rejection) return required ? Promise.reject(rejection.error) : Promise.resolve();
       // Replie la plage active en cours sans arrêter le chrono, pour que la
       // sauvegarde périodique reflète le temps jusqu'à maintenant.
@@ -469,7 +490,9 @@ export function useContentTimeTracker({
         }, IDLE_CHECK_INTERVAL_MS)
       : undefined;
 
-    return () => {
+    const stop = () => {
+      if (stopped) return;
+      stopped = true;
       disposed = true;
       document.removeEventListener('visibilitychange', onVisibilityChange);
       window.removeEventListener('pagehide', onPageHide);
@@ -485,11 +508,25 @@ export function useContentTimeTracker({
       // aucun composant ne se démonte quand l'apprenant passe au module suivant.
       if (!completing) {
         pause();
+        // This period was opened in real mode. Persist its final measurement,
+        // but postRecord will not send it while transitioning/simulating.
         void send(true, true);
       } else {
         resetSession();
       }
       if (completionControlRef.current === completionControl) completionControlRef.current = null;
+    };
+    // Freeze the real period at the boundary, not at a later React cleanup.
+    const stopIfBlocked = () => {
+      if (trackingBlocked()) stop();
+    };
+    const unsubscribeAuth = useAuthStore.subscribe(stopIfBlocked);
+    const unsubscribeSimulation = useSimulationStore.subscribe(stopIfBlocked);
+
+    return () => {
+      unsubscribeAuth();
+      unsubscribeSimulation();
+      stop();
     };
     // `competencyId` fait partie des dépendances : changer de module change le
     // contexte de la période, donc la période en cours doit être close.
@@ -499,7 +536,7 @@ export function useContentTimeTracker({
     // `expectedStateRevision` en est volontairement absent : la révision change
     // à chaque transition du parcours, et la mettre ici clôturerait la période en
     // cours à chaque fois. Elle est relue via une ref à l'envoi.
-  }, [enrollmentId, courseId, entryId, competencyId, nodeExecutionId, idleDetection]);
+  }, [enrollmentId, courseId, entryId, competencyId, nodeExecutionId, idleDetection, blocked]);
 
   // Un conflit de révision peut se résoudre sans changer de visite. Reprendre
   // alors une période neuve, sans réattribuer les mesures du contexte rejeté.

@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useAuthStore } from '@/shared/stores/auth.store';
+import { useSimulationUser } from '@/shared/simulation/useSimulationUser';
 import { getInitials } from '@/shared/lib/string/getInitials';
 import { UserProfileFields } from '@modules/shared/components/users/user-profile-fields';
 import { useProfileForm } from './useProfileForm';
@@ -30,7 +30,7 @@ export default function ProfileContent({
   uploadPath = 'platform/users',
   patchPath = 'platform/users',
 }: ProfileContentProps) {
-  const { user } = useAuthStore();
+  const user = useSimulationUser();
   const [activeTab, setActiveTab] = useState<'account' | 'security'>('account');
 
   const {
@@ -198,7 +198,7 @@ export default function ProfileContent({
                       <Input
                         id="email"
                         type="email"
-                        defaultValue={user.email}
+                        value={user.email}
                         readOnly
                         className="bg-muted/40 text-sm cursor-not-allowed"
                       />
@@ -210,7 +210,7 @@ export default function ProfileContent({
                       </Label>
                       <Input
                         id="role"
-                        defaultValue={user.role}
+                        value={user.role}
                         readOnly
                         className="bg-muted/40 text-sm cursor-not-allowed"
                       />

@@ -180,12 +180,12 @@ export interface AdminUserFormDrawerProps {
 
 function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFormDrawerProps) {
   const isEdit = !!user;
-  const { user: authUser } = useAuthStore();
-  const isSuperAdmin = authUser?.role === Role.SUPER_ADMIN;
+  const role = useAuthStore((s) => s.role);
+  const isSuperAdmin = role === Role.SUPER_ADMIN;
 
   // Le backend reserve la reaffectation a ces deux roles : un responsable
   // pourrait sinon deplacer ses apprenants hors de son perimetre.
-  const canReassignClient = isSuperAdmin || authUser?.role === Role.EDITOR;
+  const canReassignClient = isSuperAdmin || role === Role.EDITOR;
 
   const createMutation = useCreateUser();
   const updateMutation = useUpdateUser();
@@ -203,9 +203,9 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
   });
 
   // Un createur rattache a un client transmet le sien : aucun champ a afficher.
-  const callerHasClient = authUser?.role === Role.CLIENT_MANAGER;
+  const callerHasClient = role === Role.CLIENT_MANAGER;
 
-  const creatableRoles = CREATABLE_ROLES[authUser?.role ?? Role.TRAINEE];
+  const creatableRoles = CREATABLE_ROLES[role ?? Role.TRAINEE];
   const roleLabels = isEdit
     ? ROLE_LABELS
     : Object.fromEntries(creatableRoles.map((role) => [role, ROLE_LABELS[role]]));

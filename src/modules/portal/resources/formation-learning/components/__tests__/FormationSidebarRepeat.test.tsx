@@ -116,4 +116,51 @@ describe('Indication de repassage sur les nœuds du sommaire', () => {
     expect(screen.queryByText('À refaire')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Bilan/ })).toBeEnabled();
   });
+
+  it('affiche une coche pour un contenu terminé dans le résumé et garde la suite verrouillée après le premier contenu en attente', async () => {
+    const formation = mapSummaryToFormation(
+      buildExecutionSummary({
+        modules: [
+          {
+            id: 'module-1',
+            name: 'Module actif',
+            courses: [
+              {
+                id: 'course-1',
+                name: 'Cours',
+                entries: [
+                  { id: 'entry-1', title: 'Contenu terminé', completed: true },
+                  { id: 'entry-2', title: 'Contenu à terminer' },
+                  { id: 'entry-3', title: 'Contenu verrouillé' },
+                ],
+              },
+            ],
+          },
+        ],
+      }),
+    );
+    const before = JSON.parse(JSON.stringify(formation));
+    const onSelect = jest.fn();
+    render(
+      <FormationSidebar
+        formation={formation}
+        activeId="module-1:course-1:entry-2"
+        onSelect={onSelect}
+      />,
+    );
+    const completed = screen.getByRole('button', { name: 'Contenu terminé' });
+    expect(completed).toBeEnabled();
+    expect(completed).not.toHaveAttribute('title');
+    expect(completed.querySelector('.lucide-check')).toBeInTheDocument();
+    expect(completed.querySelector('.lucide-lock')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Contenu à terminer' })).toBeEnabled();
+    const locked = screen.getByRole('button', { name: 'Contenu verrouillé' });
+    expect(locked).toBeDisabled();
+    expect(locked).not.toHaveAttribute('title');
+    expect(locked.querySelector('.lucide-lock')).toBeInTheDocument();
+    expect(locked.querySelector('.lucide-check')).not.toBeInTheDocument();
+    await userEvent.setup().click(locked);
+    expect(onSelect).not.toHaveBeenCalled();
+    expect(formation).toEqual(before);
+  });
 });

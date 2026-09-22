@@ -1,6 +1,6 @@
 jest.mock('@/shared/stores/auth.store', () => ({
-  useAuthStore: (selector: (state: { role: Role }) => unknown) =>
-    selector({ role: mockCallerRole }),
+  useAuthStore: (selector: (state: { role: Role; simulatedRole: Role | null }) => unknown) =>
+    selector({ role: mockCallerRole, simulatedRole: mockSimulatedRole }),
 }));
 
 jest.mock('@/shared/stores/tenant.store', () => ({
@@ -42,12 +42,14 @@ import { tenantApi } from '@/modules/admin/resources/tenants/api';
 import { Role } from '@/shared/constants/roles';
 import { renderWithQueryClient } from '@/shared/lib/test-utils';
 import { MOCK_TENANTS } from '@/shared/mocks/tenant/mock-tenants';
+import { SIMULATION_IDS } from '@/shared/simulation/fixtures';
 import { adminUsersApi } from '../../api';
 import type { AdminUsersTable } from '../_components/admin-users-table';
 import { UsersList } from '../UsersList';
 
 let mockActiveTenant: { id: string } | null = null;
 let mockCallerRole: Role = Role.SUPER_ADMIN;
+let mockSimulatedRole: Role | null = null;
 const TENANTS = [
   { ...MOCK_TENANTS[0], name: 'Tenant Alpha' },
   { ...MOCK_TENANTS[1], name: 'Tenant Beta' },
@@ -70,6 +72,7 @@ describe('UsersList - filtres tenant et client', () => {
     jest.clearAllMocks();
     mockActiveTenant = null;
     mockCallerRole = Role.SUPER_ADMIN;
+    mockSimulatedRole = null;
     jest.mocked(tenantApi.getAll).mockResolvedValue({ data: TENANTS });
     jest.mocked(adminClientsApi.list).mockResolvedValue({ data: [CLIENT] });
     jest.mocked(adminUsersApi.list).mockResolvedValue({ data: [], total: 0 });
@@ -184,6 +187,34 @@ describe('UsersList - filtres tenant et client', () => {
     });
     expect(jest.mocked(adminUsersApi.list).mock.calls.at(-1)?.[0]).not.toHaveProperty('client_id');
   });
+
+  it.each([Role.EDITOR, Role.CLIENT_MANAGER])(
+    'utilise le tenant fictif pour le role simule %s',
+    async (role) => {
+      mockActiveTenant = { id: 'real-tenant' };
+      mockSimulatedRole = role;
+      mockCallerRole = role;
+      renderWithQueryClient(<UsersList />);
+
+      await waitFor(() =>
+        expect(adminUsersApi.list).toHaveBeenCalledWith(
+          expect.objectContaining({ tenant_id: SIMULATION_IDS.tenant }),
+        ),
+      );
+      expect(adminUsersApi.list).not.toHaveBeenCalledWith(
+        expect.objectContaining({ tenant_id: 'real-tenant' }),
+      );
+      expect(tenantApi.getAll).not.toHaveBeenCalled();
+      expect(screen.queryByRole('button', { name: 'Tous les tenants' })).not.toBeInTheDocument();
+      if (role === Role.EDITOR) {
+        await waitFor(() =>
+          expect(adminClientsApi.list).toHaveBeenCalledWith(SIMULATION_IDS.tenant),
+        );
+      } else {
+        expect(adminClientsApi.list).not.toHaveBeenCalled();
+      }
+    },
+  );
 
   it('ne considere pas le tenant du sous-domaine comme un filtre choisi', async () => {
     mockActiveTenant = { id: String(TENANTS[0].id) };
