@@ -61,6 +61,8 @@ export function SelectCoursesDialog({ open, onOpenChange, selectedCourseIds, onC
   const categories = categoriesQuery.data ?? [];
 
   const toggle = (course: Course) => {
+    if ((course.contentCount ?? 0) <= 0 || selectedCourseIds.includes(course.id)) return;
+
     setPending((prev) =>
       prev.some((c) => c.id === course.id)
         ? prev.filter((c) => c.id !== course.id)
@@ -73,7 +75,10 @@ export function SelectCoursesDialog({ open, onOpenChange, selectedCourseIds, onC
       <DialogContent className="flex h-[60vh] flex-col sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Ajouter des cours</DialogTitle>
-          <DialogDescription>Sélectionnez les cours à ajouter au module.</DialogDescription>
+          <DialogDescription>
+            Sélectionnez les cours à ajouter au module. Seuls les cours contenant au moins un
+            contenu peuvent être ajoutés.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="relative">

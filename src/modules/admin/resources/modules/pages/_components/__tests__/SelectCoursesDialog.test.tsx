@@ -23,6 +23,7 @@ const FIRST_COURSE: ApiCourse = {
   category_id: 'cat-1',
   visibility: 'PUBLISHED',
   description: null,
+  content_count: 1,
   created_at: '2025-01-01T00:00:00Z',
   updated_at: '2025-01-01T00:00:00Z',
 };
@@ -35,7 +36,7 @@ const SECOND_COURSE: ApiCourse = {
   category_id: 'cat-2',
 };
 
-function renderDialog() {
+function renderDialog(selectedCourseIds: string[] = []) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
   const onConfirm = jest.fn();
   render(
@@ -43,7 +44,7 @@ function renderDialog() {
       <SelectCoursesDialog
         open
         onOpenChange={jest.fn()}
-        selectedCourseIds={[]}
+        selectedCourseIds={selectedCourseIds}
         onConfirm={onConfirm}
       />
     </QueryClientProvider>,
@@ -55,6 +56,53 @@ describe('SelectCoursesDialog — chargement du catalogue', () => {
   beforeEach(() => {
     mockListCourses.mockReset();
     mockListCategories.mockReset().mockResolvedValue({ data: [] });
+  });
+
+  it('désactive les cours sans contenu et ne confirme que les cours contenant du contenu', async () => {
+    const user = userEvent.setup();
+    mockListCourses.mockResolvedValue({
+      data: [{ ...FIRST_COURSE, content_count: 0 }, SECOND_COURSE],
+      meta: { total: 2 },
+    });
+    const { onConfirm } = renderDialog();
+
+    const emptyCourse = await screen.findByRole('button', {
+      name: `${FIRST_COURSE.full_name} Aucun contenu`,
+    });
+    expect(emptyCourse).toBeDisabled();
+    await user.click(emptyCourse);
+    expect(screen.getByRole('button', { name: 'Ajouter des cours' })).toBeDisabled();
+    expect(onConfirm).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: SECOND_COURSE.full_name }));
+    await user.click(screen.getByRole('button', { name: 'Ajouter 1 cours' }));
+    expect(onConfirm).toHaveBeenCalledWith([
+      expect.objectContaining({ id: SECOND_COURSE.id, contentCount: 1 }),
+    ]);
+  });
+
+  it('ne permet pas de sélectionner un cours dont le nombre de contenus est inconnu', async () => {
+    mockListCourses.mockResolvedValue({
+      data: [{ ...FIRST_COURSE, content_count: undefined }],
+      meta: { total: 1 },
+    });
+    renderDialog();
+
+    expect(
+      await screen.findByRole('button', {
+        name: `${FIRST_COURSE.full_name} Contenu indisponible`,
+      }),
+    ).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Ajouter des cours' })).toBeDisabled();
+  });
+
+  it('garde les cours déjà ajoutés désactivés même quand ils contiennent du contenu', async () => {
+    mockListCourses.mockResolvedValue({ data: [FIRST_COURSE], meta: { total: 1 } });
+    renderDialog([FIRST_COURSE.id]);
+
+    expect(
+      await screen.findByRole('button', { name: `${FIRST_COURSE.full_name} Déjà ajouté` }),
+    ).toBeDisabled();
   });
 
   it('permet de relancer un chargement en échec sans le confondre avec un résultat vide', async () => {
