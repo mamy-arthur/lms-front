@@ -23,15 +23,25 @@ jest.mock('@/modules/admin/resources/clients', () => ({
 }));
 
 jest.mock('../../../hooks/useCreateUser', () => ({
-  useCreateUser: () => ({ mutate: mockCreate, reset: jest.fn(), isPending: false }),
+  useCreateUser: () => ({
+    mutate: mockCreate,
+    mutateAsync: mockCreateAsync,
+    reset: jest.fn(),
+    isPending: false,
+  }),
 }));
 
 jest.mock('../../../hooks/useUpdateUser', () => ({
-  useUpdateUser: () => ({ mutate: mockUpdate, reset: jest.fn(), isPending: false }),
+  useUpdateUser: () => ({
+    mutate: mockUpdate,
+    mutateAsync: mockUpdateAsync,
+    reset: jest.fn(),
+    isPending: false,
+  }),
 }));
 
-jest.mock('@modules/shared/components/users/user-photo-field', () => ({
-  UserPhotoField: () => null,
+jest.mock('@/modules/shared/lib/uploadUserProfilePhoto', () => ({
+  uploadUserProfilePhoto: jest.fn(),
 }));
 
 jest.mock('@modules/shared/components/users/user-profile-fields', () => ({
@@ -41,6 +51,7 @@ jest.mock('@modules/shared/components/users/user-profile-fields', () => ({
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { tenantApi } from '@/modules/admin/resources/tenants/api';
+import { uploadUserProfilePhoto } from '@/modules/shared/lib/uploadUserProfilePhoto';
 import { Role } from '@/shared/constants/roles';
 import { renderWithQueryClient } from '@/shared/lib/test-utils';
 import { MOCK_TENANTS } from '@/shared/mocks/tenant/mock-tenants';
@@ -57,6 +68,8 @@ const mockClients = [
 ];
 const mockUpdate = jest.fn();
 const mockCreate = jest.fn();
+const mockUpdateAsync = jest.fn();
+const mockCreateAsync = jest.fn();
 const mockRefetchClients = jest.fn();
 let mockClientsState: 'success' | 'loading' | 'error' | 'empty' = 'success';
 let mockCallerRole: Role = Role.SUPER_ADMIN;
@@ -86,6 +99,8 @@ describe('AdminUserFormDrawer - rattachement client', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockUpdateAsync.mockResolvedValue({ data: EXISTING_USER });
+    mockCreateAsync.mockResolvedValue({ data: EXISTING_USER });
     mockCallerRole = Role.SUPER_ADMIN;
     mockClientsState = 'success';
     jest.mocked(tenantApi.getAll).mockResolvedValue({
@@ -94,6 +109,139 @@ describe('AdminUserFormDrawer - rattachement client', () => {
         { ...MOCK_TENANTS[1], id: TENANT_B, name: 'Tenant Beta' },
       ],
     } as unknown as Awaited<ReturnType<typeof tenantApi.getAll>>);
+  });
+
+  it.each([
+    'annuler',
+    'echap',
+    'fermeture externe',
+    'autre utilisateur',
+    'reouverture du meme utilisateur',
+  ])('abandonne le fichier et sa previsualisation apres %s', async (transition) => {
+    const interaction = userEvent.setup();
+    const onClose = jest.fn();
+    const view = renderWithQueryClient(
+      <AdminUserFormDrawer open onClose={onClose} user={EXISTING_USER} />,
+    );
+    const input = document.querySelector<HTMLInputElement>('input[type="file"]');
+    expect(input).not.toBeNull();
+    await interaction.upload(input!, new File(['photo-a'], 'alice.png', { type: 'image/png' }));
+    expect(await screen.findByText(/Photo sélectionnée/)).toBeInTheDocument();
+
+    if (transition === 'annuler' || transition === 'reouverture du meme utilisateur') {
+      await interaction.click(screen.getByRole('button', { name: 'Annuler' }));
+      expect(onClose).toHaveBeenCalled();
+    } else if (transition === 'echap') {
+      await interaction.keyboard('{Escape}');
+      expect(onClose).toHaveBeenCalled();
+    }
+    if (transition !== 'autre utilisateur') {
+      view.rerender(<AdminUserFormDrawer open={false} onClose={onClose} user={EXISTING_USER} />);
+    }
+    const target = transition === 'reouverture du meme utilisateur' ? EXISTING_USER : OTHER_USER;
+    view.rerender(<AdminUserFormDrawer open onClose={onClose} user={target} />);
+
+    expect(screen.queryByText(/Photo sélectionnée/)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Ajouter une photo' })).toBeInTheDocument();
+    expect(document.querySelector<HTMLInputElement>('input[type="file"]')?.files).toHaveLength(0);
+    await interaction.click(screen.getByRole('button', { name: 'Enregistrer' }));
+    await waitFor(() =>
+      expect(mockUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({ id: target.id }),
+        expect.any(Object),
+      ),
+    );
+    expect(mockUpdateAsync).not.toHaveBeenCalled();
+    expect(uploadUserProfilePhoto).not.toHaveBeenCalled();
+  });
+
+  it('envoie uniquement la nouvelle photo choisie pour le second utilisateur', async () => {
+    const interaction = userEvent.setup();
+    const onClose = jest.fn();
+    const view = renderWithQueryClient(
+      <AdminUserFormDrawer open onClose={onClose} user={EXISTING_USER} />,
+    );
+    await interaction.upload(
+      document.querySelector<HTMLInputElement>('input[type="file"]')!,
+      new File(['photo-a'], 'alice.png', { type: 'image/png' }),
+    );
+    await screen.findByText(/Photo sélectionnée/);
+    await interaction.click(screen.getByRole('button', { name: 'Annuler' }));
+    view.rerender(<AdminUserFormDrawer open={false} onClose={onClose} />);
+    view.rerender(<AdminUserFormDrawer open onClose={onClose} user={OTHER_USER} />);
+
+    const newPhoto = new File(['photo-b'], 'bob.png', { type: 'image/png' });
+    await interaction.upload(
+      document.querySelector<HTMLInputElement>('input[type="file"]')!,
+      newPhoto,
+    );
+    await screen.findByText(/Photo sélectionnée/);
+    await interaction.click(screen.getByRole('button', { name: 'Enregistrer' }));
+
+    await waitFor(() =>
+      expect(uploadUserProfilePhoto).toHaveBeenCalledWith(
+        OTHER_USER.id,
+        newPhoto,
+        'platform/users',
+      ),
+    );
+    expect(uploadUserProfilePhoto).toHaveBeenCalledTimes(1);
+    expect(mockUpdateAsync).toHaveBeenCalledWith(expect.objectContaining({ id: OTHER_USER.id }));
+  });
+
+  it('abandonne la photo d une creation annulee avant de modifier un utilisateur', async () => {
+    const interaction = userEvent.setup();
+    const onClose = jest.fn();
+    const view = renderWithQueryClient(<AdminUserFormDrawer open onClose={onClose} />);
+    await interaction.upload(
+      document.querySelector<HTMLInputElement>('input[type="file"]')!,
+      new File(['creation'], 'creation.png', { type: 'image/png' }),
+    );
+    await screen.findByText(/Photo sélectionnée/);
+    await interaction.click(screen.getByRole('button', { name: 'Annuler' }));
+    view.rerender(<AdminUserFormDrawer open={false} onClose={onClose} />);
+    view.rerender(<AdminUserFormDrawer open onClose={onClose} user={EXISTING_USER} />);
+
+    expect(screen.queryByText(/Photo sélectionnée/)).not.toBeInTheDocument();
+    await interaction.click(screen.getByRole('button', { name: 'Enregistrer' }));
+    await waitFor(() =>
+      expect(mockUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({ id: EXISTING_USER.id }),
+        expect.any(Object),
+      ),
+    );
+    expect(uploadUserProfilePhoto).not.toHaveBeenCalled();
+    expect(mockUpdateAsync).not.toHaveBeenCalled();
+  });
+
+  it('conserve la photo choisie pendant la saisie et l envoie au compte cree', async () => {
+    const interaction = userEvent.setup();
+    renderWithQueryClient(<AdminUserFormDrawer open onClose={jest.fn()} />);
+    const photo = new File(['creation'], 'creation.png', { type: 'image/png' });
+    await interaction.upload(
+      document.querySelector<HTMLInputElement>('input[type="file"]')!,
+      photo,
+    );
+    await screen.findByText(/Photo sélectionnée/);
+    fireEvent.keyDown(screen.getByRole('combobox', { name: 'Rôle' }), { key: 'ArrowDown' });
+    fireEvent.click(await screen.findByRole('option', { name: 'Super admin' }));
+    await interaction.type(screen.getByRole('textbox', { name: 'Nom' }), 'Test');
+    await interaction.type(screen.getByRole('textbox', { name: 'Prénom' }), 'Alice');
+    await interaction.type(screen.getByRole('textbox', { name: 'Email' }), 'alice@example.test');
+    await interaction.type(screen.getByLabelText('Mot de passe', { exact: true }), 'Password123');
+    await interaction.click(screen.getByRole('button', { name: 'Enregistrer' }));
+
+    await waitFor(() =>
+      expect(uploadUserProfilePhoto).toHaveBeenCalledWith(
+        EXISTING_USER.id,
+        photo,
+        'platform/users',
+      ),
+    );
+    expect(mockCreateAsync).toHaveBeenCalledWith(
+      expect.objectContaining({ email: 'alice@example.test' }),
+    );
+    expect(uploadUserProfilePhoto).toHaveBeenCalledTimes(1);
   });
 
   it.each([

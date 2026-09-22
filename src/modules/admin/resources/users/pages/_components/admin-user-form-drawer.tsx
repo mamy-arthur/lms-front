@@ -6,7 +6,7 @@ import { UserPhotoField } from '@modules/shared/components/users/user-photo-fiel
 import { UserProfileFields } from '@modules/shared/components/users/user-profile-fields';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { RefreshCw } from 'lucide-react';
-import { memo, useCallback, useMemo, useRef } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef } from 'react';
 import { toast } from 'sonner';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
@@ -192,6 +192,10 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
   const pendingPhotoRef = useRef<File | null>(null);
   const queryClient = useQueryClient();
 
+  useEffect(() => {
+    pendingPhotoRef.current = null;
+  }, [open, user?.id]);
+
   const { data: tenantsData } = useQuery({
     queryKey: ['tenants-select'],
     queryFn: () => tenantApi.getAll(),
@@ -337,7 +341,8 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
   // Submit avec upload photo si fichier sélectionné
   const onSubmitWithPhoto = useCallback(
     async (values: Record<string, unknown>) => {
-      if (isEdit && user && pendingPhotoRef.current) {
+      const pendingPhoto = pendingPhotoRef.current;
+      if (isEdit && user && pendingPhoto) {
         // PATCH d'abord — l'upload photo n'a lieu qu'après la sauvegarde réussie
         try {
           await updateMutation.mutateAsync({
@@ -366,7 +371,7 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
         }
         // L'endpoint profile-photo lie déjà la photo côté backend — best-effort
         try {
-          await uploadUserProfilePhoto(user.id, pendingPhotoRef.current, 'platform/users');
+          await uploadUserProfilePhoto(user.id, pendingPhoto, 'platform/users');
           await queryClient.invalidateQueries({
             queryKey: ADMIN_USERS_QUERY_KEY,
           });
@@ -376,7 +381,7 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
         pendingPhotoRef.current = null;
         handleSuccess();
         onClose();
-      } else if (!isEdit && pendingPhotoRef.current) {
+      } else if (!isEdit && pendingPhoto) {
         // Création : créer d'abord l'utilisateur, puis uploader la photo
         let newUserId: string;
         try {
@@ -410,7 +415,7 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
         }
         // Upload séparé — l'utilisateur est déjà créé, l'échec photo ne bloque pas
         try {
-          await uploadUserProfilePhoto(newUserId, pendingPhotoRef.current, 'platform/users');
+          await uploadUserProfilePhoto(newUserId, pendingPhoto, 'platform/users');
         } catch {
           toast.error("Utilisateur créé, mais l'upload photo a échoué.");
         }
@@ -628,6 +633,7 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
           roleLabels={roleLabels}
           topFields={
             <UserPhotoField
+              key={`${open ? 'open' : 'closed'}:${user?.id ?? 'create'}`}
               currentPhotoUrl={user?.profile_photo?.url ?? null}
               fullName={user ? `${user.first_name} ${user.last_name}` : ''}
               onFileSelected={(file) => {
