@@ -1,19 +1,14 @@
 import { BookOpen, CheckCircle2, EyeOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { formationProgressDemo, type FormationProgressDemo } from '../data/studentProgressDemo';
+import type { DashboardOverview } from '../types';
 
-export function FormationCatalogOverview({
-  formations = formationProgressDemo,
-}: {
-  formations?: Pick<FormationProgressDemo, 'isPublished'>[];
-}) {
-  const published = formations.filter((formation) => formation.isPublished).length;
+export function FormationCatalogOverview({ catalog }: { catalog: DashboardOverview['catalog'] }) {
   const indicators = [
-    { label: 'Total des formations', value: formations.length, icon: BookOpen, highlighted: false },
-    { label: 'Publiées', value: published, icon: CheckCircle2, highlighted: true },
+    { label: 'Total des formations', value: catalog.total, icon: BookOpen, highlighted: false },
+    { label: 'Publiées', value: catalog.published, icon: CheckCircle2, highlighted: true },
     {
       label: 'Non publiées',
-      value: formations.length - published,
+      value: catalog.unpublished,
       icon: EyeOff,
       highlighted: false,
     },

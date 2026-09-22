@@ -1,10 +1,11 @@
 'use client';
 
-import { useRef, useState } from 'react';
 import { GraduationCap, Search, Users } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
+import type { DashboardFormationSort } from '@/shared/types/dashboard.types';
 import {
   Select,
   SelectContent,
@@ -12,44 +13,42 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  enrollmentStatuses,
-  formationProgressDemo,
-  getCompletionRate,
-  getEnrollmentCount,
-  type FormationProgressDemo,
-} from '../data/studentProgressDemo';
-import { FormationStudentsSheet, type FormationStudentSelection } from './FormationStudentsSheet';
+import { dashboardEnrollmentStatuses } from '../data/enrollmentStatuses';
+import type { DashboardFormation } from '../types';
 import { AverageProgressIndicator } from './AverageProgressIndicator';
 
-function normalizeSearch(value: string) {
-  return value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLocaleLowerCase('fr-FR')
-    .trim();
+interface FormationProgressCardsProps {
+  formations: DashboardFormation[];
+  total: number;
+  page: number;
+  perPage: number;
+  search: string;
+  sort: DashboardFormationSort;
+  onSearchChange: (value: string) => void;
+  onSortChange: (value: DashboardFormationSort) => void;
+  onPageChange: (page: number) => void;
+  isLoading: boolean;
+  isFetching: boolean;
+  isError: boolean;
+  onRetry: () => void;
 }
 
 export function FormationProgressCards({
-  formations = formationProgressDemo,
-}: {
-  formations?: FormationProgressDemo[];
-}) {
-  const [search, setSearch] = useState('');
-  const [sort, setSort] = useState('enrolled');
-  const [selection, setSelection] = useState<FormationStudentSelection | null>(null);
-  const triggerRef = useRef<HTMLButtonElement | null>(null);
-  const visibleFormations = formations
-    .filter((formation) => normalizeSearch(formation.name).includes(normalizeSearch(search)))
-    .sort((a, b) => {
-      const difference =
-        sort === 'completion'
-          ? getCompletionRate(a) - getCompletionRate(b)
-          : sort === 'failed'
-            ? b.failed - a.failed
-            : getEnrollmentCount(b) - getEnrollmentCount(a);
-      return difference || a.name.localeCompare(b.name, 'fr');
-    });
+  formations,
+  total,
+  page,
+  perPage,
+  search,
+  sort,
+  onSearchChange,
+  onSortChange,
+  onPageChange,
+  isLoading,
+  isFetching,
+  isError,
+  onRetry,
+}: FormationProgressCardsProps) {
+  const pages = Math.max(1, Math.ceil(total / perPage));
 
   return (
     <section aria-labelledby="formation-progress-title" className="space-y-3">
@@ -59,7 +58,7 @@ export function FormationProgressCards({
             Suivi des étudiants par formation
           </h2>
           <p className="text-xs text-muted-foreground">
-            Consultez les effectifs par statut et ouvrez un badge pour voir les étudiants.
+            Toutes les inscriptions du tenant par statut, réinscriptions incluses.
           </p>
         </div>
       </header>
@@ -75,11 +74,17 @@ export function FormationProgressCards({
             aria-label="Rechercher une formation"
             placeholder="Rechercher une formation…"
             value={search}
-            onChange={(event) => setSearch(event.target.value)}
+            onChange={(event) => onSearchChange(event.target.value)}
             className="h-8 pl-8"
           />
         </div>
-        <Select value={sort} onValueChange={setSort}>
+        <Select
+          value={sort}
+          onValueChange={(value) => {
+            if (value === 'enrolled' || value === 'completion' || value === 'failed')
+              onSortChange(value);
+          }}
+        >
           <SelectTrigger aria-label="Trier les formations" className="h-8 w-full sm:w-52">
             <SelectValue />
           </SelectTrigger>
@@ -90,100 +95,126 @@ export function FormationProgressCards({
           </SelectContent>
         </Select>
         <p role="status" aria-live="polite" className="text-xs text-muted-foreground sm:ml-auto">
-          {visibleFormations.length} sur {formations.length} formations
+          {isFetching
+            ? 'Chargement des formations…'
+            : isError
+              ? 'Formations indisponibles'
+              : `${formations.length} sur ${total} formations`}
         </p>
       </div>
 
-      {visibleFormations.length === 0 && (
+      {isError ? (
+        <div role="alert" className="space-y-3 rounded-sm border p-5">
+          <p className="text-sm">Impossible de charger les formations.</p>
+          <Button variant="outline" onClick={onRetry}>
+            Réessayer les formations
+          </Button>
+        </div>
+      ) : isLoading ? (
+        <div aria-label="Chargement des formations" aria-busy="true" className="space-y-2">
+          {Array.from({ length: 3 }, (_, index) => (
+            <Skeleton key={index} className="h-36 w-full" />
+          ))}
+        </div>
+      ) : formations.length === 0 ? (
         <div className="space-y-2 rounded-sm border border-dashed p-6 text-center">
           <p className="text-sm font-medium">
-            {formations.length
+            {search.trim()
               ? 'Aucune formation ne correspond à votre recherche.'
               : 'Aucune formation à afficher.'}
           </p>
           {search && (
-            <Button variant="outline" onClick={() => setSearch('')}>
+            <Button variant="outline" onClick={() => onSearchChange('')}>
               Effacer la recherche
             </Button>
           )}
         </div>
-      )}
+      ) : (
+        <ul className="space-y-2" aria-busy={isFetching}>
+          {formations.map((formation) => {
+            const enrolled = formation.totalEnrollments;
+            const progress = Math.round(formation.completionRate);
 
-      <ul className="space-y-2">
-        {visibleFormations.map((formation) => {
-          const enrolled = getEnrollmentCount(formation);
-          const progress = Math.round(getCompletionRate(formation));
-
-          return (
-            <li
-              key={formation.id}
-              className="space-y-4 rounded-sm border bg-card p-4 text-card-foreground"
-            >
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <span className="shrink-0 rounded-sm bg-muted p-2 text-muted-foreground">
-                    <GraduationCap className="size-4" aria-hidden="true" />
-                  </span>
-                  <div className="min-w-0 space-y-1">
-                    <h3 className="wrap-break-word text-sm font-semibold">{formation.name}</h3>
-                    <dl>
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <Users className="size-3" aria-hidden="true" />
-                        <dt className="order-2">inscrits</dt>
-                        <dd className="tabular-nums">{enrolled}</dd>
-                      </div>
-                    </dl>
+            return (
+              <li
+                key={formation.id}
+                className="space-y-4 rounded-sm border bg-card p-4 text-card-foreground"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <span className="shrink-0 rounded-sm bg-muted p-2 text-muted-foreground">
+                      <GraduationCap className="size-4" aria-hidden="true" />
+                    </span>
+                    <div className="min-w-0 space-y-1">
+                      <h3 className="wrap-break-word text-sm font-semibold">{formation.name}</h3>
+                      <dl>
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <Users className="size-3" aria-hidden="true" />
+                          <dt className="order-2">inscriptions</dt>
+                          <dd className="tabular-nums">{enrolled}</dd>
+                        </div>
+                      </dl>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="grid items-center gap-3 lg:grid-cols-2 lg:gap-6">
-                <div className="space-y-2">
-                  <AverageProgressIndicator
-                    value={progress}
-                    variant="completion"
-                    ariaLabel={`Taux de complétion de ${formation.name}`}
-                  />
-                </div>
-                <div className="flex flex-wrap gap-2 lg:justify-end">
-                  {enrollmentStatuses.map((status) => (
-                    <Badge
-                      key={status.key}
-                      asChild
-                      variant="outline"
-                      className={`${status.badgeClassName} h-6 cursor-pointer hover:brightness-95 disabled:cursor-default disabled:opacity-50`}
-                    >
-                      <button
-                        type="button"
-                        disabled={formation[status.key] === 0}
-                        aria-haspopup="dialog"
-                        aria-label={`${status.label} : ${formation[status.key]} — ${formation.name}`}
-                        onClick={(event) => {
-                          triggerRef.current = event.currentTarget;
-                          setSelection({ formation, status: status.key });
-                        }}
+                <div className="grid items-center gap-3 lg:grid-cols-2 lg:gap-6">
+                  <div className="space-y-2">
+                    <AverageProgressIndicator
+                      value={progress}
+                      variant="completion"
+                      ariaLabel={`Taux de complétion de ${formation.name}`}
+                    />
+                  </div>
+                  <div className="flex flex-wrap gap-2 lg:justify-end">
+                    {dashboardEnrollmentStatuses.map((status) => (
+                      <Badge
+                        key={status.key}
+                        variant="outline"
+                        className={`${status.badgeClassName} h-6`}
+                        aria-label={`${status.label} : ${formation.statusCounts[status.key]} — ${formation.name}`}
                       >
                         <span className="size-1 rounded-full bg-current" aria-hidden="true" />
-                        <span className="font-semibold tabular-nums">{formation[status.key]}</span>
+                        <span className="font-semibold tabular-nums">
+                          {formation.statusCounts[status.key]}
+                        </span>
                         {status.badgeLabel}
-                      </button>
-                    </Badge>
-                  ))}
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            </li>
-          );
-        })}
-      </ul>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      {!isLoading && !isError && (pages > 1 || page > 1) && (
+        <nav aria-label="Pagination des formations" className="flex items-center justify-end gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={page <= 1 || isFetching}
+            onClick={() => onPageChange(page - 1)}
+          >
+            Précédent
+          </Button>
+          <span className="text-xs text-muted-foreground">
+            Page {page} sur {pages}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={page >= pages || isFetching}
+            onClick={() => onPageChange(page + 1)}
+          >
+            Suivant
+          </Button>
+        </nav>
+      )}
       <p className="text-xs text-muted-foreground">
-        Taux de complétion : part des inscrits ayant terminé avec succès, distincte de la
+        Taux de complétion : part des inscriptions terminées avec succès, distincte de la
         progression moyenne.
       </p>
-      <FormationStudentsSheet
-        selection={selection}
-        onClose={() => setSelection(null)}
-        onRestoreFocus={() => triggerRef.current?.focus()}
-      />
     </section>
   );
 }

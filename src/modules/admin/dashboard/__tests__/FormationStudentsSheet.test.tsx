@@ -1,11 +1,10 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {
   FormationStudentsSheet,
   type FormationStudentSelection,
 } from '../components/FormationStudentsSheet';
-import { FormationProgressCards } from '../components/FormationProgressCards';
 import {
   formationProgressDemo,
   getDemoFormationStudents,
@@ -14,18 +13,31 @@ import {
 
 const formation = formationProgressDemo[0];
 
-function Harness({ status = 'failed' }: { status?: DashboardEnrollmentStatus }) {
-  const [selection, setSelection] = useState<FormationStudentSelection | null>({
-    formation,
-    status,
-  });
+function Harness({
+  status = 'failed',
+  initiallyOpen = true,
+}: {
+  status?: DashboardEnrollmentStatus;
+  initiallyOpen?: boolean;
+}) {
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const [selection, setSelection] = useState<FormationStudentSelection | null>(
+    initiallyOpen
+      ? {
+          formation,
+          status,
+        }
+      : null,
+  );
   return (
     <>
-      <button onClick={() => setSelection({ formation, status })}>Ouvrir le panneau</button>
+      <button ref={triggerRef} onClick={() => setSelection({ formation, status })}>
+        Ouvrir le panneau
+      </button>
       <FormationStudentsSheet
         selection={selection}
         onClose={() => setSelection(null)}
-        onRestoreFocus={() => {}}
+        onRestoreFocus={() => triggerRef.current?.focus()}
       />
     </>
   );
@@ -218,8 +230,8 @@ describe('panneau des tentatives étudiantes', () => {
 
   it('ferme avec Échap depuis une tentative et restitue le focus au badge', async () => {
     const user = userEvent.setup();
-    render(<FormationProgressCards />);
-    const badge = screen.getByRole('button', { name: `Échouées : 2 — ${formation.name}` });
+    render(<Harness initiallyOpen={false} />);
+    const badge = screen.getByRole('button', { name: 'Ouvrir le panneau' });
     await user.click(badge);
     const student = getDemoFormationStudents(formation, 'failed')[0];
     await user.click(
