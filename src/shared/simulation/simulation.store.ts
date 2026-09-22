@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { Role } from '@/shared/constants/roles';
+import { ROUTES } from '@/shared/constants/routes';
 
 export interface SimulationSession {
   allowed_roles: Role[];
@@ -32,8 +33,8 @@ export const SIMULATION_ROLE_LABELS: Record<Role, string> = {
   [Role.TRAINEE]: 'Stagiaire',
 };
 
+/** Same landing page as a real login of that role (see resolveRedirectPath). */
 export function roleHome(role: Role | null): string {
-  if (role === Role.EDITOR) return '/admin/programs';
-  if (role === Role.SUPER_ADMIN) return '/admin';
-  return role === Role.TRAINEE ? '/trainee/formations' : '/dashboard';
+  if (role === Role.EDITOR || role === Role.SUPER_ADMIN) return ROUTES.admin.root;
+  return role === Role.TRAINEE ? ROUTES.portal.traineeFormations : ROUTES.portal.dashboard;
 }

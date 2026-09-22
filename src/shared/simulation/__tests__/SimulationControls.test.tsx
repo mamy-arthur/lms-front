@@ -31,7 +31,7 @@ const labels: Record<Role, string> = {
   [Role.TRAINEE]: 'Stagiaire',
 };
 const directTransitions = [
-  [Role.SUPER_ADMIN, Role.EDITOR, '/admin/programs'],
+  [Role.SUPER_ADMIN, Role.EDITOR, '/admin'],
   [Role.SUPER_ADMIN, Role.CLIENT_MANAGER, '/dashboard'],
   [Role.SUPER_ADMIN, Role.TRAINEE, '/trainee/formations'],
   [Role.EDITOR, Role.CLIENT_MANAGER, '/dashboard'],
