@@ -23,6 +23,8 @@ import { getCartItemCount } from '@/modules/portal/resources/cart/cart-utils';
 import { useCartQuery } from '@/modules/portal/resources/cart/hooks/useCartQuery';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useAuthStore } from '@/shared/stores/auth.store';
+import { useSimulationUser } from '@/shared/simulation/useSimulationUser';
+import { SimulationControls } from '@/shared/simulation/SimulationControls';
 import { getInitials } from '@/shared/lib/string/getInitials';
 import { ROUTES } from '@/shared/constants/routes';
 import { Role } from '@/shared/constants/roles';
@@ -43,7 +45,8 @@ export function AppHeader({ onLogout }: AppHeaderProps) {
   const cartCount = getCartItemCount(cartQuery.data?.data);
   const pathname = usePathname();
   const isAdmin = pathname?.startsWith('/admin') ?? false;
-  const { user } = useAuthStore();
+  const user = useSimulationUser();
+  const simulatedRole = useAuthStore((s) => s.simulatedRole);
   const profileHref = isAdmin ? ROUTES.admin.profile : ROUTES.portal.profile;
   const roleLabel = formatRole(user?.role);
 
@@ -58,6 +61,7 @@ export function AppHeader({ onLogout }: AppHeaderProps) {
 
         {/* RIGHT */}
         <div className="flex items-center gap-2">
+          <SimulationControls />
           <Popover>
             <PopoverTrigger asChild>
               <Button
@@ -112,7 +116,7 @@ export function AppHeader({ onLogout }: AppHeaderProps) {
           {/* USER MENU */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button className="h-9 max-w-45 rounded-full px-1.5 py-2 bg-transparent hover:bg-gray-100 sm:gap-2 sm:px-2">
+              <Button className="h-9 max-w-45 rounded-sm px-1.5 py-5 bg-transparent hover:bg-gray-100 sm:gap-2 sm:px-2">
                 <Avatar className="h-8 w-8 rounded-full">
                   <AvatarImage src={user?.avatar ?? undefined} alt={user?.name ?? ''} />
                   <AvatarFallback className="rounded-full bg-(--color-primary) text-[11px] font-semibold text-white">
@@ -156,7 +160,7 @@ export function AppHeader({ onLogout }: AppHeaderProps) {
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={onLogout} variant="destructive">
                 <LogOut className="mr-2 size-4" />
-                Se déconnecter
+                {simulatedRole ? 'Quitter la simulation' : 'Se déconnecter'}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

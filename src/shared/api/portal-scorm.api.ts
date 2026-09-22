@@ -16,6 +16,7 @@ export interface ApiScormLaunch {
   launch_url: string;
   /** Visite propagée par le token de lancement. */
   node_execution_id: string;
+  read_only?: boolean;
 }
 
 export interface ApiScormTrackingState {

@@ -3,7 +3,7 @@
 import { ShieldCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useAuthStore } from '@/shared/stores/auth.store';
+import { useSimulationUser } from '@/shared/simulation/useSimulationUser';
 import { getInitials } from '@/shared/lib/string/getInitials';
 
 interface ExamHeaderProps {
@@ -30,7 +30,7 @@ export function ExamHeader({
 }: ExamHeaderProps) {
   const progressPct = totalQuestions > 0 ? (answeredCount / totalQuestions) * 100 : 0;
 
-  const { user } = useAuthStore();
+  const user = useSimulationUser();
 
   return (
     <div

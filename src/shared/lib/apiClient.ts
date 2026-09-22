@@ -1,5 +1,10 @@
 import { useAuthStore } from '@/shared/stores/auth.store';
 import { useTenantStore } from '@/shared/stores/tenant.store';
+import {
+  simulationTransport,
+  trackSimulationRequest,
+  rememberShopData,
+} from '@/shared/simulation/transport';
 
 /**
  * Retourne le chemin de login adapté au contexte courant.
@@ -35,6 +40,10 @@ export const httpClient = async (
     finalUrl = `/api/v1/${url.replace(/^\/+/, '')}`;
   }
 
+  const transport = simulationTransport(finalUrl, options);
+  if (transport.local) return transport.local;
+  finalUrl = transport.url;
+
   const headers = new Headers(options.headers as HeadersInit | undefined);
   const tenant = useTenantStore.getState().tenant;
 
@@ -42,13 +51,21 @@ export const httpClient = async (
   if (tenant) headers.set('X-Tenant-ID', tenant.id);
   if (options.body) headers.set('Content-Type', 'application/json');
 
-  const res = await fetch(finalUrl, {
-    ...options,
-    headers,
-    credentials: 'include',
-  });
-
-  const body = await res.text();
+  const pending = trackSimulationRequest(options.signal);
+  let res: Response;
+  let body: string;
+  try {
+    res = await fetch(finalUrl, {
+      ...options,
+      headers,
+      credentials: 'include',
+      signal: pending.signal,
+    });
+    body = await res.text();
+    pending.assertCurrent();
+  } finally {
+    pending.release();
+  }
   let json: unknown;
   try {
     json = JSON.parse(body);
@@ -72,6 +89,7 @@ export const httpClient = async (
     throw err;
   }
 
+  if (transport.shop) rememberShopData(json);
   return { status: res.status, headers: res.headers, body, json };
 };
 
@@ -119,14 +137,30 @@ export async function apiDelete(path: string): Promise<void> {
 /** Upload multipart/form-data (ne pose pas Content-Type: application/json). */
 export async function apiUpload<T>(path: string, body: FormData): Promise<T> {
   const url = `/api/v1/${path.replace(/^\/+/, '')}`;
+  const transport = simulationTransport(url, { method: 'POST', body });
+  if (transport.local) return (await transport.local).json as T;
   const tenant = useTenantStore.getState().tenant;
   const headers = new Headers();
   headers.set('Accept', 'application/json');
   if (tenant) headers.set('X-Tenant-ID', tenant.id);
   // Pas de Content-Type : le navigateur le génère automatiquement avec le boundary
 
-  const res = await fetch(url, { method: 'POST', headers, credentials: 'include', body });
-  const text = await res.text();
+  const pending = trackSimulationRequest();
+  let res: Response;
+  let text: string;
+  try {
+    res = await fetch(url, {
+      method: 'POST',
+      headers,
+      credentials: 'include',
+      body,
+      signal: pending.signal,
+    });
+    text = await res.text();
+    pending.assertCurrent();
+  } finally {
+    pending.release();
+  }
   let json: unknown;
   try {
     json = JSON.parse(text);
@@ -154,8 +188,20 @@ export function apiUploadWithProgress<T>(
 ): Promise<T> {
   return new Promise((resolve, reject) => {
     const url = `/api/v1/${path.replace(/^\/+/, '')}`;
+    const transport = simulationTransport(url, { method: 'POST', body });
+    if (transport.local) {
+      transport.local.then((result) => {
+        onProgress(100);
+        resolve(result.json as T);
+      }, reject);
+      return;
+    }
     const tenant = useTenantStore.getState().tenant;
     const xhr = new XMLHttpRequest();
+    const pending = trackSimulationRequest();
+    pending.signal.addEventListener('abort', () => xhr.abort(), { once: true });
+    xhr.onloadend = () => pending.release();
+    xhr.onabort = () => reject(new DOMException('Simulation context changed', 'AbortError'));
 
     xhr.open('POST', url);
     xhr.withCredentials = true;
@@ -167,6 +213,12 @@ export function apiUploadWithProgress<T>(
     };
 
     xhr.onload = () => {
+      try {
+        pending.assertCurrent();
+      } catch (error) {
+        reject(error);
+        return;
+      }
       let json: unknown;
       try {
         json = JSON.parse(xhr.responseText);

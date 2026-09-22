@@ -31,6 +31,7 @@ export interface CourseContent {
   completed: boolean;
   /** Terminé lors d'un passage antérieur. N'exempte pas d'une visite obligatoire. */
   historicalCompleted: boolean;
+  readOnly?: boolean;
   durationMin?: number;
   data?: Record<string, unknown>;
 }

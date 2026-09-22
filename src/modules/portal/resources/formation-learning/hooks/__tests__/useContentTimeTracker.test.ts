@@ -16,11 +16,15 @@ jest.mock('@/shared/api/portal.api', () => ({
 import { act, renderHook } from '@testing-library/react';
 import { portalContentTimeApi } from '@/shared/api/portal.api';
 import { useContentTimeTracker } from '../useContentTimeTracker';
+import { useAuthStore } from '@/shared/stores/auth.store';
+import { useSimulationStore } from '@/shared/simulation/simulation.store';
+import { Role } from '@/shared/constants/roles';
 
 const record = jest.mocked(portalContentTimeApi.record);
 
 const FLUSH_INTERVAL_MS = 30_000;
 const PENDING_GRACE_MS = 5_000;
+const PENDING_STORAGE_KEY = 'learneo:content-time:pending';
 
 interface Props {
   enrollmentId: string;
@@ -91,6 +95,8 @@ beforeEach(() => {
   record.mockReset();
   record.mockResolvedValue(undefined);
 
+  useAuthStore.setState({ simulatedRole: null });
+  useSimulationStore.setState({ phase: 'idle', epoch: 0 });
   window.localStorage.clear();
   setVisibility('visible');
 });
@@ -100,6 +106,132 @@ afterEach(() => {
 });
 
 describe('useContentTimeTracker', () => {
+  it('ne crée aucune période fictive et ne lit/prune pas la file réelle en simulation', async () => {
+    useAuthStore.setState({ simulatedRole: Role.TRAINEE });
+    useSimulationStore.setState({ phase: 'ready' });
+    const saved = JSON.stringify([
+      {
+        enrollmentId: 'real-enrollment',
+        courseId: 'real-course',
+        entryId: 'real-entry',
+        sessionId: 'real-pending-session',
+        queuedAt: 0,
+        payload: { time_spent: 10 },
+      },
+    ]);
+    window.localStorage.setItem(PENDING_STORAGE_KEY, saved);
+    const { unmount } = renderHook(() => useContentTimeTracker(props('demo-entry')));
+
+    await advance(2 * FLUSH_INTERVAL_MS);
+    act(() => {
+      window.dispatchEvent(new Event('pointerdown'));
+      window.dispatchEvent(new Event('pagehide'));
+      window.dispatchEvent(new Event('pageshow'));
+      setVisibility('hidden');
+    });
+    unmount();
+    await settle();
+
+    expect(record).not.toHaveBeenCalled();
+    expect(window.localStorage.getItem(PENDING_STORAGE_KEY)).toBe(saved);
+  });
+
+  it('ne démarre pas le chrono pendant une transition sans rôle simulé encore défini', async () => {
+    useSimulationStore.setState({ phase: 'transition' });
+    const { unmount } = renderHook(() => useContentTimeTracker(props('entry-1')));
+    await advance(FLUSH_INTERVAL_MS);
+    unmount();
+
+    expect(record).not.toHaveBeenCalled();
+    expect(window.localStorage.getItem(PENDING_STORAGE_KEY)).toBeNull();
+  });
+
+  it('conserve la dernière période réelle sans l’envoyer pendant la simulation puis la rejoue', async () => {
+    const first = renderHook(() => useContentTimeTracker(props('entry-1')));
+    await advance(5_000);
+
+    act(() => {
+      useSimulationStore.setState({ phase: 'transition', epoch: 1 });
+      useAuthStore.setState({ simulatedRole: Role.TRAINEE });
+      useSimulationStore.setState({ phase: 'ready' });
+    });
+    const saved = window.localStorage.getItem(PENDING_STORAGE_KEY);
+    expect(JSON.parse(saved!)[0].payload.time_spent).toBe(5);
+    expect(record).not.toHaveBeenCalled();
+
+    await advance(2 * FLUSH_INTERVAL_MS);
+    first.unmount();
+    expect(window.localStorage.getItem(PENDING_STORAGE_KEY)).toBe(saved);
+    expect(record).not.toHaveBeenCalled();
+
+    useAuthStore.setState({ simulatedRole: null });
+    useSimulationStore.setState({ phase: 'ready', epoch: 2 });
+    const second = renderHook(() => useContentTimeTracker(props('entry-2')));
+    await settle();
+    expect(record).toHaveBeenCalledTimes(1);
+    expect(lastCall().entryId).toBe('entry-1');
+    expect(lastCall().payload.time_spent).toBe(5);
+    expect(window.localStorage.getItem(PENDING_STORAGE_KEY)).toBeNull();
+    second.unmount();
+  });
+
+  it.each(['success', 'forbidden'] as const)(
+    'ne perd pas le temps réel si une requête en vol finit (%s) après le début de simulation',
+    async (outcome) => {
+      let resolve!: () => void;
+      let reject!: (error: unknown) => void;
+      record.mockReturnValueOnce(
+        new Promise<void>((res, rej) => {
+          resolve = res;
+          reject = rej;
+        }),
+      );
+      const { unmount } = renderHook(() => useContentTimeTracker(props('entry-1')));
+      await advance(FLUSH_INTERVAL_MS + 5_000);
+      expect(lastCall().payload.time_spent).toBe(30);
+
+      act(() => {
+        useSimulationStore.setState({ phase: 'transition', epoch: 1 });
+        useAuthStore.setState({ simulatedRole: Role.TRAINEE });
+      });
+      const saved = window.localStorage.getItem(PENDING_STORAGE_KEY);
+      expect(JSON.parse(saved!)[0].payload.time_spent).toBe(35);
+
+      await act(async () => {
+        if (outcome === 'success') resolve();
+        else reject(Object.assign(new Error('Simulation active'), { status: 403 }));
+        await Promise.resolve();
+      });
+      unmount();
+
+      expect(record).toHaveBeenCalledTimes(1);
+      expect(window.localStorage.getItem(PENDING_STORAGE_KEY)).toBe(saved);
+    },
+  );
+
+  it('un ancien acquittement ne supprime pas une mesure finale réelle plus récente', async () => {
+    let acknowledge!: () => void;
+    record.mockReturnValueOnce(
+      new Promise<void>((resolve) => {
+        acknowledge = resolve;
+      }),
+    );
+    const { unmount } = renderHook(() => useContentTimeTracker(props('entry-1')));
+    await advance(FLUSH_INTERVAL_MS + 5_000);
+    record.mockRejectedValueOnce(new Error('offline'));
+    unmount();
+    await settle();
+
+    await act(async () => {
+      acknowledge();
+      await Promise.resolve();
+    });
+
+    const saved = JSON.parse(window.localStorage.getItem(PENDING_STORAGE_KEY)!);
+    expect(saved).toHaveLength(1);
+    expect(saved[0].payload.time_spent).toBe(35);
+  });
+
   it('clôt l’ancienne visite avec sa révision et ouvre une période indépendante pour la suivante', async () => {
     const { rerender, unmount } = renderHook((p: Props) => useContentTimeTracker(p), {
       initialProps: props('entry-1'),

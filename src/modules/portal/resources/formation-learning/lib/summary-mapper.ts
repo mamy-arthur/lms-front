@@ -82,6 +82,7 @@ export function mapSummaryToFormation(summary: ApiPortalLearningPathSummary): Fo
           status: entryStatus(entry, state, sequence),
           completed: entry.completed,
           historicalCompleted: entry.historical_completed,
+          ...(entry.read_only ? { readOnly: true } : {}),
         })),
       })),
     }));
@@ -183,6 +184,8 @@ function entryStatus(
   // Une preuve historique ne permet pas de sauter la séquence du repassage.
   if (!node.actionable) return 'locked';
   if (sequence.pending) return 'locked';
+  // Read-only concerns the SCORM runtime, not its manual simulated completion.
+  // Every pending content closes the sequence until the summary confirms it.
   sequence.pending = true;
 
   return entry.historical_completed ? 'retry' : 'available';

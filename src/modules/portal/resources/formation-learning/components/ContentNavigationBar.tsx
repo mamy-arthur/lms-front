@@ -83,7 +83,10 @@ export default function ContentNavigationBar({
         {/* ── Valider / Suivant ─────────────────────────────────────────── */}
         <div className="flex items-center gap-2 justify-self-end">
           {isCompleted && (
-            <span className="flex items-center gap-1 rounded-sm bg-emerald-50 px-2 py-2 text-[11px] font-semibold text-emerald-700">
+            <span
+              role="status"
+              className="flex items-center gap-1 rounded-sm bg-emerald-50 px-2 py-2 text-[11px] font-semibold text-emerald-700"
+            >
               <Check className="size-3" strokeWidth={3} />
               Terminé
             </span>

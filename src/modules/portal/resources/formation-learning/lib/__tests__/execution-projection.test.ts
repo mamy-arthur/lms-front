@@ -339,3 +339,47 @@ describe('Visite à démarrer', () => {
     expect(pendingStartExecutionId(mapSummaryToFormation(expired))).toBeNull();
   });
 });
+
+describe('Aperçu SCORM en lecture seule', () => {
+  it('ferme la séquence jusqu’à sa validation comme les autres contenus', () => {
+    const preview = summary({
+      modules: [
+        {
+          id: 'module-1',
+          name: 'Les bases',
+          courses: [
+            {
+              id: 'course-1',
+              name: 'Découverte',
+              entries: [
+                { id: 'entry-1', title: 'SCORM' },
+                { id: 'entry-2', title: 'Contenu 2' },
+                { id: 'entry-3', title: 'Contenu 3' },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+    preview.modules[0].courses[0].sections[0].content_entries[0].read_only = true;
+
+    const contents = mapModule(preview).courses[0].sections[0].contents;
+
+    expect(
+      contents.map(({ entryId, readOnly, completed, status }) => ({
+        entryId,
+        readOnly,
+        completed,
+        status,
+      })),
+    ).toEqual([
+      { entryId: 'entry-1', readOnly: true, completed: false, status: 'available' },
+      { entryId: 'entry-2', readOnly: undefined, completed: false, status: 'locked' },
+      { entryId: 'entry-3', readOnly: undefined, completed: false, status: 'locked' },
+    ]);
+    preview.modules[0].courses[0].sections[0].content_entries[0].completed = true;
+    expect(
+      mapModule(preview).courses[0].sections[0].contents.map((content) => content.status),
+    ).toEqual(['completed', 'available', 'locked']);
+  });
+});

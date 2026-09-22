@@ -1,6 +1,6 @@
 'use client';
 
-import { useAuthStore } from '@/shared/stores/auth.store';
+import { useSimulationUser } from '@/shared/simulation/useSimulationUser';
 import { useRouter } from 'next/navigation';
 import { KpiStatsRow } from './components/KpiStatsRow';
 import { FeaturedFormationCard } from './components/FeaturedFormationCard';
@@ -12,7 +12,7 @@ import {
 } from '@/modules/portal/resources/_shared/trainee/mock-data';
 
 export default function TraineeDashboard() {
-  const user = useAuthStore((s) => s.user);
+  const user = useSimulationUser();
   const router = useRouter();
   const firstName = user?.name?.split(' ')[0] ?? user?.email?.split('@')[0] ?? 'Stagiaire';
 

@@ -93,6 +93,8 @@ export interface ScormSessionOptions {
   courseId: string;
   entryId: string;
   version: ScormVersion;
+  /** Discard queued work if the real/simulated execution context has changed. */
+  isContextCurrent?: () => boolean;
   /**
    * Visite courante. Chaque visite a un runtime vierge : ni le score, ni
    * `suspend_data`, ni le temps, ni la séquence d'un ancien passage ne sont
@@ -168,9 +170,10 @@ export class ScormSession {
 
   /** Fetches the current tracking state. Must resolve before the iframe is mounted. */
   async preload(): Promise<boolean> {
+    if (this.opts.isContextCurrent?.() === false) return false;
     try {
       const { data } = await portalScormApi.getTracking(this.context);
-      if (this.disposed) return false;
+      if (this.disposed || this.opts.isContextCurrent?.() === false) return false;
       this.applyServerState(data);
       this.initialTotalTime = data.total_time ?? 0;
       // Already completed in a previous session — don't re-notify on the next commit.
@@ -344,7 +347,7 @@ export class ScormSession {
   async prepareCompletion(): Promise<void> {
     this.completing = true;
     await this.queueCommit();
-    if (this.dirty && !this.opts.readOnly?.()) {
+    if (this.dirty && !this.opts.readOnly?.() && this.opts.isContextCurrent?.() !== false) {
       throw this.commitError ?? new Error('Unable to save SCORM tracking before completion.');
     }
   }
@@ -369,7 +372,7 @@ export class ScormSession {
   }
 
   private async commit(): Promise<void> {
-    if (!this.dirty || this.opts.readOnly?.()) return;
+    if (!this.dirty || this.opts.readOnly?.() || this.opts.isContextCurrent?.() === false) return;
     // Une révision qui avance ailleurs dans le parcours ne remet pas ce commit en
     // course : il resterait rattaché à la visite refusée, pas à la nouvelle.
     if (this.conflicted) return;
@@ -413,8 +416,10 @@ export class ScormSession {
 
     try {
       const { data } = await portalScormApi.commitTracking(this.context, payload());
+      if (this.opts.isContextCurrent?.() === false) return;
       accept(data);
     } catch (err) {
+      if (this.opts.isContextCurrent?.() === false) return;
       // Un refus de contexte n'est PAS une dérive de compteur : resynchroniser
       // la séquence puis rejouer ferait entrer les données de ce passage dans la
       // visite courante. On abandonne le commit et on remonte le conflit.
@@ -429,11 +434,13 @@ export class ScormSession {
       // Sequence drifted — resync then retry once with the corrected sequence.
       try {
         const { data: seq } = await portalScormApi.getTrackingSequence(this.context);
-        if (this.opts.readOnly?.()) return;
+        if (this.opts.readOnly?.() || this.opts.isContextCurrent?.() === false) return;
         this.lastSequence = seq.last_sequence;
         const { data } = await portalScormApi.commitTracking(this.context, payload());
+        if (this.opts.isContextCurrent?.() === false) return;
         accept(data);
       } catch (retryErr) {
+        if (this.opts.isContextCurrent?.() === false) return;
         // Le parcours a pu basculer pendant la resynchronisation : sans cette
         // remontée, le commit serait abandonné sans aucun signal.
         reject(retryErr);

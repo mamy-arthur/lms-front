@@ -10,6 +10,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useDebounce } from '@/shared/hooks/useDebounce';
+import { useAuthStore } from '@/shared/stores/auth.store';
+import { Role } from '@/shared/constants/roles';
 import type { FormationStatus } from '@/modules/portal/resources/_shared/trainee/types';
 
 type FilterTab = 'all' | FormationStatus;
@@ -34,6 +36,11 @@ const SORT_OPTIONS: { label: string; value: SortKey; sort_by: string; sort_dir: 
   ];
 
 export default function FormationListPage() {
+  const simulatedRole = useAuthStore((state) => state.simulatedRole);
+  const realRole = useAuthStore((state) => state.user?.role);
+  const trainingPreview =
+    simulatedRole === Role.TRAINEE &&
+    (realRole === Role.EDITOR || realRole === Role.CLIENT_MANAGER);
   const [statusFilter, setStatusFilter] = useState<FilterTab>('all');
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>('recent');
@@ -43,7 +50,7 @@ export default function FormationListPage() {
   const debouncedSearch = useDebounce(search, 300);
   const sortOption = SORT_OPTIONS.find((o) => o.value === sortKey)!;
 
-  const { data, isLoading, isFetching } = useMyEnrollmentsQuery({
+  const { data, isLoading, isFetching, isError, refetch } = useMyEnrollmentsQuery({
     per_page: perPage,
     page: 1,
     q: debouncedSearch || undefined,
@@ -71,7 +78,11 @@ export default function FormationListPage() {
         <div>
           <h1 className="text-xl font-bold text-slate-900">Mes formations</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Retrouvez toutes vos formations, leur progression et vos attestations.
+            {trainingPreview
+              ? realRole === Role.CLIENT_MANAGER
+                ? 'Aperçu stagiaire de vos formations achetées. La progression reste simulée.'
+                : 'Aperçu stagiaire des formations de votre tenant. La progression reste simulée.'
+              : 'Retrouvez toutes vos formations, leur progression et vos attestations.'}
           </p>
         </div>
 
@@ -199,7 +210,14 @@ export default function FormationListPage() {
           </div>
         </div>
 
-        {isLoading ? (
+        {isError ? (
+          <div role="alert" className="space-y-3 rounded-lg border p-6 text-center">
+            <p>Impossible de charger les formations. Réessayez.</p>
+            <Button variant="outline" onClick={() => void refetch()} disabled={isFetching}>
+              Réessayer
+            </Button>
+          </div>
+        ) : isLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
             {Array.from({ length: PAGE_SIZE }).map((_, i) => (
               <Skeleton key={i} className="h-64 rounded-sm" />

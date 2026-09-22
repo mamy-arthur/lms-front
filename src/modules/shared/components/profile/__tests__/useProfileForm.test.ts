@@ -35,6 +35,7 @@ import { toast } from 'sonner';
 import { useAuthStore } from '@/shared/stores/auth.store';
 import { useProfileForm } from '../useProfileForm';
 import { Role } from '@/shared/constants/roles';
+import { SIMULATION_IDS } from '@/shared/simulation/fixtures';
 
 const mockApiGet = jest.mocked(apiGet);
 const mockApiPatch = jest.mocked(apiPatch);
@@ -71,7 +72,7 @@ const getWrapper = () =>
 describe('useProfileForm', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    useAuthStore.setState({ user: null, role: null });
+    useAuthStore.setState({ user: null, role: null, simulatedRole: null });
     queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   });
 
@@ -128,6 +129,64 @@ describe('useProfileForm', () => {
   });
 
   // ── handlePhotoSelect ─────────────────────────────────────────────────────
+
+  it('lit et modifie le profil fictif sans toucher à l’identité réelle', async () => {
+    const realUser = { ...MOCK_USER, role: Role.SUPER_ADMIN };
+    useAuthStore.setState({ user: realUser, role: Role.TRAINEE, simulatedRole: Role.TRAINEE });
+    mockApiGet.mockResolvedValue({
+      data: { ...PROFILE_DATA, profile_photo: { url: 'data:image/png;base64,DEMO' } },
+    });
+    mockApiPatch.mockResolvedValue(undefined);
+
+    const { result } = renderHook(() => useProfileForm({ patchPath: 'users' }), {
+      wrapper: getWrapper(),
+    });
+    await waitFor(() => expect(result.current.form.getValues('first_name')).toBe('Alice'));
+    expect(mockApiGet).toHaveBeenCalledWith(`users/${SIMULATION_IDS.learner}`);
+
+    await act(async () => {
+      await result.current.handleSave({ first_name: 'Profil', last_name: 'fictif' });
+    });
+
+    expect(mockApiPatch).toHaveBeenCalledWith(
+      `users/${SIMULATION_IDS.learner}`,
+      expect.objectContaining({ first_name: 'Profil', last_name: 'fictif' }),
+    );
+    expect(useAuthStore.getState().user).toBe(realUser);
+    expect(useAuthStore.getState().role).toBe(Role.TRAINEE);
+  });
+
+  it('ne copie pas une sauvegarde fictive terminée après la sortie de simulation', async () => {
+    const realUser = { ...MOCK_USER, role: Role.SUPER_ADMIN };
+    useAuthStore.setState({ user: realUser, role: Role.EDITOR, simulatedRole: Role.EDITOR });
+    mockApiGet.mockResolvedValue({ data: PROFILE_DATA });
+    let finishSave!: (value: unknown) => void;
+    mockApiPatch.mockReturnValueOnce(
+      new Promise((resolve) => {
+        finishSave = resolve;
+      }),
+    );
+
+    const { result, unmount } = renderHook(() => useProfileForm(), { wrapper: getWrapper() });
+    let pendingSave!: Promise<void>;
+    act(() => {
+      pendingSave = result.current.handleSave({ first_name: 'Démo', last_name: 'éditeur' });
+    });
+    unmount();
+    useAuthStore.setState({ simulatedRole: null, role: Role.SUPER_ADMIN });
+
+    await act(async () => {
+      finishSave(undefined);
+      await pendingSave;
+    });
+
+    expect(mockApiPatch).toHaveBeenCalledWith(
+      `platform/users/${SIMULATION_IDS.editor}`,
+      expect.any(Object),
+    );
+    expect(useAuthStore.getState().user).toBe(realUser);
+    expect(useAuthStore.getState().role).toBe(Role.SUPER_ADMIN);
+  });
 
   it("ignore handlePhotoSelect si aucun fichier dans l'input", () => {
     const { result } = renderHook(() => useProfileForm(), { wrapper: getWrapper() });

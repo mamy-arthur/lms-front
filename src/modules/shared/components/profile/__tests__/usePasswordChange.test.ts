@@ -27,6 +27,7 @@ import { toast } from 'sonner';
 import { useAuthStore } from '@/shared/stores/auth.store';
 import { usePasswordChange } from '../usePasswordChange';
 import { Role } from '@/shared/constants/roles';
+import { SIMULATION_IDS } from '@/shared/simulation/fixtures';
 
 const mockApiPatch = jest.mocked(apiPatch);
 const mockToastSuccess = jest.mocked(toast.success);
@@ -56,7 +57,7 @@ function setupFields(
 describe('usePasswordChange', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    useAuthStore.setState({ user: null, role: null });
+    useAuthStore.setState({ user: null, role: null, simulatedRole: null });
   });
 
   // ── État initial ──────────────────────────────────────────────────────────
@@ -129,6 +130,26 @@ describe('usePasswordChange', () => {
   });
 
   // ── Happy path ────────────────────────────────────────────────────────────
+
+  it('adresse le mot de passe fictif sans remplacer le compte authentifié', async () => {
+    const realUser = { ...MOCK_USER, role: Role.SUPER_ADMIN };
+    useAuthStore.setState({ user: realUser, role: Role.TRAINEE, simulatedRole: Role.TRAINEE });
+    mockApiPatch.mockResolvedValue(undefined);
+    const { result } = renderHook(() => usePasswordChange({ patchPath: 'users' }));
+    setupFields(result);
+
+    await act(async () => {
+      await result.current.handleChangePassword();
+    });
+
+    expect(mockApiPatch).toHaveBeenCalledWith(`users/${SIMULATION_IDS.learner}/password`, {
+      current_password: 'OldPass1',
+      password: 'NewPass12',
+      password_confirmation: 'NewPass12',
+    });
+    expect(useAuthStore.getState().user).toBe(realUser);
+    expect(useAuthStore.getState().simulatedRole).toBe(Role.TRAINEE);
+  });
 
   it('appelle PATCH :path/:id/password avec le bon payload', async () => {
     setupWithUser();

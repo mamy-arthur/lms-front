@@ -17,7 +17,7 @@ import { useToggleUserActive } from '../hooks/useToggleUserActive';
 import { useDeleteUser } from '../hooks/useDeleteUser';
 import { useResetUserTwoFactor } from '../hooks/useResetUserTwoFactor';
 import { useDeleteConfirm } from '@/modules/shared/hooks/useDeleteConfirm';
-import { useTenantStore } from '@/shared/stores/tenant.store';
+import { useTenant } from '@/shared/hooks/useTenant';
 import { useAuthStore } from '@/shared/stores/auth.store';
 import { ConfirmDialog } from '@/shared/components/confirm-dialog/ConfirmDialog';
 
@@ -57,7 +57,7 @@ export function UsersList() {
     hasQuery,
   } = useUsersListController<User, UserSearchParams>({ defaultPageSize: 25 });
 
-  const activeTenant = useTenantStore((s) => s.tenant);
+  const { tenant: activeTenant } = useTenant();
   const scopedParams = useMemo(
     () => ({ ...params, ...(activeTenant ? { tenant_id: activeTenant.id } : {}) }),
     [params, activeTenant],

@@ -19,6 +19,7 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 import { useAuthStore } from '@/shared/stores/auth.store';
+import { useSimulationUser } from '@/shared/simulation/useSimulationUser';
 import { getInitials } from '@/shared/lib/string/getInitials';
 import Link from 'next/link';
 import { ROUTES } from '@/shared/constants/routes';
@@ -26,7 +27,8 @@ import { usePathname } from 'next/navigation';
 
 export function NavUser({ onLogout }: { onLogout?: () => void }) {
   const { isMobile } = useSidebar();
-  const { user } = useAuthStore();
+  const user = useSimulationUser();
+  const simulatedRole = useAuthStore((s) => s.simulatedRole);
   const pathname = usePathname();
   const profileHref = pathname.startsWith('/admin') ? ROUTES.admin.profile : ROUTES.portal.profile;
   return (
@@ -83,7 +85,7 @@ export function NavUser({ onLogout }: { onLogout?: () => void }) {
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => onLogout?.()} variant="destructive">
               <LogOut />
-              Log out
+              {simulatedRole ? 'Quitter la simulation' : 'Log out'}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

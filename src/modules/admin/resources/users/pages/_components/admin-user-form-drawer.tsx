@@ -106,8 +106,8 @@ export interface AdminUserFormDrawerProps {
 
 function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFormDrawerProps) {
   const isEdit = !!user;
-  const { user: authUser } = useAuthStore();
-  const isSuperAdmin = authUser?.role === Role.SUPER_ADMIN;
+  const role = useAuthStore((s) => s.role);
+  const isSuperAdmin = role === Role.SUPER_ADMIN;
 
   const createMutation = useCreateUser();
   const updateMutation = useUpdateUser();

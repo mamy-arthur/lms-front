@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { toast } from 'sonner';
 import {
@@ -9,8 +9,20 @@ import {
   portalLearningPathsApi,
 } from '@/shared/api/portal.api';
 import { progressionApi } from '@/shared/api/progression.api';
-import { portalScormApi, type ApiScormTrackingState } from '@/shared/api/portal-scorm.api';
-import type { ApiPortalLearningPathSummary } from '@/shared/types/portal.types';
+import {
+  portalScormApi,
+  type ApiScormLaunch,
+  type ApiScormTrackingState,
+} from '@/shared/api/portal-scorm.api';
+import { Role } from '@/shared/constants/roles';
+import { portalLearningPathKeys } from '@/shared/queries/keys';
+import { useAuthStore } from '@/shared/stores/auth.store';
+import { useSimulationStore } from '@/shared/simulation/simulation.store';
+import type {
+  ApiPortalContentEntry,
+  ApiPortalLearningPathSummary,
+} from '@/shared/types/portal.types';
+import type { Formation } from '../lib/types';
 import FormationPlayer from '../FormationPlayer';
 import {
   ENROLLMENT_ID,
@@ -99,7 +111,7 @@ function setup() {
       <FormationPlayer enrollmentId={ENROLLMENT_ID} />
     </QueryClientProvider>,
   );
-  return { ...view, user: userEvent.setup() };
+  return { ...view, client, user: userEvent.setup() };
 }
 
 describe('Parcours du stagiaire piloté par le snapshot d’exécution', () => {
@@ -602,5 +614,578 @@ describe('Parcours du stagiaire piloté par le snapshot d’exécution', () => {
 
     // La visite courante est déjà `in_progress` : rien à démarrer.
     expect(jest.mocked(progressionApi.startNodeExecution)).not.toHaveBeenCalled();
+  });
+
+  describe('SCORM en lecture seule pendant la simulation stagiaire', () => {
+    const initialAuth = useAuthStore.getState();
+    const initialSimulation = useSimulationStore.getState();
+    const clients: QueryClient[] = [];
+    const assetUrl =
+      '/api/v1/role-simulation/training/learning-paths/12345678-1234-4123-8123-123456789abc/entries/12345678-1234-4123-8123-123456789def/scorm/assets/payload.signature/index.html';
+    const scormEntry: ApiPortalContentEntry = {
+      id: 'entry-2',
+      content_type_id: 'type-scorm',
+      module_type: 'scorm',
+      data: { scorm_package_id: 'package-preview' },
+      field_types: {},
+      is_published: true,
+    };
+    const launch: ApiScormLaunch = {
+      enrollment_id: ENROLLMENT_ID,
+      competency_id: 'module-1',
+      content_entry_id: scormEntry.id,
+      scorm_package_id: 'package-preview',
+      version: '1.2',
+      launch_path: 'index.html',
+      launch_url: assetUrl,
+      node_execution_id: 'exec-module-1',
+      read_only: true,
+    };
+
+    function setActor(realRole: Role, simulatedRole: Role | null = Role.TRAINEE) {
+      useAuthStore.setState({
+        user: {
+          id: 'real-actor',
+          name: 'Acteur réel',
+          email: 'actor@example.test',
+          role: realRole,
+        },
+        role: simulatedRole ?? realRole,
+        simulatedRole,
+      });
+    }
+
+    function deferScormEntry() {
+      let resolve!: (value: { data: ApiPortalContentEntry }) => void;
+      mockGetEntry.mockReturnValueOnce(
+        new Promise((done) => {
+          resolve = done;
+        }),
+      );
+      return () => resolve({ data: scormEntry });
+    }
+
+    function cachedContent(client: QueryClient, entryId: string, moduleId = 'module-1') {
+      return client
+        .getQueryData<Formation>(portalLearningPathKeys.summary(ENROLLMENT_ID))
+        ?.nodes.flatMap((node) =>
+          node.type === 'module' && node.id === moduleId
+            ? node.courses.flatMap((course) =>
+                course.sections.flatMap((section) => section.contents),
+              )
+            : [],
+        )
+        .find((content) => content.entryId === entryId);
+    }
+
+    function expectNoTracking() {
+      expect(portalScormApi.getTracking).not.toHaveBeenCalled();
+      expect(portalScormApi.commitTracking).not.toHaveBeenCalled();
+      expect(portalScormApi.getTrackingSequence).not.toHaveBeenCalled();
+      expect(portalContentTimeApi.record).not.toHaveBeenCalled();
+    }
+
+    function expectNoTrackingOrCompletion() {
+      expectNoTracking();
+      expect(mockComplete).not.toHaveBeenCalled();
+    }
+
+    beforeEach(() => {
+      useSimulationStore.setState({ phase: 'ready' });
+      // Contenu 1 est acquis : la séquence s'ouvre sur Contenu 2, le SCORM.
+      useSummary([
+        {
+          id: 'module-1',
+          name: 'Les bases',
+          courses: [
+            {
+              id: 'course-1',
+              name: 'Découverte',
+              entries: [
+                { id: 'entry-1', title: 'Contenu 1', completed: true },
+                { id: 'entry-2', title: 'Contenu 2' },
+                { id: 'entry-3', title: 'Contenu 3' },
+              ],
+            },
+            {
+              id: 'course-2',
+              name: 'Application',
+              entries: [{ id: 'entry-4', title: 'Contenu 4' }],
+            },
+          ],
+        },
+        {
+          id: 'module-2',
+          name: 'La suite',
+          actionable: false,
+          courses: [
+            {
+              id: 'course-3',
+              name: 'Perfectionnement',
+              entries: [{ id: 'entry-5', title: 'Contenu 5' }],
+            },
+          ],
+        },
+      ]);
+    });
+
+    afterEach(() => {
+      cleanup();
+      for (const client of clients.splice(0)) client.clear();
+      useAuthStore.setState(initialAuth, true);
+      useSimulationStore.setState(initialSimulation, true);
+    });
+
+    it.each([Role.EDITOR, Role.CLIENT_MANAGER])(
+      '%s valide le SCORM localement, déverrouille la suite et ne revient pas au SCORM après validation du contenu suivant',
+      async (realRole) => {
+        setActor(realRole);
+        const clock = jest.spyOn(performance, 'now').mockReturnValue(0);
+        summary.modules[0].courses[0].sections[0].content_entries[1].read_only = true;
+        const finishEntry = deferScormEntry();
+        let finishLaunch!: (value: { data: ApiScormLaunch }) => void;
+        jest.mocked(portalScormApi.launch).mockResolvedValue({ data: launch });
+        jest.mocked(portalScormApi.launch).mockReturnValueOnce(
+          new Promise((resolve) => {
+            finishLaunch = resolve;
+          }),
+        );
+        const { client, user, unmount } = setup();
+        clients.push(client);
+        await screen.findByRole('heading', { name: 'Contenu 2' });
+        await waitFor(() =>
+          expect(mockGetEntry).toHaveBeenCalledWith(ENROLLMENT_ID, 'course-1', 'entry-2'),
+        );
+
+        // Le marqueur read_only protège le runtime, sans ouvrir la séquence.
+        expect(screen.queryByRole('button', { name: /^Terminer/ })).not.toBeInTheDocument();
+        expect(
+          screen.queryByRole('button', { name: 'Marquer comme terminé' }),
+        ).not.toBeInTheDocument();
+        expect(screen.queryByTitle('Contenu SCORM')).not.toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Suivant' })).toBeDisabled();
+        expect(screen.getByRole('button', { name: 'Contenu 3' })).toBeDisabled();
+        expect(cachedContent(client, 'entry-2')).toMatchObject({
+          completed: false,
+          status: 'available',
+          readOnly: true,
+        });
+        expect(cachedContent(client, 'entry-3')).toMatchObject({
+          completed: false,
+          status: 'locked',
+        });
+        await user.click(screen.getByRole('button', { name: 'Contenu 3' }));
+        expect(mockGetEntry.mock.calls.map((call) => call[2])).toEqual(['entry-2']);
+
+        await act(async () => finishEntry());
+        await waitFor(() =>
+          expect(portalScormApi.launch).toHaveBeenCalledWith({
+            enrollmentId: ENROLLMENT_ID,
+            competencyId: 'module-1',
+            courseId: 'course-1',
+            entryId: 'entry-2',
+            nodeExecutionId: 'exec-module-1',
+          }),
+        );
+        expect(screen.getByRole('button', { name: 'Terminer et continuer' })).toBeEnabled();
+        expect(screen.queryByTitle('Contenu SCORM')).not.toBeInTheDocument();
+        expectNoTrackingOrCompletion();
+
+        await act(async () => finishLaunch({ data: launch }));
+        await waitFor(() =>
+          expect(screen.getByTitle('Contenu SCORM')).toHaveAttribute('src', assetUrl),
+        );
+        const frame = screen.getByTitle<HTMLIFrameElement>('Contenu SCORM');
+        expect(frame).not.toHaveAttribute('srcdoc');
+        expect(frame.contentWindow?.parent).toBe(window);
+        expect(screen.getByRole('button', { name: 'Terminer et continuer' })).toBeEnabled();
+
+        // L'adaptateur preview reste sans crédit : ses API ne valident jamais le contenu.
+        const parent = frame.contentWindow!.parent as unknown as {
+          API: {
+            LMSInitialize: (value: string) => string;
+            LMSSetValue: (key: string, value: string) => string;
+            LMSGetValue: (key: string) => string;
+            LMSCommit: (value: string) => string;
+            LMSFinish: (value: string) => string;
+          };
+        };
+        const api = parent.API;
+        expect(api).toBeDefined();
+        await act(async () => {
+          expect(api.LMSInitialize('')).toBe('true');
+          expect(api.LMSGetValue('cmi.core.lesson_mode')).toBe('browse');
+          expect(api.LMSGetValue('cmi.core.credit')).toBe('no-credit');
+          expect(api.LMSSetValue('cmi.core.score.raw', '100')).toBe('true');
+          expect(api.LMSSetValue('cmi.core.lesson_status', 'completed')).toBe('true');
+          expect(api.LMSSetValue('cmi.core.session_time', '00:05:00')).toBe('true');
+          expect(api.LMSCommit('')).toBe('true');
+          expect(api.LMSGetValue('cmi.core.score.raw')).toBe('100');
+          expect(api.LMSGetValue('cmi.core.lesson_status')).toBe('completed');
+          expect(api.LMSFinish('')).toBe('true');
+        });
+        expectNoTrackingOrCompletion();
+        expect(screen.getByRole('heading', { name: 'Contenu 2' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Terminer et continuer' })).toBeEnabled();
+        expect(screen.queryByText('Terminé')).not.toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Contenu 3' })).toBeDisabled();
+        expect(cachedContent(client, 'entry-2')).toMatchObject({ completed: false });
+        clock.mockReturnValue(10_000);
+        await user.click(screen.getByRole('button', { name: 'Terminer et continuer' }));
+        await screen.findByText('Texte de entry-3');
+        await waitFor(() =>
+          expect(screen.getByRole('button', { name: 'Terminer et continuer' })).toBeEnabled(),
+        );
+        expect(mockComplete).toHaveBeenCalledTimes(1);
+        expect(mockComplete).toHaveBeenCalledWith(
+          ENROLLMENT_ID,
+          'module-1',
+          'course-1',
+          'entry-2',
+          { node_execution_id: 'exec-module-1', expected_state_revision: 7 },
+        );
+        expect(cachedContent(client, 'entry-2')).toMatchObject({
+          completed: true,
+          status: 'completed',
+          readOnly: true,
+        });
+        expect(cachedContent(client, 'entry-3')).toMatchObject({
+          completed: false,
+          status: 'available',
+        });
+        expect(cachedContent(client, 'entry-4')).toMatchObject({
+          completed: false,
+          status: 'locked',
+        });
+        expect(screen.getByRole('button', { name: 'Contenu 3' })).toBeEnabled();
+        expect(screen.getByRole('button', { name: 'Contenu 2' })).not.toHaveAttribute('title');
+        expect(
+          screen.getByRole('button', { name: 'Contenu 2' }).querySelector('.lucide-check'),
+        ).toBeInTheDocument();
+        expect(
+          screen.getByRole('button', { name: 'Contenu 3' }).querySelector('.lucide-check'),
+        ).not.toBeInTheDocument();
+        expect(parent.API).toBeUndefined();
+        expectNoTracking();
+
+        // Les deux sommaires affichent la complétion normale issue du cache.
+        await user.click(screen.getByRole('button', { name: 'Ouvrir la navigation' }));
+        const rows = screen.getAllByRole('button', { name: 'Contenu 2' });
+        expect(rows).toHaveLength(2);
+        for (const row of rows) {
+          expect(row).not.toHaveAttribute('title');
+          expect(row.querySelector('.lucide-check')).toBeInTheDocument();
+        }
+        await user.click(screen.getByRole('button', { name: 'Fermer la navigation' }));
+
+        // Relire le SCORM terminé ne propose ni nouvelle validation ni tracking.
+        await user.click(screen.getByRole('button', { name: 'Précédent' }));
+        await waitFor(() =>
+          expect(screen.getByTitle('Contenu SCORM')).toHaveAttribute('src', assetUrl),
+        );
+        expect(screen.getByRole('status')).toHaveTextContent('Terminé');
+        expect(screen.queryByRole('button', { name: /^Terminer/ })).not.toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Suivant' })).toBeEnabled();
+        expect(mockComplete).toHaveBeenCalledTimes(1);
+
+        await user.click(screen.getByRole('button', { name: 'Suivant' }));
+        await screen.findByText('Texte de entry-3');
+        await user.click(screen.getByRole('button', { name: 'Terminer et continuer' }));
+        await screen.findByText('Texte de entry-4');
+        await waitFor(() =>
+          expect(screen.getByRole('button', { name: 'Terminer et continuer' })).toBeEnabled(),
+        );
+        expect(mockComplete).toHaveBeenCalledTimes(2);
+        expect(mockComplete).toHaveBeenLastCalledWith(
+          ENROLLMENT_ID,
+          'module-1',
+          'course-1',
+          'entry-3',
+          { node_execution_id: 'exec-module-1', expected_state_revision: 7 },
+        );
+        expect(cachedContent(client, 'entry-2')).toMatchObject({ completed: true });
+        expect(cachedContent(client, 'entry-3')).toMatchObject({
+          completed: true,
+          status: 'completed',
+        });
+        expect(cachedContent(client, 'entry-4')).toMatchObject({
+          completed: false,
+          status: 'available',
+        });
+        expect(screen.queryByRole('heading', { name: 'Contenu 2' })).not.toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /module la suite/i })).toBeDisabled();
+        expect(mockSummary).toHaveBeenCalledTimes(3);
+        unmount();
+        expectNoTracking();
+      },
+    );
+
+    it.each([Role.EDITOR, Role.CLIENT_MANAGER])(
+      '%s valide aussi le SCORM sans marqueur read_only dans le résumé',
+      async (realRole) => {
+        setActor(realRole);
+        const finishEntry = deferScormEntry();
+        jest.mocked(portalScormApi.launch).mockResolvedValue({ data: launch });
+        const { client, user } = setup();
+        clients.push(client);
+        await screen.findByRole('heading', { name: 'Contenu 2' });
+        expect(
+          summary.modules[0].courses[0].sections[0].content_entries[1].read_only,
+        ).toBeUndefined();
+        expect(screen.queryByRole('button', { name: /^Terminer/ })).not.toBeInTheDocument();
+        expect(screen.queryByTitle('Contenu SCORM')).not.toBeInTheDocument();
+
+        await act(async () => finishEntry());
+        await waitFor(() =>
+          expect(screen.getByTitle('Contenu SCORM')).toHaveAttribute('src', assetUrl),
+        );
+        expect(screen.getByRole('button', { name: 'Terminer et continuer' })).toBeEnabled();
+        expect(screen.getByRole('button', { name: 'Contenu 3' })).toBeDisabled();
+        expectNoTrackingOrCompletion();
+        // Le rôle protège le runtime, mais la validation manuelle suit le chemin normal.
+        await user.click(screen.getByRole('button', { name: 'Terminer et continuer' }));
+        await screen.findByText('Texte de entry-3');
+        expect(mockComplete).toHaveBeenCalledTimes(1);
+        expect(mockComplete).toHaveBeenCalledWith(
+          ENROLLMENT_ID,
+          'module-1',
+          'course-1',
+          'entry-2',
+          { node_execution_id: 'exec-module-1', expected_state_revision: 7 },
+        );
+        expect(cachedContent(client, 'entry-2')).toMatchObject({
+          completed: true,
+          status: 'completed',
+        });
+        expect(screen.getByRole('button', { name: 'Contenu 3' })).toBeEnabled();
+        expectNoTracking();
+      },
+    );
+
+    it('garde la suite verrouillée après un refus de validation SCORM et jusqu’au succès du nouvel essai', async () => {
+      setActor(Role.EDITOR);
+      summary.modules[0].courses[0].sections[0].content_entries[1].read_only = true;
+      mockGetEntry.mockResolvedValueOnce({ data: scormEntry });
+      jest.mocked(portalScormApi.launch).mockResolvedValue({ data: launch });
+      mockComplete.mockRejectedValueOnce(new Error('Validation locale refusée'));
+      let acknowledge!: () => void;
+      mockComplete.mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            acknowledge = () => {
+              completeEntry('entry-2', 'module-1');
+              resolve({ data: summary.execution });
+            };
+          }),
+      );
+      const { client, user } = setup();
+      clients.push(client);
+      await screen.findByTitle('Contenu SCORM');
+      await user.click(screen.getByRole('button', { name: 'Terminer et continuer' }));
+      await waitFor(() => expect(toast.error).toHaveBeenCalled());
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: 'Terminer et continuer' })).toBeEnabled(),
+      );
+      expect(mockComplete).toHaveBeenCalledTimes(1);
+      expect(cachedContent(client, 'entry-2')).toMatchObject({ completed: false });
+      expect(screen.getByRole('heading', { name: 'Contenu 2' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Contenu 3' })).toBeDisabled();
+      expect(
+        screen.getByRole('button', { name: 'Contenu 2' }).querySelector('.lucide-check'),
+      ).not.toBeInTheDocument();
+      expect(screen.queryByRole('status')).not.toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: 'Contenu 3' }));
+      expect(mockGetEntry.mock.calls.map((call) => call[2])).toEqual(['entry-2']);
+
+      await user.click(screen.getByRole('button', { name: 'Terminer et continuer' }));
+      await waitFor(() => expect(mockComplete).toHaveBeenCalledTimes(2));
+      expect(screen.getByRole('button', { name: 'Terminer et continuer' })).toBeDisabled();
+      expect(screen.getByRole('button', { name: 'Contenu 3' })).toBeDisabled();
+      expect(cachedContent(client, 'entry-2')).toMatchObject({ completed: false });
+      for (const call of mockComplete.mock.calls) {
+        expect(call).toEqual([
+          ENROLLMENT_ID,
+          'module-1',
+          'course-1',
+          'entry-2',
+          { node_execution_id: 'exec-module-1', expected_state_revision: 7 },
+        ]);
+      }
+
+      await act(async () => acknowledge());
+      await screen.findByText('Texte de entry-3');
+      expect(cachedContent(client, 'entry-2')).toMatchObject({
+        completed: true,
+        status: 'completed',
+      });
+      expect(screen.getByRole('button', { name: 'Contenu 3' })).toBeEnabled();
+      expectNoTracking();
+    });
+
+    it('valide le dernier SCORM fictif via le bouton démo SuperAdmin et actualise le cache', async () => {
+      setActor(Role.SUPER_ADMIN);
+      useSummary([
+        {
+          id: 'module-1',
+          name: 'Démonstration',
+          courses: [
+            {
+              id: 'course-1',
+              name: 'Cours',
+              entries: [{ id: scormEntry.id, title: 'SCORM démo' }],
+            },
+          ],
+        },
+      ]);
+      mockGetEntry.mockResolvedValue({ data: scormEntry });
+      jest.mocked(portalScormApi.launch).mockResolvedValue({
+        data: { ...launch, read_only: false, launch_url: 'about:blank' },
+      });
+      const { client, user } = setup();
+      clients.push(client);
+      const demoComplete = await screen.findByRole('button', {
+        name: 'Terminer l’activité simulée',
+      });
+      expect(screen.getByRole('button', { name: 'Terminer' })).toBeEnabled();
+      expect(cachedContent(client, scormEntry.id)).toMatchObject({ completed: false });
+      expectNoTrackingOrCompletion();
+      await user.click(demoComplete);
+      expect(await screen.findByRole('status')).toHaveTextContent('Terminé');
+      expect(mockComplete).toHaveBeenCalledTimes(1);
+      expect(mockComplete).toHaveBeenCalledWith(
+        ENROLLMENT_ID,
+        'module-1',
+        'course-1',
+        scormEntry.id,
+        { node_execution_id: 'exec-module-1', expected_state_revision: 7 },
+      );
+      expect(screen.getByRole('button', { name: 'Suivant' })).toBeDisabled();
+      expect(cachedContent(client, scormEntry.id)).toMatchObject({
+        completed: true,
+        status: 'completed',
+      });
+      const row = screen.getByRole('button', { name: 'SCORM démo' });
+      expect(row).not.toHaveAttribute('title');
+      expect(row.querySelector('.lucide-check')).toBeInTheDocument();
+      expectNoTracking();
+    });
+
+    it('désactive le marquage pendant une transition de simulation', async () => {
+      setActor(Role.EDITOR);
+      mockGetEntry.mockResolvedValue({ data: scormEntry });
+      jest.mocked(portalScormApi.launch).mockResolvedValue({ data: launch });
+      const { client, user } = setup();
+      clients.push(client);
+      await screen.findByRole('button', { name: 'Terminer et continuer' });
+      act(() => useSimulationStore.setState({ phase: 'transition' }));
+      const button = screen.getByRole('button', { name: 'Terminer et continuer' });
+      expect(button).toBeDisabled();
+      await user.click(button);
+      expect(screen.queryByText('Terminé')).not.toBeInTheDocument();
+      expect(cachedContent(client, scormEntry.id)).toMatchObject({ completed: false });
+      expect(screen.getByRole('button', { name: 'Contenu 3' })).toBeDisabled();
+      expectNoTrackingOrCompletion();
+    });
+
+    it('adresse chaque validation du SCORM partagé à son occurrence et à sa visite', async () => {
+      setActor(Role.EDITOR);
+      useSummary(
+        ['module-1', 'module-2'].map((id) => ({
+          id,
+          name: id,
+          courses: [
+            {
+              id: 'course-1',
+              name: 'Cours partagé',
+              entries: [{ id: scormEntry.id, title: 'SCORM partagé' }],
+            },
+          ],
+        })),
+      );
+      for (const module of summary.modules) {
+        module.courses[0].sections[0].content_entries[0].read_only = true;
+      }
+      mockGetEntry.mockResolvedValue({ data: scormEntry });
+      jest.mocked(portalScormApi.launch).mockImplementation(async (context) => ({
+        data: {
+          ...launch,
+          competency_id: context.competencyId,
+          node_execution_id: context.nodeExecutionId,
+        },
+      }));
+      const { client, user } = setup();
+      clients.push(client);
+      await screen.findByTitle('Contenu SCORM');
+      expect(screen.getAllByRole('button', { name: 'SCORM partagé' })[1]).toBeDisabled();
+      await user.click(await screen.findByRole('button', { name: 'Terminer et continuer' }));
+      await waitFor(() =>
+        expect(screen.getAllByRole('button', { name: 'SCORM partagé' })[1]).toBeEnabled(),
+      );
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Suivant' })).toBeEnabled());
+      const rows = screen.getAllByRole('button', { name: 'SCORM partagé' });
+      expect(rows[0]).not.toHaveAttribute('title');
+      expect(rows[0].querySelector('.lucide-check')).toBeInTheDocument();
+      expect(rows[1]).not.toHaveAttribute('title');
+      expect(rows[1].querySelector('.lucide-check')).not.toBeInTheDocument();
+      expect(cachedContent(client, scormEntry.id, 'module-1')).toMatchObject({ completed: true });
+      expect(cachedContent(client, scormEntry.id, 'module-2')).toMatchObject({ completed: false });
+      await user.click(rows[1]);
+      expect(await screen.findByRole('button', { name: 'Terminer' })).toBeEnabled();
+      expect(screen.queryByRole('status')).not.toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: 'Terminer' }));
+      await waitFor(() =>
+        expect(cachedContent(client, scormEntry.id, 'module-2')).toMatchObject({ completed: true }),
+      );
+      expect(mockComplete.mock.calls).toEqual([
+        [
+          ENROLLMENT_ID,
+          'module-1',
+          'course-1',
+          scormEntry.id,
+          { node_execution_id: 'exec-module-1', expected_state_revision: 7 },
+        ],
+        [
+          ENROLLMENT_ID,
+          'module-2',
+          'course-1',
+          scormEntry.id,
+          { node_execution_id: 'exec-module-2', expected_state_revision: 7 },
+        ],
+      ]);
+      expectNoTracking();
+    });
+
+    it.each([true, undefined])(
+      'ne propose aucune validation simulée hors simulation (read_only=%s)',
+      async (readOnly) => {
+        setActor(Role.TRAINEE, null);
+        summary.modules[0].courses[0].sections[0].content_entries[1].read_only = readOnly;
+        const finishEntry = deferScormEntry();
+        jest.mocked(portalScormApi.launch).mockResolvedValue({ data: launch });
+        const { client, user } = setup();
+        clients.push(client);
+        await screen.findByRole('heading', { name: 'Contenu 2' });
+        expect(screen.queryByTitle('Contenu SCORM')).not.toBeInTheDocument();
+        expect(
+          screen.queryByRole('button', { name: 'Marquer comme terminé' }),
+        ).not.toBeInTheDocument();
+        if (readOnly) {
+          expect(screen.queryByRole('button', { name: /^Terminer/ })).not.toBeInTheDocument();
+          await act(async () => finishEntry());
+          // A cached preview launch outside simulation must fail closed.
+          await screen.findByText('Impossible de charger le contenu SCORM.');
+          expect(
+            screen.queryByRole('button', { name: 'Marquer comme terminé' }),
+          ).not.toBeInTheDocument();
+          expect(screen.queryByRole('button', { name: /^Terminer/ })).not.toBeInTheDocument();
+          await user.click(screen.getByRole('button', { name: 'Contenu 2' }));
+          expect(cachedContent(client, scormEntry.id)).toMatchObject({ completed: false });
+        } else {
+          expect(screen.getByRole('button', { name: 'Terminer et continuer' })).toBeEnabled();
+          expect(screen.getByRole('button', { name: 'Contenu 3' })).toBeDisabled();
+        }
+        expect(mockComplete).not.toHaveBeenCalled();
+      },
+    );
   });
 });
