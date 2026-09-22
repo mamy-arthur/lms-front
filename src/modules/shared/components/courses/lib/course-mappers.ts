@@ -34,6 +34,7 @@ export function mapApiCourse(api: ApiCourse): Course {
     visible: api.visibility === 'PUBLISHED',
     visibility: api.visibility,
     description: api.description ?? undefined,
+    contentCount: api.content_count,
     // Left UNDEFINED when the payload carries no lock (the create/update responses)
     // rather than defaulted to false: collapsing "not answered" into "unlocked" would
     // present a frozen course as a free one. The read endpoints — list rows included —

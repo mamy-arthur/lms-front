@@ -184,6 +184,7 @@ function makeCourse(
     identifier: null,
     visible: true,
     visibility: 'PUBLISHED',
+    contentCount: 1,
   };
 }
 

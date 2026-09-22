@@ -22,7 +22,6 @@ import { useAuthStore } from '@/shared/stores/auth.store';
 import { ConfirmDialog } from '@/shared/components/confirm-dialog/ConfirmDialog';
 
 const ROLE_OPTIONS = [
-  { value: Role.SUPER_ADMIN, label: 'Super admin' },
   { value: Role.EDITOR, label: 'Éditeur' },
   { value: Role.CLIENT_MANAGER, label: 'Responsable' },
   { value: Role.TRAINEE, label: 'Stagiaire' },
