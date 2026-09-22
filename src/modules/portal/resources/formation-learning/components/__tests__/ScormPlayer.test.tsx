@@ -481,4 +481,31 @@ describe('ScormPlayer unchanged demo and learner behavior', () => {
     view.unmount();
     expect(globals.API).toBeUndefined();
   });
+
+  it('never sends a learner’s pending tracking once another account is authenticated', async () => {
+    setActor(null, Role.TRAINEE);
+    useAuthStore.setState({ sessionId: 'session-a' });
+    const url =
+      '/api/v1/enrollments/real/courses/course/entries/entry/scorm/assets/token/index.html';
+    mockApi.launch.mockResolvedValue({
+      data: { ...launch, read_only: undefined, launch_url: url },
+    });
+    const view = mount();
+    await waitFor(() => expect(screen.getByTitle('Contenu SCORM')).toHaveAttribute('src', url));
+    const api = globals.API!;
+    expect(api.LMSInitialize('')).toBe('true');
+    api.LMSSetValue('cmi.core.lesson_location', 'page-2');
+
+    // Logout + login as someone else, then the page unmounts: disposing the old
+    // runtime (LMSFinish) must not commit the previous learner's dirty state.
+    await act(async () => {
+      useAuthStore.setState({
+        user: { id: 'other-user', name: 'Autre', email: 'other@example.test', role: Role.TRAINEE },
+        role: Role.TRAINEE,
+        sessionId: 'session-b',
+      });
+    });
+    await act(async () => view.unmount());
+    expect(mockApi.commitTracking).not.toHaveBeenCalled();
+  });
 });

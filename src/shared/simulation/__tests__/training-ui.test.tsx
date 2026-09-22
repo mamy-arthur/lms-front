@@ -130,7 +130,7 @@ beforeEach(() => {
   // jsdom does not supply fetch; install a fail-closed stub rather than spying on it.
   Object.defineProperty(global, 'fetch', { configurable: true, writable: true, value: mockFetch });
   mockFetch.mockRejectedValue(new Error('Unexpected UI network request'));
-  mockSynchronize.mockResolvedValue(undefined);
+  mockSynchronize.mockResolvedValue(true);
   mockRefetch.mockResolvedValue(undefined);
   enrollmentQuery = {
     data: { data: [formation], total: 1 },

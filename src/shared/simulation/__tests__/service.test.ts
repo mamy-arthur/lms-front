@@ -193,6 +193,36 @@ it('never restores real writes if exit cannot be confirmed', async () => {
   expect(useAuthStore.getState().simulatedRole).toBe(Role.CLIENT_MANAGER);
 });
 
+it('shares one check per session identity and restarts it for another account', async () => {
+  const fetchMock = global.fetch as jest.Mock;
+  const respond = fetchMock.getMockImplementation()!;
+  let release!: () => void;
+  const released = new Promise<void>((resolve) => (release = resolve));
+  fetchMock.mockImplementationOnce(async (...args: Parameters<typeof respond>) => {
+    await released;
+    return respond(...args);
+  });
+
+  const first = synchronizeSimulation();
+  expect(synchronizeSimulation()).toBe(first);
+  useAuthStore.setState({
+    user: { ...useAuthStore.getState().user!, id: 'other-id' },
+    sessionId: 'other-session',
+  });
+  const second = synchronizeSimulation();
+  expect(second).not.toBe(first);
+
+  // The new account is not left waiting on the stale request.
+  await expect(second).resolves.toBe(true);
+  expect(useSimulationStore.getState().phase).toBe('ready');
+  const applied = useSimulationStore.getState();
+
+  // The superseded response never touches the store.
+  release();
+  await expect(first).resolves.toBe(false);
+  expect(useSimulationStore.getState()).toBe(applied);
+});
+
 it('does not overwrite the real profile with fictional data', async () => {
   const real = useAuthStore.getState().user!;
   await startSimulation(Role.EDITOR);

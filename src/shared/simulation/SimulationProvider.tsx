@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { LoadingSpinner } from '@/shared/components/feedback/LoadingSpinner';
-import { useAuthStore } from '@/shared/stores/auth.store';
+import { selectSessionIdentity, useAuthStore } from '@/shared/stores/auth.store';
 import { queryClient } from '@/shared/lib/query-client';
 import { clearSimulationContext, endSimulation, synchronizeSimulation } from './service';
 import { hasSimulationData } from './local-api';
@@ -14,13 +14,16 @@ import { useSimulationStore } from './simulation.store';
 export function SimulationProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const userId = useAuthStore((s) => s.user?.id);
+  // Account + session: simulation state is token-scoped, so a new session of
+  // the same account must be re-verified too.
+  const identity = useAuthStore(selectSessionIdentity);
   const role = useAuthStore((s) => s.simulatedRole);
   const { phase, error } = useSimulationStore();
   const [hydrated, setHydrated] = useState(() => useAuthStore.persist.hasHydrated());
-  const [checkedUserId, setCheckedUserId] = useState(() =>
-    phase === 'ready' ? userId : undefined,
+  const [checkedIdentity, setCheckedIdentity] = useState(() =>
+    phase === 'ready' ? identity : null,
   );
-  const checkedIdentity = useRef(checkedUserId);
+  const checkedIdentityRef = useRef(checkedIdentity);
 
   useEffect(() => {
     const unsubscribe = useAuthStore.persist.onFinishHydration(() => setHydrated(true));
@@ -50,17 +53,19 @@ export function SimulationProvider({ children }: { children: React.ReactNode }) 
 
   useEffect(() => {
     if (!hydrated) return;
-    if (!userId) {
+    if (!identity) {
       clearSimulationContext();
-      checkedIdentity.current = undefined;
-      setCheckedUserId(undefined);
+      checkedIdentityRef.current = null;
+      setCheckedIdentity(null);
       return;
     }
     let disposed = false;
-    void synchronizeSimulation().then(() => {
-      if (!disposed && checkedIdentity.current !== userId) {
-        checkedIdentity.current = userId;
-        setCheckedUserId(userId);
+    // Only a check applied for this very identity unblocks it; a superseded one
+    // resolves false and the effect run for the new identity takes over.
+    void synchronizeSimulation().then((applied) => {
+      if (!disposed && applied && checkedIdentityRef.current !== identity) {
+        checkedIdentityRef.current = identity;
+        setCheckedIdentity(identity);
       }
     });
     const sync = () => {
@@ -80,7 +85,7 @@ export function SimulationProvider({ children }: { children: React.ReactNode }) 
       channel?.close();
       document.removeEventListener('visibilitychange', visible);
     };
-  }, [userId, hydrated]);
+  }, [identity, hydrated]);
 
   useEffect(() => {
     if (!hydrated || !userId) return;
@@ -118,7 +123,7 @@ export function SimulationProvider({ children }: { children: React.ReactNode }) 
     }
   };
 
-  const blocked = !hydrated || (!!userId && (phase !== 'ready' || checkedUserId !== userId));
+  const blocked = !hydrated || (!!identity && (phase !== 'ready' || checkedIdentity !== identity));
   return blocked ? (
     error ? (
       <div

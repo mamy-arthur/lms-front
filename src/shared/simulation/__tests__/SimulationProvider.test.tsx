@@ -72,7 +72,7 @@ function simulate(role: Role) {
 
 beforeEach(() => {
   jest.resetAllMocks();
-  mockSynchronize.mockResolvedValue(undefined);
+  mockSynchronize.mockResolvedValue(true);
   useAuthStore.setState({
     user: realUser,
     role: realUser.role,
@@ -263,7 +263,7 @@ describe('SimulationProvider', () => {
         <BusinessPage request={request} />
       </SimulationProvider>,
     );
-    const result = deferred<void>();
+    const result = deferred<boolean>();
     mockSynchronize.mockImplementationOnce(() => {
       useSimulationStore.setState({ phase: 'checking', error: null });
       return result.promise;
@@ -276,7 +276,7 @@ describe('SimulationProvider', () => {
 
     await act(async () => {
       useSimulationStore.setState({ phase: 'ready', error: null });
-      result.resolve();
+      result.resolve(true);
       await result.promise;
     });
     expect(screen.getByRole('heading', { name: 'Contenu métier' })).toBeVisible();

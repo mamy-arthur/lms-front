@@ -62,6 +62,7 @@ export default function ScormPlayer({
   registerSession,
 }: Props) {
   const simulatedRole = useAuthStore((state) => state.simulatedRole);
+  const userId = useAuthStore((state) => state.user?.id);
   const launchQuery = useQuery({
     queryKey: portalScormLaunchKeys.detail(
       enrollmentId,
@@ -187,6 +188,14 @@ export default function ScormPlayer({
 
     let cancelled = false;
     const epoch = useSimulationStore.getState().epoch;
+    // Tracking belongs to the real account/session that opened this runtime:
+    // after logout or another login, pending preloads/commits (including the
+    // final one sent by dispose) must never be sent or accepted for the new one.
+    // A session id learnt later for the same token (null -> uuid, see
+    // useSessionRevalidation) is the same session and must not drop tracking.
+    const owner = useAuthStore.getState();
+    const ownerUserId = owner.user?.id;
+    const ownerSessionId = owner.sessionId;
 
     const session = new ScormSession({
       enrollmentId,
@@ -199,10 +208,13 @@ export default function ScormPlayer({
       version: launch.version,
       isContextCurrent: () => {
         const context = useSimulationStore.getState();
+        const auth = useAuthStore.getState();
         return (
+          auth.user?.id === ownerUserId &&
+          (ownerSessionId === null || auth.sessionId === ownerSessionId) &&
           context.epoch === epoch &&
           (context.phase === 'ready' || context.phase === 'idle') &&
-          !useAuthStore.getState().simulatedRole
+          !auth.simulatedRole
         );
       },
       onCompleted: () => {
@@ -242,6 +254,7 @@ export default function ScormPlayer({
     launch?.version,
     registerSession,
     simulatedRole,
+    userId,
     sessionKey,
     failed,
     demo,

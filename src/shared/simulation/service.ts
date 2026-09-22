@@ -1,6 +1,6 @@
 import { apiDelete, apiGet, apiPost } from '@/shared/lib/apiClient';
 import { queryClient } from '@/shared/lib/query-client';
-import { useAuthStore } from '@/shared/stores/auth.store';
+import { selectSessionIdentity, useAuthStore } from '@/shared/stores/auth.store';
 import { Role } from '@/shared/constants/roles';
 import {
   clearSimulationData,
@@ -11,7 +11,9 @@ import {
 import { cancelSimulationRequests } from './transport';
 import { roleHome, type SimulationSession, useSimulationStore } from './simulation.store';
 
-let checking: Promise<void> | null = null;
+let checking: { identity: string | null; promise: Promise<boolean> } | null = null;
+
+const currentIdentity = () => selectSessionIdentity(useAuthStore.getState());
 let channel: BroadcastChannel | null = null;
 
 function notifyOtherTabs() {
@@ -54,26 +56,38 @@ function applySession(session: SimulationSession) {
   }));
 }
 
-/** Always verify the server before mounting any business screen (also after reload). */
-export function synchronizeSimulation(): Promise<void> {
-  if (checking) return checking;
-  checking = (async () => {
-    const identity = useAuthStore.getState().user?.id;
+/**
+ * Always verify the server before mounting any business screen (also after reload).
+ *
+ * Owned by the session identity current at call time: concurrent calls for the
+ * same identity share one request, a new account/session starts its own, and a
+ * superseded check never touches the store. Resolves true once this identity's
+ * outcome (server state or error screen) has been applied, false if superseded.
+ */
+export function synchronizeSimulation(): Promise<boolean> {
+  const identity = currentIdentity();
+  if (checking && checking.identity === identity) return checking.promise;
+  const run: NonNullable<typeof checking> = { identity, promise: Promise.resolve(false) };
+  run.promise = (async () => {
     await isolate('checking');
     try {
       const { data } = await apiGet<{ data: SimulationSession }>('role-simulation');
-      if (useAuthStore.getState().user?.id !== identity) return;
+      if (currentIdentity() !== identity) return false;
       applySession(data);
+      return true;
     } catch {
+      if (currentIdentity() !== identity) return false;
       useSimulationStore.setState({
         phase: 'error',
         error: 'Impossible de vérifier le mode simulation. Réessayez avant de continuer.',
       });
+      return true;
     } finally {
-      checking = null;
+      if (checking === run) checking = null;
     }
   })();
-  return checking;
+  checking = run;
+  return run.promise;
 }
 
 export async function startSimulation(role: Role, tenantId?: string): Promise<string> {

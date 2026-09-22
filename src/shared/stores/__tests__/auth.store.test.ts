@@ -100,6 +100,49 @@ describe('useAuthStore', () => {
     });
   });
 
+  // ── setAuth pendant une simulation ─────────────────────────────────────────
+
+  describe('setAuth pendant une simulation', () => {
+    beforeEach(() => {
+      useAuthStore.setState({
+        user: makeUser(Role.EDITOR),
+        role: Role.TRAINEE,
+        simulatedRole: Role.TRAINEE,
+        sessionId: 'session-a',
+      });
+    });
+
+    it('ignore un rafraîchissement de la même session (profil et rôle simulé conservés)', () => {
+      const before = useAuthStore.getState();
+      useAuthStore.getState().setAuth({ ...makeUser(Role.EDITOR), name: 'Fictif' });
+      useAuthStore.getState().setAuth(makeUser(Role.EDITOR), 'session-a');
+      expect(useAuthStore.getState()).toBe(before);
+    });
+
+    it('remplace le compte et quitte la simulation quand un autre compte se connecte', () => {
+      const other: AuthUser = {
+        id: 'u-2',
+        name: 'Bob',
+        email: 'bob@example.com',
+        role: Role.CLIENT_MANAGER,
+      };
+      useAuthStore.getState().setAuth(other, 'session-b');
+      const state = useAuthStore.getState();
+      expect(state.user).toEqual(other);
+      expect(state.role).toBe(Role.CLIENT_MANAGER);
+      expect(state.sessionId).toBe('session-b');
+      expect(state.simulatedRole).toBeNull();
+    });
+
+    it("n'hérite pas de la simulation dans une nouvelle session du même compte", () => {
+      useAuthStore.getState().setAuth(makeUser(Role.EDITOR), 'session-b');
+      const state = useAuthStore.getState();
+      expect(state.sessionId).toBe('session-b');
+      expect(state.role).toBe(Role.EDITOR);
+      expect(state.simulatedRole).toBeNull();
+    });
+  });
+
   // ── tous les rôles couverts ────────────────────────────────────────────────
 
   describe.each([[Role.SUPER_ADMIN], [Role.EDITOR], [Role.CLIENT_MANAGER], [Role.TRAINEE]])(
