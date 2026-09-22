@@ -3,6 +3,7 @@ import type {
   ApiCourse,
   ApiCourseCategory,
   ApiCourseSection,
+  CourseVisibility,
   CreateCoursePayload,
   UpdateCoursePayload,
   CreateCourseCategoryPayload,
@@ -16,6 +17,7 @@ export interface CourseListParams {
   category_ids?: string;
   /** Comma-separated course ids — restricts the list to those courses. */
   ids?: string;
+  visibility?: CourseVisibility;
   sort_by?: string;
   sort_dir?: 'asc' | 'desc';
   sort_order?: 'asc' | 'desc';
@@ -32,6 +34,7 @@ export const coursesApi = {
       q: params.q,
       category_ids: params.category_ids,
       ids: params.ids,
+      visibility: params.visibility,
       sort_by: params.sort_by,
       sort_dir: params.sort_dir ?? params.sort_order,
     }),

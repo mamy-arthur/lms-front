@@ -150,7 +150,8 @@ export class ScormSession {
   private disposed = false;
   private changeVersion = 0;
   private commitError: unknown = null;
-  private rejectedRevision: number | null = null;
+  /** Sticky once set: a context rejection taints this session for good, no revision check lifts it. */
+  private conflicted = false;
   private initialTotalTime = 0;
 
   constructor(opts: ScormSessionOptions) {
@@ -351,6 +352,10 @@ export class ScormSession {
     }
   }
 
+  /**
+   * Ne lève jamais `conflicted` : après un refus de contexte, seule une session
+   * neuve (nouveau `nodeExecutionId`) peut recommencer à committer.
+   */
   resumeAfterFailure(): void {
     if (!this.disposed) this.completing = false;
   }
@@ -368,7 +373,9 @@ export class ScormSession {
 
   private async commit(): Promise<void> {
     if (!this.dirty || this.opts.readOnly?.() || this.opts.isContextCurrent?.() === false) return;
-    if (this.rejectedRevision === this.opts.expectedStateRevision()) return;
+    // Une révision qui avance ailleurs dans le parcours ne remet pas ce commit en
+    // course : il resterait rattaché à la visite refusée, pas à la nouvelle.
+    if (this.conflicted) return;
     const version = this.changeVersion;
     // A pending response must not overwrite SetValue calls made during the request.
     const values = {
@@ -381,16 +388,14 @@ export class ScormSession {
       total_time: this.initialTotalTime + this.sessionTimeSeconds,
       cmi_data: { ...this.raw },
     };
-    let revision = this.opts.expectedStateRevision();
     const payload = () => ({
       ...values,
       commit_id: crypto.randomUUID(),
       sequence: this.lastSequence + 1,
-      expected_state_revision: (revision = this.opts.expectedStateRevision()),
+      expected_state_revision: this.opts.expectedStateRevision(),
     });
     const accept = (data: ApiScormTrackingState) => {
       this.commitError = null;
-      this.rejectedRevision = null;
       if (version === this.changeVersion) {
         this.applyServerState(data);
         this.dirty = false;
@@ -404,7 +409,7 @@ export class ScormSession {
     const reject = (error: unknown) => {
       this.commitError = error;
       if (isExecutionContextRejection(error)) {
-        this.rejectedRevision = revision;
+        this.conflicted = true;
         this.opts.onExecutionConflict?.(error);
       }
     };

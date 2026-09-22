@@ -22,6 +22,8 @@ export type Course = {
   visible: boolean;
   visibility: CourseVisibility;
   description?: string;
+  /** Unknown when the response does not include the course content count. */
+  contentCount?: number;
   /**
    * True when this course sits in a module belonging to a sold learning path.
    * `undefined` means the payload it was mapped from carries no lock (create/update
