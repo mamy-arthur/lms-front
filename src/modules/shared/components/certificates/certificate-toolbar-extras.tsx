@@ -18,7 +18,11 @@ import {
   type ImageConfirmAttrs,
 } from '@modules/shared/components/tiptap/ImageInsertDialog';
 import { ALIGN_STYLES } from '@modules/shared/components/tiptap/RichTextEditor';
-import { useTemplateVariablesQuery } from '@/modules/shared/hooks/useTemplateVariablesQuery';
+import {
+  useTemplateVariablesQuery,
+  variableItemValue,
+  variableKeyFromItemValue,
+} from '@/modules/shared/hooks/useTemplateVariablesQuery';
 
 type UploadMediaFn = (file: File) => Promise<{ mediaId: string; src: string }>;
 
@@ -48,7 +52,8 @@ function CertificateToolbarExtrasComponent({
   const grouped = data?.data ?? {};
 
   /** La clé du backend inclut déjà `{{…}}`, on l'insère directement. */
-  const insertVariable = (key: string) => {
+  const insertVariable = (itemValue: string) => {
+    const key = variableKeyFromItemValue(itemValue);
     if (insertText) {
       insertText(key);
       return;
@@ -120,7 +125,11 @@ function CertificateToolbarExtrasComponent({
                 {CATEGORY_LABELS[category] ?? category}
               </SelectLabel>
               {variables.map((v) => (
-                <SelectItem key={v.key} value={v.key} className="text-xs">
+                <SelectItem
+                  key={v.key}
+                  value={variableItemValue(category, v.key)}
+                  className="text-xs"
+                >
                   {v.label}
                 </SelectItem>
               ))}
