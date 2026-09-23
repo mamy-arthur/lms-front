@@ -70,7 +70,6 @@ export function AdminForgotPasswordForm() {
           autoComplete="email"
           placeholder="vous@exemple.com"
           {...form.register('email')}
-          className="h-12"
         />
 
         {form.formState.errors.email && (
@@ -78,7 +77,11 @@ export function AdminForgotPasswordForm() {
         )}
       </div>
 
-      <Button type="submit" className="h-12 w-full" disabled={form.formState.isSubmitting}>
+      <Button
+        type="submit"
+        className="h-12 w-full bg-(--color-primary) hover:bg-(--color-primary)/80"
+        disabled={form.formState.isSubmitting}
+      >
         {form.formState.isSubmitting ? (
           <>
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />

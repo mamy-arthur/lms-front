@@ -2,22 +2,19 @@ import { AdminForgotPasswordForm } from '@/modules/auth/components/AdminForgotPa
 
 export default function AdminForgotPasswordPage() {
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#f5f5f5',
-      }}
-    >
-      <div style={{ padding: 4, width: '100%', maxWidth: 420 }}>
-        <span style={{ fontWeight: 700, marginBottom: 1 }}>Mot de passe oublié</span>
-        <span color="text.secondary" style={{ marginBottom: 3 }}>
-          Saisissez votre email pour recevoir un lien de réinitialisation.
-        </span>
+    <section className="flex min-h-screen items-center justify-center">
+      <div className="w-full max-w-md shadow-sm rounded-sm p-8 mb-8">
+        <div className="mb-5 mt-8 w-40 mx-auto">
+          <img src="/logo.png" alt="Logo" className="h-[50px] w-auto object-contain" />
+        </div>
+        <div className="mb-5 text-center">
+          <h1 className="text-3xl font-semibold">Mot de passe oublié</h1>
+          <p className="mt-2 text-muted-foreground text-xs">
+            Saisissez votre email pour recevoir un lien de réinitialisation.
+          </p>
+        </div>
         <AdminForgotPasswordForm />
       </div>
-    </div>
+    </section>
   );
 }

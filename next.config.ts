@@ -10,6 +10,7 @@ const nextConfig: NextConfig = {
     'acme.learneo.local',
     'beta.learneo.local',
     'suspended.learneo.local',
+    'patata.learneo.local',
   ],
 };
 

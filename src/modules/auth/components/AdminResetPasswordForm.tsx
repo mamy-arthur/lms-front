@@ -105,7 +105,7 @@ export function AdminResetPasswordForm() {
             type={showPassword ? 'text' : 'password'}
             placeholder="••••••••"
             {...form.register('password')}
-            className="h-12 pr-12"
+            className="pr-12"
           />
 
           <button
@@ -113,7 +113,7 @@ export function AdminResetPasswordForm() {
             onClick={() => setShowPassword((v) => !v)}
             className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
           >
-            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
           </button>
         </div>
 
@@ -131,7 +131,7 @@ export function AdminResetPasswordForm() {
             type={showConfirmation ? 'text' : 'password'}
             placeholder="••••••••"
             {...form.register('password_confirmation')}
-            className="h-12 pr-12"
+            className="pr-12"
           />
 
           <button
@@ -139,7 +139,7 @@ export function AdminResetPasswordForm() {
             onClick={() => setShowConfirmation((v) => !v)}
             className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
           >
-            {showConfirmation ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            {showConfirmation ? <EyeOff size={18} /> : <Eye size={18} />}
           </button>
         </div>
 
@@ -154,7 +154,11 @@ export function AdminResetPasswordForm() {
 
       <input type="hidden" {...form.register('email')} />
 
-      <Button type="submit" className="h-12 w-full" disabled={form.formState.isSubmitting}>
+      <Button
+        type="submit"
+        className="h-12 w-full bg-(--color-primary) hover:bg-(--color-primary)/80"
+        disabled={form.formState.isSubmitting}
+      >
         {form.formState.isSubmitting ? (
           <>
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />

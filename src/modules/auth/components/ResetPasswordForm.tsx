@@ -5,12 +5,14 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { ArrowRight, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { resetPasswordSchema, type ResetPasswordSchema } from '@/shared/schemas/auth.schema';
 import { authApi } from '@/shared/api/auth.api';
 import { mapPasswordResetError } from '@/modules/auth/lib/passwordResetErrors';
 import { ROUTES } from '@/shared/constants/routes';
-import { Button } from '@/shared/components/ui/Button/Button';
-import { cn } from '@/shared/lib/cn';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 interface ResetPasswordFormProps {
   email: string;
@@ -21,6 +23,8 @@ export function ResetPasswordForm({ email, token }: ResetPasswordFormProps) {
   const router = useRouter();
   const [serverError, setServerError] = useState<string | null>(null);
   const [linkExpired, setLinkExpired] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
 
   const {
     register,
@@ -56,73 +60,100 @@ export function ResetPasswordForm({ email, token }: ResetPasswordFormProps) {
 
   if (linkExpired) {
     return (
-      <div className="space-y-4">
-        <div className="rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+      <div className="space-y-5">
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-600">
           Ce lien de réinitialisation est invalide, a expiré ou a déjà été utilisé.
         </div>
-        <Link
-          href={ROUTES.auth.forgotPassword}
-          className="block text-center text-sm text-blue-600 hover:underline"
-        >
-          Faire une nouvelle demande
-        </Link>
+
+        <p className="text-center text-xs text-muted-foreground">
+          <Link
+            href={ROUTES.auth.forgotPassword}
+            className="font-semibold text-primary hover:underline"
+          >
+            Faire une nouvelle demande
+          </Link>
+        </p>
       </div>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
+    <form onSubmit={handleSubmit(onSubmit)} noValidate className="mt-8 space-y-5">
+      <input type="hidden" {...register('email')} />
+      <input type="hidden" {...register('token')} />
+
+      <div className="space-y-2">
+        <Label htmlFor="password">Nouveau mot de passe</Label>
+
+        <div className="relative">
+          <Input
+            id="password"
+            type={showPassword ? 'text' : 'password'}
+            autoComplete="new-password"
+            placeholder="••••••••"
+            {...register('password')}
+          />
+
+          <button
+            type="button"
+            onClick={() => setShowPassword((v) => !v)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+          >
+            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+          </button>
+        </div>
+
+        {errors.password && <p className="text-sm text-red-500">{errors.password.message}</p>}
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="password_confirmation">Confirmer le mot de passe</Label>
+
+        <div className="relative">
+          <Input
+            id="password_confirmation"
+            type={showConfirmation ? 'text' : 'password'}
+            autoComplete="new-password"
+            placeholder="••••••••"
+            {...register('password_confirmation')}
+          />
+
+          <button
+            type="button"
+            onClick={() => setShowConfirmation((v) => !v)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+          >
+            {showConfirmation ? <EyeOff size={18} /> : <Eye size={18} />}
+          </button>
+        </div>
+
+        {errors.password_confirmation && (
+          <p className="text-sm text-red-500">{errors.password_confirmation.message}</p>
+        )}
+      </div>
+
       {serverError && (
-        <div className="rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-600">
           {serverError}
         </div>
       )}
 
-      <input type="hidden" {...register('email')} />
-      <input type="hidden" {...register('token')} />
-
-      <div className="space-y-1">
-        <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-          Nouveau mot de passe
-        </label>
-        <input
-          id="password"
-          type="password"
-          autoComplete="new-password"
-          {...register('password')}
-          className={cn(
-            'w-full rounded-md border px-3 py-2 text-sm shadow-sm outline-none',
-            'placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500',
-            errors.password ? 'border-red-400 bg-red-50' : 'border-gray-300 bg-white',
-          )}
-          placeholder="••••••••"
-        />
-        {errors.password && <p className="text-xs text-red-600">{errors.password.message}</p>}
-      </div>
-
-      <div className="space-y-1">
-        <label htmlFor="password_confirmation" className="block text-sm font-medium text-gray-700">
-          Confirmer le mot de passe
-        </label>
-        <input
-          id="password_confirmation"
-          type="password"
-          autoComplete="new-password"
-          {...register('password_confirmation')}
-          className={cn(
-            'w-full rounded-md border px-3 py-2 text-sm shadow-sm outline-none',
-            'placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500',
-            errors.password_confirmation ? 'border-red-400 bg-red-50' : 'border-gray-300 bg-white',
-          )}
-          placeholder="••••••••"
-        />
-        {errors.password_confirmation && (
-          <p className="text-xs text-red-600">{errors.password_confirmation.message}</p>
+      <Button
+        type="submit"
+        disabled={isSubmitting}
+        className="h-12 w-full bg-(--color-primary) hover:bg-(--color-primary)/80"
+      >
+        {isSubmitting ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Réinitialisation...
+          </>
+        ) : (
+          <>
+            Réinitialiser le mot de passe
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </>
         )}
-      </div>
-
-      <Button type="submit" size="lg" loading={isSubmitting} className="w-full">
-        Réinitialiser le mot de passe
       </Button>
     </form>
   );
