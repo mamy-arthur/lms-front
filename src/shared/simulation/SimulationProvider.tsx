@@ -7,9 +7,17 @@ import { Button } from '@/components/ui/button';
 import { LoadingSpinner } from '@/shared/components/feedback/LoadingSpinner';
 import { selectSessionIdentity, useAuthStore } from '@/shared/stores/auth.store';
 import { queryClient } from '@/shared/lib/query-client';
-import { clearSimulationContext, endSimulation, synchronizeSimulation } from './service';
+import {
+  clearSimulationContext,
+  endSimulation,
+  revalidateSimulation,
+  synchronizeSimulation,
+} from './service';
 import { hasSimulationChanges, hasSimulationData } from './local-api';
 import { useSimulationStore } from './simulation.store';
+
+/** Un alt-tab ne doit pas valoir une requête : la session ne change quasiment jamais. */
+const MIN_REVALIDATE_INTERVAL_MS = 60_000;
 
 export function SimulationProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -24,6 +32,7 @@ export function SimulationProvider({ children }: { children: React.ReactNode }) 
     phase === 'ready' ? identity : null,
   );
   const checkedIdentityRef = useRef(checkedIdentity);
+  const lastRevalidateAt = useRef(0);
 
   useEffect(() => {
     const unsubscribe = useAuthStore.persist.onFinishHydration(() => setHydrated(true));
@@ -77,17 +86,33 @@ export function SimulationProvider({ children }: { children: React.ReactNode }) 
     let disposed = false;
     // Only a check applied for this very identity unblocks it; a superseded one
     // resolves false and the effect run for the new identity takes over.
+    lastRevalidateAt.current = Date.now();
     void synchronizeSimulation().then((applied) => {
       if (!disposed && applied && checkedIdentityRef.current !== identity) {
         checkedIdentityRef.current = identity;
         setCheckedIdentity(identity);
       }
     });
+    // A session already verified is re-checked silently: blocking the pages and
+    // wiping the cache on every alt-tab would cost a full reload for an answer
+    // that is almost always identical. revalidateSimulation isolates only on a
+    // real change. A phase that is not ready has nothing to keep mounted, so it
+    // still takes the authoritative path.
     const sync = () => {
-      if (useSimulationStore.getState().phase !== 'transition') void synchronizeSimulation();
+      const { phase } = useSimulationStore.getState();
+      if (phase === 'transition' || phase === 'checking') return;
+      if (phase === 'ready') {
+        void revalidateSimulation();
+        return;
+      }
+      void synchronizeSimulation();
     };
     const visible = () => {
-      if (document.visibilityState === 'visible') sync();
+      if (document.visibilityState !== 'visible') return;
+      const now = Date.now();
+      if (now - lastRevalidateAt.current < MIN_REVALIDATE_INTERVAL_MS) return;
+      lastRevalidateAt.current = now;
+      sync();
     };
     const channel =
       typeof BroadcastChannel === 'undefined'

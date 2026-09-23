@@ -12,6 +12,8 @@ import { cancelSimulationRequests } from './transport';
 import { roleHome, type SimulationSession, useSimulationStore } from './simulation.store';
 
 let checking: { identity: string | null; promise: Promise<boolean> } | null = null;
+type Revalidation = { promise: Promise<void> };
+let revalidating: Revalidation | null = null;
 
 const currentIdentity = () => selectSessionIdentity(useAuthStore.getState());
 let channel: BroadcastChannel | null = null;
@@ -87,6 +89,60 @@ export function synchronizeSimulation(): Promise<boolean> {
     }
   })();
   checking = run;
+  return run.promise;
+}
+
+/**
+ * Only the simulated identity justifies isolating: it is what scopes the cache,
+ * the local engine and the writes. `allowed_roles`/`shop_tenants` merely feed the
+ * role switcher. A simulated role whose local engine is gone counts as a change
+ * too, since applySession is what rebuilds it (see the Fast Refresh recovery).
+ */
+function authorityChanged(next: SimulationSession, current: SimulationSession | null): boolean {
+  return (
+    current === null ||
+    next.simulated_role !== current.simulated_role ||
+    next.tenant_id !== current.tenant_id ||
+    (next.simulated_role !== null && !hasSimulationData(next.simulated_role))
+  );
+}
+
+/**
+ * Re-checks the server without blocking a session it has already verified.
+ *
+ * synchronizeSimulation isolates up front because nothing may be mounted before
+ * the server has spoken. A tab regaining focus is not that case: the session was
+ * already authoritative and the answer is almost always identical, so the GET
+ * runs silently behind the mounted pages and only a real change pays for the
+ * spinner and the cache wipe. Concurrent callers share the one request.
+ */
+export function revalidateSimulation(): Promise<void> {
+  if (revalidating) return revalidating.promise;
+  const identity = currentIdentity();
+  const run: Revalidation = { promise: Promise.resolve() };
+  run.promise = (async () => {
+    try {
+      const { data } = await apiGet<{ data: SimulationSession }>('role-simulation');
+      if (currentIdentity() !== identity) return;
+      // A full check started meanwhile owns the store: never race it.
+      const current = useSimulationStore.getState();
+      if (current.phase !== 'ready') return;
+      if (!authorityChanged(data, current.session)) {
+        useSimulationStore.setState({ session: data });
+        return;
+      }
+      await isolate('checking');
+      if (currentIdentity() !== identity) return;
+      applySession(data);
+    } catch {
+      // A verified session must survive a failed re-check: no error screen here.
+      // httpClient already handles a 401, and the next real request would fail
+      // the same way, so nothing stays unlocked that the server refuses.
+    } finally {
+      if (revalidating === run) revalidating = null;
+    }
+  })();
+  revalidating = run;
   return run.promise;
 }
 
