@@ -1273,12 +1273,19 @@ function progressionAccess(
         .map(nodeKey),
     ),
   );
-  const accessible = new Set(
-    [
-      ...modules.map((module) => `module:${module.id}`),
-      ...evaluations.map((evaluation) => `evaluation:${evaluation.id}`),
-    ].filter((key) => !targeted.has(key)),
-  );
+  // Mirrors the frozen server definition: the nodes form an ordered list whose
+  // first element is the entry point of the path. Being some rule's target only
+  // says where a branch lands, never whether a node opens the path. Without this,
+  // a remediation branch pointing back at the first module locks it, and no rule
+  // can ever fire since every source is then unreachable: the whole path stays
+  // closed and the learner cannot open a single content.
+  const ordered = [
+    ...modules.map((module) => `module:${module.id}`),
+    ...evaluations.map((evaluation) => `evaluation:${evaluation.id}`),
+  ];
+  const accessible = new Set(ordered.filter((key) => !targeted.has(key)));
+  const entry = ordered[0];
+  if (entry !== undefined) accessible.add(entry);
   // Fixed point, bounded by the graph size: cycles never recurse or unlock themselves.
   for (let pass = 0; pass <= rules.length; pass++) {
     let changed = false;
