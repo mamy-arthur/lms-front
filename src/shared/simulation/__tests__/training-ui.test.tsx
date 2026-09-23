@@ -43,6 +43,7 @@ jest.mock('next/navigation', () => ({
 jest.mock('../service', () => ({
   startSimulation: jest.fn(),
   synchronizeSimulation: jest.fn(),
+  revalidateSimulation: jest.fn(),
   clearSimulationContext: jest.fn(),
   endSimulation: jest.fn(),
 }));

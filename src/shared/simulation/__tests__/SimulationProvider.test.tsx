@@ -23,6 +23,7 @@ jest.mock('../service', () => ({
   startSimulation: jest.fn(),
   endSimulation: jest.fn(),
   synchronizeSimulation: jest.fn(),
+  revalidateSimulation: jest.fn(),
   clearSimulationContext: jest.fn(),
 }));
 
