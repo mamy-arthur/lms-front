@@ -93,11 +93,20 @@ export type ResourceName =
   | 'media'
   | 'tenants';
 
+/** Public shop listing data of a real product; never its training content. */
+export interface SimulationShopProduct {
+  name: string;
+  image: string;
+  category_id: string | null;
+}
+
 export interface SimulationPurchase {
   id: string;
   learning_path_id: string;
   purchased: number;
   created_at: string;
+  /** Set when a real shop product was bought during the simulation (display only). */
+  product?: SimulationShopProduct;
 }
 
 export interface SimulationData {
@@ -115,8 +124,13 @@ export interface SimulationData {
   scormPackages: ApiScormPackage[];
   scormTracking: Map<string, ApiScormTrackingState>;
   twoFactorOverrides: Map<string, TwoFactorSettings['overrides']>;
-  /** Catalog pricing and authorized cover only; never imports real learning content. */
-  shopPrices: Map<string, { price: number; currency: string; image?: string }>;
+  /** Public shop listing data (price, name, category, authorized cover); never real learning content. */
+  shopPrices: Map<
+    string,
+    { price: number; currency: string; image?: string; name?: string; category_id?: string | null }
+  >;
+  /** Names of the real shop categories seen during the simulation, by id. */
+  shopCategories: Map<string, string>;
 }
 
 const entity = <T extends { id: string }>(value: T): SimulationEntity => ({ ...value });
@@ -691,6 +705,7 @@ export function createSimulationFixtures(role: Role): SimulationData {
     completedEntries: new Set(),
     timeSessions: new Map(),
     shopPrices: new Map(),
+    shopCategories: new Map(),
     scormPackages: [
       {
         id: id.scormPackage,

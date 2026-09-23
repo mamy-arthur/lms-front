@@ -29,6 +29,7 @@ import {
   type ResourceName,
   type SimulationData,
   type SimulationEntity,
+  type SimulationPurchase,
 } from './fixtures';
 
 export interface SimulationResponse {
@@ -162,7 +163,7 @@ export const SIMULATION_ROUTES = [
 
 export const SIMULATION_LIMITATIONS = [
   'Login/logout/session replacement, auth identity/challenges, role-simulation and impersonation remain forbidden; the session owner handles them. Password/reset/2FA settings are visual local success only; no secrets are retained or security changed.',
-  'Shop transport belongs to the caller. rememberShopData retains product IDs, prices, currencies and authorized shop covers for the local cart, never training content.',
+  'Shop transport belongs to the caller. rememberShopData retains public listing data (product IDs, names, prices, currencies, categories and authorized shop covers) for the local cart and purchases, never training content. A real product bought locally is listed as a purchase and can be assigned to learners, who cannot follow it: its content is never loaded.',
   'Wallet, invoices and the dashboard messaging dialog currently use direct frontend mocks/callbacks, not messaging API calls; those UI behaviors are outside this engine.',
   'Fictional SCORM stays inert. Authorized Client/Editor trainee training previews launch the actual package through dedicated signed GETs, with a disposable no-I/O SCORM adapter and no tracking, time or completion writes. Package scripts follow the existing SCORM trust/CSP model; third-party telemetry is not prevented.',
   'Uploads return an inert inline placeholder, not the uploaded file. Template preview never executes HTML or sends email.',
@@ -174,11 +175,18 @@ let state: SimulationData | null = null;
 let training: { key: string; source: ReturnType<typeof createTrainingSource> } | null = null;
 // Stable, synthetic visit IDs belong to this in-memory data set, never to real enrollments.
 const executionIds = new WeakMap<SimulationData, Map<string, string>>();
+// Data sets modified by a local write; a fresh data set (reset/clear) starts unchanged.
+const changedData = new WeakSet<SimulationData>();
 
 export function resetSimulationData(role: Role): void {
   if (!Object.values(Role).includes(role)) throw new Error('Invalid simulation role');
   training = null;
   state = createSimulationFixtures(role);
+}
+
+/** True once the user has changed the demo data: reloading the page would discard it. */
+export function hasSimulationChanges(): boolean {
+  return state !== null && changedData.has(state);
 }
 
 /** The session owner must check local readiness after server confirmation, not just the UI role. */
@@ -218,12 +226,32 @@ const number = (value: unknown, fallback = 0): number =>
   typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 const nextId = (data: SimulationData): string => simulationId(data.sequence++);
 
-/** Never imports the public shop object into any business fixture graph. */
-export function rememberShopData(json: unknown): void {
+const shortText = (value: unknown, max: number): string | null => {
+  const trimmed = text(value).trim();
+  return trimmed && trimmed.length <= max ? trimmed : null;
+};
+
+/**
+ * Never imports the public shop object into any business fixture graph. Only
+ * its public listing data (price, name, category, authorized cover) is kept,
+ * so a product bought in the simulated checkout can be displayed as a local
+ * purchase; its training content is never fetched nor stored.
+ */
+export function rememberShopData(json: unknown, url = ''): void {
   if (!state) return;
   const payload = object(json).data ?? json;
-  const products = Array.isArray(payload) ? payload : [payload];
-  for (const candidate of products) {
+  const rows = Array.isArray(payload) ? payload : [payload];
+  if (/\/shop\/learning-path-categories(?:\?|$)/.test(url)) {
+    for (const candidate of rows) {
+      const category = object(candidate);
+      const name = shortText(category.name, 255);
+      if (typeof category.id === 'string' && category.id.length <= 100 && name) {
+        state.shopCategories.set(category.id, name);
+      }
+    }
+    return;
+  }
+  for (const candidate of rows) {
     const product = object(candidate);
     const price = typeof product.price === 'string' ? Number(product.price) : product.price;
     if (
@@ -242,7 +270,17 @@ export function rememberShopData(json: unknown): void {
         /^[a-zA-Z0-9-]+$/.test(product.id) && cover === expectedCover
           ? expectedCover
           : SIMULATION_COVER_IMAGE;
-      state.shopPrices.set(product.id, { price, currency: product.currency, image });
+      const categoryId =
+        typeof product.category_id === 'string' && product.category_id.length <= 100
+          ? product.category_id
+          : null;
+      state.shopPrices.set(product.id, {
+        price,
+        currency: product.currency,
+        image,
+        name: shortText(product.name, 255) ?? undefined,
+        category_id: categoryId,
+      });
       // A list/detail refresh may change the cover of an already selected product.
       state.cart.items
         .filter((item) => item.learning_path_id === product.id)
@@ -1272,12 +1310,19 @@ function progressionAccess(
         .map(nodeKey),
     ),
   );
-  const accessible = new Set(
-    [
-      ...modules.map((module) => `module:${module.id}`),
-      ...evaluations.map((evaluation) => `evaluation:${evaluation.id}`),
-    ].filter((key) => !targeted.has(key)),
-  );
+  // Mirrors the frozen server definition: the nodes form an ordered list whose
+  // first element is the entry point of the path. Being some rule's target only
+  // says where a branch lands, never whether a node opens the path. Without this,
+  // a remediation branch pointing back at the first module locks it, and no rule
+  // can ever fire since every source is then unreachable: the whole path stays
+  // closed and the learner cannot open a single content.
+  const ordered = [
+    ...modules.map((module) => `module:${module.id}`),
+    ...evaluations.map((evaluation) => `evaluation:${evaluation.id}`),
+  ];
+  const accessible = new Set(ordered.filter((key) => !targeted.has(key)));
+  const entry = ordered[0];
+  if (entry !== undefined) accessible.add(entry);
   // Fixed point, bounded by the graph size: cycles never recurse or unlock themselves.
   for (let pass = 0; pass <= rules.length; pass++) {
     let changed = false;
@@ -1413,7 +1458,9 @@ function handleCart(
         id: nextId(data),
         cart_id: cart.id,
         learning_path_id: productId,
-        name: fixture ? text(fixture.name) : 'Produit boutique démonstration',
+        name: fixture
+          ? text(fixture.name)
+          : (data.shopPrices.get(productId)?.name ?? 'Produit boutique démonstration'),
         image: product.image ?? SIMULATION_COVER_IMAGE,
         price: product.price,
         currency: product.currency,
@@ -1477,10 +1524,15 @@ function handleOrders(
       items: data.cart.items.map((item) => ({ ...item })),
     };
     data.orders.push(order);
-    // Only fictional fixture products become training credits, never real shop content.
+    // Every bought product becomes a local purchase. A real shop product only
+    // carries its public listing data (name, cover, category): its training
+    // content is never imported, so assigning it only simulates the assignment.
     for (const item of order.items) {
-      if (!data.resources['learning-paths'].some((row) => row.id === item.learning_path_id))
-        continue;
+      const fixture = data.resources['learning-paths'].some(
+        (row) => row.id === item.learning_path_id,
+      );
+      const shop = data.shopPrices.get(item.learning_path_id);
+      if (!fixture && !shop) continue;
       const purchase = data.purchases.find((row) => row.learning_path_id === item.learning_path_id);
       if (purchase) purchase.purchased += item.quantity;
       else
@@ -1489,6 +1541,16 @@ function handleOrders(
           learning_path_id: item.learning_path_id,
           purchased: item.quantity,
           created_at: SIMULATION_DATE,
+          ...(fixture
+            ? {}
+            : {
+                product: {
+                  name: item.name,
+                  // Already validated by rememberShopData: the authorized cover or local artwork.
+                  image: shop?.image ?? SIMULATION_COVER_IMAGE,
+                  category_id: shop?.category_id ?? null,
+                },
+              }),
         });
     }
     data.cart.items = [];
@@ -1496,6 +1558,28 @@ function handleOrders(
     return response({ data: order }, 201);
   }
   return unsupported(method, path);
+}
+
+/** The fictional path, or the public shop listing of a real product bought during the simulation. */
+function purchasedLearningPath(
+  data: SimulationData,
+  purchase: SimulationPurchase,
+): SimulationEntity {
+  if (!purchase.product) {
+    return decorate(
+      data,
+      'learning-paths',
+      find(data, 'learning-paths', purchase.learning_path_id),
+    );
+  }
+  const { name, image, category_id } = purchase.product;
+  return {
+    id: purchase.learning_path_id,
+    name,
+    image: { id: purchase.learning_path_id, url: image, mime_type: '' },
+    category_id,
+    category_name: category_id ? (data.shopCategories.get(category_id) ?? null) : null,
+  };
 }
 
 function handlePurchases(
@@ -1508,11 +1592,7 @@ function handlePurchases(
   if (path === 'purchased-learning-paths')
     return listResponse(
       data.purchases.map((purchase) => {
-        const learningPath = decorate(
-          data,
-          'learning-paths',
-          find(data, 'learning-paths', purchase.learning_path_id),
-        );
+        const learningPath = purchasedLearningPath(data, purchase);
         const registrations = data.enrollments.filter(
           (row) => row.learning_path_id === purchase.learning_path_id,
         );
@@ -1571,7 +1651,9 @@ function handlePurchases(
 
 function createEnrollments(data: SimulationData, payload: JsonObject): SimulationResponse {
   const pathId = text(payload.learning_path_id);
-  find(data, 'learning-paths', pathId);
+  // A purchase is what grants assignment, for a fictional path as for a real
+  // shop product bought locally (whose content is never loaded: the assignment
+  // only consumes local credits and lists the learners).
   const purchase = data.purchases.find((row) => row.learning_path_id === pathId);
   if (!purchase) invalid('Aucun crédit local pour ce parcours.');
   const learnerIds = new Set(strings(payload.learner_ids));
@@ -2150,9 +2232,25 @@ function handleScorm(
 }
 
 /** A local transport, NOT a proxy. Errors reject with the same status/json shape as httpClient. */
+/**
+ * Local business API. A successful write marks the current data set as
+ * changed (failures throw), so the UI can warn before a reload discards it.
+ */
 export async function handleSimulationRequest(
   url: string,
   options: RequestInit = {},
+): Promise<SimulationResponse> {
+  const data = state;
+  const result = await dispatchSimulationRequest(url, options);
+  if (data && state === data && (options.method ?? 'GET').toUpperCase() !== 'GET') {
+    changedData.add(data);
+  }
+  return result;
+}
+
+async function dispatchSimulationRequest(
+  url: string,
+  options: RequestInit,
 ): Promise<SimulationResponse> {
   if (options.signal?.aborted) throw new DOMException('Aborted', 'AbortError');
   let parsed: URL;

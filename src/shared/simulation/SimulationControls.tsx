@@ -116,7 +116,8 @@ export function SimulationControls() {
           <DialogTitle>Simuler un rôle</DialogTitle>
           <DialogDescription className="text-xs">
             Explorez l’application avec des données fictives. Les actions et achats ne seront pas
-            enregistrés. Votre compte reste connecté.
+            enregistrés et sont perdus si vous rechargez ou fermez la page. Votre compte reste
+            connecté.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-2">
