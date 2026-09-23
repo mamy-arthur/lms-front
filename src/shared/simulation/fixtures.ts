@@ -1,5 +1,6 @@
 import { Role } from '@/shared/constants/roles';
 import type { User } from '@/modules/admin/resources/users/types';
+import type { Client } from '@/modules/admin/resources/clients';
 import type { CompetencyApiResponse } from '@/modules/admin/resources/modules/types';
 import type { ApiEvaluation } from '@/shared/api/evaluations.api';
 import type { ApiCart } from '@/shared/types/cart.types';
@@ -19,6 +20,11 @@ import type { TwoFactorSettings } from '@/modules/admin/resources/two-factor/typ
 export const simulationId = (n: number): string =>
   `d3e00000-0000-4000-8000-${n.toString(16).padStart(12, '0')}`;
 
+export const simulationClientSlug = (name: string): string =>
+  `demo-client-${Array.from(name.normalize('NFKC').trim().toLowerCase())
+    .map((character) => character.codePointAt(0)!.toString(16))
+    .join('-')}`;
+
 export const SIMULATION_IDS = {
   tenant: simulationId(1),
   editor: simulationId(2),
@@ -26,6 +32,7 @@ export const SIMULATION_IDS = {
   learner: simulationId(4),
   secondLearner: simulationId(5),
   admin: simulationId(6),
+  client: simulationId(7),
   category: simulationId(10),
   learningPath: simulationId(20),
   secondLearningPath: simulationId(21),
@@ -96,6 +103,7 @@ export interface SimulationPurchase {
 export interface SimulationData {
   role: Role;
   sequence: number;
+  clients: Client[];
   resources: Record<ResourceName, SimulationEntity[]>;
   cart: ApiCart;
   orders: Array<ApiOrder & { items: ApiCart['items']; total: number; currency: string }>;
@@ -257,6 +265,7 @@ export function newSimulationEntity(resource: ResourceName, id: string): Simulat
         ...common,
         ...tenant,
         editor_id: SIMULATION_IDS.editor,
+        client_id: SIMULATION_IDS.client,
         first_name: 'Alex',
         last_name: 'démonstration',
         full_name: 'Alex démonstration',
@@ -352,6 +361,7 @@ export function createSimulationFixtures(role: Role): SimulationData {
     id: userId,
     tenant_id: id.tenant,
     editor_id: id.editor,
+    client_id: userRole === Role.CLIENT_MANAGER || userRole === Role.TRAINEE ? id.client : null,
     first_name: firstName,
     last_name: 'démonstration',
     full_name: `${firstName} démonstration`,
@@ -567,6 +577,16 @@ export function createSimulationFixtures(role: Role): SimulationData {
   return {
     role,
     sequence: 1000,
+    clients: [
+      {
+        id: id.client,
+        tenant_id: id.tenant,
+        name: 'Client démonstration',
+        slug: simulationClientSlug('Client démonstration'),
+        is_active: true,
+        created_at: SIMULATION_DATE,
+      },
+    ],
     resources: {
       'learning-paths': [
         entity(learningPath),

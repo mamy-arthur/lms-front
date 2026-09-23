@@ -42,6 +42,8 @@ Les restrictions d'interface habituelles sont conservées : le rôle Éditeur pr
 
 `fixtures.ts` contient les jeux de données déconnectés, et `local-api.ts` les contrats locaux avec un registre `SIMULATION_ROUTES`. Tout nouveau parcours API doit ajouter son contrat et ses tests à ce registre. Une route non prise en charge affiche une erreur locale explicite plutôt qu'un faux succès incomplet ou un accès réel.
 
+Le parcours utilisateurs inclut les clients fictifs : liste, recherche par nom, rattachement et filtre. Les responsables simulés restent rattachés au client de démonstration. Les identités des noms simulés sont des clés locales déterministes (casse et espaces périphériques ignorés), pas une reproduction de la translittération Laravel. La parité des ligatures et caractères spéciaux avec le backend se vérifie hors simulation. Aucun nom ni client réel n'est envoyé ou chargé pour ce parcours.
+
 Les opérations externes sont remplacées par des résultats visuels : uploads avec média de substitution, aperçu de mail sans envoi, import de ZIP SCORM fictif sans extraction, achat sans prestataire de paiement. Seuls les packages déjà extraits et autorisés de l'aperçu Formation sont exécutés. Les rapports et portefeuilles qui utilisent déjà des mocks continuent d'utiliser ces données fictives.
 
 ## Déploiement et validation

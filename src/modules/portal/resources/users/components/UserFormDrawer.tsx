@@ -261,12 +261,13 @@ function UserFormDrawerBase({ open, onClose, onSuccess, user }: UserFormDrawerPr
       name="is_active"
       render={({ field }) => (
         <FieldGroup>
-          <div className="flex items-center justify-between">
-            <FieldLabel className="text-xs">Compte actif</FieldLabel>
+          <div className="flex items-center justify-between border p-3 bg-gray-50/40 rounded-sm">
+            <FieldLabel className="text-xs">Autoriser l’accès au compte</FieldLabel>
             <Switch
               checked={field.value}
               onCheckedChange={field.onChange}
-              aria-label="Compte actif"
+              aria-label="Autoriser l’accès au compte"
+              className="data-checked:bg-(--color-primary)"
             />
           </div>
         </FieldGroup>
@@ -306,8 +307,8 @@ function UserFormDrawerBase({ open, onClose, onSuccess, user }: UserFormDrawerPr
           }
           extraFields={
             <>
-              {activeField}
               <UserProfileFields form={formState.form} />
+              {activeField}
             </>
           }
         />
