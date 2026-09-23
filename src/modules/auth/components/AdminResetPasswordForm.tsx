@@ -4,10 +4,12 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useSearchParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 
 import { resetPasswordSchema, type ResetPasswordSchema } from '@/shared/schemas/auth.schema';
 import { authApi } from '@/shared/api/auth.api';
+import { mapPasswordResetError } from '@/modules/auth/lib/passwordResetErrors';
 import { ROUTES } from '@/shared/constants/routes';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,6 +23,7 @@ export function AdminResetPasswordForm() {
   const email = searchParams?.get('email') ?? '';
 
   const [serverError, setServerError] = useState<string | null>(null);
+  const [linkExpired, setLinkExpired] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
 
@@ -49,10 +52,41 @@ export function AdminResetPasswordForm() {
       await authApi.platformResetPassword(data);
 
       router.push(`${ROUTES.platform.login}?reset=1`);
-    } catch {
-      setServerError('Une erreur est survenue. Veuillez réessayer.');
+    } catch (err) {
+      const mapped = mapPasswordResetError(err);
+
+      if (mapped.kind === 'invalid_token') {
+        setLinkExpired(true);
+        return;
+      }
+
+      if (mapped.kind === 'invalid_password') {
+        form.setError('password', { message: mapped.message });
+        return;
+      }
+
+      setServerError(mapped.message);
     }
   };
+
+  if (linkExpired) {
+    return (
+      <div className="space-y-4">
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+          Ce lien de réinitialisation est invalide, a expiré ou a déjà été utilisé.
+        </div>
+
+        <div className="text-center">
+          <Link
+            href={ROUTES.platform.forgotPassword}
+            className="text-sm text-primary hover:underline"
+          >
+            Faire une nouvelle demande
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">

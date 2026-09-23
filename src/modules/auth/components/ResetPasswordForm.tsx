@@ -3,9 +3,11 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { resetPasswordSchema, type ResetPasswordSchema } from '@/shared/schemas/auth.schema';
 import { authApi } from '@/shared/api/auth.api';
+import { mapPasswordResetError } from '@/modules/auth/lib/passwordResetErrors';
 import { ROUTES } from '@/shared/constants/routes';
 import { Button } from '@/shared/components/ui/Button/Button';
 import { cn } from '@/shared/lib/cn';
@@ -18,10 +20,12 @@ interface ResetPasswordFormProps {
 export function ResetPasswordForm({ email, token }: ResetPasswordFormProps) {
   const router = useRouter();
   const [serverError, setServerError] = useState<string | null>(null);
+  const [linkExpired, setLinkExpired] = useState(false);
 
   const {
     register,
     handleSubmit,
+    setError,
     formState: { errors, isSubmitting },
   } = useForm<ResetPasswordSchema>({
     resolver: zodResolver(resetPasswordSchema),
@@ -33,10 +37,38 @@ export function ResetPasswordForm({ email, token }: ResetPasswordFormProps) {
     try {
       await authApi.resetPassword(data);
       router.replace(`${ROUTES.auth.login}?reset=1`);
-    } catch {
-      setServerError('Le lien est invalide ou a expiré. Veuillez refaire une demande.');
+    } catch (err) {
+      const mapped = mapPasswordResetError(err);
+
+      if (mapped.kind === 'invalid_token') {
+        setLinkExpired(true);
+        return;
+      }
+
+      if (mapped.kind === 'invalid_password') {
+        setError('password', { message: mapped.message });
+        return;
+      }
+
+      setServerError(mapped.message);
     }
   };
+
+  if (linkExpired) {
+    return (
+      <div className="space-y-4">
+        <div className="rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+          Ce lien de réinitialisation est invalide, a expiré ou a déjà été utilisé.
+        </div>
+        <Link
+          href={ROUTES.auth.forgotPassword}
+          className="block text-center text-sm text-blue-600 hover:underline"
+        >
+          Faire une nouvelle demande
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">

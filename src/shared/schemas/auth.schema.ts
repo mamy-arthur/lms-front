@@ -13,12 +13,21 @@ export const forgotPasswordSchema = z.object({
 
 export type ForgotPasswordSchema = z.infer<typeof forgotPasswordSchema>;
 
+/** Reprend la politique appliquée par le backend (PasswordPolicy + règle Laravel `Password`). */
+export const passwordPolicySchema = z
+  .string()
+  .min(8, 'Minimum 8 caractères')
+  .max(255, 'Maximum 255 caractères')
+  .regex(/[a-z]/, 'Au moins une minuscule')
+  .regex(/[A-Z]/, 'Au moins une majuscule')
+  .regex(/\d/, 'Au moins un chiffre');
+
 export const resetPasswordSchema = z
   .object({
     email: z.string().email('Email invalide'),
     token: z.string().min(1, 'Token requis'),
-    password: z.string().min(8, 'Minimum 8 caractères'),
-    password_confirmation: z.string().min(8, 'Minimum 8 caractères'),
+    password: passwordPolicySchema,
+    password_confirmation: z.string().min(1, 'Confirmation requise'),
   })
   .refine((d) => d.password === d.password_confirmation, {
     message: 'Les mots de passe ne correspondent pas',

@@ -8,6 +8,7 @@ import { Loader2 } from 'lucide-react';
 
 import { forgotPasswordSchema, type ForgotPasswordSchema } from '@/shared/schemas/auth.schema';
 import { authApi } from '@/shared/api/auth.api';
+import { mapPasswordResetError } from '@/modules/auth/lib/passwordResetErrors';
 import { ROUTES } from '@/shared/constants/routes';
 
 import { Button } from '@/components/ui/button';
@@ -31,8 +32,8 @@ export function AdminForgotPasswordForm() {
     try {
       await authApi.platformForgotPassword(data.email);
       setSubmitted(true);
-    } catch {
-      setServerError('Une erreur est survenue. Veuillez réessayer.');
+    } catch (err) {
+      setServerError(mapPasswordResetError(err).message);
     }
   };
 

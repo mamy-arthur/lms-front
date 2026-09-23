@@ -7,6 +7,7 @@ import Link from 'next/link';
 
 import { forgotPasswordSchema, type ForgotPasswordSchema } from '@/shared/schemas/auth.schema';
 import { authApi } from '@/shared/api/auth.api';
+import { mapPasswordResetError } from '@/modules/auth/lib/passwordResetErrors';
 import { ROUTES } from '@/shared/constants/routes';
 import { Button } from '@/shared/components/ui/Button/Button';
 import { cn } from '@/shared/lib/cn';
@@ -29,8 +30,8 @@ export function ForgotPasswordForm() {
     try {
       await authApi.forgotPassword(data.email);
       setSubmitted(true);
-    } catch {
-      setServerError('Une erreur est survenue. Veuillez réessayer.');
+    } catch (err) {
+      setServerError(mapPasswordResetError(err).message);
     }
   };
 
