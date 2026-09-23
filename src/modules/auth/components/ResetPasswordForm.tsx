@@ -96,6 +96,7 @@ export function ResetPasswordForm({ email, token }: ResetPasswordFormProps) {
 
           <button
             type="button"
+            aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
             onClick={() => setShowPassword((v) => !v)}
             className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
           >
@@ -120,6 +121,7 @@ export function ResetPasswordForm({ email, token }: ResetPasswordFormProps) {
 
           <button
             type="button"
+            aria-label={showConfirmation ? 'Masquer la confirmation' : 'Afficher la confirmation'}
             onClick={() => setShowConfirmation((v) => !v)}
             className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
           >
