@@ -9,13 +9,18 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { SessionConflictModal } from '@/modules/auth/components/SessionConflictModal';
+import { PasswordResetSuccessNotice } from '@/modules/auth/components/PasswordResetSuccessNotice';
 import { TwoFactorChallengeStep } from '@/modules/auth/components/TwoFactorChallengeStep';
 import { useLoginFlow } from '@/modules/auth/hooks/useLoginFlow';
 import { authApi } from '@/shared/api/auth.api';
 import { ROUTES } from '@/shared/constants/routes';
 import { type LoginSchema, loginSchema } from '@/shared/schemas/auth.schema';
 
-export function PlatformLoginForm() {
+interface PlatformLoginFormProps {
+  resetSuccess?: boolean;
+}
+
+export function PlatformLoginForm({ resetSuccess = false }: PlatformLoginFormProps) {
   const [showPassword, setShowPassword] = useState(false);
 
   const {
@@ -56,6 +61,8 @@ export function PlatformLoginForm() {
   return (
     <>
       <form onSubmit={form.handleSubmit(submit)} className="mt-8 space-y-5">
+        {resetSuccess && <PasswordResetSuccessNotice />}
+
         <div className="space-y-2">
           <Label htmlFor="platform-email">Email</Label>
 
@@ -85,6 +92,7 @@ export function PlatformLoginForm() {
 
             <button
               type="button"
+              aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
               onClick={() => setShowPassword((v) => !v)}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
             >

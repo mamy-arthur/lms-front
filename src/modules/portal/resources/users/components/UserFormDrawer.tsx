@@ -216,9 +216,10 @@ function UserFormDrawerBase({ open, onClose, onSuccess, user }: UserFormDrawerPr
         onClose();
       } else if (!isEdit && pendingPhotoRef.current) {
         // Création : créer d'abord l'utilisateur, puis uploader la photo
-        let newUserId: string;
+        const pendingPhoto = pendingPhotoRef.current;
+        let created: Awaited<ReturnType<typeof createMutation.mutateAsync>>;
         try {
-          const res = await createMutation.mutateAsync({
+          created = await createMutation.mutateAsync({
             first_name: values.first_name as string,
             last_name: values.last_name as string,
             email: values.email as string,
@@ -233,17 +234,26 @@ function UserFormDrawerBase({ open, onClose, onSuccess, user }: UserFormDrawerPr
             timezone: (values.timezone as string | null) ?? null,
             preferred_language: (values.preferred_language as string | null) ?? null,
           } as CreateClientUserPayload);
-          newUserId = (res as { data: { id: string } }).data.id;
         } catch {
           toast.error("Échec de la création de l'utilisateur.");
           return;
         }
-        // Upload séparé — l'utilisateur est déjà créé, l'échec photo ne bloque pas
-        try {
-          await uploadUserProfilePhoto(newUserId, pendingPhotoRef.current, 'users');
-        } catch {
-          toast.error("Utilisateur créé, mais l'upload photo a échoué.");
+
+        // Hors du try : l'utilisateur existe, une réponse inattendue ne doit pas
+        // se lire comme un échec de création.
+        const newUserId = created?.data?.id;
+
+        if (newUserId) {
+          // Upload séparé — l'utilisateur est déjà créé, l'échec photo ne bloque pas
+          try {
+            await uploadUserProfilePhoto(newUserId, pendingPhoto, 'users');
+          } catch {
+            toast.error("Utilisateur créé, mais l'upload photo a échoué.");
+          }
+        } else {
+          toast.warning("Utilisateur créé, mais la photo n'a pas pu lui être associée.");
         }
+
         await queryClient.invalidateQueries({ queryKey: TENANT_USERS_QUERY_KEY });
         pendingPhotoRef.current = null;
         handleSuccess();
@@ -252,7 +262,7 @@ function UserFormDrawerBase({ open, onClose, onSuccess, user }: UserFormDrawerPr
         formState.onSubmit(values);
       }
     },
-    [isEdit, user, createMutation, updateMutation, formState, onSuccess, onClose, tenantId],
+    [isEdit, user, createMutation, updateMutation, formState, handleSuccess, onClose, tenantId],
   );
 
   const activeField = (

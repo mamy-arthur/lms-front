@@ -15,6 +15,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { useClientNameQuery, type Client } from '@/modules/admin/resources/clients';
+import { getApiErrorStatus } from '@/shared/lib/errors';
 
 export interface ClientNameComboboxProps extends Pick<
   ComponentProps<'button'>,
@@ -58,7 +59,7 @@ export function ClientNameCombobox({
             client.name.toLocaleLowerCase().includes(query.toLocaleLowerCase()),
         ) ?? []);
   const existingWithSameName = resolved?.clients.find((client) => client.slug === resolved.slug);
-  const invalidName = (resolution.error as { status?: number } | null)?.status === 422;
+  const invalidName = getApiErrorStatus(resolution.error) === 422;
 
   const selectedClient = clientId ? clients.find((c) => c.id === clientId) : undefined;
 

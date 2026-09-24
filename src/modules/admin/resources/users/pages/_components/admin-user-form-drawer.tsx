@@ -6,7 +6,7 @@ import { UserPhotoField } from '@modules/shared/components/users/user-photo-fiel
 import { UserProfileFields } from '@modules/shared/components/users/user-profile-fields';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { RefreshCw } from 'lucide-react';
-import { memo, useCallback, useEffect, useMemo, useRef } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
@@ -30,20 +30,15 @@ import { useClientsQuery } from '@/modules/admin/resources/clients';
 import { tenantApi } from '@/modules/admin/resources/tenants/api';
 import { uploadUserProfilePhoto } from '@/modules/shared/lib/uploadUserProfilePhoto';
 import { Role } from '@/shared/constants/roles';
+import { getApiErrorStatus } from '@/shared/lib/errors';
+import { PEER_MANAGEMENT_REFUSED } from '@/shared/utils/api-error';
+import { passwordPolicySchema } from '@/shared/schemas/auth.schema';
 import { useAuthStore } from '@/shared/stores/auth.store';
 import { useCreateUser } from '../../hooks/useCreateUser';
 import { useUpdateUser } from '../../hooks/useUpdateUser';
 import { ADMIN_USERS_QUERY_KEY } from '../../hooks/useUsersQuery';
 import type { CreateUserPayload, UpdateUserPayload, User } from '../../types';
 import { ClientNameCombobox } from './client-name-combobox';
-
-const passwordSchema = z
-  .string()
-  .min(8, 'Minimum 8 caractères')
-  .regex(/[A-Z]/, 'Au moins une majuscule')
-  .regex(/[a-z]/, 'Au moins une minuscule')
-  .regex(/[0-9]/, 'Au moins un chiffre')
-  .max(255);
 
 const profileFieldsSchema = z.object({
   address: z.string().max(255).nullable().optional(),
@@ -59,7 +54,7 @@ const createSchemaShape = z
     first_name: z.string().min(1, 'Prénom requis').max(120),
     last_name: z.string().min(1, 'Nom requis').max(120),
     email: z.string().email('Email invalide').max(255),
-    password: passwordSchema,
+    password: passwordPolicySchema,
     role: z.nativeEnum(Role),
     tenant_id: z.string().uuid().nullable().optional(),
     client_id: z.string().uuid().nullable().optional(),
@@ -108,7 +103,7 @@ const updateSchemaShape = z
     first_name: z.string().min(1, 'Prénom requis').max(120),
     last_name: z.string().min(1, 'Nom requis').max(120),
     email: z.string().email('Email invalide').max(255),
-    password: passwordSchema.optional().or(z.literal('')),
+    password: passwordPolicySchema.optional().or(z.literal('')),
     role: z.nativeEnum(Role),
     tenant_id: z.string().uuid().nullable().optional(),
     client_id: z.string().uuid().nullable().optional(),
@@ -190,6 +185,8 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
   const createMutation = useCreateUser();
   const updateMutation = useUpdateUser();
   const pendingPhotoRef = useRef<File | null>(null);
+  // L'upload photo suit la mutation : sans ce verrou le bouton se réactive entre les deux.
+  const [isUploading, setIsUploading] = useState(false);
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -365,11 +362,16 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
               preferred_language: (values.preferred_language as string | null) ?? null,
             } as UpdateUserPayload,
           });
-        } catch {
-          toast.error("Échec de la mise à jour de l'utilisateur.");
+        } catch (error) {
+          toast.error(
+            getApiErrorStatus(error) === 403
+              ? PEER_MANAGEMENT_REFUSED
+              : "Échec de la mise à jour de l'utilisateur.",
+          );
           return;
         }
         // L'endpoint profile-photo lie déjà la photo côté backend — best-effort
+        setIsUploading(true);
         try {
           await uploadUserProfilePhoto(user.id, pendingPhoto, 'platform/users');
           await queryClient.invalidateQueries({
@@ -377,15 +379,17 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
           });
         } catch {
           toast.warning("Données sauvegardées, mais l'upload photo a échoué.");
+        } finally {
+          setIsUploading(false);
         }
         pendingPhotoRef.current = null;
         handleSuccess();
         onClose();
       } else if (!isEdit && pendingPhoto) {
         // Création : créer d'abord l'utilisateur, puis uploader la photo
-        let newUserId: string;
+        let created: Awaited<ReturnType<typeof createMutation.mutateAsync>>;
         try {
-          const res = await createMutation.mutateAsync({
+          created = await createMutation.mutateAsync({
             first_name: values.first_name as string,
             last_name: values.last_name as string,
             email: values.email as string,
@@ -408,17 +412,29 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
             timezone: (values.timezone as string | null) ?? null,
             preferred_language: (values.preferred_language as string | null) ?? null,
           } as CreateUserPayload);
-          newUserId = (res as { data: { id: string } }).data.id;
         } catch {
           toast.error("Échec de la création de l'utilisateur.");
           return;
         }
-        // Upload séparé — l'utilisateur est déjà créé, l'échec photo ne bloque pas
-        try {
-          await uploadUserProfilePhoto(newUserId, pendingPhoto, 'platform/users');
-        } catch {
-          toast.error("Utilisateur créé, mais l'upload photo a échoué.");
+
+        // Hors du try : l'utilisateur existe, une réponse inattendue ne doit pas
+        // se lire comme un échec de création.
+        const newUserId = created?.data?.id;
+
+        if (newUserId) {
+          // Upload séparé — l'utilisateur est déjà créé, l'échec photo ne bloque pas
+          setIsUploading(true);
+          try {
+            await uploadUserProfilePhoto(newUserId, pendingPhoto, 'platform/users');
+          } catch {
+            toast.error("Utilisateur créé, mais l'upload photo a échoué.");
+          } finally {
+            setIsUploading(false);
+          }
+        } else {
+          toast.warning("Utilisateur créé, mais la photo n'a pas pu lui être associée.");
         }
+
         await queryClient.invalidateQueries({
           queryKey: ADMIN_USERS_QUERY_KEY,
         });
@@ -437,9 +453,14 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
       updateMutation,
       formState,
       queryClient,
-      onSuccess,
+      handleSuccess,
       onClose,
     ],
+  );
+
+  const submitMutation = useMemo(
+    () => ({ ...formState.mutation, isPending: formState.mutation.isPending || isUploading }),
+    [formState.mutation, isUploading],
   );
 
   // Champ is_active — toggle actif/inactif
@@ -624,7 +645,7 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
         </SheetHeader>
         <UserForm
           form={formState.form}
-          mutation={formState.mutation}
+          mutation={submitMutation}
           isEdit={formState.isEdit}
           handleClose={formState.handleClose}
           onSubmit={onSubmitWithPhoto}

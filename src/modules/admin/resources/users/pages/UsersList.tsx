@@ -1,12 +1,13 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ChevronDown, Plus, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { UserSearch } from '@modules/shared/components/users';
 import { AdminUserFormDrawer } from './_components/admin-user-form-drawer';
 import { AdminUsersTable } from './_components/admin-users-table';
@@ -80,7 +81,7 @@ export function UsersList() {
   const tenants = tenantsData?.data ?? [];
 
   const tenantId = activeTenant?.id ?? tenantFilter;
-  const { data: clients } = useClientsQuery(
+  const { data: clients, isSuccess: clientsLoaded } = useClientsQuery(
     canFilterByClient && (!canSelectTenant || tenantId !== null),
     tenantId,
   );
@@ -96,6 +97,16 @@ export function UsersList() {
     setClientFilter(id);
     handlePageChange(0);
   };
+
+  // Un client disparu de la liste (suppression, invalidation du cache) laisserait
+  // sinon le tableau filtre sur une valeur devenue invisible, donc ineffacable.
+  useEffect(() => {
+    if (!clientFilter || !clientsLoaded) return;
+    if (!clients?.some((c) => c.id === clientFilter)) {
+      setClientFilter(null);
+      handlePageChange(0);
+    }
+  }, [clientFilter, clientsLoaded, clients, handlePageChange]);
 
   const scopedParams = useMemo(
     () => ({
@@ -221,23 +232,22 @@ export function UsersList() {
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-56 p-2" align="end">
-                  <div className="max-h-64 space-y-0.5 overflow-y-auto">
+                  <RadioGroup
+                    aria-label="Filtrer par tenant"
+                    value={tenantFilter ?? ''}
+                    onValueChange={(value) => handleTenantFilter(value || null)}
+                    className="max-h-64 gap-0.5 overflow-y-auto"
+                  >
                     {tenants.map((t) => (
                       <label
                         key={String(t.id)}
                         className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 hover:bg-muted text-xs"
                       >
-                        <Checkbox
-                          checked={tenantFilter === String(t.id)}
-                          onCheckedChange={() =>
-                            handleTenantFilter(tenantFilter === String(t.id) ? null : String(t.id))
-                          }
-                          className="data-[state=checked]:bg-(--color-primary) data-[state=checked]:border-(--color-primary)"
-                        />
+                        <RadioGroupItem value={String(t.id)} />
                         {t.name}
                       </label>
                     ))}
-                  </div>
+                  </RadioGroup>
                   {tenantFilter ? (
                     <button
                       className="mt-1.5 w-full rounded px-2 py-1 text-center text-xs text-muted-foreground hover:bg-muted"
@@ -251,7 +261,7 @@ export function UsersList() {
             ) : null}
 
             {/* Client filter */}
-            {canFilterByClient && (clients?.length ?? 0) > 0 ? (
+            {canFilterByClient && ((clients?.length ?? 0) > 0 || clientFilter) ? (
               <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="outline" className="justify-between text-xs font-normal">
@@ -262,23 +272,22 @@ export function UsersList() {
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-56 p-2" align="end">
-                  <div className="space-y-0.5">
+                  <RadioGroup
+                    aria-label="Filtrer par client"
+                    value={clientFilter ?? ''}
+                    onValueChange={(value) => handleClientFilter(value || null)}
+                    className="gap-0.5"
+                  >
                     {(clients ?? []).map((c) => (
                       <label
                         key={c.id}
                         className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 hover:bg-muted text-xs"
                       >
-                        <Checkbox
-                          checked={clientFilter === c.id}
-                          onCheckedChange={() =>
-                            handleClientFilter(clientFilter === c.id ? null : c.id)
-                          }
-                          className="data-[state=checked]:bg-(--color-primary) data-[state=checked]:border-(--color-primary)"
-                        />
+                        <RadioGroupItem value={c.id} />
                         {c.name}
                       </label>
                     ))}
-                  </div>
+                  </RadioGroup>
                   {clientFilter ? (
                     <button
                       className="mt-1.5 w-full rounded px-2 py-1 text-center text-xs text-muted-foreground hover:bg-muted"

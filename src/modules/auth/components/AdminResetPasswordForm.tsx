@@ -51,7 +51,8 @@ export function AdminResetPasswordForm() {
     try {
       await authApi.platformResetPassword(data);
 
-      router.push(`${ROUTES.platform.login}?reset=1`);
+      // replace : le token est consommé, revenir en arrière n'a plus de sens.
+      router.replace(`${ROUTES.platform.login}?reset=1`);
     } catch (err) {
       const mapped = mapPasswordResetError(err);
 

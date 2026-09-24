@@ -22,7 +22,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import type { MutationLike } from '@/shared/types/mutation';
-import { extractApiError } from '@/shared/utils/api-error';
+import { extractUserFormError } from '@/shared/utils/api-error';
 
 export interface UserFormProps {
   form: UseFormReturn<any>;
@@ -64,7 +64,7 @@ export function UserForm({
               role="alert"
               className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive"
             >
-              {extractApiError(mutation.error, isEdit)}
+              {extractUserFormError(mutation.error, isEdit)}
             </div>
           )}
           {topFields}

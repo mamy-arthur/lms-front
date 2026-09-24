@@ -45,12 +45,17 @@ jest.mock('@/modules/shared/lib/uploadUserProfilePhoto', () => ({
   uploadUserProfilePhoto: jest.fn(),
 }));
 
+jest.mock('sonner', () => ({
+  toast: { success: jest.fn(), error: jest.fn(), warning: jest.fn() },
+}));
+
 jest.mock('@modules/shared/components/users/user-profile-fields', () => ({
   UserProfileFields: () => null,
 }));
 
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { toast } from 'sonner';
 import { tenantApi } from '@/modules/admin/resources/tenants/api';
 import { uploadUserProfilePhoto } from '@/modules/shared/lib/uploadUserProfilePhoto';
 import { Role } from '@/shared/constants/roles';
@@ -92,6 +97,15 @@ const OTHER_USER = normalizeUser({
   tenant_id: TENANT_B,
   client_id: CLIENT_B,
 });
+
+const fillCreationForm = async (interaction: ReturnType<typeof userEvent.setup>) => {
+  fireEvent.keyDown(screen.getByRole('combobox', { name: 'Rôle' }), { key: 'ArrowDown' });
+  fireEvent.click(await screen.findByRole('option', { name: 'Super admin' }));
+  await interaction.type(screen.getByRole('textbox', { name: 'Nom' }), 'Test');
+  await interaction.type(screen.getByRole('textbox', { name: 'Prénom' }), 'Alice');
+  await interaction.type(screen.getByRole('textbox', { name: 'Email' }), 'alice@example.test');
+  await interaction.type(screen.getByLabelText('Mot de passe', { exact: true }), 'Password123');
+};
 
 describe('AdminUserFormDrawer - rattachement client', () => {
   beforeAll(() => {
@@ -243,6 +257,46 @@ describe('AdminUserFormDrawer - rattachement client', () => {
       expect.objectContaining({ email: 'alice@example.test' }),
     );
     expect(uploadUserProfilePhoto).toHaveBeenCalledTimes(1);
+  });
+
+  it("n'annonce pas un echec de creation quand la reponse n'expose pas d'id", async () => {
+    mockCreateAsync.mockResolvedValue({} as unknown as { data: typeof EXISTING_USER });
+    const interaction = userEvent.setup();
+    renderWithQueryClient(<AdminUserFormDrawer open onClose={jest.fn()} />);
+    await interaction.upload(
+      document.querySelector<HTMLInputElement>('input[type="file"]')!,
+      new File(['creation'], 'creation.png', { type: 'image/png' }),
+    );
+    await screen.findByText(/Photo sélectionnée/);
+    await fillCreationForm(interaction);
+    await interaction.click(screen.getByRole('button', { name: 'Enregistrer' }));
+
+    await waitFor(() => expect(toast.warning).toHaveBeenCalled());
+    expect(toast.error).not.toHaveBeenCalledWith("Échec de la création de l'utilisateur.");
+    expect(uploadUserProfilePhoto).not.toHaveBeenCalled();
+  });
+
+  it('empeche une seconde soumission pendant l upload de la photo', async () => {
+    let releaseUpload: () => void = () => {};
+    jest.mocked(uploadUserProfilePhoto).mockImplementation(
+      () =>
+        new Promise<never>((resolve) => {
+          releaseUpload = resolve as unknown as () => void;
+        }),
+    );
+    const interaction = userEvent.setup();
+    renderWithQueryClient(<AdminUserFormDrawer open onClose={jest.fn()} user={EXISTING_USER} />);
+    await interaction.upload(
+      document.querySelector<HTMLInputElement>('input[type="file"]')!,
+      new File(['photo'], 'alice.png', { type: 'image/png' }),
+    );
+    await screen.findByText(/Photo sélectionnée/);
+    await interaction.click(screen.getByRole('button', { name: 'Enregistrer' }));
+
+    await waitFor(() => expect(uploadUserProfilePhoto).toHaveBeenCalled());
+    expect(screen.getByRole('button', { name: /Enregistrement/ })).toBeDisabled();
+
+    releaseUpload();
   });
 
   it.each([

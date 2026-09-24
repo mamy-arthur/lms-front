@@ -93,7 +93,7 @@ describe('UsersList - filtres tenant et client', () => {
         }),
       );
       await interaction.click(
-        screen.getByRole('checkbox', {
+        screen.getByRole('radio', {
           name: isTenant ? 'Tenant Alpha' : 'Client Alpha',
         }),
       );
@@ -125,7 +125,7 @@ describe('UsersList - filtres tenant et client', () => {
           name: isTenant ? 'Tous les tenants' : 'Tous les clients',
         }),
       );
-      await interaction.click(screen.getByRole('checkbox', { name: label }));
+      await interaction.click(screen.getByRole('radio', { name: label }));
       await interaction.keyboard('{Escape}');
       await goToLaterPage(interaction);
 
@@ -148,7 +148,7 @@ describe('UsersList - filtres tenant et client', () => {
     await waitFor(() => expect(adminUsersApi.list).toHaveBeenCalled());
     expect(adminClientsApi.list).not.toHaveBeenCalled();
     await interaction.click(await screen.findByRole('button', { name: 'Tous les tenants' }));
-    await interaction.click(screen.getByRole('checkbox', { name: 'Tenant Alpha' }));
+    await interaction.click(screen.getByRole('radio', { name: 'Tenant Alpha' }));
     await waitFor(() => expect(adminClientsApi.list).toHaveBeenCalledWith(String(TENANTS[0].id)));
     const calls = jest.mocked(adminClientsApi.list).mock.calls.length;
     await interaction.click(screen.getByRole('button', { name: 'Effacer' }));
@@ -162,19 +162,44 @@ describe('UsersList - filtres tenant et client', () => {
     await waitFor(() => expect(adminClientsApi.list).toHaveBeenCalledWith(null));
   });
 
+  it('retire le filtre client quand le client disparait de la liste chargee', async () => {
+    const interaction = userEvent.setup();
+    mockActiveTenant = { id: String(TENANTS[0].id) };
+    const view = renderWithQueryClient(<UsersList />);
+    await interaction.click(await screen.findByRole('button', { name: 'Tous les clients' }));
+    await interaction.click(screen.getByRole('radio', { name: 'Client Alpha' }));
+    await interaction.keyboard('{Escape}');
+    await waitFor(() =>
+      expect(adminUsersApi.list).toHaveBeenLastCalledWith(
+        expect.objectContaining({ client_id: CLIENT.id }),
+      ),
+    );
+
+    jest.mocked(adminClientsApi.list).mockResolvedValue({ data: [] });
+    mockActiveTenant = { id: String(TENANTS[1].id) };
+    view.rerender(<UsersList />);
+
+    await waitFor(() =>
+      expect(jest.mocked(adminUsersApi.list).mock.calls.at(-1)?.[0]).not.toHaveProperty(
+        'client_id',
+      ),
+    );
+    expect(screen.queryByRole('button', { name: 'Client Alpha' })).not.toBeInTheDocument();
+  });
+
   it('retire le filtre client quand le tenant change', async () => {
     const interaction = userEvent.setup();
     renderWithQueryClient(<UsersList />);
     await interaction.click(await screen.findByRole('button', { name: 'Tous les tenants' }));
-    await interaction.click(screen.getByRole('checkbox', { name: 'Tenant Alpha' }));
+    await interaction.click(screen.getByRole('radio', { name: 'Tenant Alpha' }));
     await interaction.keyboard('{Escape}');
     await interaction.click(await screen.findByRole('button', { name: 'Tous les clients' }));
-    await interaction.click(screen.getByRole('checkbox', { name: 'Client Alpha' }));
+    await interaction.click(screen.getByRole('radio', { name: 'Client Alpha' }));
     await interaction.keyboard('{Escape}');
     await goToLaterPage(interaction);
 
     await interaction.click(screen.getByRole('button', { name: 'Tenant Alpha' }));
-    await interaction.click(screen.getByRole('checkbox', { name: 'Tenant Beta' }));
+    await interaction.click(screen.getByRole('radio', { name: 'Tenant Beta' }));
     await interaction.keyboard('{Escape}');
 
     await waitFor(() => {

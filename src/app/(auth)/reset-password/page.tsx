@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { LoginBrandingPanel } from '@/app/(auth)/_components/LoginBrandingPanel';
 import { ResetPasswordForm } from '@/modules/auth/components/ResetPasswordForm';
 import { ROUTES } from '@/shared/constants/routes';
+import { PASSWORD_POLICY_HINT } from '@/shared/schemas/auth.schema';
 
 interface Props {
   searchParams: Promise<{ token?: string; email?: string }>;
@@ -41,9 +42,7 @@ export default async function ResetPasswordPage({ searchParams }: Props) {
                 <div>
                   <h1 className="text-3xl font-bold">Nouveau mot de passe</h1>
 
-                  <p className="mt-2 text-muted-foreground text-sm">
-                    Choisissez un mot de passe d'au moins 8 caractères.
-                  </p>
+                  <p className="mt-2 text-muted-foreground text-sm">{PASSWORD_POLICY_HINT}</p>
                 </div>
 
                 <ResetPasswordForm email={email} token={token} />
