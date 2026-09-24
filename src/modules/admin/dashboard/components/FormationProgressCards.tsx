@@ -215,8 +215,7 @@ export function FormationProgressCards({
         </nav>
       )}
       <p className="text-xs text-muted-foreground">
-        Taux de complétion : part des inscriptions terminées avec succès, distincte de la
-        progression moyenne.
+        Taux de complétion : part des inscriptions terminées avec succès pour cette formation.
       </p>
     </section>
   );

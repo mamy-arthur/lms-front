@@ -24,12 +24,18 @@ export function normalizeDashboardFormation(formation: ApiDashboardFormation) {
 }
 
 export function normalizeDashboardOverview(overview: ApiDashboardOverview) {
+  const totalEnrollments = overview.students.total_enrollments;
+  const completedEnrollments = overview.students.status_counts.completed ?? 0;
+
   return {
     catalog: overview.catalog,
     students: {
       uniqueStudents: overview.students.unique_students,
-      totalEnrollments: overview.students.total_enrollments,
-      averageProgress: overview.students.average_progress_percent,
+      totalEnrollments,
+      completionRate:
+        totalEnrollments > 0
+          ? Math.round((10000 * completedEnrollments) / totalEnrollments) / 100
+          : 0,
       statusCounts: normalizeStatusCounts(overview.students.status_counts),
     },
   };

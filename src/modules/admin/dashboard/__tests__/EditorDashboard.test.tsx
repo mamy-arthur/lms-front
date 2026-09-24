@@ -23,7 +23,6 @@ const overview: ApiDashboardOverview = {
   students: {
     unique_students: 2,
     total_enrollments: 6,
-    average_progress_percent: 37.5,
     status_counts: { completed: 2, in_progress: 1, not_started: 1, failed: 1, expired: 1 },
   },
 };
@@ -95,11 +94,9 @@ describe('dashboard éditeur connecté', () => {
       'href',
       '/admin/programs',
     );
-    const progress = screen.getByRole('progressbar', { name: 'Progression moyenne des étudiants' });
-    await waitFor(() => expect(progress).toHaveAttribute('aria-valuenow', '37.5'));
-    expect(
-      screen.getByText(/Moyenne de l’avancement de toutes les inscriptions/),
-    ).toBeInTheDocument();
+    const progress = screen.getByRole('progressbar', { name: 'Taux de complétion global' });
+    await waitFor(() => expect(progress).toHaveAttribute('aria-valuenow', '33.33'));
+    expect(screen.getByText(/Part des inscriptions terminées avec succès/)).toBeInTheDocument();
     expect(api.overview).toHaveBeenCalledTimes(1);
     expect(api.formations).toHaveBeenCalledWith({
       q: '',
@@ -239,7 +236,6 @@ describe('dashboard éditeur connecté', () => {
         students: {
           unique_students: 0,
           total_enrollments: 0,
-          average_progress_percent: 0,
           status_counts: zero,
         },
       },

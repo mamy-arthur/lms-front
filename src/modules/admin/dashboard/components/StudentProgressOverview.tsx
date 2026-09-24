@@ -29,10 +29,13 @@ export function StudentProgressOverview({ students }: { students: DashboardOverv
       <CardContent className="space-y-5">
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="space-y-4 rounded-sm bg-(--color-primary) p-5 text-primary-foreground">
-            <p className="text-sm font-medium">Progression moyenne</p>
-            <AverageProgressIndicator value={students.averageProgress} />
+            <p className="text-sm font-medium">Taux de complétion</p>
+            <AverageProgressIndicator
+              value={students.completionRate}
+              ariaLabel="Taux de complétion global"
+            />
             <p className="text-xs text-primary-foreground/90">
-              Moyenne de l’avancement de toutes les inscriptions, réinscriptions incluses.
+              Part des inscriptions terminées avec succès, réinscriptions incluses.
             </p>
           </div>
 

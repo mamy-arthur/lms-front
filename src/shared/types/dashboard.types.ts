@@ -10,7 +10,6 @@ export interface ApiDashboardOverview {
   students: {
     unique_students: number;
     total_enrollments: number;
-    average_progress_percent: number;
     status_counts: ApiDashboardStatusCounts;
   };
 }
