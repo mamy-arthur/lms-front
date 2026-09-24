@@ -26,7 +26,7 @@ export function StudentAttemptHistory({ attempts }: { attempts: StudentAttemptDe
 
   return (
     <div className="space-y-3">
-      <p className="text-xs text-muted-foreground">
+      <p className="text-xs">
         {attempts.length} tentative{attempts.length > 1 ? 's' : ''} · De la plus ancienne à la plus
         récente. Ouvrez une tentative pour consulter ses étapes.
       </p>

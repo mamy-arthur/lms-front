@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { normalizeSearch } from '@/shared/lib/string/normalizeSearch';
 import {
   enrollmentStatuses,
   formationProgressDemo,
@@ -21,14 +22,6 @@ import {
 } from '../data/studentProgressDemo';
 import { FormationStudentsSheet, type FormationStudentSelection } from './FormationStudentsSheet';
 import { AverageProgressIndicator } from './AverageProgressIndicator';
-
-function normalizeSearch(value: string) {
-  return value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLocaleLowerCase('fr-FR')
-    .trim();
-}
 
 export function FormationProgressCards({
   formations = formationProgressDemo,

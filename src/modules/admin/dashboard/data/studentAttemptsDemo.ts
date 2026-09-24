@@ -178,6 +178,15 @@ export type EnrollmentSummaryDemo = {
   /** Fin de la dernière tentative — absent tant que le parcours est en cours. */
   endedAt?: string;
   dueAt: string;
+  /** Durée d'accès au parcours, en jours : de l'ouverture jusqu'à l'échéance. */
+  accessDays: number;
+  /**
+   * Dernier jour d'accès réel : l'échéance de l'étudiant, sauf si la formation
+   * expire avant — auquel cas c'est l'expiration qui s'applique.
+   */
+  accessEndsAt: string;
+  /** Vrai quand c'est l'expiration de la formation qui écourte l'accès. */
+  cappedByFormation: boolean;
   attempts: number;
   /** Temps passé cumulé sur toutes les tentatives, en minutes. */
   minutes: number;
@@ -195,14 +204,21 @@ export function getDemoEnrollmentSummary(
   studentId: string,
   now: number = Date.now(),
 ): EnrollmentSummaryDemo {
-  const { dueAt } = getEnrollmentDates(studentId);
+  // `openedAt` est l'ouverture de l'accès, qui existe même sans tentative —
+  // contrairement à `startedAt` ci-dessous, absent tant que rien n'est commencé.
+  const { startedAt: openedAt, dueAt } = getEnrollmentDates(studentId);
   const attempts = getDemoStudentAttempts(formation, status, studentId);
   const endedAt = attempts[attempts.length - 1]?.endedAt;
+  const formationExpiresAt = Date.parse(formation.expiresAt);
+  const cappedByFormation = formationExpiresAt < dueAt;
 
   return {
     startedAt: attempts[0]?.startedAt,
     endedAt,
     dueAt: new Date(dueAt).toISOString(),
+    accessDays: Math.round((dueAt - openedAt) / DAY_MS),
+    accessEndsAt: new Date(cappedByFormation ? formationExpiresAt : dueAt).toISOString(),
+    cappedByFormation,
     attempts: attempts.length,
     minutes: attempts.reduce((total, attempt) => total + getAttemptMinutes(attempt.steps), 0),
     lateness: endedAt
@@ -220,6 +236,16 @@ export function formatAttemptDuration(minutes: number) {
   const remainder = minutes % 60;
   if (!hours) return `${remainder} min`;
   return `${hours} h${remainder ? ` ${remainder} min` : ''}`;
+}
+
+/** Format numérique JJ/MM/AAAA, pour les dates de gestion (accès, expiration). */
+export function formatShortDate(date: string) {
+  return new Intl.DateTimeFormat('fr-FR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(new Date(date));
 }
 
 export function formatAttemptDate(date: string) {

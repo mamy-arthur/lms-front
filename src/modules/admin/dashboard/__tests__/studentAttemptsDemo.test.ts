@@ -157,6 +157,7 @@ describe('synthèse d’inscription', () => {
       startedAt: attempts[0].startedAt,
       endedAt: attempts[1].endedAt,
       dueAt: '2026-10-09T09:00:00.000Z',
+      accessDays: 35,
       attempts: 2,
       minutes: 570,
       lateness: 'on_time',
@@ -178,6 +179,7 @@ describe('synthèse d’inscription', () => {
       startedAt: undefined,
       endedAt: undefined,
       dueAt: '2026-09-11T09:00:00.000Z',
+      accessDays: 7,
       attempts: 0,
       minutes: 0,
       lateness: 'late',
@@ -200,6 +202,23 @@ describe('synthèse d’inscription', () => {
     expect(summary.endedAt).toBeUndefined();
     expect(summary.startedAt).toBeDefined();
     expect(summary.attempts).toBe(2);
+  });
+
+  it('expose une durée d’accès cohérente avec l’échéance', () => {
+    const durations = new Set(
+      formationProgressDemo.flatMap((item) =>
+        enrollmentStatuses.flatMap(({ key }) =>
+          getDemoFormationStudents(item, key).map((student) => {
+            const summary = getDemoEnrollmentSummary(item, key, student.id, now);
+            // L'accès court de l'ouverture à l'échéance, tentative ou pas.
+            expect(summary.accessDays).toBeGreaterThan(0);
+            return summary.accessDays;
+          }),
+        ),
+      ),
+    );
+
+    expect([...durations].sort((a, b) => a - b)).toEqual([7, 14, 21, 28, 35]);
   });
 
   it('ne compte pas les étapes verrouillées dans le temps passé', () => {

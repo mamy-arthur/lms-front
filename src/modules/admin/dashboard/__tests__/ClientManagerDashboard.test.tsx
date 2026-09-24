@@ -211,8 +211,8 @@ describe('ClientManagerDashboard', () => {
       });
       trigger.focus();
       await user.keyboard('{Enter}');
-      const dialog = await screen.findByRole('dialog', { name: `Étudiants · ${status.label}` });
-      expect(within(dialog).getByText(formation.name)).toBeInTheDocument();
+      // Le panneau charge tout l'effectif, mais s'ouvre filtré sur le badge cliqué.
+      const dialog = await screen.findByRole('dialog', { name: formation.name });
       const [, body] = within(
         within(dialog).getByRole('table', { name: 'Étudiants concernés' }),
       ).getAllByRole('rowgroup');
@@ -239,6 +239,9 @@ describe('ClientManagerDashboard', () => {
             id: 'empty',
             name: 'Formation vide',
             isPublished: false,
+            theoreticalMinutes: 60,
+            expiresAt: '2026-12-31T23:59:59.000Z',
+            completionCriterion: 'Évaluation finale réussie',
             completed: 0,
             in_progress: 0,
             not_started: 0,

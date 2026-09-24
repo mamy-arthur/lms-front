@@ -8,18 +8,29 @@ import {
 import { FormationProgressCards } from '../components/FormationProgressCards';
 import {
   formationProgressDemo,
+  getDemoFormationRoster,
   getDemoFormationStudents,
   type DashboardEnrollmentStatus,
 } from '../data/studentProgressDemo';
 import {
   formatAttemptDate,
   formatAttemptDuration,
+  formatShortDate,
   getAttemptMinutes,
   getDemoEnrollmentSummary,
   getDemoStudentAttempts,
 } from '../data/studentAttemptsDemo';
 
 const formation = formationProgressDemo[0];
+
+/** Les quatre statuts à zéro : le seul moyen d'obtenir un effectif vide. */
+const EMPTY_FORMATION = {
+  ...formation,
+  completed: 0,
+  in_progress: 0,
+  not_started: 0,
+  failed: 0,
+};
 
 /** Lignes d'étudiants : en-tête et ligne d'état vide (une seule cellule) exclus. */
 function studentRows() {
@@ -148,10 +159,18 @@ describe('panneau des tentatives étudiantes', () => {
       within(screen.getByRole('table', { name: 'Étudiants concernés' }))
         .getAllByRole('columnheader')
         .map((column) => column.textContent),
-    ).toEqual(['Étudiant', 'Début', 'Fin', 'Temps passé', 'Tentatives', 'Échéance', 'Statut']);
+    ).toEqual([
+      'Étudiant',
+      'Début',
+      'Fin',
+      'Temps passé',
+      'Tentatives',
+      'Accès valable jusqu’au',
+      'Statut',
+    ]);
   });
 
-  it('range dates, temps passé, tentatives et échéance dans les colonnes', () => {
+  it('range dates, temps passé, tentatives, accès et statut dans les colonnes', () => {
     render(<Harness status="failed" />);
 
     studentRows().forEach((row, index) => {
@@ -165,9 +184,70 @@ describe('panneau des tentatives étudiantes', () => {
       expect(cells[2]).toHaveTextContent(formatAttemptDate(summary.endedAt!));
       expect(cells[3]).toHaveTextContent(formatAttemptDuration(summary.minutes));
       expect(cells[4]).toHaveTextContent(String(summary.attempts));
-      expect(cells[5]).toHaveTextContent(formatAttemptDate(summary.dueAt));
-      expect(cells[6]).toHaveTextContent(/Dans les temps|En retard|Terminé en retard/);
+      expect(cells[5]).toHaveTextContent(formatShortDate(summary.accessEndsAt));
+      expect(cells[6]).toHaveTextContent('Échoué');
     });
+  });
+
+  it('affiche la durée théorique et l’expiration de la formation en en-tête', () => {
+    render(<Harness status="failed" />);
+    const header = screen.getByRole('dialog');
+
+    expect(within(header).getByText('Durée théorique').nextElementSibling).toHaveTextContent(
+      formatAttemptDuration(formation.theoreticalMinutes),
+    );
+    expect(
+      within(header).getByText('Expiration de la formation').nextElementSibling,
+    ).toHaveTextContent(formatShortDate(formation.expiresAt));
+    expect(
+      within(header).getByText(`Critère de fin : ${formation.completionCriterion}`),
+    ).toBeInTheDocument();
+  });
+
+  it('plafonne la date de fin d’accès à l’expiration de la formation', () => {
+    // demo-4 expire avant l'échéance de certains étudiants.
+    const shortLived = formationProgressDemo[3];
+    const capped = getDemoFormationRoster(shortLived).find(
+      (item) => getDemoEnrollmentSummary(shortLived, item.status, item.id).cappedByFormation,
+    )!;
+    const summary = getDemoEnrollmentSummary(shortLived, capped.status, capped.id);
+
+    expect(Date.parse(summary.dueAt)).toBeGreaterThan(Date.parse(shortLived.expiresAt));
+    expect(summary.accessEndsAt).toBe(shortLived.expiresAt);
+  });
+
+  it('colore le temps passé en vert sous la durée théorique, en rouge au-dessus', async () => {
+    const user = userEvent.setup();
+    render(<Harness status="failed" />);
+    // Tout l'effectif : le statut « échoué » seul ne couvre pas les deux cas.
+    await user.click(
+      within(screen.getByRole('group', { name: 'Filtrer par statut' })).getByRole('button', {
+        name: /^Tous/,
+      }),
+    );
+
+    const seen = new Set<string>();
+    studentRows().forEach((row) => {
+      const id = within(row).getByRole('button').getAttribute('aria-label')!;
+      const entry = getDemoFormationRoster(formation).find(
+        (item) => `Voir les tentatives de ${item.name}` === id,
+      )!;
+      const { minutes, attempts } = getDemoEnrollmentSummary(formation, entry.status, entry.id);
+      const cell = within(row).getAllByRole('cell')[3];
+
+      if (!attempts) {
+        // Sans tentative, aucun temps à juger : ni vert ni rouge.
+        expect(cell).toHaveClass('text-muted-foreground');
+        seen.add('neutre');
+        return;
+      }
+      const expected = minutes < formation.theoreticalMinutes ? 'text-emerald-600' : 'text-red-600';
+      expect(cell).toHaveClass(expected);
+      seen.add(expected);
+    });
+
+    // Les trois états sont bien exercés par les fixtures.
+    expect(seen).toEqual(new Set(['text-emerald-600', 'text-red-600', 'neutre']));
   });
 
   it('cumule le temps passé sur toutes les tentatives', () => {
@@ -276,12 +356,12 @@ describe('panneau des tentatives étudiantes', () => {
   it('affiche un état vide lorsque la liste ne contient aucun étudiant', () => {
     render(
       <FormationStudentsSheet
-        selection={{ formation: { ...formation, failed: 0 }, status: 'failed' }}
+        selection={{ formation: EMPTY_FORMATION, status: 'failed' }}
         onClose={() => {}}
         onRestoreFocus={() => {}}
       />,
     );
-    expect(screen.getByText('Aucun étudiant dans ce statut.')).toBeInTheDocument();
+    expect(screen.getByText('Aucun étudiant inscrit à cette formation.')).toBeInTheDocument();
     expect(studentRows()).toHaveLength(0);
     expect(screen.queryByRole('region', { name: /^Tentatives de/ })).not.toBeInTheDocument();
   });
@@ -394,5 +474,166 @@ describe('panneau des tentatives étudiantes', () => {
     await user.keyboard('{Escape}');
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(badge).toHaveFocus();
+  });
+});
+
+describe('recherche d’étudiants', () => {
+  // 30 étudiants : assez pour que filtrer ait un effet observable.
+  const status = 'completed' as const;
+  const students = getDemoFormationStudents(formation, status);
+  // Le panneau charge tout l'effectif, le compteur s'y réfère.
+  const roster = getDemoFormationRoster(formation);
+
+  function searchBox() {
+    return screen.getByRole('searchbox', { name: 'Rechercher un étudiant' });
+  }
+
+  it('filtre sur le nom sans tenir compte des accents, de la casse et des espaces', async () => {
+    const user = userEvent.setup();
+    render(<Harness status={status} />);
+    expect(studentRows()).toHaveLength(students.length);
+
+    await user.type(searchBox(), '  ETUDIANT 007  ');
+
+    const rows = studentRows();
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toHaveTextContent('Étudiant 007');
+  });
+
+  it('filtre aussi sur l’e-mail', async () => {
+    const user = userEvent.setup();
+    render(<Harness status={status} />);
+
+    await user.type(searchBox(), 'etudiant.012@');
+
+    const rows = studentRows();
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toHaveTextContent('etudiant.012@example.com');
+  });
+
+  it('annonce le nombre de résultats', async () => {
+    const user = userEvent.setup();
+    render(<Harness status={status} />);
+    expect(screen.getByRole('status')).toHaveTextContent(
+      `${students.length} sur ${roster.length} étudiants`,
+    );
+
+    await user.type(searchBox(), '007');
+
+    expect(screen.getByRole('status')).toHaveTextContent(`1 sur ${roster.length} étudiants`);
+  });
+
+  it('propose d’effacer une recherche sans résultat', async () => {
+    const user = userEvent.setup();
+    render(<Harness status={status} />);
+    await user.type(searchBox(), 'introuvable');
+
+    expect(studentRows()).toHaveLength(0);
+    expect(screen.getByText('Aucun étudiant ne correspond à votre recherche.')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Effacer la recherche' }));
+
+    expect(searchBox()).toHaveValue('');
+    expect(studentRows()).toHaveLength(students.length);
+  });
+
+  it('garde l’historique ouvert même si l’étudiant sort des résultats', async () => {
+    const user = userEvent.setup();
+    render(<Harness status={status} />);
+    await user.click(
+      screen.getByRole('button', { name: `Voir les tentatives de ${students[0].name}` }),
+    );
+
+    await user.type(searchBox(), '030');
+
+    expect(studentRows()).toHaveLength(1);
+    expect(
+      screen.getByRole('region', { name: `Tentatives de ${students[0].name}` }),
+    ).toBeInTheDocument();
+  });
+
+  it('n’affiche ni recherche ni badges quand l’effectif est vide', () => {
+    render(
+      <FormationStudentsSheet
+        selection={{ formation: EMPTY_FORMATION, status: 'failed' }}
+        onClose={() => {}}
+        onRestoreFocus={() => {}}
+      />,
+    );
+
+    expect(screen.queryByRole('searchbox')).not.toBeInTheDocument();
+    expect(screen.getByText('Aucun étudiant inscrit à cette formation.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Effacer la recherche' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: 'Filtrer par statut' })).not.toBeInTheDocument();
+  });
+});
+
+describe('filtres par statut', () => {
+  const roster = getDemoFormationRoster(formation);
+
+  function filterBadge(name: RegExp | string) {
+    return within(screen.getByRole('group', { name: 'Filtrer par statut' })).getByRole('button', {
+      name,
+    });
+  }
+
+  it('affiche un badge par statut avec son effectif', () => {
+    render(<Harness status="failed" />);
+    expect(
+      within(screen.getByRole('group', { name: 'Filtrer par statut' }))
+        .getAllByRole('button')
+        .map((badge) => badge.textContent),
+    ).toEqual([
+      `Tous (${roster.length})`,
+      `Terminé (${formation.completed})`,
+      `En cours (${formation.in_progress})`,
+      `Non commencé (${formation.not_started})`,
+      `Échoué (${formation.failed})`,
+    ]);
+  });
+
+  it('s’ouvre sur le statut cliqué depuis le tableau de bord', () => {
+    render(<Harness status="in_progress" />);
+
+    expect(filterBadge(/^En cours/)).toHaveAttribute('aria-pressed', 'true');
+    expect(filterBadge(/^Tous/)).toHaveAttribute('aria-pressed', 'false');
+    expect(studentRows()).toHaveLength(formation.in_progress);
+  });
+
+  it('bascule sur « Tous » et affiche l’effectif complet', async () => {
+    const user = userEvent.setup();
+    render(<Harness status="failed" />);
+    expect(studentRows()).toHaveLength(formation.failed);
+
+    await user.click(filterBadge(/^Tous/));
+
+    expect(filterBadge(/^Tous/)).toHaveAttribute('aria-pressed', 'true');
+    expect(studentRows()).toHaveLength(roster.length);
+  });
+
+  it('restreint le tableau au statut choisi', async () => {
+    const user = userEvent.setup();
+    render(<Harness status="failed" />);
+
+    await user.click(filterBadge(/^Non commencé/));
+
+    const rows = studentRows();
+    expect(rows).toHaveLength(formation.not_started);
+    rows.forEach((row) =>
+      expect(within(row).getAllByRole('cell')[6]).toHaveTextContent('Non commencé'),
+    );
+  });
+
+  it('combine filtre de statut et recherche', async () => {
+    const user = userEvent.setup();
+    render(<Harness status="failed" />);
+    await user.click(filterBadge(/^Terminé/));
+
+    await user.type(screen.getByRole('searchbox', { name: 'Rechercher un étudiant' }), '007');
+
+    const rows = studentRows();
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toHaveTextContent('Étudiant 007');
+    expect(rows[0]).toHaveTextContent('Terminé');
   });
 });
