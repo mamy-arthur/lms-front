@@ -1,3 +1,7 @@
+/**
+ * Données de démo du panneau étudiants, en attente de son branchement API (ticket suivant).
+ * Le dashboard Éditeur n'en dépend plus : sa config de statuts est `data/enrollmentStatuses.ts`.
+ */
 export const enrollmentStatuses = [
   {
     key: 'completed',

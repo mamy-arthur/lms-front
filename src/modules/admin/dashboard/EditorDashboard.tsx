@@ -33,11 +33,12 @@ export function EditorDashboard() {
           <p className="text-sm">Impossible de charger la synthèse du tableau de bord.</p>
           <Button
             variant="outline"
+            disabled={overview.isFetching}
             onClick={() => {
               void overview.refetch();
             }}
           >
-            Réessayer la synthèse
+            {overview.isFetching ? 'Nouvelle tentative…' : 'Réessayer la synthèse'}
           </Button>
         </div>
       ) : overview.data ? (

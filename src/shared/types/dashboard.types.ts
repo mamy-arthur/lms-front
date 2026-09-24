@@ -2,6 +2,8 @@ import type { EnrollmentStatus } from './enrollment.types';
 
 export type DashboardFormationSort = 'enrolled' | 'completion' | 'failed';
 export type DashboardStatusCounts = Record<EnrollmentStatus, number>;
+/** Le backend peut omettre les statuts sans inscription : la normalisation les remet à 0. */
+export type ApiDashboardStatusCounts = Partial<DashboardStatusCounts>;
 
 export interface ApiDashboardOverview {
   catalog: { total: number; published: number; unpublished: number };
@@ -9,7 +11,7 @@ export interface ApiDashboardOverview {
     unique_students: number;
     total_enrollments: number;
     average_progress_percent: number;
-    status_counts: DashboardStatusCounts;
+    status_counts: ApiDashboardStatusCounts;
   };
 }
 
@@ -19,7 +21,7 @@ export interface ApiDashboardFormation {
   is_published: boolean;
   total_enrollments: number;
   completion_rate: number;
-  status_counts: DashboardStatusCounts;
+  status_counts: ApiDashboardStatusCounts;
 }
 
 export interface DashboardFormationsParams {

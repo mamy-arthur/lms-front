@@ -49,6 +49,8 @@ export function FormationProgressCards({
   onRetry,
 }: FormationProgressCardsProps) {
   const pages = Math.max(1, Math.ceil(total / perPage));
+  // Le serveur peut renvoyer moins de pages que demandé si le catalogue a rétréci entre-temps.
+  const currentPage = Math.min(Math.max(page, 1), pages);
 
   return (
     <section aria-labelledby="formation-progress-title" className="space-y-3">
@@ -58,7 +60,7 @@ export function FormationProgressCards({
             Suivi des étudiants par formation
           </h2>
           <p className="text-xs text-muted-foreground">
-            Toutes les inscriptions du tenant par statut, réinscriptions incluses.
+            Toutes les inscriptions par statut, réinscriptions incluses.
           </p>
         </div>
       </header>
@@ -106,8 +108,8 @@ export function FormationProgressCards({
       {isError ? (
         <div role="alert" className="space-y-3 rounded-sm border p-5">
           <p className="text-sm">Impossible de charger les formations.</p>
-          <Button variant="outline" onClick={onRetry}>
-            Réessayer les formations
+          <Button variant="outline" onClick={onRetry} disabled={isFetching}>
+            {isFetching ? 'Nouvelle tentative…' : 'Réessayer les formations'}
           </Button>
         </div>
       ) : isLoading ? (
@@ -171,6 +173,7 @@ export function FormationProgressCards({
                       <Badge
                         key={status.key}
                         variant="outline"
+                        role="img"
                         className={`${status.badgeClassName} h-6`}
                         aria-label={`${status.label} : ${formation.statusCounts[status.key]} — ${formation.name}`}
                       >
@@ -188,24 +191,24 @@ export function FormationProgressCards({
           })}
         </ul>
       )}
-      {!isLoading && !isError && (pages > 1 || page > 1) && (
+      {!isLoading && !isError && (pages > 1 || currentPage > 1) && (
         <nav aria-label="Pagination des formations" className="flex items-center justify-end gap-3">
           <Button
             variant="outline"
             size="sm"
-            disabled={page <= 1 || isFetching}
-            onClick={() => onPageChange(page - 1)}
+            disabled={currentPage <= 1 || isFetching}
+            onClick={() => onPageChange(currentPage - 1)}
           >
             Précédent
           </Button>
           <span className="text-xs text-muted-foreground">
-            Page {page} sur {pages}
+            Page {currentPage} sur {pages}
           </span>
           <Button
             variant="outline"
             size="sm"
-            disabled={page >= pages || isFetching}
-            onClick={() => onPageChange(page + 1)}
+            disabled={currentPage >= pages || isFetching}
+            onClick={() => onPageChange(currentPage + 1)}
           >
             Suivant
           </Button>

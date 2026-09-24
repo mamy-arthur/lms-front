@@ -6,6 +6,8 @@ import type { DashboardFormationSort } from '@/shared/types/dashboard.types';
 import { useEditorDashboardFormationsQuery } from '../hooks/useEditorDashboardQuery';
 import { FormationProgressCards } from './FormationProgressCards';
 
+const PER_PAGE = 20;
+
 export function FormationProgressSection() {
   const [filters, setFilters] = useState<{
     search: string;
@@ -16,27 +18,28 @@ export function FormationProgressSection() {
     page: 1,
     sort: 'enrolled',
   });
-  const debounced = useDebounce(filters);
+  // Seule la saisie est débouncée : tri et pagination sont des actions discrètes.
+  const debouncedSearch = useDebounce(filters.search);
   const query = useEditorDashboardFormationsQuery({
-    q: debounced.search.trim(),
-    sort_by: debounced.sort,
-    page: debounced.page,
-    per_page: 20,
+    q: debouncedSearch.trim(),
+    sort_by: filters.sort,
+    page: filters.page,
+    per_page: PER_PAGE,
   });
 
   return (
     <FormationProgressCards
       formations={query.data?.formations ?? []}
       total={query.data?.meta.total ?? 0}
-      page={query.data?.meta.page ?? debounced.page}
-      perPage={query.data?.meta.per_page ?? 20}
+      page={filters.page}
+      perPage={query.data?.meta.per_page ?? PER_PAGE}
       search={filters.search}
       sort={filters.sort}
       onSearchChange={(search) => setFilters((previous) => ({ ...previous, search, page: 1 }))}
       onSortChange={(sort) => setFilters((previous) => ({ ...previous, sort, page: 1 }))}
       onPageChange={(page) => setFilters((previous) => ({ ...previous, page }))}
       isLoading={query.isPending}
-      isFetching={query.isFetching || filters !== debounced}
+      isFetching={query.isFetching || debouncedSearch !== filters.search}
       isError={query.isError}
       onRetry={() => {
         void query.refetch();

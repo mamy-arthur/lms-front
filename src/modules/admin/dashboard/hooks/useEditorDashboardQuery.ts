@@ -6,6 +6,9 @@ import type { DashboardFormationsParams } from '@/shared/types/dashboard.types';
 import { editorDashboardApi } from '../api';
 import { normalizeDashboardFormation, normalizeDashboardOverview } from '../types';
 
+const isSameScope = (previousKey: readonly unknown[], scopeKey: readonly unknown[]) =>
+  scopeKey.every((part, index) => previousKey[index] === part);
+
 function useDashboardScope() {
   const tenantId = useTenantStore((state) => state.tenant?.id);
   const userId = useAuthStore((state) => state.user?.id);
@@ -39,5 +42,8 @@ export function useEditorDashboardFormationsQuery(params: DashboardFormationsPar
     enabled: scope.enabled,
     staleTime: 30_000,
     refetchOnMount: 'always',
+    // Conserve la page affichée pendant un changement de filtre, jamais entre deux identités.
+    placeholderData: (previous, previousQuery) =>
+      previousQuery && isSameScope(previousQuery.queryKey, scope.key) ? previous : undefined,
   });
 }

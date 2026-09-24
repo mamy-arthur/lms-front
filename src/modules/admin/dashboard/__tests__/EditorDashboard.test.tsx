@@ -4,7 +4,11 @@ import userEvent from '@testing-library/user-event';
 import { Role } from '@/shared/constants/roles';
 import { useAuthStore } from '@/shared/stores/auth.store';
 import { useTenantStore } from '@/shared/stores/tenant.store';
-import type { ApiDashboardFormation, ApiDashboardOverview } from '@/shared/types/dashboard.types';
+import type {
+  ApiDashboardFormation,
+  ApiDashboardOverview,
+  ApiDashboardPage,
+} from '@/shared/types/dashboard.types';
 import { EditorDashboard } from '../EditorDashboard';
 import { editorDashboardApi } from '../api';
 import { ReenrollmentBadge } from '../components/ReenrollmentBadge';
@@ -306,6 +310,92 @@ describe('dashboard éditeur connecté', () => {
     expect(api.overview).toHaveBeenCalledTimes(2);
     expect(api.formations).toHaveBeenCalledTimes(2);
     client.clear();
+  });
+
+  it('affiche zéro pour un statut absent de la réponse serveur', async () => {
+    api.overview.mockResolvedValue({
+      data: { ...overview, students: { ...overview.students, status_counts: { completed: 4 } } },
+    });
+    api.formations.mockResolvedValue({
+      data: [{ ...formation, status_counts: { completed: 4 } }],
+      meta: { total: 1, page: 1, per_page: 20 },
+    });
+    renderDashboard();
+    await screen.findByRole('heading', { name: formation.name });
+    const card = within(formationSection()).getByRole('listitem');
+    expect(
+      within(card).getByLabelText(`Terminées avec succès : 4 — ${formation.name}`),
+    ).toBeInTheDocument();
+    dashboardEnrollmentStatuses
+      .filter((status) => status.key !== 'completed')
+      .forEach((status) => {
+        expect(
+          within(card).getByLabelText(`${status.label} : 0 — ${formation.name}`),
+        ).toBeInTheDocument();
+      });
+    const expiredEntry = screen.getByText('Expirées').closest('div') as HTMLElement;
+    expect(within(expiredEntry).getByRole('definition')).toHaveTextContent('0');
+  });
+
+  it('conserve la liste et la pagination pendant le chargement d’une autre page', async () => {
+    let resolveSecondPage!: (page: ApiDashboardPage<ApiDashboardFormation>) => void;
+    api.formations
+      .mockResolvedValueOnce({
+        data: [{ ...formation, name: 'Formation page 1' }],
+        meta: { total: 21, page: 1, per_page: 20 },
+      })
+      .mockReturnValueOnce(
+        new Promise((resolve) => {
+          resolveSecondPage = resolve;
+        }),
+      );
+    const user = userEvent.setup();
+    renderDashboard();
+    await screen.findByRole('heading', { name: 'Formation page 1' });
+    await user.click(screen.getByRole('button', { name: 'Suivant' }));
+    expect(screen.getByRole('heading', { name: 'Formation page 1' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('navigation', { name: 'Pagination des formations' }),
+    ).toBeInTheDocument();
+    resolveSecondPage({
+      data: [{ ...formation, name: 'Formation page 2' }],
+      meta: { total: 21, page: 2, per_page: 20 },
+    });
+    expect(await screen.findByRole('heading', { name: 'Formation page 2' })).toBeInTheDocument();
+  });
+
+  it('remplace l’erreur par un chargement pendant la nouvelle tentative', async () => {
+    api.formations
+      .mockRejectedValueOnce(new Error('indisponible'))
+      .mockReturnValueOnce(new Promise(() => {}));
+    const user = userEvent.setup();
+    renderDashboard();
+    await user.click(await screen.findByRole('button', { name: 'Réessayer les formations' }));
+    expect(screen.getByText('Chargement des formations…')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Réessayer les formations' }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText('Aucune formation à afficher.')).not.toBeInTheDocument();
+  });
+
+  it('ramène la pagination dans les bornes quand le serveur renvoie moins de pages', async () => {
+    api.formations
+      .mockResolvedValueOnce({
+        data: [{ ...formation, name: 'Formation page 1' }],
+        meta: { total: 21, page: 1, per_page: 20 },
+      })
+      .mockResolvedValueOnce({
+        data: [{ ...formation, name: 'Formation restante' }],
+        meta: { total: 5, page: 1, per_page: 20 },
+      });
+    const user = userEvent.setup();
+    renderDashboard();
+    await screen.findByRole('heading', { name: 'Formation page 1' });
+    await user.click(screen.getByRole('button', { name: 'Suivant' }));
+    await screen.findByRole('heading', { name: 'Formation restante' });
+    expect(
+      screen.queryByRole('navigation', { name: 'Pagination des formations' }),
+    ).not.toBeInTheDocument();
   });
 });
 
