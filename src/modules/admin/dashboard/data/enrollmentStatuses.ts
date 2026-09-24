@@ -33,14 +33,6 @@ export const dashboardEnrollmentStatuses = [
     badgeClassName:
       'border-red-200 bg-red-50 text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300',
   },
-  {
-    key: 'expired',
-    label: 'Expirées',
-    badgeLabel: 'expirées',
-    color: 'bg-violet-500',
-    badgeClassName:
-      'border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-900 dark:bg-violet-950 dark:text-violet-300',
-  },
 ] as const satisfies ReadonlyArray<{
   key: EnrollmentStatus;
   label: string;

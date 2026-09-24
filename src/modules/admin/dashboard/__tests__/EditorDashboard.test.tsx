@@ -109,7 +109,7 @@ describe('dashboard éditeur connecté', () => {
     });
   });
 
-  it('affiche les cinq statuts, les réinscriptions comptées et le taux de complétion serveur', async () => {
+  it('affiche les statuts suivis, les réinscriptions comptées et le taux de complétion serveur', async () => {
     renderDashboard();
     await screen.findByRole('heading', { name: formation.name });
     const card = within(formationSection()).getByRole('listitem');
@@ -121,6 +121,7 @@ describe('dashboard éditeur connecté', () => {
       expect(badge).toHaveClass(...status.badgeClassName.split(' '));
       expect(badge.tagName).toBe('SPAN');
     });
+    expect(screen.queryByText(/Expirées|expirées/)).not.toBeInTheDocument();
     await waitFor(() =>
       expect(within(card).getByRole('progressbar')).toHaveAttribute('aria-valuenow', '33'),
     );
@@ -333,8 +334,8 @@ describe('dashboard éditeur connecté', () => {
           within(card).getByLabelText(`${status.label} : 0 — ${formation.name}`),
         ).toBeInTheDocument();
       });
-    const expiredEntry = screen.getByText('Expirées').closest('div') as HTMLElement;
-    expect(within(expiredEntry).getByRole('definition')).toHaveTextContent('0');
+    const failedEntry = screen.getByText('Échouées').closest('div') as HTMLElement;
+    expect(within(failedEntry).getByRole('definition')).toHaveTextContent('0');
   });
 
   it('conserve la liste et la pagination pendant le chargement d’une autre page', async () => {

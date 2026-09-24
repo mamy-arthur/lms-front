@@ -55,7 +55,7 @@ export function StudentProgressOverview({ students }: { students: DashboardOverv
                 />
               ))}
             </div>
-            <dl className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+            <dl className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               {enrollments.map((status) => (
                 <div
                   key={status.label}
