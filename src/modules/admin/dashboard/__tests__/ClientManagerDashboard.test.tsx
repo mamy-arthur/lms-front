@@ -213,7 +213,10 @@ describe('ClientManagerDashboard', () => {
       await user.keyboard('{Enter}');
       const dialog = await screen.findByRole('dialog', { name: `Étudiants · ${status.label}` });
       expect(within(dialog).getByText(formation.name)).toBeInTheDocument();
-      const rows = within(dialog).getAllByRole('listitem');
+      const [, body] = within(
+        within(dialog).getByRole('table', { name: 'Étudiants concernés' }),
+      ).getAllByRole('rowgroup');
+      const rows = within(body).getAllByRole('row');
       const students = getDemoFormationStudents(formation, status.key);
       expect(rows).toHaveLength(formation[status.key]);
       rows.forEach((row, index) => {
