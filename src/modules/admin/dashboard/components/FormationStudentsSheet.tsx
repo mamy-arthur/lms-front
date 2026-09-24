@@ -161,10 +161,13 @@ function FormationStudentsContent({
                 alerte : `role` est neutralisé pour ne pas créer une live region
                 sur une donnée purement informative et jamais mise à jour.
               */}
-              <Alert role={undefined} className="w-auto border">
+              <Alert
+                role={undefined}
+                className="w-auto border bg-amber-50 border-amber-100 text-amber-600 rounded-sm"
+              >
                 <Clock aria-hidden="true" />
                 <AlertTitle>Durée théorique</AlertTitle>
-                <AlertDescription className="font-semibold tabular-nums text-foreground">
+                <AlertDescription className="tabular-nums text-amber-600">
                   {formatAttemptDuration(selection.formation.theoreticalMinutes)}
                 </AlertDescription>
               </Alert>
@@ -225,7 +228,7 @@ function FormationStudentsContent({
                   type="button"
                   aria-pressed={statusFilter === null}
                   onClick={() => setStatusFilter(null)}
-                  className="rounded-sm border px-2 py-1 text-xs transition-colors hover:bg-muted aria-pressed:border-(--color-primary) aria-pressed:bg-(--color-primary)/10 aria-pressed:font-semibold"
+                  className="rounded-sm  px-2 py-1 text-xs transition-colors hover:bg-muted aria-pressed:border-(--color-primary) aria-pressed:bg-(--color-primary)/10"
                 >
                   Tous ({students.length})
                 </button>
@@ -236,7 +239,7 @@ function FormationStudentsContent({
                     aria-pressed={statusFilter === value}
                     onClick={() => setStatusFilter(value)}
                     className={cn(
-                      'rounded-sm border px-2 py-1 text-xs transition-colors hover:brightness-95 aria-pressed:font-semibold aria-pressed:ring-1 aria-pressed:ring-current',
+                      'rounded-sm  px-2 text-xs transition-colors hover:brightness-95 aria-pressed:ring-1 aria-pressed:ring-current',
                       STUDENT_STATUS[value].className,
                     )}
                   >
