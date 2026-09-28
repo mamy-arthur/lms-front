@@ -104,7 +104,11 @@ describe('ClientManagerDashboard', () => {
       expect(within(card).getByRole('definition')).toHaveTextContent(
         String(getEnrollmentCount(formation)),
       );
-      expect(within(card).getAllByRole('button')).toHaveLength(4);
+      // 4 badges de statut + le titre, qui ouvre l'effectif complet.
+      expect(within(card).getAllByRole('button')).toHaveLength(5);
+      expect(
+        within(card).getByRole('button', { name: `Voir les étudiants de ${formation.name}` }),
+      ).toBeInTheDocument();
       enrollmentStatuses.forEach((status) => {
         expect(
           within(card).getByRole('button', {
@@ -200,6 +204,51 @@ describe('ClientManagerDashboard', () => {
     ]);
   });
 
+  it('ouvre l’effectif complet au clic sur la carte, sans filtre de statut', async () => {
+    const user = userEvent.setup();
+    render(<ClientManagerDashboard />);
+    const formation = formationProgressDemo[0];
+
+    const trigger = screen.getByRole('button', {
+      name: `Voir les étudiants de ${formation.name}`,
+    });
+    await user.click(trigger);
+
+    const dialog = await screen.findByRole('dialog', { name: formation.name });
+    expect(within(dialog).getByRole('button', { name: /^Tous/ })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(trigger).toHaveFocus();
+  });
+
+  it('n’ouvre pas l’effectif complet quand on clique un badge de statut', async () => {
+    const user = userEvent.setup();
+    render(<ClientManagerDashboard />);
+    const formation = formationProgressDemo[0];
+
+    // Le badge est dans la carte : sans stopPropagation, le clic remonterait
+    // à la carte et le filtre de statut serait écrasé.
+    await user.click(
+      screen.getByRole('button', {
+        name: `Échouées : ${formation.failed} — ${formation.name}`,
+      }),
+    );
+
+    const dialog = await screen.findByRole('dialog', { name: formation.name });
+    expect(within(dialog).getByRole('button', { name: /^Échoué/ })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(within(dialog).getByRole('button', { name: /^Tous/ })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
+  });
+
   it.each(enrollmentStatuses)(
     'ouvre les étudiants du statut $key et restaure le focus',
     async (status) => {
@@ -251,9 +300,20 @@ describe('ClientManagerDashboard', () => {
       />,
     );
     expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '0');
-    within(formationSection())
-      .getAllByRole('button')
-      .forEach((button) => expect(button).toBeDisabled());
+    // Les badges d'un statut à zéro n'ouvrent rien…
+    enrollmentStatuses.forEach((status) =>
+      expect(
+        within(formationSection()).getByRole('button', {
+          name: `${status.label} : 0 — Formation vide`,
+        }),
+      ).toBeDisabled(),
+    );
+    // …mais la carte reste ouvrable : le panneau y annonce l'absence d'inscrit.
+    expect(
+      within(formationSection()).getByRole('button', {
+        name: 'Voir les étudiants de Formation vide',
+      }),
+    ).toBeEnabled();
   });
 
   it('affiche un état vide lorsque le catalogue ne contient aucune formation', () => {

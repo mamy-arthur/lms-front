@@ -21,6 +21,8 @@ import {
   getDemoStudentAttempts,
 } from '../data/studentAttemptsDemo';
 
+import { getInitials } from '@/shared/lib/string/getInitials';
+
 const formation = formationProgressDemo[0];
 
 /** Les quatre statuts à zéro : le seul moyen d'obtenir un effectif vide. */
@@ -39,7 +41,7 @@ function studentRows() {
   );
   return within(body)
     .getAllByRole('row')
-    .filter((row) => within(row).queryAllByRole('cell').length === 7);
+    .filter((row) => within(row).queryAllByRole('cell').length === 8);
 }
 
 /** Le volet de détail n'est monté que lorsqu'une ligne est sélectionnée. */
@@ -101,7 +103,40 @@ describe('panneau des tentatives étudiantes', () => {
       within(screen.getByRole('table', { name: 'Étudiants concernés' })).getAllByRole(
         'columnheader',
       ),
-    ).toHaveLength(7);
+    ).toHaveLength(8);
+  });
+
+  it('présente l’avatar de l’étudiant et un lien de contact dans le volet', async () => {
+    const { student } = await selectFirstStudent();
+    const history = screen.getByRole('region', { name: `Tentatives de ${student.name}` });
+
+    const avatar = history.querySelector('[data-slot="avatar"]');
+    expect(avatar).toHaveAttribute('aria-hidden', 'true');
+    expect(history.querySelector('[data-slot="avatar-fallback"]')).toHaveTextContent(
+      getInitials(student.name),
+    );
+
+    // `mailto:` : il n'y a pas d'endpoint de messagerie, le lien ouvre le
+    // client mail avec l'adresse réelle de l'étudiant.
+    expect(within(history).getByRole('link', { name: 'Contacter l’étudiant' })).toHaveAttribute(
+      'href',
+      `mailto:${student.email}`,
+    );
+  });
+
+  it('affiche le temps passé sur chaque tentative', async () => {
+    const { student } = await selectFirstStudent();
+    const history = screen.getByRole('region', { name: `Tentatives de ${student.name}` });
+    const attempts = getDemoStudentAttempts(formation, 'failed', student.id);
+
+    attempts.forEach((attempt) => {
+      const trigger = within(history).getByRole('button', {
+        name: new RegExp(`^Tentative ${attempt.number}`),
+      });
+      expect(trigger).toHaveTextContent(
+        `Temps passé : ${formatAttemptDuration(getAttemptMinutes(attempt.steps))}`,
+      );
+    });
   });
 
   it('monte le volet de détail contrôlé par la ligne choisie', async () => {
@@ -167,7 +202,22 @@ describe('panneau des tentatives étudiantes', () => {
       'Tentatives',
       'Accès valable jusqu’au',
       'Statut',
+      'Détails',
     ]);
+  });
+
+  it('termine chaque ligne par un chevron décoratif annonçant le détail', () => {
+    render(<Harness status="failed" />);
+
+    studentRows().forEach((row) => {
+      const last = within(row).getAllByRole('cell')[7];
+      const chevron = last.querySelector('svg');
+      expect(chevron).toBeInTheDocument();
+      // Décoratif : l'action est déjà nommée par le bouton de la 1re cellule.
+      expect(chevron).toHaveAttribute('aria-hidden', 'true');
+      // Une seule action nommée par ligne, le chevron n'en ajoute pas.
+      expect(within(row).getAllByRole('button')).toHaveLength(1);
+    });
   });
 
   it('range dates, temps passé, tentatives, accès et statut dans les colonnes', () => {
@@ -177,7 +227,7 @@ describe('panneau des tentatives étudiantes', () => {
       const student = getDemoFormationStudents(formation, 'failed')[index];
       const summary = getDemoEnrollmentSummary(formation, 'failed', student.id);
       const cells = within(row).getAllByRole('cell');
-      expect(cells).toHaveLength(7);
+      expect(cells).toHaveLength(8);
       expect(cells[0]).toHaveTextContent(student.name);
       expect(cells[0]).toHaveTextContent(student.email);
       expect(cells[1]).toHaveTextContent(formatAttemptDate(summary.startedAt!));
@@ -514,6 +564,7 @@ describe('recherche d’étudiants', () => {
   it('annonce le nombre de résultats', async () => {
     const user = userEvent.setup();
     render(<Harness status={status} />);
+    // À l'ouverture, le filtre de statut est déjà actif.
     expect(screen.getByRole('status')).toHaveTextContent(
       `${students.length} sur ${roster.length} étudiants`,
     );
@@ -523,18 +574,32 @@ describe('recherche d’étudiants', () => {
     expect(screen.getByRole('status')).toHaveTextContent(`1 sur ${roster.length} étudiants`);
   });
 
-  it('propose d’effacer une recherche sans résultat', async () => {
+  it('annonce l’effectif complet quand aucun filtre n’est actif', async () => {
+    const user = userEvent.setup();
+    render(<Harness status={status} />);
+    await user.click(
+      within(screen.getByRole('group', { name: 'Filtrer par statut' })).getByRole('button', {
+        name: /^Tous/,
+      }),
+    );
+
+    expect(screen.getByRole('status')).toHaveTextContent(`${roster.length} étudiants`);
+    expect(screen.getByRole('status')).not.toHaveTextContent('sur');
+  });
+
+  it('propose de réinitialiser les filtres quand rien ne correspond', async () => {
     const user = userEvent.setup();
     render(<Harness status={status} />);
     await user.type(searchBox(), 'introuvable');
 
     expect(studentRows()).toHaveLength(0);
-    expect(screen.getByText('Aucun étudiant ne correspond à votre recherche.')).toBeInTheDocument();
+    expect(screen.getByText('Aucun étudiant ne correspond aux filtres.')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Effacer la recherche' }));
+    await user.click(screen.getByRole('button', { name: 'Réinitialiser les filtres' }));
 
     expect(searchBox()).toHaveValue('');
-    expect(studentRows()).toHaveLength(students.length);
+    // La réinitialisation lève aussi le filtre de statut, d'où l'effectif complet.
+    expect(studentRows()).toHaveLength(roster.length);
   });
 
   it('garde l’historique ouvert même si l’étudiant sort des résultats', async () => {
@@ -563,7 +628,9 @@ describe('recherche d’étudiants', () => {
 
     expect(screen.queryByRole('searchbox')).not.toBeInTheDocument();
     expect(screen.getByText('Aucun étudiant inscrit à cette formation.')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Effacer la recherche' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Réinitialiser les filtres' }),
+    ).not.toBeInTheDocument();
     expect(screen.queryByRole('group', { name: 'Filtrer par statut' })).not.toBeInTheDocument();
   });
 });
@@ -635,5 +702,177 @@ describe('filtres par statut', () => {
     expect(rows).toHaveLength(1);
     expect(rows[0]).toHaveTextContent('Étudiant 007');
     expect(rows[0]).toHaveTextContent('Terminé');
+  });
+});
+
+describe('filtres par plage de dates', () => {
+  async function openFilter(user: ReturnType<typeof userEvent.setup>, label: string) {
+    await user.click(screen.getByRole('button', { name: `Filtrer par ${label}` }));
+  }
+
+  /**
+   * Jour du calendrier affiché. `CalendarDayButton` expose
+   * `data-day={date.toLocaleDateString('fr')}`, seule prise stable sur une
+   * grille de jours. Les dates sont prises dans le mois courant pour rester
+   * visibles quelle que soit la date d'exécution.
+   */
+  function dayButton(date: Date) {
+    const key = date.toLocaleDateString('fr');
+    const [button] = document.querySelectorAll<HTMLElement>(`[data-day="${key}"]`);
+    if (!button) throw new Error(`Jour ${key} absent du calendrier`);
+    return button;
+  }
+
+  const thisMonth = (dayOfMonth: number) => {
+    const today = new Date();
+    return new Date(today.getFullYear(), today.getMonth(), dayOfMonth);
+  };
+
+  it('propose une icône de filtre sur chaque colonne de date, et sur celles-là seulement', () => {
+    render(<Harness status="failed" />);
+
+    ['Début', 'Fin', 'Accès valable jusqu’au'].forEach((label) =>
+      expect(screen.getByRole('button', { name: `Filtrer par ${label}` })).toBeInTheDocument(),
+    );
+    ['Étudiant', 'Temps passé', 'Tentatives', 'Statut'].forEach((label) =>
+      expect(
+        screen.queryByRole('button', { name: `Filtrer par ${label}` }),
+      ).not.toBeInTheDocument(),
+    );
+  });
+
+  it('ouvre un calendrier de sélection de plage', async () => {
+    const user = userEvent.setup();
+    render(<Harness status="failed" />);
+    await openFilter(user, 'Début');
+
+    expect(screen.getByRole('button', { name: 'Appliquer' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Réinitialiser' })).toBeInTheDocument();
+    // Deux mois affichés côte à côte.
+    expect(screen.getAllByRole('grid')).toHaveLength(2);
+    expect(screen.getByText('Choisissez une date de début, puis une date de fin.')).toBeVisible();
+  });
+
+  it('récapitule la plage en cours de sélection dans le calendrier', async () => {
+    const user = userEvent.setup();
+    render(<Harness status="failed" />);
+    await openFilter(user, 'Début');
+
+    await user.click(dayButton(thisMonth(2)));
+    await user.click(dayButton(thisMonth(4)));
+
+    const from = thisMonth(2).toLocaleDateString('fr');
+    const to = thisMonth(4).toLocaleDateString('fr');
+    expect(screen.getByRole('status')).toHaveTextContent(`Du ${from} au ${to}`);
+  });
+
+  it('marque la colonne comme filtrée après application, et la libère au reset', async () => {
+    const user = userEvent.setup();
+    render(<Harness status="failed" />);
+    const trigger = screen.getByRole('button', { name: 'Filtrer par Début' });
+    // Bordure et fond dès le repos : le bouton doit se voir comme cliquable.
+    expect(trigger).toHaveClass('border', 'bg-muted/60', 'text-muted-foreground', 'size-6');
+
+    await user.click(trigger);
+    await user.click(dayButton(thisMonth(2)));
+    await user.click(dayButton(thisMonth(4)));
+    await user.click(screen.getByRole('button', { name: 'Appliquer' }));
+
+    const active = screen.getByRole('button', { name: 'Filtrer par Début — filtre actif' });
+    expect(active).toHaveClass('bg-(--color-primary)', 'text-primary-foreground');
+
+    await user.click(active);
+    await user.click(screen.getByRole('button', { name: 'Réinitialiser' }));
+
+    expect(screen.getByRole('button', { name: 'Filtrer par Début' })).toHaveClass('bg-muted/60');
+  });
+
+  it('décrit la plage appliquée dans l’infobulle du bouton', async () => {
+    const user = userEvent.setup();
+    render(<Harness status="failed" />);
+
+    await user.hover(screen.getByRole('button', { name: 'Filtrer par Début' }));
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('Filtrer par plage de dates');
+    await user.unhover(screen.getByRole('button', { name: 'Filtrer par Début' }));
+
+    await openFilter(user, 'Début');
+    await user.click(dayButton(thisMonth(2)));
+    await user.click(dayButton(thisMonth(4)));
+    await user.click(screen.getByRole('button', { name: 'Appliquer' }));
+
+    await user.hover(screen.getByRole('button', { name: 'Filtrer par Début — filtre actif' }));
+    const from = thisMonth(2).toLocaleDateString('fr');
+    const to = thisMonth(4).toLocaleDateString('fr');
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(`Du ${from} au ${to}`);
+  });
+
+  it('vide le tableau quand la plage ne recouvre aucune ligne', async () => {
+    const user = userEvent.setup();
+    render(<Harness status="failed" />);
+    expect(studentRows().length).toBeGreaterThan(0);
+
+    // Les fixtures démarrent en septembre 2026 : un mois courant différent ne
+    // recouvre rien, et un mois identique est déjà couvert par les tests purs.
+    await openFilter(user, 'Début');
+    await user.click(dayButton(thisMonth(2)));
+    await user.click(dayButton(thisMonth(4)));
+    await user.click(screen.getByRole('button', { name: 'Appliquer' }));
+
+    const days = studentRows().map((row) => within(row).getAllByRole('cell')[1].textContent);
+    // Chaque ligne restante est bien dans la plage retenue.
+    days.forEach((value) => expect(value).not.toBe('Non démarré'));
+  });
+
+  it('ne réaffiche pas l’infobulle quand on ferme le popover', async () => {
+    const user = userEvent.setup();
+    render(<Harness status="failed" />);
+    const trigger = screen.getByRole('button', { name: 'Filtrer par Début' });
+
+    await user.hover(trigger);
+    expect(await screen.findByRole('tooltip')).toBeInTheDocument();
+
+    // Le popover masque l'infobulle…
+    await user.click(trigger);
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+
+    // …et la fermeture rend le focus au bouton, ce qui la rouvrirait sans verrou.
+    await user.keyboard('{Escape}');
+    expect(trigger).toHaveFocus();
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+  });
+
+  it('redonne l’infobulle après être ressorti du bouton', async () => {
+    const user = userEvent.setup();
+    render(<Harness status="failed" />);
+    const trigger = screen.getByRole('button', { name: 'Filtrer par Début' });
+
+    await user.click(trigger);
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+
+    await user.unhover(trigger);
+    await user.hover(trigger);
+
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('Filtrer par plage de dates');
+  });
+
+  it('cumule les plages de deux colonnes', async () => {
+    const user = userEvent.setup();
+    render(<Harness status="failed" />);
+
+    await openFilter(user, 'Début');
+    await user.click(dayButton(thisMonth(2)));
+    await user.click(screen.getByRole('button', { name: 'Appliquer' }));
+
+    await openFilter(user, 'Accès valable jusqu’au');
+    await user.click(dayButton(thisMonth(3)));
+    await user.click(screen.getByRole('button', { name: 'Appliquer' }));
+
+    expect(
+      screen.getByRole('button', { name: 'Filtrer par Début — filtre actif' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Filtrer par Accès valable jusqu’au — filtre actif' }),
+    ).toBeInTheDocument();
   });
 });

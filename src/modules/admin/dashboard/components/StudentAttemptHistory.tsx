@@ -1,4 +1,4 @@
-import { CalendarDays, CircleAlert, History, RotateCcw } from 'lucide-react';
+import { CalendarDays, CircleAlert, History, RotateCcw, Timer } from 'lucide-react';
 import {
   Accordion,
   AccordionContent,
@@ -7,7 +7,12 @@ import {
 } from '@/components/ui/accordion';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { formatAttemptDate, type StudentAttemptDemo } from '../data/studentAttemptsDemo';
+import {
+  formatAttemptDate,
+  formatAttemptDuration,
+  getAttemptMinutes,
+  type StudentAttemptDemo,
+} from '../data/studentAttemptsDemo';
 import { enrollmentStatuses } from '../data/studentProgressDemo';
 import { StudentAttemptDetails } from './StudentAttemptDetails';
 
@@ -64,6 +69,11 @@ export function StudentAttemptHistory({ attempts }: { attempts: StudentAttemptDe
                         <time dateTime={attempt.endedAt}>{formatAttemptDate(attempt.endedAt)}</time>
                       </span>
                     )}
+                    {/* Cumul des étapes abordées, verrouillées exclues. */}
+                    <span className="inline-flex items-center gap-1 font-medium text-foreground">
+                      <Timer aria-hidden="true" className="size-3.5" />
+                      Temps passé : {formatAttemptDuration(getAttemptMinutes(attempt.steps))}
+                    </span>
                   </span>
                 </span>
               </AccordionTrigger>

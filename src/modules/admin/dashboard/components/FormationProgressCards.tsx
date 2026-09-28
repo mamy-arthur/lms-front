@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { GraduationCap, Search, Users } from 'lucide-react';
+import { Search, Users } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -110,15 +110,36 @@ export function FormationProgressCards({
           return (
             <li
               key={formation.id}
-              className="space-y-4 rounded-sm border bg-card p-4 text-card-foreground"
+              // La carte entière ouvre l'effectif complet ; les badges, eux,
+              // ouvrent sur leur statut et stoppent la propagation.
+              onClick={(event) => {
+                triggerRef.current = event.currentTarget.querySelector('button');
+                setSelection({ formation, status: null });
+              }}
+              className="group cursor-pointer space-y-4 rounded-sm border bg-card p-4 text-card-foreground transition-colors hover:border-(--color-primary)"
             >
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <span className="shrink-0 rounded-sm bg-muted p-2 text-muted-foreground">
-                    <GraduationCap className="size-4" aria-hidden="true" />
-                  </span>
                   <div className="min-w-0 space-y-1">
-                    <h3 className="wrap-break-word text-sm font-semibold">{formation.name}</h3>
+                    <h3 className="wrap-break-word text-sm font-semibold">
+                      {/*
+                        Cible clavier réelle : la carte seule ne serait pas
+                        atteignable au Tab ni annoncée comme actionnable.
+                      */}
+                      <button
+                        type="button"
+                        aria-haspopup="dialog"
+                        aria-label={`Voir les étudiants de ${formation.name}`}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          triggerRef.current = event.currentTarget;
+                          setSelection({ formation, status: null });
+                        }}
+                        className="rounded-sm text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      >
+                        {formation.name}
+                      </button>
+                    </h3>
                     <dl>
                       <div className="flex items-center gap-1 text-xs text-muted-foreground">
                         <Users className="size-3" aria-hidden="true" />
@@ -152,6 +173,9 @@ export function FormationProgressCards({
                         aria-haspopup="dialog"
                         aria-label={`${status.label} : ${formation[status.key]} — ${formation.name}`}
                         onClick={(event) => {
+                          // Sans ça, la carte ouvrirait aussi le panneau, mais
+                          // sans filtre : le statut cliqué serait perdu.
+                          event.stopPropagation();
                           triggerRef.current = event.currentTarget;
                           setSelection({ formation, status: status.key });
                         }}
@@ -168,10 +192,6 @@ export function FormationProgressCards({
           );
         })}
       </ul>
-      <p className="text-xs text-muted-foreground">
-        Taux de complétion : part des inscrits ayant terminé avec succès, distincte de la
-        progression moyenne.
-      </p>
       <FormationStudentsSheet
         selection={selection}
         onClose={() => setSelection(null)}
