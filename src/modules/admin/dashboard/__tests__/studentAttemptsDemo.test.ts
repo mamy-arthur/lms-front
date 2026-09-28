@@ -1,6 +1,8 @@
 import {
   formatAttemptDate,
   formatAttemptDuration,
+  getAttemptMinutes,
+  getDemoEnrollmentSummary,
   getDemoStudentAttempts,
 } from '../data/studentAttemptsDemo';
 import {
@@ -139,5 +141,137 @@ describe('historique des tentatives de démonstration', () => {
 
   it('formate les dates françaises de manière stable', () => {
     expect(formatAttemptDate('2026-09-01T23:30:00Z')).toContain('1 sept. 2026');
+  });
+});
+
+describe('synthèse d’inscription', () => {
+  const formation = formationProgressDemo[0];
+  /** Repère fixe : le calcul de retard ne doit pas dépendre de l’horloge. */
+  const now = Date.UTC(2026, 8, 20);
+
+  it('résume un parcours terminé dans les temps', () => {
+    const [student] = getDemoFormationStudents(formation, 'failed');
+    const attempts = getDemoStudentAttempts(formation, 'failed', student.id);
+
+    expect(getDemoEnrollmentSummary(formation, 'failed', student.id, now)).toEqual({
+      startedAt: attempts[0].startedAt,
+      endedAt: attempts[1].endedAt,
+      dueAt: '2026-10-09T09:00:00.000Z',
+      accessDays: 35,
+      attempts: 2,
+      minutes: 570,
+      lateness: 'on_time',
+    });
+  });
+
+  it('signale un parcours terminé après son échéance', () => {
+    const student = getDemoFormationStudents(formation, 'failed')[1];
+    const summary = getDemoEnrollmentSummary(formation, 'failed', student.id, now);
+
+    expect(summary.lateness).toBe('finished_late');
+    expect(Date.parse(summary.endedAt!)).toBeGreaterThan(Date.parse(summary.dueAt));
+  });
+
+  it('signale un parcours jamais démarré dont l’échéance est dépassée', () => {
+    const [student] = getDemoFormationStudents(formation, 'not_started');
+
+    expect(getDemoEnrollmentSummary(formation, 'not_started', student.id, now)).toEqual({
+      startedAt: undefined,
+      endedAt: undefined,
+      dueAt: '2026-09-11T09:00:00.000Z',
+      accessDays: 7,
+      attempts: 0,
+      minutes: 0,
+      lateness: 'late',
+    });
+  });
+
+  it('ne déclare pas en retard un parcours non terminé avant son échéance', () => {
+    const [student] = getDemoFormationStudents(formation, 'not_started');
+    const before = Date.UTC(2026, 8, 5);
+
+    expect(getDemoEnrollmentSummary(formation, 'not_started', student.id, before).lateness).toBe(
+      'on_time',
+    );
+  });
+
+  it('laisse la date de fin ouverte tant que la dernière tentative est en cours', () => {
+    const [student] = getDemoFormationStudents(formation, 'in_progress');
+    const summary = getDemoEnrollmentSummary(formation, 'in_progress', student.id, now);
+
+    expect(summary.endedAt).toBeUndefined();
+    expect(summary.startedAt).toBeDefined();
+    expect(summary.attempts).toBe(2);
+  });
+
+  it('expose une durée d’accès cohérente avec l’échéance', () => {
+    const durations = new Set(
+      formationProgressDemo.flatMap((item) =>
+        enrollmentStatuses.flatMap(({ key }) =>
+          getDemoFormationStudents(item, key).map((student) => {
+            const summary = getDemoEnrollmentSummary(item, key, student.id, now);
+            // L'accès court de l'ouverture à l'échéance, tentative ou pas.
+            expect(summary.accessDays).toBeGreaterThan(0);
+            return summary.accessDays;
+          }),
+        ),
+      ),
+    );
+
+    expect([...durations].sort((a, b) => a - b)).toEqual([7, 14, 21, 28, 35]);
+  });
+
+  it('ne compte pas les étapes verrouillées dans le temps passé', () => {
+    const [student] = getDemoFormationStudents(formation, 'failed');
+    const [first] = getDemoStudentAttempts(formation, 'failed', student.id);
+    const locked = first.steps.filter((step) => step.state === 'locked');
+
+    expect(locked.length).toBeGreaterThan(0);
+    expect(getAttemptMinutes(first.steps)).toBe(
+      first.steps.reduce((total, step) => total + (step.state === 'locked' ? 0 : step.minutes), 0),
+    );
+  });
+
+  it('fait coïncider le temps passé avec l’écart entre début et fin de tentative', () => {
+    let checked = 0;
+
+    formationProgressDemo.forEach((item) =>
+      enrollmentStatuses.forEach(({ key }) =>
+        getDemoFormationStudents(item, key).forEach((student) =>
+          getDemoStudentAttempts(item, key, student.id).forEach((attempt) => {
+            if (!attempt.endedAt) return;
+            expect((Date.parse(attempt.endedAt) - Date.parse(attempt.startedAt)) / 60_000).toBe(
+              getAttemptMinutes(attempt.steps),
+            );
+            checked += 1;
+          }),
+        ),
+      ),
+    );
+
+    expect(checked).toBe(243);
+  });
+
+  it('cumule le temps passé de toutes les tentatives', () => {
+    const [student] = getDemoFormationStudents(formation, 'completed');
+    const attempts = getDemoStudentAttempts(formation, 'completed', student.id);
+
+    expect(attempts.map((attempt) => getAttemptMinutes(attempt.steps))).toEqual([200, 450]);
+    expect(getDemoEnrollmentSummary(formation, 'completed', student.id, now).minutes).toBe(650);
+    expect(formatAttemptDuration(650)).toBe('10 h 50 min');
+  });
+
+  it('couvre les trois états de retard sur l’ensemble des fixtures', () => {
+    const states = new Set(
+      formationProgressDemo.flatMap((item) =>
+        enrollmentStatuses.flatMap(({ key }) =>
+          getDemoFormationStudents(item, key).map(
+            (student) => getDemoEnrollmentSummary(item, key, student.id, now).lateness,
+          ),
+        ),
+      ),
+    );
+
+    expect(states).toEqual(new Set(['on_time', 'late', 'finished_late']));
   });
 });

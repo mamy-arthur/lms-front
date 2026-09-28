@@ -43,6 +43,20 @@ export type FormationProgressDemo = {
   id: string;
   name: string;
   isPublished: boolean;
+  /**
+   * Durée théorique du parcours, en minutes : le temps attendu d'un étudiant.
+   *
+   * Les fixtures ne produisent que trois temps passés non nuls — 495, 570 et
+   * 650 min. Pour que la colonne « Temps passé » montre ses deux couleurs, le
+   * seuil doit tomber strictement entre le plus petit et le plus grand, soit
+   * dans l'intervalle ]495 ; 650]. En dehors, toutes les lignes prennent la
+   * même couleur et la colonne ne distingue plus rien.
+   */
+  theoreticalMinutes: number;
+  /** Date au-delà de laquelle la formation n'est plus accessible, pour personne. */
+  expiresAt: string;
+  /** Condition qui fait passer un étudiant en « Terminé ». */
+  completionCriterion: string;
 } & Record<DashboardEnrollmentStatus, number>;
 
 export const formationProgressDemo: FormationProgressDemo[] = [
@@ -50,6 +64,9 @@ export const formationProgressDemo: FormationProgressDemo[] = [
     id: 'demo-1',
     name: 'Les fondamentaux du management',
     isPublished: true,
+    theoreticalMinutes: 600,
+    expiresAt: '2026-12-31T23:59:59.000Z',
+    completionCriterion: 'Évaluation finale réussie',
     completed: 30,
     in_progress: 24,
     not_started: 4,
@@ -59,6 +76,9 @@ export const formationProgressDemo: FormationProgressDemo[] = [
     id: 'demo-2',
     name: 'Communiquer avec impact',
     isPublished: true,
+    theoreticalMinutes: 540,
+    expiresAt: '2026-10-15T23:59:59.000Z',
+    completionCriterion: 'Tous les modules consultés',
     completed: 20,
     in_progress: 24,
     not_started: 4,
@@ -68,6 +88,9 @@ export const formationProgressDemo: FormationProgressDemo[] = [
     id: 'demo-3',
     name: 'Piloter un projet digital',
     isPublished: true,
+    theoreticalMinutes: 630,
+    expiresAt: '2027-06-30T23:59:59.000Z',
+    completionCriterion: 'Évaluation finale réussie',
     completed: 16,
     in_progress: 17,
     not_started: 5,
@@ -77,6 +100,12 @@ export const formationProgressDemo: FormationProgressDemo[] = [
     id: 'demo-4',
     name: 'Prévenir les risques professionnels',
     isPublished: false,
+    theoreticalMinutes: 510,
+    // Volontairement courte : c'est la seule formation dont l'expiration tombe
+    // avant l'échéance de certains étudiants, donc la seule qui exerce le
+    // plafonnement de la date de fin d'accès.
+    expiresAt: '2026-09-20T23:59:59.000Z',
+    completionCriterion: 'Temps minimum atteint',
     completed: 6,
     in_progress: 16,
     not_started: 5,
@@ -128,4 +157,20 @@ export function getDemoFormationStudents(
       email: `etudiant.${studentLabel}@example.com`,
     };
   });
+}
+
+export type FormationRosterEntry = ReturnType<typeof getDemoFormationStudents>[number] & {
+  status: DashboardEnrollmentStatus;
+};
+
+/**
+ * Effectif complet d'une formation, chaque étudiant portant son statut.
+ *
+ * Les quatre groupes sont disjoints par construction (décalages successifs),
+ * donc les concaténer ne produit aucun doublon.
+ */
+export function getDemoFormationRoster(formation: FormationProgressDemo): FormationRosterEntry[] {
+  return enrollmentStatuses.flatMap(({ key }) =>
+    getDemoFormationStudents(formation, key).map((student) => ({ ...student, status: key })),
+  );
 }

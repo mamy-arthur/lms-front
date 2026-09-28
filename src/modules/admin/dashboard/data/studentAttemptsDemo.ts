@@ -90,6 +90,38 @@ function buildSteps(
   });
 }
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Dates d'inscription d'un étudiant : démarrage prévu et échéance du parcours.
+ * Source unique pour les tentatives et pour la synthèse, afin que les deux ne
+ * puissent pas diverger.
+ */
+function getEnrollmentDates(studentId: string) {
+  const studentNumber = Number(studentId.replace('demo-student-', ''));
+  const startedAt = Date.UTC(2026, 8, 1 + (studentNumber % 4), 9);
+  return {
+    studentNumber,
+    startedAt,
+    /**
+     * Échéance : 1 à 5 semaines après le démarrage, selon l'étudiant. La borne
+     * basse est volontairement courte — une tentative aboutie s'étale sur une
+     * semaine, donc seule une échéance à 7 jours produit des parcours terminés
+     * hors délai. Sans cela, l'état `finished_late` serait inatteignable.
+     */
+    dueAt: startedAt + (7 + (studentNumber % 5) * 7) * DAY_MS,
+  };
+}
+
+/**
+ * Temps réellement passé sur une tentative : les étapes verrouillées n'ont pas
+ * été abordées et ne comptent pas. Sert à la fois à dater la fin de la
+ * tentative et à alimenter la colonne « Temps passé ».
+ */
+export function getAttemptMinutes(steps: AttemptStepDemo[]) {
+  return steps.reduce((total, step) => total + (step.state === 'locked' ? 0 : step.minutes), 0);
+}
+
 /** Frontend-only fixtures: histories belong to a student AND a formation. */
 export function getDemoStudentAttempts(
   formation: FormationProgressDemo,
@@ -100,8 +132,7 @@ export function getDemoStudentAttempts(
   const studentIndex = students.findIndex((student) => student.id === studentId);
   if (studentIndex === -1 || status === 'not_started') return [];
 
-  const studentNumber = Number(studentId.replace('demo-student-', ''));
-  const baseDate = Date.UTC(2026, 8, 1 + (studentNumber % 4), 9);
+  const { studentNumber, startedAt: baseDate } = getEnrollmentDates(studentId);
   const latestStoppingStep = status === 'in_progress' ? 2 : studentNumber % 2 === 0 ? 5 : 3;
 
   return [1, 2].map((number) => {
@@ -109,10 +140,7 @@ export function getDemoStudentAttempts(
     const stoppingStep = number === 1 ? 1 : latestStoppingStep;
     const steps = buildSteps(number, outcome, stoppingStep);
     const startedAt = baseDate + (number - 1) * 7 * 24 * 60 * 60 * 1000;
-    const minutes = steps.reduce(
-      (total, step) => total + (step.state === 'locked' ? 0 : step.minutes),
-      0,
-    );
+    const minutes = getAttemptMinutes(steps);
 
     return {
       id: `${formation.id}-${studentId}-attempt-${number}`,
@@ -136,11 +164,88 @@ export function getDemoStudentAttempts(
   });
 }
 
+/**
+ * Retard d'un parcours vis-à-vis de son échéance.
+ * - `late` : échéance dépassée alors que le parcours n'est pas terminé.
+ * - `finished_late` : parcours terminé, mais après l'échéance.
+ * - `on_time` : tout le reste.
+ */
+export type EnrollmentLateness = 'on_time' | 'late' | 'finished_late';
+
+export type EnrollmentSummaryDemo = {
+  /** Début de la première tentative — absent tant que rien n'est commencé. */
+  startedAt?: string;
+  /** Fin de la dernière tentative — absent tant que le parcours est en cours. */
+  endedAt?: string;
+  dueAt: string;
+  /** Durée d'accès au parcours, en jours : de l'ouverture jusqu'à l'échéance. */
+  accessDays: number;
+  /**
+   * Dernier jour d'accès réel : l'échéance de l'étudiant, sauf si la formation
+   * expire avant — auquel cas c'est l'expiration qui s'applique.
+   */
+  accessEndsAt: string;
+  /** Vrai quand c'est l'expiration de la formation qui écourte l'accès. */
+  cappedByFormation: boolean;
+  attempts: number;
+  /** Temps passé cumulé sur toutes les tentatives, en minutes. */
+  minutes: number;
+  lateness: EnrollmentLateness;
+};
+
+/**
+ * Synthèse affichée dans la liste des étudiants, avant d'ouvrir l'historique.
+ *
+ * @param now Injectable pour rendre le calcul de retard déterministe en test.
+ */
+export function getDemoEnrollmentSummary(
+  formation: FormationProgressDemo,
+  status: DashboardEnrollmentStatus,
+  studentId: string,
+  now: number = Date.now(),
+): EnrollmentSummaryDemo {
+  // `openedAt` est l'ouverture de l'accès, qui existe même sans tentative —
+  // contrairement à `startedAt` ci-dessous, absent tant que rien n'est commencé.
+  const { startedAt: openedAt, dueAt } = getEnrollmentDates(studentId);
+  const attempts = getDemoStudentAttempts(formation, status, studentId);
+  const endedAt = attempts[attempts.length - 1]?.endedAt;
+  const formationExpiresAt = Date.parse(formation.expiresAt);
+  const cappedByFormation = formationExpiresAt < dueAt;
+
+  return {
+    startedAt: attempts[0]?.startedAt,
+    endedAt,
+    dueAt: new Date(dueAt).toISOString(),
+    accessDays: Math.round((dueAt - openedAt) / DAY_MS),
+    accessEndsAt: new Date(cappedByFormation ? formationExpiresAt : dueAt).toISOString(),
+    cappedByFormation,
+    attempts: attempts.length,
+    minutes: attempts.reduce((total, attempt) => total + getAttemptMinutes(attempt.steps), 0),
+    lateness: endedAt
+      ? Date.parse(endedAt) > dueAt
+        ? 'finished_late'
+        : 'on_time'
+      : now > dueAt
+        ? 'late'
+        : 'on_time',
+  };
+}
+
 export function formatAttemptDuration(minutes: number) {
   const hours = Math.floor(minutes / 60);
   const remainder = minutes % 60;
   if (!hours) return `${remainder} min`;
   return `${hours} h${remainder ? ` ${remainder} min` : ''}`;
+}
+
+/** Format numérique JJ/MM/AAAA, pour les dates de gestion (accès, expiration). */
+export function formatShortDate(date: string) {
+  return new Intl.DateTimeFormat('fr-FR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(new Date(date));
 }
 
 export function formatAttemptDate(date: string) {
