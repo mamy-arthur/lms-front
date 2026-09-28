@@ -12,7 +12,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { STUDENTS } from '../../lib/students-data';
+import { cn } from '@/lib/utils';
+import type { DashboardStudent } from '../../types';
 
 const chartConfig = {
   progress: {
@@ -21,18 +22,32 @@ const chartConfig = {
   },
 } satisfies ChartConfig;
 
-export function ProgressCard() {
+export function ProgressCard({
+  className,
+  students,
+}: {
+  className?: string;
+  students: DashboardStudent[] | undefined;
+}) {
   const [courseFilter, setCourseFilter] = useState<string>('all');
 
-  const courses = useMemo(() => Array.from(new Set(STUDENTS.map((s) => s.course))).sort(), []);
+  const courses = useMemo(
+    () =>
+      [...new Map((students ?? []).map((s) => [s.courseId, s.course])).entries()].sort((a, b) =>
+        a[1].localeCompare(b[1]),
+      ),
+    [students],
+  );
 
   const progress = useMemo(() => {
     const subset =
-      courseFilter === 'all' ? STUDENTS : STUDENTS.filter((s) => s.course === courseFilter);
+      courseFilter === 'all'
+        ? (students ?? [])
+        : (students ?? []).filter((s) => s.courseId === courseFilter);
     if (subset.length === 0) return 0;
     const avg = subset.reduce((sum, s) => sum + s.progress, 0) / subset.length;
     return Math.round(avg);
-  }, [courseFilter]);
+  }, [courseFilter, students]);
 
   const chartData = [
     {
@@ -43,7 +58,7 @@ export function ProgressCard() {
   ];
 
   return (
-    <Card>
+    <Card className={cn('h-full', className)}>
       <CardHeader className="flex justify-between gap-2 items-center pb-0">
         <div>
           <CardTitle>Progression global</CardTitle>
@@ -55,16 +70,20 @@ export function ProgressCard() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Tous les parcours</SelectItem>
-            {courses.map((c) => (
-              <SelectItem key={c} value={c}>
-                {c}
+            {courses.map(([id, name]) => (
+              <SelectItem key={id} value={id}>
+                {name}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
       </CardHeader>
       <CardContent className="pt-6">
-        <div className="flex flex-col items-center gap-4">
+        <div
+          className="flex flex-col items-center gap-4"
+          role="img"
+          aria-label={`Progression moyenne : ${students ? `${progress}%` : 'indisponible'}`}
+        >
           <ChartContainer config={chartConfig} className="mx-auto aspect-square h-56">
             <RadialBarChart
               data={chartData}
@@ -99,7 +118,7 @@ export function ProgressCard() {
                             y={viewBox.cy - 6}
                             className="fill-foreground text-2xl font-bold"
                           >
-                            {progress}%
+                            {students ? `${progress}%` : '—'}
                           </tspan>
                         </text>
                       );

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useDebounce } from '@/shared/hooks/useDebounce';
 import type { DashboardFormationSort } from '@/shared/types/dashboard.types';
 import { useEditorDashboardFormationsQuery } from '../hooks/useEditorDashboardQuery';
@@ -20,6 +20,18 @@ export function FormationProgressSection() {
   });
   // Seule la saisie est débouncée : tri et pagination sont des actions discrètes.
   const debouncedSearch = useDebounce(filters.search);
+  const hasMountedRef = useRef(false);
+
+  // Ramène à la page 1 seulement une fois la recherche débouncée, pour éviter une requête
+  // intermédiaire "page 1 + ancien texte" à chaque frappe quand l'utilisateur n'est pas déjà en page 1.
+  useEffect(() => {
+    if (!hasMountedRef.current) {
+      hasMountedRef.current = true;
+      return;
+    }
+    setFilters((previous) => (previous.page === 1 ? previous : { ...previous, page: 1 }));
+  }, [debouncedSearch]);
+
   const query = useEditorDashboardFormationsQuery({
     q: debouncedSearch.trim(),
     sort_by: filters.sort,
@@ -35,7 +47,7 @@ export function FormationProgressSection() {
       perPage={query.data?.meta.per_page ?? PER_PAGE}
       search={filters.search}
       sort={filters.sort}
-      onSearchChange={(search) => setFilters((previous) => ({ ...previous, search, page: 1 }))}
+      onSearchChange={(search) => setFilters((previous) => ({ ...previous, search }))}
       onSortChange={(sort) => setFilters((previous) => ({ ...previous, sort, page: 1 }))}
       onPageChange={(page) => setFilters((previous) => ({ ...previous, page }))}
       isLoading={query.isPending}

@@ -1,20 +1,18 @@
-import { useEffect, useState } from 'react';
+'use client';
+
+import { Button } from '@/components/ui/button';
 import { KpiCards } from './components/KpiCards';
-import { StudentDrawer } from './components/students-drawer';
 import { StudentsTable } from './components/students-table';
-import { Student, STUDENTS } from './lib/students-data';
 import { ProgressCard } from './components/chart/chart-radial-text';
-import { OnlineStudentsCard } from './components/ActiveStudents';
+import { useClientDashboardQuery, useClientDashboardScope } from './hooks/useClientDashboardQuery';
 
 export default function ClientDashboard() {
-  const [loading, setLoading] = useState(true);
-  const [selected, setSelected] = useState<Student | null>(null);
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const scope = useClientDashboardScope();
+  return <ClientDashboardContent key={JSON.stringify(scope.key)} />;
+}
 
-  useEffect(() => {
-    const t = setTimeout(() => setLoading(false), 700);
-    return () => clearTimeout(t);
-  }, []);
+function ClientDashboardContent() {
+  const { overview, students } = useClientDashboardQuery();
 
   return (
     <div className="bg-background flex flex-col">
@@ -29,26 +27,42 @@ export default function ClientDashboard() {
           </div>
         </header>
         <div className="flex flex-col space-y-3">
-          <KpiCards />
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="sm:col-span-2">
-              <StudentsTable
-                students={STUDENTS}
-                loading={loading}
-                onSelect={(s) => {
-                  setSelected(s);
-                  setDrawerOpen(true);
+          {(overview.isError || students.isError) && (
+            <div
+              role="alert"
+              className="flex items-center justify-between gap-3 rounded-md border p-3 text-sm"
+            >
+              <p>
+                {overview.isError && students.isError
+                  ? 'Impossible de charger le tableau de bord.'
+                  : `Impossible de charger ${overview.isError ? 'les indicateurs' : 'les étudiants'}.`}
+              </p>
+              <Button
+                variant="outline"
+                disabled={overview.isFetching || students.isFetching}
+                onClick={() => {
+                  if (overview.isError) void overview.refetch();
+                  if (students.isError) void students.refetch();
                 }}
-              />
+              >
+                Réessayer
+              </Button>
             </div>
-            <div className="flex flex-col self-start gap-2">
-              <ProgressCard />
-              <OnlineStudentsCard />
-            </div>
+          )}
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-4 lg:grid-rows-2">
+            <KpiCards data={overview.data} />
+            <ProgressCard
+              students={students.data}
+              className="lg:col-start-3 lg:col-span-2 lg:row-start-1 lg:row-span-2"
+            />
           </div>
+          <StudentsTable
+            students={students.data ?? []}
+            loading={students.isPending}
+            error={students.isError}
+          />
         </div>
       </div>
-      <StudentDrawer student={selected} open={drawerOpen} onOpenChange={setDrawerOpen} />
     </div>
   );
 }

@@ -8,11 +8,19 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useState } from 'react';
 
-export function DatePickerWithRange() {
-  const [date, setDate] = useState<DateRange | undefined>({
+export function DatePickerWithRange({
+  value,
+  onChange,
+}: {
+  value?: DateRange;
+  onChange?: (value: DateRange | undefined) => void;
+} = {}) {
+  const [internalDate, setInternalDate] = useState<DateRange | undefined>({
     from: new Date(new Date().getFullYear(), 0, 20),
     to: addDays(new Date(new Date().getFullYear(), 0, 20), 20),
   });
+  const date = onChange ? value : internalDate;
+  const setDate = onChange ?? setInternalDate;
 
   return (
     <div className="mx-auto w-60">
@@ -33,7 +41,7 @@ export function DatePickerWithRange() {
                 format(date.from, 'LLL dd, y')
               )
             ) : (
-              <span>Pick a date</span>
+              <span>{onChange ? 'Toutes les périodes' : 'Pick a date'}</span>
             )}
           </Button>
         </PopoverTrigger>

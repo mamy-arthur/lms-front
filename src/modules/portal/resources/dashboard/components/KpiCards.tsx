@@ -1,103 +1,103 @@
-import { Wallet, BookOpen, CircleCheckBig, LoaderCircle, ListTodo } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
+import type { ClientDashboardOverview } from '../types';
 
 const kpis = [
   {
-    label: 'Solde disponible',
-    description: 'Disponible pour les prochains achats',
-    value: '3 000 pts',
-    icon: Wallet,
-    highlight: true,
-    span: 'lg:col-span-2',
-  },
-  {
     label: 'Parcours',
     description: 'Nombre de parcours suivis',
-    value: '4',
-    icon: BookOpen,
-    span: 'lg:col-span-1',
+    key: 'learning_paths',
+    position: 'lg:col-start-1 lg:row-start-1',
   },
   {
     label: 'Terminés',
     description: 'Modules terminés',
-    value: '86',
-    icon: CircleCheckBig,
-    span: 'lg:col-span-1',
+    key: 'completed',
+    position: 'lg:col-start-2 lg:row-start-1',
+    highlighted: true,
   },
   {
     label: 'En cours',
     description: 'Modules en cours',
-    value: '23',
-    icon: LoaderCircle,
-    span: 'lg:col-span-1',
+    key: 'in_progress',
+    position: 'lg:col-start-1 lg:row-start-2',
   },
   {
     label: 'À faire',
     description: 'Modules à réaliser',
-    value: '11',
-    icon: ListTodo,
-    span: 'lg:col-span-1',
+    key: 'not_started',
+    position: 'lg:col-start-2 lg:row-start-2',
   },
-];
+] as const;
 
-export function KpiCards() {
+export function KpiCards({ data }: { data: ClientDashboardOverview | undefined }) {
   return (
-    <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
+    <>
       {kpis.map((kpi) => {
-        const Icon = kpi.icon;
+        const highlighted = 'highlighted' in kpi && kpi.highlighted;
 
         return (
           <Card
             key={kpi.label}
-            className={`${kpi.span} bg-card transition-all duration-200 ${
-              kpi.highlight
-                ? 'border-0 bg-linear-to-br from-(--color-primary) via-(--color-primary)/90 to-(--color-primary)/70 shadow-lg shadow-(--color-primary)/20'
-                : ''
-            }`}
+            className={cn(
+              kpi.position,
+              'relative isolate overflow-hidden bg-card transition-all duration-200',
+              highlighted && 'border-none bg-(--color-primary)/10',
+            )}
           >
-            <CardContent className="flex h-28 flex-col justify-between">
+            <span
+              aria-hidden="true"
+              className={cn(
+                'pointer-events-none absolute -right-2 -bottom-5 size-28 -rotate-12',
+                highlighted
+                  ? 'text-(--color-primary)/20'
+                  : 'text-slate-300/40 dark:text-slate-600/30',
+              )}
+            >
+              <span className="absolute inset-0 translate-x-5 translate-y-3 rounded-2xl bg-current opacity-40" />
+              <span className="absolute inset-0 rounded-2xl border border-current" />
+              <span className="absolute inset-0 -translate-x-5 -translate-y-3 rounded-2xl border border-current" />
+            </span>
+            <CardContent className="relative z-10 flex h-28 flex-col justify-between">
               <div className="flex items-start justify-between">
                 <div>
                   <p
-                    className={`text-xs font-bold uppercase tracking-wide ${
-                      kpi.highlight ? 'text-white/80' : ''
-                    }`}
+                    className={cn(
+                      'text-xs font-bold uppercase tracking-wide',
+                      highlighted && 'text-(--color-primary)',
+                    )}
                   >
                     {kpi.label}
                   </p>
 
                   {kpi.description && (
                     <p
-                      className={`mt-1 text-xs ${
-                        kpi.highlight ? 'text-white/70' : 'text-gray-500'
-                      }`}
+                      className={cn(
+                        'mt-1 text-xs text-gray-500',
+                        highlighted && 'text-muted-foreground',
+                      )}
                     >
                       {kpi.description}
                     </p>
                   )}
                 </div>
-
-                <div
-                  className={`flex h-8 w-8 items-center justify-center rounded-md ${
-                    kpi.highlight ? 'bg-white/15' : 'bg-muted'
-                  }`}
-                >
-                  <Icon
-                    className={`h-5 w-5 ${kpi.highlight ? 'text-white' : 'text-muted-foreground'}`}
-                  />
-                </div>
               </div>
               <p
-                className={`text-3xl tracking-tight ${
-                  kpi.highlight ? 'text-white font-semibold' : 'text-black'
-                }`}
+                className={cn(
+                  'text-3xl tracking-tight text-black',
+                  highlighted && 'text-(--color-primary)',
+                )}
               >
-                {kpi.value}
+                {data
+                  ? kpi.key === 'learning_paths'
+                    ? data.learning_paths
+                    : data.modules[kpi.key]
+                  : '—'}
               </p>
             </CardContent>
           </Card>
         );
       })}
-    </div>
+    </>
   );
 }
