@@ -287,6 +287,24 @@ describe('dashboard éditeur connecté', () => {
     expect(historyApi.history).toHaveBeenCalledTimes(1);
   });
 
+  it('ouvre toutes les inscriptions en cliquant n’importe où sur la ligne, sans filtrer par statut', async () => {
+    const user = userEvent.setup();
+    renderDashboard();
+    const card = await within(formationSection()).findByRole('listitem');
+    await user.click(card);
+    const dialog = await screen.findByRole('dialog', { name: formation.name });
+    await within(dialog).findByText('alice@example.com');
+    expect(api.enrollments).toHaveBeenCalledWith(
+      formation.id,
+      expect.objectContaining({ status: undefined, page: 1 }),
+      expect.any(AbortSignal),
+    );
+    expect(within(dialog).getByRole('button', { name: 'Tous (6)' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+  });
+
   it.each(['identité', 'session', 'tenant'] as const)(
     'ferme la sélection ancienne au changement de %s et recharge sans données privées résiduelles',
     async (scope) => {

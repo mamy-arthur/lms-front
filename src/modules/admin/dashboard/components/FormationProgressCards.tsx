@@ -34,7 +34,7 @@ interface FormationProgressCardsProps {
   onSelect: (
     formation: DashboardFormation,
     status: EnrollmentStatus | null,
-    trigger: HTMLButtonElement,
+    trigger: HTMLElement,
   ) => void;
 }
 
@@ -146,7 +146,8 @@ export function FormationProgressCards({
             return (
               <li
                 key={formation.id}
-                className="space-y-4 rounded-sm border bg-card p-4 text-card-foreground"
+                onClick={(event) => onSelect(formation, null, event.currentTarget)}
+                className="cursor-pointer space-y-4 rounded-sm border bg-card p-4 text-card-foreground transition-colors hover:bg-muted/40"
               >
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
@@ -159,7 +160,11 @@ export function FormationProgressCards({
                           type="button"
                           aria-label={`Voir les étudiants de ${formation.name}`}
                           aria-haspopup="dialog"
-                          onClick={(event) => onSelect(formation, null, event.currentTarget)}
+                          onClick={(event) => {
+                            // La ligne entière porte déjà la même sélection.
+                            event.stopPropagation();
+                            onSelect(formation, null, event.currentTarget);
+                          }}
                           className="rounded-sm text-left hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         >
                           {formation.name}
@@ -190,7 +195,10 @@ export function FormationProgressCards({
                         key={status.key}
                         type="button"
                         aria-haspopup="dialog"
-                        onClick={(event) => onSelect(formation, status.key, event.currentTarget)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onSelect(formation, status.key, event.currentTarget);
+                        }}
                         className={`${status.badgeClassName} inline-flex h-6 items-center gap-1 rounded-sm border px-2 py-0.5 text-xs transition-colors hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring`}
                         aria-label={`${status.label} : ${formation.statusCounts[status.key]} — ${formation.name}`}
                       >

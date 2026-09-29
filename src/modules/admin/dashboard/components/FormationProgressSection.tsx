@@ -19,7 +19,7 @@ export function FormationProgressSection() {
     scope: string;
     value: FormationStudentSelection;
   } | null>(null);
-  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const triggerRef = useRef<HTMLElement | null>(null);
   const sectionRef = useRef<HTMLDivElement | null>(null);
   const [filters, setFilters] = useState<{
     search: string;
