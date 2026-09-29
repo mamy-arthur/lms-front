@@ -12,7 +12,7 @@ le SCORM, l’audio et les PDF ne passent pas par ce suivi.
 
 - Reprise à la dernière position après chargement des métadonnées, sans lecture automatique.
 - Ne pas déplacer la lecture si l’apprenant a déjà commencé pendant le chargement.
-- « Recommencer » revient à zéro sans effacer les segments déjà visionnés.
+- Les commandes −10 s / +10 s et la barre native déplacent le signet sans créditer les passages sautés.
 - Sauvegarde toutes les dix secondes, à la pause, après déplacement, en fin de vidéo
   et lors de la sortie du contenu. Les envois de sortie utilisent `keepalive`.
 - La position et les segments visionnés sont indépendants : avancer jusqu’à la fin
@@ -45,12 +45,24 @@ pas une preuve de complétion. Le temps de consultation conserve ses propres rè
   indépendants d’un nœud et d’un passage à l’autre.
 - Les écritures sont sérialisées. Une nouvelle tentative conserve le même commit
   avant d’envoyer une position plus récente.
+- Le dernier `commit_id` enregistré est rejoué sans écriture après contrôle d’accès,
+  même si la révision d’exécution a changé ou si la visite est devenue historique.
+  Seul ce dernier commit est rejouable : les commits supplantés restent soumis aux conflits.
+- Le serveur fusionne et coupe les plages à `[0, duration]`. La durée reste ajustable.
+  Au-delà de 512 intervalles disjoints **stockés au total**, il refuse le PUT avec
+  `422 errors.watched_ranges` sans rien modifier. Ne jamais combler des trous non
+  visionnés pour contourner cette limite ni réessayer indéfiniment le même payload.
 - Un brouillon local borné à 20 vidéos et 24 heures permet la reprise après coupure.
   Il est isolé par tenant, apprenant, inscription, nœud, visite, cours, contenu et média.
   Les anciens brouillons sans identité de visite ne sont pas repris.
 - Un brouillon périmé côté serveur n’écrase pas le signet d’un autre onglet.
 - Les erreurs réseau sont réessayées ; un conflit ou un refus permanent arrête les
-  écritures et affiche une invitation à recharger, sans bloquer la lecture.
+  écritures sans bloquer la lecture. L’interface actuelle n’affiche pas de bannière de statut.
+- `409 execution_conflict` : recharger le résumé, puis reconstruire la session pour la
+  visite autorisée, sans transférer un ancien payload vers une nouvelle visite.
+- `409 video_progress_conflict` : relire le signet et reconstruire la session depuis
+  la version serveur ; ne jamais forcer la sauvegarde d’un brouillon obsolète.
+  Un rechargement de la page réalise ces lectures ; aucun retry aveugle de 409.
 - La livraison à la fermeture d’un onglet n’est pas garantie par le navigateur ;
   le brouillon est un filet de reprise, pas une garantie de sauvegarde serveur.
 
