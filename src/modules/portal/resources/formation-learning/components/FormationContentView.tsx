@@ -9,6 +9,7 @@ import type { ApiPortalContentEntry } from '@/shared/types/portal.types';
 import type { ExecutionMutationContext } from '@/shared/types/progression.types';
 import ContentNavigationBar from './ContentNavigationBar';
 import type { RegisterScormSession } from '../lib/scormRuntime';
+import type { RegisterVideoSession } from '../lib/videoProgressSession';
 import { useAuthStore } from '@/shared/stores/auth.store';
 import { useSimulationStore } from '@/shared/simulation/simulation.store';
 import { Role } from '@/shared/constants/roles';
@@ -32,6 +33,7 @@ interface Props {
   canMutate: boolean;
   onExecutionConflict: (error: unknown) => void;
   registerScormSession?: RegisterScormSession;
+  registerVideoSession?: RegisterVideoSession;
 }
 
 export default function FormationContentView({
@@ -48,6 +50,7 @@ export default function FormationContentView({
   canMutate,
   onExecutionConflict,
   registerScormSession,
+  registerVideoSession,
 }: Props) {
   const simulatedRole = useAuthStore((state) => state.simulatedRole);
   const actorRole = useAuthStore((state) => state.user?.role);
@@ -130,6 +133,7 @@ export default function FormationContentView({
             onScormCompleted={canComplete ? () => onMarkComplete() : undefined}
             onScormExecutionConflict={onExecutionConflict}
             registerScormSession={registerScormSession}
+            registerVideoSession={registerVideoSession}
           />
         </div>
       </div>

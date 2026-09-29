@@ -5,6 +5,8 @@ import { getHttpContentUrl, toYouTubeEmbedUrl } from '@/lib/utils';
 import { getMediaCategory } from '@/modules/shared/components/courses/contents/forms/fields/media-utils';
 import ScormPlayer from './ScormPlayer';
 import type { RegisterScormSession } from '../lib/scormRuntime';
+import TrackedVideoPlayer, { type VideoTrackingProps } from './TrackedVideoPlayer';
+import type { RegisterVideoSession } from '../lib/videoProgressSession';
 
 interface Props {
   entry: ApiPortalContentEntry | undefined;
@@ -20,6 +22,7 @@ interface Props {
   onScormCompleted?: () => void;
   onScormExecutionConflict?: (error: unknown) => void;
   registerScormSession?: RegisterScormSession;
+  registerVideoSession?: RegisterVideoSession;
 }
 
 // Extra utility classes for portal richtext content.
@@ -41,10 +44,11 @@ function secureUrl(url: string): string {
 }
 
 /** Renders a single resolved media object using the same logic as MediaPreviewModal. */
-function MediaPlayer({ media }: { media: ResolvedMedia }) {
+function MediaPlayer({ media, tracking }: { media: ResolvedMedia; tracking?: VideoTrackingProps }) {
   const category = getMediaCategory(media.mime_type);
 
   if (category === 'video') {
+    if (tracking && typeof media.id === 'string' && media.id) return <TrackedVideoPlayer key={media.id} src={secureUrl(media.url)} mediaId={media.id} {...tracking} />;
     return (
       <video
         src={secureUrl(media.url)}
@@ -94,9 +98,11 @@ function MediaPlayer({ media }: { media: ResolvedMedia }) {
 function FieldsRenderer({
   data,
   fieldTypes,
+  tracking,
 }: {
   data: Record<string, unknown>;
   fieldTypes: Record<string, string>;
+  tracking?: VideoTrackingProps;
 }) {
   const rendered: React.ReactNode[] = [];
 
@@ -165,13 +171,13 @@ function FieldsRenderer({
 
     if (type === 'media') {
       if (isResolvedMedia(value)) {
-        rendered.push(<MediaPlayer key={key} media={value} />);
+        rendered.push(<MediaPlayer key={key} media={value} tracking={tracking} />);
       } else if (Array.isArray(value)) {
         // multiple media field
         rendered.push(
           <div key={key} className="flex flex-col gap-3">
             {value.filter(isResolvedMedia).map((m) => (
-              <MediaPlayer key={m.id} media={m} />
+              <MediaPlayer key={m.id} media={m} tracking={tracking} />
             ))}
           </div>,
         );
@@ -199,6 +205,7 @@ export default function PortalContentRenderer({
   onScormCompleted,
   onScormExecutionConflict,
   registerScormSession,
+  registerVideoSession,
 }: Props) {
   if (isLoading) {
     return (
@@ -243,6 +250,14 @@ export default function PortalContentRenderer({
     );
   }
 
+  const tracking: VideoTrackingProps | undefined = courseId && competencyId && nodeExecutionId ? {
+    context: { enrollmentId, courseId, entryId: entry.id, competencyId, nodeExecutionId },
+    execution: nodeExecutionId && expectedStateRevision !== null
+      ? { node_execution_id: nodeExecutionId, expected_state_revision: expectedStateRevision } : null,
+    readOnly,
+    registerVideoSession,
+  } : undefined;
+
   // module_type === 'folder' is the only other special case needing a different layout.
   if (entry.module_type === 'folder') {
     return (
@@ -251,10 +266,10 @@ export default function PortalContentRenderer({
           <FolderOpen className="h-5 w-5" />
           <span className="text-sm">Dossier</span>
         </div>
-        <FieldsRenderer data={entry.data} fieldTypes={entry.field_types} />
+        <FieldsRenderer data={entry.data} fieldTypes={entry.field_types} tracking={tracking} />
       </div>
     );
   }
 
-  return <FieldsRenderer data={entry.data} fieldTypes={entry.field_types} />;
+  return <FieldsRenderer data={entry.data} fieldTypes={entry.field_types} tracking={tracking} />;
 }

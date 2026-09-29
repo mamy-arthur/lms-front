@@ -9,6 +9,7 @@ import { buildExecutionContext, findNodeExecutionState } from './lib/execution-c
 import { EXECUTION_CONFLICT_MESSAGE } from './lib/constants';
 import type { Formation } from './lib/types';
 import type { RegisterScormSession, ScormSession } from './lib/scormRuntime';
+import type { RegisterVideoSession, VideoProgressSession } from './lib/videoProgressSession';
 import { useFormationSummaryQuery } from './hooks/useFormationSummaryQuery';
 import { usePortalContentEntryQuery } from './hooks/usePortalContentEntryQuery';
 import { useMarkContentCompleteMutation } from './hooks/useMarkContentCompleteMutation';
@@ -57,6 +58,13 @@ export default function FormationPlayer({ enrollmentId }: Props) {
     useMarkContentCompleteMutation(enrollmentId);
   const [isFlushingTime, setIsFlushingTime] = useState(false);
   const completingRef = useRef(false);
+  const videoSessionsRef = useRef(new Set<VideoProgressSession>());
+  const registerVideoSession = useCallback<RegisterVideoSession>((session) => {
+    videoSessionsRef.current.add(session);
+    return () => {
+      videoSessionsRef.current.delete(session);
+    };
+  }, []);
   const scormSessionRef = useRef<ScormSession | null>(null);
   const registerScormSession = useCallback<RegisterScormSession>((session) => {
     scormSessionRef.current = session;
@@ -134,9 +142,15 @@ export default function FormationPlayer({ enrollmentId }: Props) {
     }
     completingRef.current = true;
     setIsFlushingTime(true);
+    // Bookmark failures never change the existing manual completion policy.
+    // Flush before closing the visit, while writes are still authorized.
+    await Promise.allSettled(
+      [...videoSessionsRef.current].map((session) => session.prepareCompletion()),
+    );
     try {
       await scormSessionRef.current?.prepareCompletion();
     } catch (err) {
+      videoSessionsRef.current.forEach((session) => session.resumeAfterFailure());
       scormSessionRef.current?.resumeAfterFailure();
       completingRef.current = false;
       setIsFlushingTime(false);
@@ -147,6 +161,7 @@ export default function FormationPlayer({ enrollmentId }: Props) {
     try {
       await flushBeforeComplete();
     } catch (err) {
+      videoSessionsRef.current.forEach((session) => session.resumeAfterFailure());
       scormSessionRef.current?.resumeAfterFailure();
       resumeAfterFailure();
       completingRef.current = false;
@@ -171,6 +186,7 @@ export default function FormationPlayer({ enrollmentId }: Props) {
       if (refreshed) setActiveId(getDefaultActiveId(refreshed));
     } catch {
       // The mutation hook reports the error; keep measuring the unfinished content.
+      videoSessionsRef.current.forEach((session) => session.resumeAfterFailure());
       scormSessionRef.current?.resumeAfterFailure();
       resumeAfterFailure();
     } finally {
@@ -288,6 +304,7 @@ export default function FormationPlayer({ enrollmentId }: Props) {
             canMutate={canMutate}
             onExecutionConflict={handleExecutionConflict}
             registerScormSession={registerScormSession}
+            registerVideoSession={registerVideoSession}
           />
         </main>
       </div>
