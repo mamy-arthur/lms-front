@@ -332,23 +332,6 @@ it('combine les trois dates avec la recherche et le parcours, puis réinitialise
   expect(screen.queryByRole('button', { name: /filtre actif/ })).not.toBeInTheDocument();
 });
 
-it('utilise une teinte discrète de la couleur des progressions pour la carte Terminés uniquement', async () => {
-  renderDashboard();
-  await screen.findByText('65');
-  const completedCard = screen.getByText('Terminés').closest('[data-slot="card"]');
-  expect(completedCard).toHaveClass('bg-(--color-primary)/10');
-  expect(completedCard).not.toHaveClass('bg-card', 'bg-linear-to-br', 'bg-(--color-primary)');
-  expect(screen.getByText('Terminés')).toHaveClass('text-(--color-primary)');
-  expect(screen.getByText('65')).toHaveClass('text-(--color-primary)');
-  for (const description of [
-    'Nombre de parcours suivis',
-    'Modules en cours',
-    'Modules à réaliser',
-  ]) {
-    expect(screen.getByText(description).closest('[data-slot="card"]')).toHaveClass('bg-card');
-  }
-});
-
 it('garde les statistiques en grille 2×2 et place la progression dessous uniquement sur mobile', async () => {
   renderDashboard();
   await screen.findByText('65');

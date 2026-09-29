@@ -1,8 +1,4 @@
-import {
-  EMPTY_DATE_RANGE,
-  isDateRangeActive,
-  matchesDateRange,
-} from '../DateRangeColumnFilter';
+import { EMPTY_DATE_RANGE, isDateRangeActive, matchesDateRange } from '../DateRangeColumnFilter';
 
 /** Une date ISO telle que la produisent les synthèses d'inscription. */
 const iso = (day: string) => `${day}T09:00:00.000Z`;

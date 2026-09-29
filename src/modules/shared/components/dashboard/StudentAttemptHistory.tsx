@@ -17,7 +17,10 @@ import {
   useEnrollmentHistoryQuery,
   useEnrollmentHistoryScope,
 } from '@/modules/shared/hooks/useEnrollmentHistoryQuery';
-import { formatAttemptDate, formatTrackedDuration } from '@/modules/shared/lib/studentProgressFormatters';
+import {
+  formatAttemptDate,
+  formatTrackedDuration,
+} from '@/modules/shared/lib/studentProgressFormatters';
 import { StudentAttemptDetails } from './StudentAttemptDetails';
 
 export function StudentAttemptHistory({ enrollmentId }: { enrollmentId: string }) {

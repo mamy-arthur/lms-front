@@ -18,7 +18,10 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
-import { formatAttemptDate, formatTrackedDuration } from '@/modules/shared/lib/studentProgressFormatters';
+import {
+  formatAttemptDate,
+  formatTrackedDuration,
+} from '@/modules/shared/lib/studentProgressFormatters';
 import type {
   AttemptNodeStatus,
   EnrollmentAttemptCourse,
