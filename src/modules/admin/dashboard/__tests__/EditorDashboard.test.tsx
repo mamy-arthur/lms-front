@@ -1,21 +1,40 @@
-import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  renderHook,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import userEvent from '@testing-library/user-event';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { Role } from '@/shared/constants/roles';
 import { useAuthStore } from '@/shared/stores/auth.store';
 import { useTenantStore } from '@/shared/stores/tenant.store';
 import type {
+  ApiDashboardEnrollmentsPage,
   ApiDashboardFormation,
   ApiDashboardOverview,
   ApiDashboardPage,
 } from '@/shared/types/dashboard.types';
 import { EditorDashboard } from '../EditorDashboard';
 import { editorDashboardApi } from '../api';
-import { ReenrollmentBadge } from '../components/ReenrollmentBadge';
-import { dashboardEnrollmentStatuses } from '../data/enrollmentStatuses';
+import { enrollmentHistoryApi } from '@/shared/api/enrollment-history.api';
+import { dashboardEnrollmentStatuses } from '@/modules/shared/lib/dashboardEnrollmentStatuses';
+import {
+  useEditorDashboardFormationsQuery,
+  useEditorDashboardOverviewQuery,
+  useFormationEnrollmentsQuery,
+} from '../hooks/useEditorDashboardQuery';
 
 jest.mock('../api', () => ({
   editorDashboardApi: { overview: jest.fn(), formations: jest.fn(), enrollments: jest.fn() },
+}));
+jest.mock('@/shared/api/enrollment-history.api', () => ({
+  enrollmentHistoryApi: { history: jest.fn(), detail: jest.fn() },
 }));
 
 const overview: ApiDashboardOverview = {
@@ -35,6 +54,45 @@ const formation: ApiDashboardFormation = {
   status_counts: { ...overview.students.status_counts },
 };
 const api = jest.mocked(editorDashboardApi);
+const historyApi = jest.mocked(enrollmentHistoryApi);
+const clients: QueryClient[] = [];
+const enrollments: ApiDashboardEnrollmentsPage = {
+  data: [
+    {
+      id: 'enrollment-real',
+      learner: {
+        id: 'learner-real',
+        first_name: 'Alice',
+        last_name: 'Martin',
+        email: 'alice@example.com',
+      },
+      status: 'failed',
+      enrolled_at: '2026-09-01T09:00:00Z',
+      started_at: '2026-09-02T09:00:00Z',
+      ended_at: '2026-09-03T09:00:00Z',
+      expires_at: null,
+      attempts_count: 1,
+      time_spent_seconds: 61,
+    },
+  ],
+  meta: {
+    total: 1,
+    page: 1,
+    per_page: 20,
+    summary: { total: 6, status_counts: overview.students.status_counts },
+    formation: { duration_minutes: null },
+  },
+};
+const historyAttempt = {
+  id: 'attempt-real',
+  attempt_number: 1,
+  status: 'failed' as const,
+  available_at: '2026-09-01T09:00:00Z',
+  started_at: '2026-09-02T09:00:00Z',
+  ended_at: '2026-09-03T09:00:00Z',
+  interruption_reason: null,
+  time_spent_seconds: 61,
+};
 const originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
 
 beforeAll(() => {
@@ -46,11 +104,16 @@ afterAll(() => {
 });
 
 function renderDashboard() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: Infinity } },
+  });
+  clients.push(client);
   return {
     ...render(
       <QueryClientProvider client={client}>
-        <EditorDashboard />
+        <TooltipProvider>
+          <EditorDashboard />
+        </TooltipProvider>
       </QueryClientProvider>,
     ),
     client,
@@ -74,10 +137,27 @@ beforeEach(() => {
     data: [formation],
     meta: { total: 21, page: 1, per_page: 20 },
   });
+  api.enrollments.mockResolvedValue(enrollments);
+  historyApi.history.mockResolvedValue({
+    data: {
+      enrollment: {
+        id: 'enrollment-real',
+        learner_id: 'learner-real',
+        learning_path_id: formation.id,
+        status: 'failed',
+      },
+      attempts: [historyAttempt],
+    },
+    meta: { total: 1, page: 1, per_page: 20 },
+  });
+  historyApi.detail.mockResolvedValue({ data: { attempt: historyAttempt, nodes: [] } });
 });
 
 afterEach(() => {
+  cleanup();
+  clients.splice(0).forEach((client) => client.clear());
   useAuthStore.setState({ user: null, role: null, sessionId: null });
+  useTenantStore.setState({ tenant: null, resolutionStatus: 'resolved' });
 });
 
 describe('dashboard éditeur connecté', () => {
@@ -98,12 +178,11 @@ describe('dashboard éditeur connecté', () => {
     await waitFor(() => expect(progress).toHaveAttribute('aria-valuenow', '33.33'));
     expect(screen.getByText(/Part des inscriptions terminées avec succès/)).toBeInTheDocument();
     expect(api.overview).toHaveBeenCalledTimes(1);
-    expect(api.formations).toHaveBeenCalledWith({
-      q: '',
-      sort_by: 'enrolled',
-      page: 1,
-      per_page: 20,
-    });
+    expect(api.overview).toHaveBeenCalledWith(expect.any(AbortSignal));
+    expect(api.formations).toHaveBeenCalledWith(
+      { q: '', sort_by: 'enrolled', page: 1, per_page: 20 },
+      expect.any(AbortSignal),
+    );
   });
 
   it('affiche les statuts suivis, les réinscriptions comptées et le taux de complétion serveur', async () => {
@@ -116,19 +195,144 @@ describe('dashboard éditeur connecté', () => {
         `${status.label} : ${formation.status_counts[status.key]} — ${formation.name}`,
       );
       expect(badge).toHaveClass(...status.badgeClassName.split(' '));
-      expect(badge.tagName).toBe('SPAN');
+      expect(badge.tagName).toBe('BUTTON');
+      expect(badge).toHaveAttribute('aria-haspopup', 'dialog');
     });
     expect(screen.queryByText(/Expirées|expirées/)).not.toBeInTheDocument();
     await waitFor(() =>
       expect(within(card).getByRole('progressbar')).toHaveAttribute('aria-valuenow', '33'),
     );
-    expect(within(card).queryByRole('button')).not.toBeInTheDocument();
+    expect(within(card).getAllByRole('button')).toHaveLength(
+      dashboardEnrollmentStatuses.length + 1,
+    );
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(api.enrollments).not.toHaveBeenCalled();
+    expect(historyApi.history).not.toHaveBeenCalled();
+    expect(historyApi.detail).not.toHaveBeenCalled();
     expect(
       screen.queryByText(/Étudiant 001|Les fondamentaux du management/),
     ).not.toBeInTheDocument();
   });
+
+  it.each(dashboardEnrollmentStatuses)(
+    'ouvre le badge $label avec son statut serveur initial et restaure le focus à la fermeture',
+    async (status) => {
+      const user = userEvent.setup();
+      renderDashboard();
+      const trigger = await screen.findByRole('button', {
+        name: `${status.label} : ${formation.status_counts[status.key]} — ${formation.name}`,
+      });
+      await user.click(trigger);
+      const dialog = await screen.findByRole('dialog', { name: formation.name });
+      await within(dialog).findByText('alice@example.com');
+      expect(api.enrollments).toHaveBeenCalledWith(
+        formation.id,
+        expect.objectContaining({ status: status.key, q: '', page: 1, per_page: 20 }),
+        expect.any(AbortSignal),
+      );
+      expect(
+        within(dialog)
+          .getByRole('group', { name: 'Filtrer par statut' })
+          .querySelectorAll('[aria-pressed="true"]'),
+      ).toHaveLength(1);
+      expect(historyApi.history).not.toHaveBeenCalled();
+      await user.click(within(dialog).getByRole('button', { name: 'Close' }));
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+      expect(trigger).toHaveFocus();
+    },
+  );
+
+  it('ouvre toutes les inscriptions depuis le titre au clavier puis charge paresseusement historique et étapes', async () => {
+    const user = userEvent.setup();
+    renderDashboard();
+    const trigger = await screen.findByRole('button', {
+      name: `Voir les étudiants de ${formation.name}`,
+    });
+    trigger.focus();
+    await user.keyboard('{Enter}');
+    const dialog = await screen.findByRole('dialog', { name: formation.name });
+    await within(dialog).findByText('alice@example.com');
+    expect(api.enrollments).toHaveBeenLastCalledWith(
+      formation.id,
+      expect.objectContaining({ status: undefined, page: 1 }),
+      expect.any(AbortSignal),
+    );
+    expect(within(dialog).getByRole('button', { name: 'Tous (6)' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(historyApi.history).not.toHaveBeenCalled();
+    await user.click(
+      within(dialog).getByRole('button', { name: 'Voir les tentatives de Alice Martin' }),
+    );
+    const attempt = await within(dialog).findByRole('button', { name: /^Tentative 1/ });
+    expect(historyApi.history).toHaveBeenCalledWith('enrollment-real', 1, expect.any(AbortSignal));
+    expect(historyApi.detail).not.toHaveBeenCalled();
+    expect(within(dialog).getByRole('table')).not.toHaveTextContent(/réinscription/i);
+    attempt.focus();
+    await user.keyboard(' ');
+    await waitFor(() =>
+      expect(historyApi.detail).toHaveBeenCalledWith(
+        'enrollment-real',
+        'attempt-real',
+        expect.any(AbortSignal),
+      ),
+    );
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(trigger).toHaveFocus();
+    await user.click(trigger);
+    await screen.findByRole('dialog');
+    expect(screen.queryByRole('region', { name: 'Alice Martin' })).not.toBeInTheDocument();
+    expect(historyApi.history).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(['identité', 'session', 'tenant'] as const)(
+    'ferme la sélection ancienne au changement de %s et recharge sans données privées résiduelles',
+    async (scope) => {
+      const user = userEvent.setup();
+      renderDashboard();
+      await user.click(
+        await screen.findByRole('button', { name: `Voir les étudiants de ${formation.name}` }),
+      );
+      await user.click(
+        await screen.findByRole('button', { name: 'Voir les tentatives de Alice Martin' }),
+      );
+      await user.click(await screen.findByRole('button', { name: /^Tentative 1/ }));
+      await waitFor(() => expect(historyApi.detail).toHaveBeenCalledTimes(1));
+      api.enrollments.mockReturnValue(new Promise(() => {}));
+      act(() => {
+        if (scope === 'identité')
+          useAuthStore.setState({
+            user: {
+              id: 'editor-2',
+              name: 'Autre éditeur',
+              email: 'other@example.com',
+              role: Role.EDITOR,
+            },
+          });
+        else if (scope === 'session') useAuthStore.setState({ sessionId: 'session-2' });
+        else
+          useTenantStore.setState({
+            tenant: { id: 'tenant-2' } as NonNullable<
+              ReturnType<typeof useTenantStore.getState>['tenant']
+            >,
+          });
+      });
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+      expect(screen.queryByText('alice@example.com')).not.toBeInTheDocument();
+      expect(api.enrollments).toHaveBeenCalledTimes(1);
+      await user.click(
+        await screen.findByRole('button', { name: `Voir les étudiants de ${formation.name}` }),
+      );
+      expect(await screen.findByRole('dialog')).toBeInTheDocument();
+      expect(screen.queryByText('alice@example.com')).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /^Tentative 1/ })).not.toBeInTheDocument();
+      await waitFor(() => expect(api.enrollments).toHaveBeenCalledTimes(2));
+      expect(historyApi.history).toHaveBeenCalledTimes(1);
+      expect(historyApi.detail).toHaveBeenCalledTimes(1);
+    },
+  );
 
   it('affiche des chargements sans nombres fictifs', () => {
     api.overview.mockReturnValue(new Promise(() => {}));
@@ -174,12 +378,10 @@ describe('dashboard éditeur connecté', () => {
     await screen.findByRole('heading', { name: formation.name });
     await user.type(screen.getByRole('searchbox'), '  PREVENIR  ');
     await waitFor(() =>
-      expect(api.formations).toHaveBeenLastCalledWith({
-        q: 'PREVENIR',
-        sort_by: 'enrolled',
-        page: 1,
-        per_page: 20,
-      }),
+      expect(api.formations).toHaveBeenLastCalledWith(
+        { q: 'PREVENIR', sort_by: 'enrolled', page: 1, per_page: 20 },
+        expect.any(AbortSignal),
+      ),
     );
     expect(
       await screen.findByText('Aucune formation ne correspond à votre recherche.'),
@@ -201,24 +403,20 @@ describe('dashboard éditeur connecté', () => {
     await screen.findByRole('heading', { name: 'Formation page 1' });
     await user.click(screen.getByRole('button', { name: 'Suivant' }));
     await screen.findByRole('heading', { name: 'Formation page 2' });
-    expect(api.formations).toHaveBeenLastCalledWith({
-      q: '',
-      sort_by: 'enrolled',
-      page: 2,
-      per_page: 20,
-    });
+    expect(api.formations).toHaveBeenLastCalledWith(
+      { q: '', sort_by: 'enrolled', page: 2, per_page: 20 },
+      expect.any(AbortSignal),
+    );
     expect(screen.getByRole('button', { name: 'Suivant' })).toBeDisabled();
     fireEvent.keyDown(screen.getByRole('combobox', { name: 'Trier les formations' }), {
       key: 'ArrowDown',
     });
     await user.click(await screen.findByRole('option', { name: 'Plus d’échecs' }));
     await waitFor(() =>
-      expect(api.formations).toHaveBeenLastCalledWith({
-        q: '',
-        sort_by: 'failed',
-        page: 1,
-        per_page: 20,
-      }),
+      expect(api.formations).toHaveBeenLastCalledWith(
+        { q: '', sort_by: 'failed', page: 1, per_page: 20 },
+        expect.any(AbortSignal),
+      ),
     );
     expect(await screen.findByRole('heading', { name: 'Formation page 1' })).toBeInTheDocument();
     expect(
@@ -279,6 +477,71 @@ describe('dashboard éditeur connecté', () => {
     expect(screen.queryByText('2 étudiants · 6 inscriptions')).not.toBeInTheDocument();
     await waitFor(() => expect(api.overview).toHaveBeenCalledTimes(2));
   });
+
+  it.each(['démontage', 'session'] as const)(
+    'annule les trois requêtes dashboard en attente au changement de %s',
+    async (change) => {
+      api.overview.mockReturnValue(new Promise(() => {}));
+      api.formations.mockReturnValue(new Promise(() => {}));
+      api.enrollments.mockReturnValue(new Promise(() => {}));
+      const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      clients.push(client);
+      const { unmount } = renderHook(
+        () => ({
+          overview: useEditorDashboardOverviewQuery(),
+          formations: useEditorDashboardFormationsQuery({
+            page: 1,
+            per_page: 20,
+            sort_by: 'enrolled',
+          }),
+          enrollments: useFormationEnrollmentsQuery(formation.id, { page: 1 }),
+        }),
+        {
+          wrapper: ({ children }) => (
+            <QueryClientProvider client={client}>{children}</QueryClientProvider>
+          ),
+        },
+      );
+      await waitFor(() => expect(api.overview).toHaveBeenCalledTimes(1));
+      expect(api.formations).toHaveBeenCalledTimes(1);
+      expect(api.enrollments).toHaveBeenCalledTimes(1);
+      const signals = [
+        api.overview.mock.calls[0][0],
+        api.formations.mock.calls[0][1],
+        api.enrollments.mock.calls[0][2],
+      ];
+      const onAbort = jest.fn();
+      signals.forEach((signal) => {
+        expect(signal).toBeInstanceOf(AbortSignal);
+        expect(signal?.aborted).toBe(false);
+        signal?.addEventListener('abort', onAbort, { once: true });
+      });
+
+      if (change === 'session') act(() => useAuthStore.setState({ sessionId: 'session-2' }));
+      else unmount();
+
+      signals.forEach((signal) => expect(signal?.aborted).toBe(true));
+      expect(onAbort).toHaveBeenCalledTimes(3);
+      if (change === 'session') {
+        await waitFor(() => expect(api.overview).toHaveBeenCalledTimes(2));
+        expect(api.formations).toHaveBeenCalledTimes(2);
+        expect(api.enrollments).toHaveBeenCalledTimes(2);
+        const nextSignals = [
+          api.overview.mock.calls[1][0],
+          api.formations.mock.calls[1][1],
+          api.enrollments.mock.calls[1][2],
+        ];
+        nextSignals.forEach((signal, index) => {
+          expect(signal).not.toBe(signals[index]);
+          expect(signal?.aborted).toBe(false);
+        });
+      } else {
+        expect(api.overview).toHaveBeenCalledTimes(1);
+        expect(api.formations).toHaveBeenCalledTimes(1);
+        expect(api.enrollments).toHaveBeenCalledTimes(1);
+      }
+    },
+  );
 
   it('ne lance pas ces queries pour un client manager', () => {
     useAuthStore.setState({ role: Role.CLIENT_MANAGER });
@@ -393,16 +656,5 @@ describe('dashboard éditeur connecté', () => {
     expect(
       screen.queryByRole('navigation', { name: 'Pagination des formations' }),
     ).not.toBeInTheDocument();
-  });
-});
-
-describe('badge de réinscription prêt pour le futur panneau', () => {
-  it('ne marque pas la première inscription et reprend le numéro fourni par le serveur', () => {
-    const { container, rerender } = render(<ReenrollmentBadge number={0} />);
-    expect(container).toBeEmptyDOMElement();
-    rerender(<ReenrollmentBadge number={1} />);
-    expect(screen.getByText('Réinscription 1')).toHaveAttribute('data-slot', 'badge');
-    rerender(<ReenrollmentBadge number={2} />);
-    expect(screen.getByText('Réinscription 2')).toBeInTheDocument();
   });
 });

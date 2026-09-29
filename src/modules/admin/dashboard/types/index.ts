@@ -1,4 +1,5 @@
 import type {
+  ApiDashboardEnrollment,
   ApiDashboardFormation,
   ApiDashboardOverview,
   ApiDashboardStatusCounts,
@@ -43,3 +44,23 @@ export function normalizeDashboardOverview(overview: ApiDashboardOverview) {
 
 export type DashboardFormation = ReturnType<typeof normalizeDashboardFormation>;
 export type DashboardOverview = ReturnType<typeof normalizeDashboardOverview>;
+
+export function normalizeDashboardEnrollment(enrollment: ApiDashboardEnrollment) {
+  return {
+    id: enrollment.id,
+    learnerId: enrollment.learner.id,
+    name:
+      [enrollment.learner.first_name, enrollment.learner.last_name].filter(Boolean).join(' ') ||
+      enrollment.learner.email ||
+      'Étudiant indisponible',
+    email: enrollment.learner.email,
+    status: enrollment.status,
+    startedAt: enrollment.started_at,
+    endedAt: enrollment.ended_at,
+    accessEndsAt: enrollment.expires_at,
+    attempts: enrollment.attempts_count,
+    timeSpentSeconds: enrollment.time_spent_seconds,
+  };
+}
+
+export type DashboardEnrollment = ReturnType<typeof normalizeDashboardEnrollment>;

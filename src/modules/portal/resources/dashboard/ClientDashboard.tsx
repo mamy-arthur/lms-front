@@ -1,18 +1,23 @@
 'use client';
 
+import { useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { KpiCards } from './components/KpiCards';
 import { StudentsTable } from './components/students-table';
+import { StudentDrawer } from './components/students-drawer';
 import { ProgressCard } from './components/chart/chart-radial-text';
 import { useClientDashboardQuery, useClientDashboardScope } from './hooks/useClientDashboardQuery';
+import type { DashboardStudent } from './types';
 
 export default function ClientDashboard() {
   const scope = useClientDashboardScope();
-  return <ClientDashboardContent key={JSON.stringify(scope.key)} />;
+  return <ClientDashboardContent key={JSON.stringify(scope.key)} enabled={scope.enabled} />;
 }
 
-function ClientDashboardContent() {
+function ClientDashboardContent({ enabled }: { enabled: boolean }) {
   const { overview, students } = useClientDashboardQuery();
+  const [selectedStudent, setSelectedStudent] = useState<DashboardStudent | null>(null);
+  const drawerTrigger = useRef<HTMLElement | null>(null);
 
   return (
     <div className="bg-background flex flex-col">
@@ -49,17 +54,33 @@ function ClientDashboardContent() {
               </Button>
             </div>
           )}
-          <div className="grid grid-cols-1 gap-3 lg:grid-cols-4 lg:grid-rows-2">
+          <div className="grid min-w-0 grid-cols-2 gap-3 md:grid-cols-4 md:grid-rows-2">
             <KpiCards data={overview.data} />
             <ProgressCard
               students={students.data}
-              className="lg:col-start-3 lg:col-span-2 lg:row-start-1 lg:row-span-2"
+              className="col-span-2 col-start-1 row-start-3 md:col-start-3 md:row-start-1 md:row-span-2"
             />
           </div>
           <StudentsTable
             students={students.data ?? []}
             loading={students.isPending}
             error={students.isError}
+            onSelect={
+              enabled
+                ? (student, trigger) => {
+                    drawerTrigger.current = trigger;
+                    setSelectedStudent(student);
+                  }
+                : undefined
+            }
+          />
+          <StudentDrawer
+            student={enabled ? selectedStudent : null}
+            open={enabled && selectedStudent !== null}
+            onOpenChange={(open) => {
+              if (!open) setSelectedStudent(null);
+            }}
+            onRestoreFocus={() => drawerTrigger.current?.focus()}
           />
         </div>
       </div>

@@ -45,6 +45,29 @@ export interface ApiDashboardEnrollment {
   };
   status: EnrollmentStatus;
   enrolled_at: string;
-  /** 0 = première inscription ; les suivantes sont numérotées avant filtrage et pagination. */
-  reenrollment_number: number;
+  started_at: string | null;
+  ended_at: string | null;
+  expires_at: string | null;
+  attempts_count: number;
+  time_spent_seconds: number;
+}
+
+export interface DashboardEnrollmentsParams {
+  status?: EnrollmentStatus;
+  q?: string;
+  page?: number;
+  per_page?: number;
+  started_at_from?: string;
+  started_at_to?: string;
+  ended_at_from?: string;
+  ended_at_to?: string;
+  expires_at_from?: string;
+  expires_at_to?: string;
+}
+
+export interface ApiDashboardEnrollmentsPage extends ApiDashboardPage<ApiDashboardEnrollment> {
+  meta: ApiDashboardPage<ApiDashboardEnrollment>['meta'] & {
+    summary: { total: number; status_counts: ApiDashboardStatusCounts };
+    formation: { duration_minutes: number | null };
+  };
 }

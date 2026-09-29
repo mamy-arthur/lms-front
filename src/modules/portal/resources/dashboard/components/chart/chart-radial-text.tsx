@@ -1,7 +1,14 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Label, PolarGrid, PolarRadiusAxis, RadialBar, RadialBarChart } from 'recharts';
+import {
+  Label,
+  PolarGrid,
+  PolarRadiusAxis,
+  RadialBar,
+  RadialBarChart,
+  usePlotArea,
+} from 'recharts';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartContainer, type ChartConfig } from '@/components/ui/chart';
@@ -21,6 +28,22 @@ const chartConfig = {
     color: 'var(--color-primary)',
   },
 } satisfies ChartConfig;
+
+function ProgressGrid() {
+  const plotArea = usePlotArea();
+  if (!plotArea) return null;
+
+  const radius = Math.min(plotArea.width, plotArea.height) / 2;
+  return (
+    <PolarGrid
+      gridType="circle"
+      radialLines={false}
+      stroke="none"
+      polarRadius={[radius, radius * 0.8]}
+      className="first:fill-muted last:fill-background"
+    />
+  );
+}
 
 export function ProgressCard({
   className,
@@ -58,14 +81,17 @@ export function ProgressCard({
   ];
 
   return (
-    <Card className={cn('h-full', className)}>
-      <CardHeader className="flex justify-between gap-2 items-center pb-0">
-        <div>
+    <Card className={cn('h-full min-w-0', className)}>
+      <CardHeader className="flex flex-wrap items-start justify-between gap-2 pb-0">
+        <div className="min-w-0 flex-1 basis-48">
           <CardTitle>Progression global</CardTitle>
           <CardDescription>Progression moyenne sur l’ensemble des formations.</CardDescription>
         </div>
         <Select value={courseFilter} onValueChange={setCourseFilter}>
-          <SelectTrigger className="mt-2 h-8 w-50" aria-label="Filtrer par parcours">
+          <SelectTrigger
+            className="mt-2 h-8 w-50 min-w-0 max-w-full"
+            aria-label="Filtrer par parcours"
+          >
             <SelectValue placeholder="Tous les parcours" />
           </SelectTrigger>
           <SelectContent>
@@ -84,21 +110,16 @@ export function ProgressCard({
           role="img"
           aria-label={`Progression moyenne : ${students ? `${progress}%` : 'indisponible'}`}
         >
-          <ChartContainer config={chartConfig} className="mx-auto aspect-square h-56">
+          <ChartContainer config={chartConfig} className="mx-auto aspect-square w-full max-w-56">
             <RadialBarChart
               data={chartData}
               startAngle={90}
               endAngle={90 - (360 * progress) / 100}
-              innerRadius={80}
-              outerRadius={100}
+              margin={{ top: 12, right: 12, bottom: 12, left: 12 }}
+              innerRadius="80%"
+              outerRadius="100%"
             >
-              <PolarGrid
-                gridType="circle"
-                radialLines={false}
-                stroke="none"
-                polarRadius={[100, 80]}
-                className="first:fill-muted last:fill-background"
-              />
+              <ProgressGrid />
 
               <RadialBar dataKey="value" cornerRadius={10} background />
 

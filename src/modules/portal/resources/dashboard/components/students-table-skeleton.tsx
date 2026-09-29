@@ -16,6 +16,15 @@ export function StudentsTableSkeleton({ rows = 6 }: { rows?: number }) {
             <Skeleton className="h-4 w-28" />
           </TableCell>
           <TableCell>
+            <Skeleton className="h-5 w-20 rounded-full" />
+          </TableCell>
+          <TableCell>
+            <Skeleton className="h-4 w-20" />
+          </TableCell>
+          <TableCell>
+            <Skeleton className="h-4 w-20" />
+          </TableCell>
+          <TableCell>
             <div className="flex items-center gap-5">
               <Skeleton className="h-4 w-28" />
               <Skeleton className="h-5 w-16 rounded-full" />

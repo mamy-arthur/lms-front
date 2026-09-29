@@ -7,26 +7,26 @@ const kpis = [
     label: 'Parcours',
     description: 'Nombre de parcours suivis',
     key: 'learning_paths',
-    position: 'lg:col-start-1 lg:row-start-1',
+    position: 'col-start-1 row-start-1',
   },
   {
     label: 'Terminés',
     description: 'Modules terminés',
     key: 'completed',
-    position: 'lg:col-start-2 lg:row-start-1',
+    position: 'col-start-2 row-start-1',
     highlighted: true,
   },
   {
     label: 'En cours',
     description: 'Modules en cours',
     key: 'in_progress',
-    position: 'lg:col-start-1 lg:row-start-2',
+    position: 'col-start-1 row-start-2',
   },
   {
     label: 'À faire',
     description: 'Modules à réaliser',
     key: 'not_started',
-    position: 'lg:col-start-2 lg:row-start-2',
+    position: 'col-start-2 row-start-2',
   },
 ] as const;
 
@@ -41,7 +41,7 @@ export function KpiCards({ data }: { data: ClientDashboardOverview | undefined }
             key={kpi.label}
             className={cn(
               kpi.position,
-              'relative isolate overflow-hidden bg-card transition-all duration-200',
+              'relative isolate min-w-0 overflow-hidden bg-card transition-all duration-200',
               highlighted && 'border-none bg-(--color-primary)/10',
             )}
           >
@@ -58,7 +58,7 @@ export function KpiCards({ data }: { data: ClientDashboardOverview | undefined }
               <span className="absolute inset-0 rounded-2xl border border-current" />
               <span className="absolute inset-0 -translate-x-5 -translate-y-3 rounded-2xl border border-current" />
             </span>
-            <CardContent className="relative z-10 flex h-28 flex-col justify-between">
+            <CardContent className="relative z-10 flex min-h-28 flex-1 flex-col justify-between gap-3 wrap-break-word">
               <div className="flex items-start justify-between">
                 <div>
                   <p

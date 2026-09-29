@@ -1,7 +1,6 @@
 'use client';
 
 import { GraduationCap, Search, Users } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -13,8 +12,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { dashboardEnrollmentStatuses } from '../data/enrollmentStatuses';
+import { dashboardEnrollmentStatuses } from '@/modules/shared/lib/dashboardEnrollmentStatuses';
 import type { DashboardFormation } from '../types';
+import type { EnrollmentStatus } from '@/shared/types/enrollment.types';
 import { AverageProgressIndicator } from './AverageProgressIndicator';
 
 interface FormationProgressCardsProps {
@@ -31,6 +31,11 @@ interface FormationProgressCardsProps {
   isFetching: boolean;
   isError: boolean;
   onRetry: () => void;
+  onSelect: (
+    formation: DashboardFormation,
+    status: EnrollmentStatus | null,
+    trigger: HTMLButtonElement,
+  ) => void;
 }
 
 export function FormationProgressCards({
@@ -47,6 +52,7 @@ export function FormationProgressCards({
   isFetching,
   isError,
   onRetry,
+  onSelect,
 }: FormationProgressCardsProps) {
   const pages = Math.max(1, Math.ceil(total / perPage));
   // Le serveur peut renvoyer moins de pages que demandé si le catalogue a rétréci entre-temps.
@@ -148,7 +154,17 @@ export function FormationProgressCards({
                       <GraduationCap className="size-4" aria-hidden="true" />
                     </span>
                     <div className="min-w-0 space-y-1">
-                      <h3 className="wrap-break-word text-sm font-semibold">{formation.name}</h3>
+                      <h3 className="wrap-break-word text-sm font-semibold">
+                        <button
+                          type="button"
+                          aria-label={`Voir les étudiants de ${formation.name}`}
+                          aria-haspopup="dialog"
+                          onClick={(event) => onSelect(formation, null, event.currentTarget)}
+                          className="rounded-sm text-left hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                          {formation.name}
+                        </button>
+                      </h3>
                       <dl>
                         <div className="flex items-center gap-1 text-xs text-muted-foreground">
                           <Users className="size-3" aria-hidden="true" />
@@ -170,11 +186,12 @@ export function FormationProgressCards({
                   </div>
                   <div className="flex flex-wrap gap-2 lg:justify-end">
                     {dashboardEnrollmentStatuses.map((status) => (
-                      <Badge
+                      <button
                         key={status.key}
-                        variant="outline"
-                        role="img"
-                        className={`${status.badgeClassName} h-6`}
+                        type="button"
+                        aria-haspopup="dialog"
+                        onClick={(event) => onSelect(formation, status.key, event.currentTarget)}
+                        className={`${status.badgeClassName} inline-flex h-6 items-center gap-1 rounded-sm border px-2 py-0.5 text-xs transition-colors hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring`}
                         aria-label={`${status.label} : ${formation.statusCounts[status.key]} — ${formation.name}`}
                       >
                         <span className="size-1 rounded-full bg-current" aria-hidden="true" />
@@ -182,7 +199,7 @@ export function FormationProgressCards({
                           {formation.statusCounts[status.key]}
                         </span>
                         {status.badgeLabel}
-                      </Badge>
+                      </button>
                     ))}
                   </div>
                 </div>

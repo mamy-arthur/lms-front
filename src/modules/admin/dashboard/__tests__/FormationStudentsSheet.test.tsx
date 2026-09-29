@@ -1,890 +1,880 @@
 import { useRef, useState } from 'react';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import userEvent from '@testing-library/user-event';
+import type { DateRange } from 'react-day-picker';
+import { TooltipProvider } from '@/components/ui/tooltip';
+import { Role } from '@/shared/constants/roles';
+import { useAuthStore } from '@/shared/stores/auth.store';
+import { useTenantStore } from '@/shared/stores/tenant.store';
+import type {
+  ApiDashboardEnrollment,
+  ApiDashboardEnrollmentsPage,
+} from '@/shared/types/dashboard.types';
+import { editorDashboardApi } from '../api';
+import { enrollmentHistoryApi } from '@/shared/api/enrollment-history.api';
 import {
   FormationStudentsSheet,
   type FormationStudentSelection,
 } from '../components/FormationStudentsSheet';
-import {
-  formationProgressDemo,
-  getDemoFormationRoster,
-  getDemoFormationStudents,
-  type DashboardEnrollmentStatus,
-} from '../data/studentProgressDemo';
-import {
-  formatAttemptDate,
-  formatAttemptDuration,
-  formatShortDate,
-  getAttemptMinutes,
-  getDemoEnrollmentSummary,
-  getDemoStudentAttempts,
-} from '../data/studentAttemptsDemo';
+import type { DashboardFormation } from '../types';
+import type {
+  EnrollmentAttemptSummary,
+  EnrollmentHistoryResponse,
+} from '@/shared/types/enrollment-history.types';
 
-import { getInitials } from '@/shared/lib/string/getInitials';
+jest.mock('../api', () => ({
+  editorDashboardApi: { overview: jest.fn(), formations: jest.fn(), enrollments: jest.fn() },
+}));
+jest.mock('@/shared/api/enrollment-history.api', () => ({
+  enrollmentHistoryApi: { history: jest.fn(), detail: jest.fn() },
+}));
+// Keep the real date popovers, draft/apply behavior and query hooks. Only date picking is doubled.
+jest.mock('@/components/ui/calendar', () => ({
+  Calendar: ({ onSelect }: { onSelect: (range: DateRange | undefined) => void }) => (
+    <div>
+      <button onClick={() => onSelect({ from: new Date(2026, 8, 2), to: new Date(2026, 8, 28) })}>
+        Choisir une plage
+      </button>
+      <button onClick={() => onSelect({ from: new Date(2026, 8, 2) })}>
+        Choisir la borne inférieure
+      </button>
+      <button onClick={() => onSelect({ from: undefined, to: new Date(2026, 8, 28) })}>
+        Choisir la borne supérieure
+      </button>
+    </div>
+  ),
+}));
 
-const formation = formationProgressDemo[0];
-
-
-/** Les quatre statuts à zéro : le seul moyen d'obtenir un effectif vide. */
-const EMPTY_FORMATION = {
-  ...formation,
-  completed: 0,
-  in_progress: 0,
-  not_started: 0,
-  failed: 0,
+const api = jest.mocked(editorDashboardApi);
+const historyApi = jest.mocked(enrollmentHistoryApi);
+const formation: DashboardFormation = {
+  id: 'formation-1',
+  name: 'Formation serveur',
+  isPublished: true,
+  totalEnrollments: 999, // Deliberately stale: the sheet must use its own server summary.
+  completionRate: 0,
+  statusCounts: { completed: 0, in_progress: 0, not_started: 0, failed: 999, expired: 0 },
+};
+const enrollment: ApiDashboardEnrollment = {
+  id: 'enrollment-1',
+  learner: {
+    id: 'learner-1',
+    first_name: 'Alice',
+    last_name: 'Martin',
+    email: 'alice@example.com',
+  },
+  status: 'failed',
+  enrolled_at: '2026-08-01T09:00:00Z',
+  started_at: '2026-09-02T09:00:00Z',
+  ended_at: '2026-09-03T10:00:00Z',
+  expires_at: '2026-12-31T23:59:59Z',
+  attempts_count: 3,
+  time_spent_seconds: 61,
+};
+const otherEnrollment: ApiDashboardEnrollment = {
+  ...enrollment,
+  id: 'enrollment-2',
+  learner: {
+    id: 'learner-2',
+    first_name: 'Bruno',
+    last_name: 'Durand',
+    email: 'bruno@example.com',
+  },
+  status: 'completed',
+};
+const summary: ApiDashboardEnrollmentsPage['meta']['summary'] = {
+  total: 107,
+  status_counts: { completed: 40, in_progress: 30, not_started: 20, failed: 10, expired: 7 },
+};
+const attempt: EnrollmentAttemptSummary = {
+  id: 'attempt-1',
+  attempt_number: 3,
+  status: 'failed',
+  available_at: '2026-09-01T09:00:00Z',
+  started_at: '2026-09-02T09:00:00Z',
+  ended_at: '2026-09-03T10:00:00Z',
+  interruption_reason: null,
+  time_spent_seconds: 61,
 };
 
-/** Lignes d'étudiants : en-tête et ligne d'état vide (une seule cellule) exclus. */
-function studentRows() {
-  const [, body] = within(screen.getByRole('table', { name: 'Étudiants concernés' })).getAllByRole(
-    'rowgroup',
-  );
-  return within(body)
-    .getAllByRole('row')
+function page(
+  data: ApiDashboardEnrollment[] = [enrollment, otherEnrollment],
+  meta: Partial<ApiDashboardEnrollmentsPage['meta']> = {},
+): ApiDashboardEnrollmentsPage {
+  return {
+    data,
+    meta: {
+      total: data.length,
+      page: 1,
+      per_page: 20,
+      summary,
+      formation: { duration_minutes: 60 },
+      ...meta,
+    },
+  };
+}
+
+function history(id = enrollment.id, attempts = [attempt]): EnrollmentHistoryResponse {
+  return {
+    data: {
+      enrollment: { id, learner_id: 'learner-1', learning_path_id: formation.id, status: 'failed' },
+      attempts,
+    },
+    meta: { total: attempts.length, page: 1, per_page: 20 },
+  };
+}
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((done) => {
+    resolve = done;
+  });
+  return { promise, resolve };
+}
+
+const clients: QueryClient[] = [];
+function renderSheet(selection: FormationStudentSelection | null = { formation, status: null }) {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: Infinity } },
+  });
+  clients.push(client);
+  const props = { onClose: jest.fn(), onRestoreFocus: jest.fn() };
+  const view = render(<FormationStudentsSheet selection={selection} {...props} />, {
+    wrapper: ({ children }) => (
+      <QueryClientProvider client={client}>
+        <TooltipProvider>{children}</TooltipProvider>
+      </QueryClientProvider>
+    ),
+  });
+  return {
+    ...view,
+    client,
+    changeSelection: (next: FormationStudentSelection | null) =>
+      view.rerender(<FormationStudentsSheet selection={next} {...props} />),
+  };
+}
+
+function table() {
+  return screen.getByRole('table', { name: 'Étudiants concernés' });
+}
+function rows() {
+  return within(table())
+    .queryAllByRole('row')
     .filter((row) => within(row).queryAllByRole('cell').length === 8);
 }
-
-/** Le volet de détail n'est monté que lorsqu'une ligne est sélectionnée. */
+function searchBox() {
+  return screen.getByRole('searchbox', { name: 'Rechercher un étudiant' });
+}
+function statusButton(name: RegExp) {
+  return within(screen.getByRole('group', { name: 'Filtrer par statut' })).getByRole('button', {
+    name,
+  });
+}
+function studentButton(name = 'Alice Martin') {
+  return screen.getByRole('button', { name: `Voir les tentatives de ${name}` });
+}
 function detailPane() {
-  return screen.queryByRole('region', { name: /^Tentatives de/ });
-}
-function Harness({
-  status = 'failed',
-  initiallyOpen = true,
-}: {
-  status?: DashboardEnrollmentStatus;
-  initiallyOpen?: boolean;
-}) {
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const [selection, setSelection] = useState<FormationStudentSelection | null>(
-    initiallyOpen
-      ? {
-          formation,
-          status,
-        }
-      : null,
-  );
-  return (
-    <>
-      <button ref={triggerRef} onClick={() => setSelection({ formation, status })}>
-        Ouvrir le panneau
-      </button>
-      <FormationStudentsSheet
-        selection={selection}
-        onClose={() => setSelection(null)}
-        onRestoreFocus={() => triggerRef.current?.focus()}
-      />
-    </>
-  );
+  return screen.queryByRole('region', { name: 'Alice Martin' });
 }
 
-/** Le volet de détail n'existe pas au départ : il faut sélectionner une ligne. */
-async function selectFirstStudent(status: DashboardEnrollmentStatus = 'failed') {
+async function selectStudent() {
   const user = userEvent.setup();
-  render(<Harness status={status} />);
-  const student = getDemoFormationStudents(formation, status)[0];
-  const button = screen.getByRole('button', { name: `Voir les tentatives de ${student.name}` });
-  expect(button).toHaveAttribute('aria-current', 'false');
-  await user.click(button);
-  expect(button).toHaveAttribute('aria-current', 'true');
-  return { user, student, button };
+  await screen.findByRole('button', { name: 'Voir les tentatives de Alice Martin' });
+  await user.click(studentButton());
+  await screen.findByRole('button', { name: /^Tentative 3/ });
+  return user;
 }
 
-describe('panneau des tentatives étudiantes', () => {
-  it('ouvre sur un tableau pleine largeur, sans volet de détail', () => {
-    render(<Harness status="failed" />);
+beforeEach(() => {
+  jest.clearAllMocks();
+  api.enrollments.mockReset().mockResolvedValue(page());
+  historyApi.history.mockReset().mockImplementation(async (id) => history(id));
+  historyApi.detail.mockReset().mockResolvedValue({ data: { attempt, nodes: [] } });
+  useAuthStore.setState({
+    user: { id: 'editor-1', name: 'Éditeur', email: 'editor@example.com', role: Role.EDITOR },
+    role: Role.EDITOR,
+    sessionId: 'session-1',
+  });
+  useTenantStore.setState({ tenant: null, resolutionStatus: 'resolved' });
+});
+
+afterEach(() => {
+  cleanup();
+  clients.splice(0).forEach((client) => client.clear());
+  useAuthStore.setState({ user: null, role: null, sessionId: null });
+  useTenantStore.setState({ tenant: null, resolutionStatus: 'resolved' });
+});
+
+describe('panneau connecté aux inscriptions réelles', () => {
+  it('ne demande ni inscriptions ni historique quand le panneau est fermé', () => {
+    renderSheet(null);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(api.enrollments).not.toHaveBeenCalled();
+    expect(historyApi.history).not.toHaveBeenCalled();
+    expect(historyApi.detail).not.toHaveBeenCalled();
+  });
+
+  it('charge le statut initial et les compteurs globaux sans les déduire des lignes ni de la carte', async () => {
+    api.enrollments.mockResolvedValue(page([enrollment], { total: 10 }));
+    renderSheet({ formation, status: 'failed' });
+    await screen.findByText('10 sur 107 inscriptions');
+    expect(api.enrollments).toHaveBeenCalledWith(
+      formation.id,
+      expect.objectContaining({ status: 'failed', q: '', page: 1, per_page: 20 }),
+      expect.any(AbortSignal),
+    );
+    expect(statusButton(/^Tous/)).toHaveTextContent('Tous (107)');
+    expect(statusButton(/^Terminé/)).toHaveTextContent('Terminé (40)');
+    expect(statusButton(/^En cours/)).toHaveTextContent('En cours (30)');
+    expect(statusButton(/^Non commencé/)).toHaveTextContent('Non commencé (20)');
+    expect(statusButton(/^Échoué/)).toHaveTextContent('Échoué (10)');
+    expect(statusButton(/^Échoué/)).toHaveAttribute('aria-pressed', 'true');
+    expect(statusButton(/^Expiré/)).toHaveTextContent('Expiré (7)');
+    expect(rows()).toHaveLength(1);
     expect(screen.getByRole('dialog')).toHaveClass('data-[side=right]:min-w-full');
     expect(detailPane()).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Replier' })).not.toBeInTheDocument();
-
-    const rows = studentRows();
-    expect(rows).toHaveLength(formation.failed);
-    rows.forEach((row) => {
-      const trigger = within(row).getByRole('button');
-      expect(trigger).toHaveAttribute('aria-current', 'false');
-      // Rien à contrôler tant que le volet n'est pas monté.
-      expect(trigger).not.toHaveAttribute('aria-controls');
-    });
+    expect(studentButton()).not.toHaveAttribute('aria-controls');
+    expect(historyApi.history).not.toHaveBeenCalled();
   });
 
-  it('garde la largeur du drawer et les colonnes après sélection', async () => {
-    await selectFirstStudent();
-    expect(screen.getByRole('dialog')).toHaveClass('data-[side=right]:min-w-full');
-    expect(studentRows()).toHaveLength(formation.failed);
+  it('affiche les dates et secondes serveur sans inventer de critère de fin ni d’expiration globale', async () => {
+    renderSheet();
+    await screen.findByText('alice@example.com');
+    const cells = within(rows()[0]).getAllByRole('cell');
     expect(
-      within(screen.getByRole('table', { name: 'Étudiants concernés' })).getAllByRole(
-        'columnheader',
-      ),
-    ).toHaveLength(8);
-  });
-
-  it('présente l’avatar de l’étudiant et un lien de contact dans le volet', async () => {
-    const { student } = await selectFirstStudent();
-    const history = screen.getByRole('region', { name: `Tentatives de ${student.name}` });
-
-    const avatar = history.querySelector('[data-slot="avatar"]');
-    expect(avatar).toHaveAttribute('aria-hidden', 'true');
-    expect(history.querySelector('[data-slot="avatar-fallback"]')).toHaveTextContent(
-      getInitials(student.name),
-    );
-
-    // `mailto:` : il n'y a pas d'endpoint de messagerie, le lien ouvre le
-    // client mail avec l'adresse réelle de l'étudiant.
-    expect(within(history).getByRole('link', { name: 'Contacter l’étudiant' })).toHaveAttribute(
-      'href',
-      `mailto:${student.email}`,
-    );
-  });
-
-  it('affiche le temps passé sur chaque tentative', async () => {
-    const { student } = await selectFirstStudent();
-    const history = screen.getByRole('region', { name: `Tentatives de ${student.name}` });
-    const attempts = getDemoStudentAttempts(formation, 'failed', student.id);
-
-    attempts.forEach((attempt) => {
-      const trigger = within(history).getByRole('button', {
-        name: new RegExp(`^Tentative ${attempt.number}`),
-      });
-      expect(trigger).toHaveTextContent(
-        `Temps passé : ${formatAttemptDuration(getAttemptMinutes(attempt.steps))}`,
-      );
-    });
-  });
-
-  it('monte le volet de détail contrôlé par la ligne choisie', async () => {
-    const { student, button } = await selectFirstStudent();
-    const history = screen.getByRole('region', { name: `Tentatives de ${student.name}` });
-
-    expect(button.getAttribute('aria-controls')).toBe(history.id);
-    expect(within(history).getByText(student.email)).toBeInTheDocument();
-  });
-
-  it('replie le volet et rend sa pleine largeur au tableau', async () => {
-    const { user, button } = await selectFirstStudent();
-    await user.click(screen.getByRole('button', { name: 'Replier' }));
-
-    expect(detailPane()).not.toBeInTheDocument();
-    expect(studentRows()).toHaveLength(formation.failed);
-    expect(button).toHaveAttribute('aria-current', 'false');
-    expect(button).not.toHaveAttribute('aria-controls');
-  });
-
-  it('rend le focus à la ligne quittée après repli', async () => {
-    const { user, button } = await selectFirstStudent();
-    await user.click(screen.getByRole('button', { name: 'Replier' }));
-    expect(button).toHaveFocus();
-  });
-
-  it('rouvre le volet après un repli', async () => {
-    const { user, student, button } = await selectFirstStudent();
-    await user.click(screen.getByRole('button', { name: 'Replier' }));
-    await user.click(button);
-
-    expect(
-      screen.getByRole('region', { name: `Tentatives de ${student.name}` }),
-    ).toBeInTheDocument();
-    expect(button).toHaveAttribute('aria-current', 'true');
-  });
-
-  it('bascule le détail d’un étudiant à l’autre sans rien replier', async () => {
-    const { user, student } = await selectFirstStudent();
-    const next = getDemoFormationStudents(formation, 'failed')[1];
-    await user.click(screen.getByRole('button', { name: `Voir les tentatives de ${next.name}` }));
-
-    expect(
-      screen.queryByRole('region', { name: `Tentatives de ${student.name}` }),
-    ).not.toBeInTheDocument();
-    expect(screen.getByRole('region', { name: `Tentatives de ${next.name}` })).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: `Voir les tentatives de ${student.name}` }),
-    ).toHaveAttribute('aria-current', 'false');
-  });
-
-  it('nomme les colonnes du tableau', () => {
-    render(<Harness status="failed" />);
-    expect(
-      within(screen.getByRole('table', { name: 'Étudiants concernés' }))
+      within(table())
         .getAllByRole('columnheader')
-        .map((column) => column.textContent),
+        .map((cell) => cell.textContent),
     ).toEqual([
       'Étudiant',
+      'Statut',
       'Début',
       'Fin',
       'Temps passé',
       'Tentatives',
       'Accès valable jusqu’au',
-      'Statut',
       'Détails',
     ]);
-  });
-
-  it('termine chaque ligne par un chevron décoratif annonçant le détail', () => {
-    render(<Harness status="failed" />);
-
-    studentRows().forEach((row) => {
-      const last = within(row).getAllByRole('cell')[7];
-      const chevron = last.querySelector('svg');
-      expect(chevron).toBeInTheDocument();
-      // Décoratif : l'action est déjà nommée par le bouton de la 1re cellule.
-      expect(chevron).toHaveAttribute('aria-hidden', 'true');
-      // Une seule action nommée par ligne, le chevron n'en ajoute pas.
-      expect(within(row).getAllByRole('button')).toHaveLength(1);
-    });
-  });
-
-  it('range dates, temps passé, tentatives, accès et statut dans les colonnes', () => {
-    render(<Harness status="failed" />);
-
-    studentRows().forEach((row, index) => {
-      const student = getDemoFormationStudents(formation, 'failed')[index];
-      const summary = getDemoEnrollmentSummary(formation, 'failed', student.id);
-      const cells = within(row).getAllByRole('cell');
-      expect(cells).toHaveLength(8);
-      expect(cells[0]).toHaveTextContent(student.name);
-      expect(cells[0]).toHaveTextContent(student.email);
-      expect(cells[1]).toHaveTextContent(formatAttemptDate(summary.startedAt!));
-      expect(cells[2]).toHaveTextContent(formatAttemptDate(summary.endedAt!));
-      expect(cells[3]).toHaveTextContent(formatAttemptDuration(summary.minutes));
-      expect(cells[4]).toHaveTextContent(String(summary.attempts));
-      expect(cells[5]).toHaveTextContent(formatShortDate(summary.accessEndsAt));
-      expect(cells[6]).toHaveTextContent('Échoué');
-    });
-  });
-
-  it('affiche la durée théorique et l’expiration de la formation en en-tête', () => {
-    render(<Harness status="failed" />);
-    const header = screen.getByRole('dialog');
-
-    expect(within(header).getByText('Durée théorique').nextElementSibling).toHaveTextContent(
-      formatAttemptDuration(formation.theoreticalMinutes),
-    );
+    expect(cells[1]).toHaveTextContent('Échoué');
+    expect(cells[2].querySelector('time')).toHaveAttribute('datetime', enrollment.started_at);
+    expect(cells[3].querySelector('time')).toHaveAttribute('datetime', enrollment.ended_at);
+    expect(cells[4]).toHaveTextContent(/^1 min 1 s$/);
+    expect(cells[5]).toHaveTextContent(/^3$/);
+    expect(cells[6].querySelector('time')).toHaveAttribute('datetime', enrollment.expires_at);
+    expect(cells[6]).toHaveTextContent('31/12/2026');
+    expect(screen.getByText('Durée théorique').nextElementSibling).toHaveTextContent('1 h');
     expect(
-      within(header).getByText('Expiration de la formation').nextElementSibling,
-    ).toHaveTextContent(formatShortDate(formation.expiresAt));
-    expect(
-      within(header).getByText(`Critère de fin : ${formation.completionCriterion}`),
-    ).toBeInTheDocument();
-  });
-
-  it('plafonne la date de fin d’accès à l’expiration de la formation', () => {
-    // demo-4 expire avant l'échéance de certains étudiants.
-    const shortLived = formationProgressDemo[3];
-    const capped = getDemoFormationRoster(shortLived).find(
-      (item) => getDemoEnrollmentSummary(shortLived, item.status, item.id).cappedByFormation,
-    )!;
-    const summary = getDemoEnrollmentSummary(shortLived, capped.status, capped.id);
-
-    expect(Date.parse(summary.dueAt)).toBeGreaterThan(Date.parse(shortLived.expiresAt));
-    expect(summary.accessEndsAt).toBe(shortLived.expiresAt);
-  });
-
-  it('colore le temps passé en vert sous la durée théorique, en rouge au-dessus', async () => {
-    const user = userEvent.setup();
-    render(<Harness status="failed" />);
-    // Tout l'effectif : le statut « échoué » seul ne couvre pas les deux cas.
-    await user.click(
-      within(screen.getByRole('group', { name: 'Filtrer par statut' })).getByRole('button', {
-        name: /^Tous/,
-      }),
-    );
-
-    const seen = new Set<string>();
-    studentRows().forEach((row) => {
-      const id = within(row).getByRole('button').getAttribute('aria-label')!;
-      const entry = getDemoFormationRoster(formation).find(
-        (item) => `Voir les tentatives de ${item.name}` === id,
-      )!;
-      const { minutes, attempts } = getDemoEnrollmentSummary(formation, entry.status, entry.id);
-      const cell = within(row).getAllByRole('cell')[3];
-
-      if (!attempts) {
-        // Sans tentative, aucun temps à juger : ni vert ni rouge.
-        expect(cell).toHaveClass('text-muted-foreground');
-        seen.add('neutre');
-        return;
-      }
-      const expected = minutes < formation.theoreticalMinutes ? 'text-emerald-600' : 'text-red-600';
-      expect(cell).toHaveClass(expected);
-      seen.add(expected);
-    });
-
-    // Les trois états sont bien exercés par les fixtures.
-    expect(seen).toEqual(new Set(['text-emerald-600', 'text-red-600', 'neutre']));
-  });
-
-  it('cumule le temps passé sur toutes les tentatives', () => {
-    const [student] = getDemoFormationStudents(formation, 'failed');
-    const attempts = getDemoStudentAttempts(formation, 'failed', student.id);
-    const expected = attempts.reduce(
-      (total, attempt) => total + getAttemptMinutes(attempt.steps),
-      0,
-    );
-
-    render(<Harness status="failed" />);
-    expect(within(studentRows()[0]).getAllByRole('cell')[3]).toHaveTextContent(
-      formatAttemptDuration(expected),
-    );
-    expect(expected).toBeGreaterThan(0);
-  });
-
-  it('annonce un parcours jamais démarré sans date, temps ni tentative', () => {
-    render(<Harness status="not_started" />);
-    const cells = within(studentRows()[0]).getAllByRole('cell');
-    expect(cells[1]).toHaveTextContent('Non démarré');
-    expect(cells[2]).toHaveTextContent('—');
-    expect(cells[3]).toHaveTextContent('—');
-    expect(cells[4]).toHaveTextContent('0');
-  });
-
-  it('sélectionne au clic sur la ligne, pas seulement sur le nom', async () => {
-    const user = userEvent.setup();
-    render(<Harness status="failed" />);
-    const student = getDemoFormationStudents(formation, 'failed')[0];
-    const [row] = studentRows();
-
-    await user.click(within(row).getAllByRole('cell')[4]);
-    expect(
-      screen.getByRole('button', { name: `Voir les tentatives de ${student.name}` }),
-    ).toHaveAttribute('aria-current', 'true');
-    expect(
-      screen.getByRole('region', { name: `Tentatives de ${student.name}` }),
-    ).toBeInTheDocument();
-  });
-
-  it('présente les tentatives de l’étudiant choisi sans les déplier', async () => {
-    const { student } = await selectFirstStudent();
-    expect(screen.getAllByRole('dialog')).toHaveLength(1);
-    const history = screen.getByRole('region', { name: `Tentatives de ${student.name}` });
-    expect(within(history).getByRole('button', { name: /^Tentative 1/ })).toHaveAttribute(
-      'aria-expanded',
-      'false',
-    );
-    expect(within(history).getByRole('button', { name: /^Tentative 2/ })).toHaveAttribute(
-      'aria-expanded',
-      'false',
-    );
-    expect(within(history).getByText(/Reprise depuis le début/)).toBeInTheDocument();
-    expect(within(history).getAllByText(/Motif d’interruption/)).toHaveLength(2);
-    const alerts = within(history).getAllByRole('alert');
-    expect(alerts).toHaveLength(3);
-    alerts.forEach((alert) => {
-      expect(alert).toHaveAttribute('data-slot', 'alert');
-      expect(alert.closest('button')).toBeNull();
-    });
-    expect(
-      within(history).getByRole('alert', { name: 'Reprise du parcours · Tentative 2' }),
-    ).toHaveTextContent(/Reprise depuis le début/);
-    expect(
-      within(history).getByRole('alert', { name: 'Motif d’interruption · Tentative 1' }),
-    ).toHaveTextContent(/Échec à l’évaluation 1/);
-    expect(history.querySelectorAll('time')).toHaveLength(4);
-    expect(within(history).queryByRole('list')).not.toBeInTheDocument();
-  });
-
-  it('déplie les étapes au clavier avec temps passés et causes de verrouillage', async () => {
-    const { user } = await selectFirstStudent();
-    const trigger = screen.getByRole('button', { name: /^Tentative 1/ });
-    trigger.focus();
-    await user.keyboard('{Enter}');
-    const steps = within(
-      screen.getByRole('list', { name: 'Étapes de la tentative 1' }),
-    ).getAllByRole('listitem');
-    expect(steps).toHaveLength(6);
-    expect(steps[0]).toHaveTextContent('Module 1');
-    expect(steps[0]).toHaveTextContent('Terminé');
-    expect(steps[0]).toHaveTextContent('Temps passé : 3 h');
-    expect(steps[1]).toHaveTextContent('Évaluation 1');
-    expect(steps[1]).toHaveTextContent('Échouée');
-    steps.slice(2).forEach((step) => {
-      expect(step).toHaveTextContent(/Verrouillé/);
-      expect(step).toHaveTextContent('Échec à l’évaluation 1');
-      expect(step).not.toHaveTextContent('Temps passé');
-    });
-
-    await user.click(screen.getByRole('button', { name: /^Tentative 2/ }));
-    expect(trigger).toHaveAttribute('aria-expanded', 'false');
-    expect(
-      screen.queryByRole('list', { name: 'Étapes de la tentative 1' }),
+      screen.queryByText(/Expiration de la formation|Critère de fin|Reprise depuis le début/),
     ).not.toBeInTheDocument();
-    const second = within(
-      screen.getByRole('list', { name: 'Étapes de la tentative 2' }),
-    ).getAllByRole('listitem');
-    expect(second[0]).toHaveTextContent('Temps passé : 4 h');
-    expect(second[1]).toHaveTextContent('Réussie');
-    expect(second[3]).toHaveTextContent('Échouée');
-    expect(second[4]).toHaveTextContent('Échec à l’évaluation 2');
+    expect(cells[7].querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    expect(within(rows()[0]).getAllByRole('button')).toHaveLength(1);
   });
 
-  it('affiche un état vide lorsque la liste ne contient aucun étudiant', () => {
-    render(
-      <FormationStudentsSheet
-        selection={{ formation: EMPTY_FORMATION, status: 'failed' }}
-        onClose={() => {}}
-        onRestoreFocus={() => {}}
-      />,
-    );
-    expect(screen.getByText('Aucun étudiant inscrit à cette formation.')).toBeInTheDocument();
-    expect(studentRows()).toHaveLength(0);
-    expect(screen.queryByRole('region', { name: /^Tentatives de/ })).not.toBeInTheDocument();
-  });
-
-  it('consulte les temps par cours sans replier la tentative et les réinitialise au changement d’étudiant', async () => {
-    const { user } = await selectFirstStudent();
-    const attempt = screen.getByRole('button', { name: /^Tentative 1/ });
-    await user.click(attempt);
-    await user.click(screen.getByRole('button', { name: 'Voir le temps par cours de Module 1' }));
-    expect(attempt).toHaveAttribute('aria-expanded', 'true');
-    expect(
-      screen.getByRole('list', { name: 'Temps par cours de Module 1 — tentative 1' }),
-    ).toBeInTheDocument();
-    const next = getDemoFormationStudents(formation, 'failed')[1];
-    await user.click(screen.getByRole('button', { name: `Voir les tentatives de ${next.name}` }));
-    await user.click(screen.getByRole('button', { name: /^Tentative 1/ }));
-    expect(
-      screen.getByRole('button', { name: 'Voir le temps par cours de Module 1' }),
-    ).toHaveAttribute('aria-expanded', 'false');
-  });
-
-  it('ne conserve pas une tentative ouverte en changeant d’étudiant', async () => {
-    const { user } = await selectFirstStudent();
-    await user.click(screen.getByRole('button', { name: /^Tentative 1/ }));
-    const next = getDemoFormationStudents(formation, 'failed')[1];
-    await user.click(screen.getByRole('button', { name: `Voir les tentatives de ${next.name}` }));
-    expect(screen.getByRole('region', { name: `Tentatives de ${next.name}` })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^Tentative 1/ })).toHaveAttribute(
-      'aria-expanded',
-      'false',
-    );
-    await user.click(screen.getByRole('button', { name: /^Tentative 2/ }));
-    const steps = within(
-      screen.getByRole('list', { name: 'Étapes de la tentative 2' }),
-    ).getAllByRole('listitem');
-    expect(steps[4]).toHaveTextContent('Terminé');
-    expect(steps[5]).toHaveTextContent('Échouée');
-  });
-
-  it('affiche un état vide pour un étudiant qui n’a pas commencé', async () => {
-    await selectFirstStudent('not_started');
-    expect(screen.getByText('Aucune tentative commencée')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /^Tentative 1/ })).not.toBeInTheDocument();
-  });
-
-  it.each(['completed', 'in_progress'] as const)(
-    'reflète le statut %s dans la dernière tentative',
-    async (status) => {
-      const { user } = await selectFirstStudent(status);
-      await user.click(screen.getByRole('button', { name: /^Tentative 2/ }));
-      const steps = within(
-        screen.getByRole('list', { name: 'Étapes de la tentative 2' }),
-      ).getAllByRole('listitem');
-      if (status === 'completed') {
-        expect(steps.every((step) => !step.textContent?.includes('Verrouillé'))).toBe(true);
-        expect(steps[5]).toHaveTextContent('Réussie');
-      } else {
-        expect(steps[2]).toHaveTextContent('En cours');
-        expect(steps[3]).toHaveTextContent('Le module 2 est en cours');
-      }
+  it.each([
+    [59, 1, '59 s', 'text-emerald-600'],
+    [60, 1, '1 min', 'text-red-600'],
+    [61, 1, '1 min 1 s', 'text-red-600'],
+    [0, 0, '0 s', 'text-muted-foreground'],
+  ])(
+    'compare exactement %i secondes au budget d’une minute (%i tentative)',
+    async (seconds, attempts, text, color) => {
+      api.enrollments.mockResolvedValue(
+        page([{ ...enrollment, time_spent_seconds: seconds, attempts_count: attempts }], {
+          formation: { duration_minutes: 1 },
+        }),
+      );
+      renderSheet();
+      await screen.findByText('alice@example.com');
+      const cell = within(rows()[0]).getAllByRole('cell')[4];
+      expect(cell.textContent).toBe(text);
+      expect(cell).toHaveClass(color);
     },
   );
 
-  it('garde le focus sur le déclencheur après sélection, sans le déplacer', async () => {
-    const { button } = await selectFirstStudent();
-    expect(button).toHaveFocus();
-  });
-
-  it('réouvre le panneau replié, sans sélection', async () => {
-    const { user } = await selectFirstStudent();
-    const next = getDemoFormationStudents(formation, 'failed')[1];
-    await user.click(screen.getByRole('button', { name: `Voir les tentatives de ${next.name}` }));
-    await user.click(screen.getByRole('button', { name: /^Tentative 1/ }));
-    await user.click(screen.getByRole('button', { name: 'Close' }));
-    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
-    await user.click(screen.getByRole('button', { name: 'Ouvrir le panneau' }));
-    expect(detailPane()).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /^Tentative 1/ })).not.toBeInTheDocument();
-    getDemoFormationStudents(formation, 'failed').forEach((item) =>
-      expect(
-        screen.getByRole('button', { name: `Voir les tentatives de ${item.name}` }),
-      ).toHaveAttribute('aria-current', 'false'),
-    );
-  });
-
-  it('vide le détail lorsque le filtre change', () => {
-    const props = { onClose: () => {}, onRestoreFocus: () => {} };
-    const { rerender } = render(
-      <FormationStudentsSheet {...props} selection={{ formation, status: 'failed' }} />,
-    );
-    rerender(<FormationStudentsSheet {...props} selection={{ formation, status: 'completed' }} />);
-    expect(detailPane()).not.toBeInTheDocument();
-    const students = getDemoFormationStudents(formation, 'completed');
-    expect(studentRows()).toHaveLength(students.length);
-    expect(
-      screen.getByRole('button', { name: `Voir les tentatives de ${students[0].name}` }),
-    ).toHaveAttribute('aria-current', 'false');
-  });
-
-  it('ferme avec Échap depuis une tentative et restitue le focus au badge', async () => {
-    const user = userEvent.setup();
-    render(<Harness initiallyOpen={false} />);
-    const badge = screen.getByRole('button', { name: 'Ouvrir le panneau' });
-    await user.click(badge);
-    const student = getDemoFormationStudents(formation, 'failed')[0];
-    await user.click(
-      screen.getByRole('button', { name: `Voir les tentatives de ${student.name}` }),
-    );
-    await user.click(screen.getByRole('button', { name: /^Tentative 1/ }));
-    await user.keyboard('{Escape}');
-    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
-    expect(badge).toHaveFocus();
-  });
-});
-
-describe('recherche d’étudiants', () => {
-  // 30 étudiants : assez pour que filtrer ait un effet observable.
-  const status = 'completed' as const;
-  const students = getDemoFormationStudents(formation, status);
-  // Le panneau charge tout l'effectif, le compteur s'y réfère.
-  const roster = getDemoFormationRoster(formation);
-
-  function searchBox() {
-    return screen.getByRole('searchbox', { name: 'Rechercher un étudiant' });
-  }
-
-  it('filtre sur le nom sans tenir compte des accents, de la casse et des espaces', async () => {
-    const user = userEvent.setup();
-    render(<Harness status={status} />);
-    expect(studentRows()).toHaveLength(students.length);
-
-    await user.type(searchBox(), '  ETUDIANT 007  ');
-
-    const rows = studentRows();
-    expect(rows).toHaveLength(1);
-    expect(rows[0]).toHaveTextContent('Étudiant 007');
-  });
-
-  it('filtre aussi sur l’e-mail', async () => {
-    const user = userEvent.setup();
-    render(<Harness status={status} />);
-
-    await user.type(searchBox(), 'etudiant.012@');
-
-    const rows = studentRows();
-    expect(rows).toHaveLength(1);
-    expect(rows[0]).toHaveTextContent('etudiant.012@example.com');
-  });
-
-  it('annonce le nombre de résultats', async () => {
-    const user = userEvent.setup();
-    render(<Harness status={status} />);
-    // À l'ouverture, le filtre de statut est déjà actif.
-    expect(screen.getByRole('status')).toHaveTextContent(
-      `${students.length} sur ${roster.length} étudiants`,
-    );
-
-    await user.type(searchBox(), '007');
-
-    expect(screen.getByRole('status')).toHaveTextContent(`1 sur ${roster.length} étudiants`);
-  });
-
-  it('annonce l’effectif complet quand aucun filtre n’est actif', async () => {
-    const user = userEvent.setup();
-    render(<Harness status={status} />);
-    await user.click(
-      within(screen.getByRole('group', { name: 'Filtrer par statut' })).getByRole('button', {
-        name: /^Tous/,
+  it('ne colore pas le temps comme un dépassement quand la durée théorique est inconnue', async () => {
+    api.enrollments.mockResolvedValue(
+      page([{ ...enrollment, time_spent_seconds: 3661 }], {
+        formation: { duration_minutes: null },
       }),
     );
-
-    expect(screen.getByRole('status')).toHaveTextContent(`${roster.length} étudiants`);
-    expect(screen.getByRole('status')).not.toHaveTextContent('sur');
+    renderSheet();
+    await screen.findByText('alice@example.com');
+    const cell = within(rows()[0]).getAllByRole('cell')[4];
+    expect(cell).toHaveTextContent(/^1 h 1 min 1 s$/);
+    expect(cell).toHaveClass('text-muted-foreground');
+    expect(cell).not.toHaveClass('text-red-600');
+    expect(cell).not.toHaveClass('text-emerald-600');
+    expect(screen.queryByText('Durée théorique')).not.toBeInTheDocument();
   });
 
-  it('propose de réinitialiser les filtres quand rien ne correspond', async () => {
-    const user = userEvent.setup();
-    render(<Harness status={status} />);
-    await user.type(searchBox(), 'introuvable');
-
-    expect(studentRows()).toHaveLength(0);
-    expect(screen.getByText('Aucun étudiant ne correspond aux filtres.')).toBeInTheDocument();
-
-    await user.click(screen.getByRole('button', { name: 'Réinitialiser les filtres' }));
-
-    expect(searchBox()).toHaveValue('');
-    // La réinitialisation lève aussi le filtre de statut, d'où l'effectif complet.
-    expect(studentRows()).toHaveLength(roster.length);
-  });
-
-  it('garde l’historique ouvert même si l’étudiant sort des résultats', async () => {
-    const user = userEvent.setup();
-    render(<Harness status={status} />);
-    await user.click(
-      screen.getByRole('button', { name: `Voir les tentatives de ${students[0].name}` }),
+  it('accepte les noms, e-mails et dates nuls et le statut expiré sans lien de contact fictif', async () => {
+    api.enrollments.mockResolvedValue(
+      page([
+        {
+          ...enrollment,
+          learner: { id: 'learner-1', first_name: null, last_name: null, email: null },
+          status: 'expired',
+          started_at: null,
+          ended_at: null,
+          expires_at: null,
+          attempts_count: 0,
+          time_spent_seconds: 0,
+        },
+      ]),
     );
-
-    await user.type(searchBox(), '030');
-
-    expect(studentRows()).toHaveLength(1);
+    historyApi.history.mockResolvedValue(history(enrollment.id, []));
+    const user = userEvent.setup();
+    renderSheet({ formation, status: 'expired' });
+    await screen.findByText('Étudiant indisponible');
+    const cells = within(rows()[0]).getAllByRole('cell');
+    expect(cells[1]).toHaveTextContent('Expiré');
+    expect(cells[2]).toHaveTextContent('Non démarré');
+    expect(cells[3]).toHaveTextContent('—');
+    expect(cells[4]).toHaveTextContent('0 s');
+    expect(cells[5]).toHaveTextContent('0');
+    expect(cells[6]).toHaveTextContent('Sans échéance');
+    expect(table().querySelector('time')).not.toBeInTheDocument();
+    await user.click(studentButton('Étudiant indisponible'));
+    expect(await screen.findByText('Aucune tentative à afficher.')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Contacter l’étudiant' })).not.toBeInTheDocument();
     expect(
-      screen.getByRole('region', { name: `Tentatives de ${students[0].name}` }),
+      within(screen.getByRole('region', { name: 'Étudiant indisponible' })).getByText(
+        'E-mail indisponible',
+      ),
     ).toBeInTheDocument();
+    expect(historyApi.detail).not.toHaveBeenCalled();
   });
 
-  it('n’affiche ni recherche ni badges quand l’effectif est vide', () => {
-    render(
-      <FormationStudentsSheet
-        selection={{ formation: EMPTY_FORMATION, status: 'failed' }}
-        onClose={() => {}}
-        onRestoreFocus={() => {}}
-      />,
-    );
-
-    expect(screen.queryByRole('searchbox')).not.toBeInTheDocument();
-    expect(screen.getByText('Aucun étudiant inscrit à cette formation.')).toBeInTheDocument();
+  it('charge l’historique à la sélection et les étapes seulement au dépliage clavier', async () => {
+    const user = userEvent.setup();
+    renderSheet();
+    await screen.findByText('alice@example.com');
+    const trigger = studentButton();
+    trigger.focus();
+    await user.keyboard('{Enter}');
+    const attemptTrigger = await screen.findByRole('button', { name: /^Tentative 3/ });
+    expect(historyApi.history).toHaveBeenCalledWith(enrollment.id, 1, expect.any(AbortSignal));
+    expect(historyApi.detail).not.toHaveBeenCalled();
+    expect(trigger).toHaveFocus();
+    expect(trigger).toHaveAttribute('aria-current', 'true');
+    expect(trigger).toHaveAttribute('aria-controls', detailPane()!.id);
     expect(
-      screen.queryByRole('button', { name: 'Réinitialiser les filtres' }),
-    ).not.toBeInTheDocument();
-    expect(screen.queryByRole('group', { name: 'Filtrer par statut' })).not.toBeInTheDocument();
+      within(detailPane()!).getByRole('link', { name: 'Contacter l’étudiant' }),
+    ).toHaveAttribute('href', 'mailto:alice@example.com');
+    expect(attemptTrigger).toHaveTextContent('Temps passé : 1 min 1 s');
+    expect(attemptTrigger).toHaveAttribute('aria-expanded', 'false');
+    attemptTrigger.focus();
+    await user.keyboard(' ');
+    await waitFor(() =>
+      expect(historyApi.detail).toHaveBeenCalledWith(
+        enrollment.id,
+        attempt.id,
+        expect.any(AbortSignal),
+      ),
+    );
+    await user.click(screen.getByRole('button', { name: 'Replier' }));
+    expect(detailPane()).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
+    expect(trigger).toHaveAttribute('aria-current', 'false');
+    expect(trigger).not.toHaveAttribute('aria-controls');
+    expect(rows()).toHaveLength(2);
+  });
+
+  it('conserve deux inscriptions du même étudiant sans mention de réinscription et réinitialise leur tentative ouverte', async () => {
+    const reenrollment = {
+      ...enrollment,
+      id: 'enrollment-repeat',
+      status: 'completed' as const,
+    };
+    api.enrollments.mockResolvedValue(page([enrollment, reenrollment]));
+    historyApi.history.mockImplementation(async (id) =>
+      history(id, [
+        { ...attempt, id: `attempt-${id}`, attempt_number: id === enrollment.id ? 3 : 1 },
+      ]),
+    );
+    const user = userEvent.setup();
+    renderSheet();
+    expect(await screen.findAllByText('alice@example.com')).toHaveLength(2);
+    const [first, second] = rows().map((row) => within(row).getByRole('button'));
+    expect(table()).not.toHaveTextContent(/réinscription/i);
+    await user.click(first);
+    await user.click(await screen.findByRole('button', { name: /^Tentative 3/ }));
+    await waitFor(() =>
+      expect(historyApi.detail).toHaveBeenCalledWith(
+        enrollment.id,
+        `attempt-${enrollment.id}`,
+        expect.any(AbortSignal),
+      ),
+    );
+    // The whole row also opens history, not just the name button.
+    await user.click(within(rows()[1]).getAllByRole('cell')[4]);
+    expect(await screen.findByRole('button', { name: /^Tentative 1/ })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    );
+    expect(historyApi.history).toHaveBeenLastCalledWith(
+      reenrollment.id,
+      1,
+      expect.any(AbortSignal),
+    );
+    expect(first).toHaveAttribute('aria-current', 'false');
+    expect(second).toHaveAttribute('aria-current', 'true');
+    expect(screen.queryByRole('button', { name: /^Tentative 3/ })).not.toBeInTheDocument();
+    expect(historyApi.detail).toHaveBeenCalledTimes(1);
+    await user.click(screen.getByRole('button', { name: /^Tentative 1/ }));
+    await waitFor(() =>
+      expect(historyApi.detail).toHaveBeenLastCalledWith(
+        reenrollment.id,
+        `attempt-${reenrollment.id}`,
+        expect.any(AbortSignal),
+      ),
+    );
   });
 });
 
-describe('filtres par statut', () => {
-  const roster = getDemoFormationRoster(formation);
+describe('filtres et pagination côté serveur', () => {
+  it('envoie la recherche débouncée au serveur et affiche sa réponse, pas un sous-ensemble de la page visible', async () => {
+    api.enrollments.mockImplementation(async (_id, params = {}) =>
+      params.q ? page([otherEnrollment], { total: 31 }) : page([enrollment], { total: 107 }),
+    );
+    renderSheet();
+    await screen.findByText('alice@example.com');
+    fireEvent.change(searchBox(), { target: { value: '  ALIAS_SERVEUR  ' } });
+    await screen.findByText('bruno@example.com');
+    expect(api.enrollments).toHaveBeenLastCalledWith(
+      formation.id,
+      expect.objectContaining({ q: 'ALIAS_SERVEUR', page: 1, per_page: 20 }),
+      expect.any(AbortSignal),
+    );
+    // The server may match aliases; the client must not apply its own name/email filter.
+    expect(rows()).toHaveLength(1);
+    expect(screen.queryByText('alice@example.com')).not.toBeInTheDocument();
+    expect(screen.getByText('31 sur 107 inscriptions')).toBeInTheDocument();
+    expect(statusButton(/^Terminé/)).toHaveTextContent('(40)');
+    expect(historyApi.history).not.toHaveBeenCalled();
+  });
 
-  function filterBadge(name: RegExp | string) {
-    return within(screen.getByRole('group', { name: 'Filtrer par statut' })).getByRole('button', {
-      name,
-    });
-  }
-
-  it('affiche un badge par statut avec son effectif', () => {
-    render(<Harness status="failed" />);
+  it('pagine avec les métadonnées serveur et ne demande jamais une page 2 avec un nouveau statut ou texte', async () => {
+    api.enrollments.mockImplementation(async (_id, params = {}) =>
+      page(params.page === 2 ? [otherEnrollment] : [enrollment], {
+        total: 21,
+        page: params.page ?? 1,
+      }),
+    );
+    const user = userEvent.setup();
+    renderSheet();
+    await screen.findByText('Page 1 sur 2');
+    expect(screen.getByRole('button', { name: 'Inscriptions précédentes' })).toBeDisabled();
+    await user.click(screen.getByRole('button', { name: 'Inscriptions suivantes' }));
+    await screen.findByText('bruno@example.com');
+    expect(screen.queryByText('alice@example.com')).not.toBeInTheDocument();
+    expect(api.enrollments).toHaveBeenLastCalledWith(
+      formation.id,
+      expect.objectContaining({ page: 2, per_page: 20 }),
+      expect.any(AbortSignal),
+    );
+    expect(screen.getByRole('button', { name: 'Inscriptions suivantes' })).toBeDisabled();
+    await user.click(statusButton(/^Expiré/));
+    await screen.findByText('alice@example.com');
+    expect(api.enrollments).toHaveBeenLastCalledWith(
+      formation.id,
+      expect.objectContaining({ status: 'expired', page: 1 }),
+      expect.any(AbortSignal),
+    );
+    await user.click(screen.getByRole('button', { name: 'Inscriptions suivantes' }));
+    await screen.findByText('bruno@example.com');
+    fireEvent.change(searchBox(), { target: { value: 'nouveau' } });
+    await waitFor(() =>
+      expect(api.enrollments).toHaveBeenLastCalledWith(
+        formation.id,
+        expect.objectContaining({ status: 'expired', q: 'nouveau', page: 1 }),
+        expect.any(AbortSignal),
+      ),
+    );
+    // Inspect calls in order: applying the status first requests page 1, not page 2.
     expect(
-      within(screen.getByRole('group', { name: 'Filtrer par statut' }))
-        .getAllByRole('button')
-        .map((badge) => badge.textContent),
-    ).toEqual([
-      `Tous (${roster.length})`,
-      `Terminé (${formation.completed})`,
-      `En cours (${formation.in_progress})`,
-      `Non commencé (${formation.not_started})`,
-      `Échoué (${formation.failed})`,
-    ]);
+      api.enrollments.mock.calls.find(([, params]) => params?.status === 'expired')?.[1]?.page,
+    ).toBe(1);
+    expect(
+      api.enrollments.mock.calls.some(([, params]) => params?.q === 'nouveau' && params.page !== 1),
+    ).toBe(false);
   });
 
-  it('s’ouvre sur le statut cliqué depuis le tableau de bord', () => {
-    render(<Harness status="in_progress" />);
-
-    expect(filterBadge(/^En cours/)).toHaveAttribute('aria-pressed', 'true');
-    expect(filterBadge(/^Tous/)).toHaveAttribute('aria-pressed', 'false');
-    expect(studentRows()).toHaveLength(formation.in_progress);
-  });
-
-  it('bascule sur « Tous » et affiche l’effectif complet', async () => {
-    const user = userEvent.setup();
-    render(<Harness status="failed" />);
-    expect(studentRows()).toHaveLength(formation.failed);
-
-    await user.click(filterBadge(/^Tous/));
-
-    expect(filterBadge(/^Tous/)).toHaveAttribute('aria-pressed', 'true');
-    expect(studentRows()).toHaveLength(roster.length);
-  });
-
-  it('restreint le tableau au statut choisi', async () => {
-    const user = userEvent.setup();
-    render(<Harness status="failed" />);
-
-    await user.click(filterBadge(/^Non commencé/));
-
-    const rows = studentRows();
-    expect(rows).toHaveLength(formation.not_started);
-    rows.forEach((row) =>
-      expect(within(row).getAllByRole('cell')[6]).toHaveTextContent('Non commencé'),
-    );
-  });
-
-  it('combine filtre de statut et recherche', async () => {
-    const user = userEvent.setup();
-    render(<Harness status="failed" />);
-    await user.click(filterBadge(/^Terminé/));
-
-    await user.type(screen.getByRole('searchbox', { name: 'Rechercher un étudiant' }), '007');
-
-    const rows = studentRows();
-    expect(rows).toHaveLength(1);
-    expect(rows[0]).toHaveTextContent('Étudiant 007');
-    expect(rows[0]).toHaveTextContent('Terminé');
-  });
-});
-
-describe('filtres par plage de dates', () => {
-  async function openFilter(user: ReturnType<typeof userEvent.setup>, label: string) {
-    await user.click(screen.getByRole('button', { name: `Filtrer par ${label}` }));
-  }
-
-  /**
-   * Jour du calendrier affiché. `CalendarDayButton` expose
-   * `data-day={date.toLocaleDateString('fr')}`, seule prise stable sur une
-   * grille de jours. Les dates sont prises dans le mois courant pour rester
-   * visibles quelle que soit la date d'exécution.
-   */
-  function dayButton(date: Date) {
-    const key = date.toLocaleDateString('fr');
-    const [button] = document.querySelectorAll<HTMLElement>(`[data-day="${key}"]`);
-    if (!button) throw new Error(`Jour ${key} absent du calendrier`);
-    return button;
-  }
-
-  const thisMonth = (dayOfMonth: number) => {
-    const today = new Date();
-    return new Date(today.getFullYear(), today.getMonth(), dayOfMonth);
-  };
-
-  it('propose une icône de filtre sur chaque colonne de date, et sur celles-là seulement', () => {
-    render(<Harness status="failed" />);
-
-    ['Début', 'Fin', 'Accès valable jusqu’au'].forEach((label) =>
-      expect(screen.getByRole('button', { name: `Filtrer par ${label}` })).toBeInTheDocument(),
-    );
-    ['Étudiant', 'Temps passé', 'Tentatives', 'Statut'].forEach((label) =>
+  it.each([
+    ['Début', 'started_at_from', 'started_at_to'],
+    ['Fin', 'ended_at_from', 'ended_at_to'],
+    ['Accès valable jusqu’au', 'expires_at_from', 'expires_at_to'],
+  ] as const)(
+    'applique les bornes %s au serveur avant la pagination, jamais au seul tableau visible',
+    async (label, from, to) => {
+      api.enrollments.mockImplementation(async (_id, params = {}) =>
+        page([params[from] ? otherEnrollment : enrollment], { total: 21, page: params.page ?? 1 }),
+      );
+      const user = userEvent.setup();
+      renderSheet();
+      await screen.findByText('alice@example.com');
+      await user.click(screen.getByRole('button', { name: 'Inscriptions suivantes' }));
+      await waitFor(() => expect(table()).toHaveAttribute('aria-busy', 'false'));
+      const requests = api.enrollments.mock.calls.length;
+      await user.click(screen.getByRole('button', { name: `Filtrer par ${label}` }));
+      await user.click(screen.getByRole('button', { name: 'Choisir une plage' }));
+      expect(api.enrollments).toHaveBeenCalledTimes(requests);
+      await user.click(screen.getByRole('button', { name: 'Appliquer' }));
+      await screen.findByText('bruno@example.com');
+      expect(api.enrollments).toHaveBeenLastCalledWith(
+        formation.id,
+        expect.objectContaining({
+          [from]: '2026-09-02',
+          [to]: '2026-09-28',
+          page: 1,
+          per_page: 20,
+        }),
+        expect.any(AbortSignal),
+      );
       expect(
-        screen.queryByRole('button', { name: `Filtrer par ${label}` }),
+        api.enrollments.mock.calls.some(([, params]) => params?.[from] && params.page !== 1),
+      ).toBe(false);
+      // In particular the expires_at date is outside the selected range: trust the API response.
+      expect(rows()).toHaveLength(1);
+      expect(screen.getByText('21 sur 107 inscriptions')).toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: `Filtrer par ${label} — filtre actif` }));
+      await user.click(screen.getByRole('button', { name: 'Réinitialiser' }));
+      await screen.findByText('alice@example.com');
+      expect(screen.getByRole('button', { name: `Filtrer par ${label}` })).toBeInTheDocument();
+    },
+  );
+
+  it('combine toutes les dates avec le statut et la recherche puis réinitialise les filtres', async () => {
+    api.enrollments.mockImplementation(async (_id, params = {}) =>
+      page(params.expires_at_to ? [] : [enrollment]),
+    );
+    const user = userEvent.setup();
+    renderSheet({ formation, status: 'failed' });
+    await screen.findByText('alice@example.com');
+    fireEvent.change(searchBox(), { target: { value: '  Alice  ' } });
+    await waitFor(() =>
+      expect(api.enrollments).toHaveBeenLastCalledWith(
+        formation.id,
+        expect.objectContaining({ q: 'Alice' }),
+        expect.any(AbortSignal),
+      ),
+    );
+    for (const label of ['Début', 'Fin', 'Accès valable jusqu’au']) {
+      await user.click(screen.getByRole('button', { name: `Filtrer par ${label}` }));
+      await user.click(screen.getByRole('button', { name: 'Choisir une plage' }));
+      await user.click(screen.getByRole('button', { name: 'Appliquer' }));
+    }
+    expect(
+      await screen.findByText('Aucun étudiant ne correspond aux filtres.'),
+    ).toBeInTheDocument();
+    expect(api.enrollments).toHaveBeenLastCalledWith(
+      formation.id,
+      {
+        status: 'failed',
+        q: 'Alice',
+        page: 1,
+        per_page: 20,
+        started_at_from: '2026-09-02',
+        started_at_to: '2026-09-28',
+        ended_at_from: '2026-09-02',
+        ended_at_to: '2026-09-28',
+        expires_at_from: '2026-09-02',
+        expires_at_to: '2026-09-28',
+      },
+      expect.any(AbortSignal),
+    );
+    await user.click(screen.getByRole('button', { name: 'Réinitialiser les filtres' }));
+    await waitFor(() =>
+      expect(api.enrollments).toHaveBeenLastCalledWith(
+        formation.id,
+        {
+          status: undefined,
+          q: '',
+          page: 1,
+          per_page: 20,
+          started_at_from: undefined,
+          started_at_to: undefined,
+          ended_at_from: undefined,
+          ended_at_to: undefined,
+          expires_at_from: undefined,
+          expires_at_to: undefined,
+        },
+        expect.any(AbortSignal),
+      ),
+    );
+    expect(searchBox()).toHaveValue('');
+    expect(statusButton(/^Tous/)).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.queryByText('Aucun étudiant ne correspond aux filtres.')).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ['Choisir la borne inférieure', { started_at_from: '2026-09-02', started_at_to: undefined }],
+    ['Choisir la borne supérieure', { started_at_from: undefined, started_at_to: '2026-09-28' }],
+  ])('transmet une plage ouverte : %s', async (choice, bounds) => {
+    const user = userEvent.setup();
+    renderSheet();
+    await screen.findByText('alice@example.com');
+    await user.click(screen.getByRole('button', { name: 'Filtrer par Début' }));
+    await user.click(screen.getByRole('button', { name: choice }));
+    await user.click(screen.getByRole('button', { name: 'Appliquer' }));
+    await waitFor(() =>
+      expect(api.enrollments).toHaveBeenLastCalledWith(
+        formation.id,
+        expect.objectContaining(bounds),
+        expect.any(AbortSignal),
+      ),
+    );
+  });
+
+  it('conserve le détail à travers recherche, statut, dates et page puis rend le focus à la recherche si la ligne a disparu', async () => {
+    api.enrollments.mockImplementation(async (_id, params = {}) =>
+      page(params.q || params.status || params.page === 2 ? [otherEnrollment] : [enrollment], {
+        total: 21,
+        page: params.page ?? 1,
+      }),
+    );
+    renderSheet();
+    const user = await selectStudent();
+    fireEvent.change(searchBox(), { target: { value: 'Bruno' } });
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('button', { name: 'Voir les tentatives de Alice Martin' }),
       ).not.toBeInTheDocument(),
     );
-  });
-
-  it('ouvre un calendrier de sélection de plage', async () => {
-    const user = userEvent.setup();
-    render(<Harness status="failed" />);
-    await openFilter(user, 'Début');
-
-    expect(screen.getByRole('button', { name: 'Appliquer' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Réinitialiser' })).toBeInTheDocument();
-    // Deux mois affichés côte à côte.
-    expect(screen.getAllByRole('grid')).toHaveLength(2);
-    expect(screen.getByText('Choisissez une date de début, puis une date de fin.')).toBeVisible();
-  });
-
-  it('récapitule la plage en cours de sélection dans le calendrier', async () => {
-    const user = userEvent.setup();
-    render(<Harness status="failed" />);
-    await openFilter(user, 'Début');
-
-    await user.click(dayButton(thisMonth(2)));
-    await user.click(dayButton(thisMonth(4)));
-
-    const from = thisMonth(2).toLocaleDateString('fr');
-    const to = thisMonth(4).toLocaleDateString('fr');
-    expect(screen.getByRole('status')).toHaveTextContent(`Du ${from} au ${to}`);
-  });
-
-  it('marque la colonne comme filtrée après application, et la libère au reset', async () => {
-    const user = userEvent.setup();
-    render(<Harness status="failed" />);
-    const trigger = screen.getByRole('button', { name: 'Filtrer par Début' });
-    // Bordure et fond dès le repos : le bouton doit se voir comme cliquable.
-    expect(trigger).toHaveClass('border', 'bg-muted/60', 'text-muted-foreground', 'size-6');
-
-    await user.click(trigger);
-    await user.click(dayButton(thisMonth(2)));
-    await user.click(dayButton(thisMonth(4)));
+    expect(detailPane()).toBeInTheDocument();
+    await user.click(statusButton(/^Terminé/));
+    await waitFor(() => expect(table()).toHaveAttribute('aria-busy', 'false'));
+    await user.click(screen.getByRole('button', { name: 'Filtrer par Fin' }));
+    await user.click(screen.getByRole('button', { name: 'Choisir une plage' }));
     await user.click(screen.getByRole('button', { name: 'Appliquer' }));
+    await waitFor(() => expect(table()).toHaveAttribute('aria-busy', 'false'));
+    await user.click(screen.getByRole('button', { name: 'Inscriptions suivantes' }));
+    await screen.findByText('Page 2 sur 2');
+    expect(detailPane()).toBeInTheDocument();
+    expect(historyApi.history).toHaveBeenCalledTimes(1);
+    await user.click(screen.getByRole('button', { name: 'Replier' }));
+    expect(detailPane()).not.toBeInTheDocument();
+    expect(searchBox()).toHaveFocus();
+  });
+});
 
-    const active = screen.getByRole('button', { name: 'Filtrer par Début — filtre actif' });
-    expect(active).toHaveClass('bg-(--color-primary)', 'text-primary-foreground');
-
-    await user.click(active);
-    await user.click(screen.getByRole('button', { name: 'Réinitialiser' }));
-
-    expect(screen.getByRole('button', { name: 'Filtrer par Début' })).toHaveClass('bg-muted/60');
+describe('chargement, erreurs et isolation', () => {
+  it('annonce le chargement initial sans fabriquer une liste vide ou des totaux', async () => {
+    const pending = deferred<ApiDashboardEnrollmentsPage>();
+    api.enrollments.mockReturnValue(pending.promise);
+    renderSheet();
+    expect(screen.getByRole('status')).toHaveTextContent('Chargement des inscriptions…');
+    expect(table()).toHaveAttribute('aria-busy', 'true');
+    expect(screen.queryByText(/Aucun étudiant/)).not.toBeInTheDocument();
+    expect(statusButton(/^Tous/)).toHaveTextContent('Tous (…)');
+    expect(rows()).toHaveLength(0);
+    await act(async () => pending.resolve(page()));
+    expect(await screen.findByText('alice@example.com')).toBeInTheDocument();
   });
 
-  it('décrit la plage appliquée dans l’infobulle du bouton', async () => {
+  it('masque la page précédente pendant le chargement et bloque les boutons de pagination', async () => {
+    const pending = deferred<ApiDashboardEnrollmentsPage>();
+    api.enrollments
+      .mockResolvedValueOnce(page([enrollment], { total: 21 }))
+      .mockReturnValueOnce(pending.promise);
     const user = userEvent.setup();
-    render(<Harness status="failed" />);
-
-    await user.hover(screen.getByRole('button', { name: 'Filtrer par Début' }));
-    expect(await screen.findByRole('tooltip')).toHaveTextContent('Filtrer par plage de dates');
-    await user.unhover(screen.getByRole('button', { name: 'Filtrer par Début' }));
-
-    await openFilter(user, 'Début');
-    await user.click(dayButton(thisMonth(2)));
-    await user.click(dayButton(thisMonth(4)));
-    await user.click(screen.getByRole('button', { name: 'Appliquer' }));
-
-    await user.hover(screen.getByRole('button', { name: 'Filtrer par Début — filtre actif' }));
-    const from = thisMonth(2).toLocaleDateString('fr');
-    const to = thisMonth(4).toLocaleDateString('fr');
-    expect(await screen.findByRole('tooltip')).toHaveTextContent(`Du ${from} au ${to}`);
+    renderSheet();
+    await screen.findByText('alice@example.com');
+    await user.click(screen.getByRole('button', { name: 'Inscriptions suivantes' }));
+    expect(screen.queryByText('alice@example.com')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Aucun étudiant/)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Inscriptions suivantes' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Inscriptions précédentes' })).toBeDisabled();
+    await act(async () => pending.resolve(page([otherEnrollment], { total: 21, page: 2 })));
+    expect(await screen.findByText('bruno@example.com')).toBeInTheDocument();
   });
 
-  it('vide le tableau quand la plage ne recouvre aucune ligne', async () => {
+  it('distingue erreur et vide, et permet une nouvelle tentative', async () => {
+    api.enrollments.mockRejectedValueOnce(new Error('indisponible'));
     const user = userEvent.setup();
-    render(<Harness status="failed" />);
-    expect(studentRows().length).toBeGreaterThan(0);
-
-    // Les fixtures démarrent en septembre 2026 : un mois courant différent ne
-    // recouvre rien, et un mois identique est déjà couvert par les tests purs.
-    await openFilter(user, 'Début');
-    await user.click(dayButton(thisMonth(2)));
-    await user.click(dayButton(thisMonth(4)));
-    await user.click(screen.getByRole('button', { name: 'Appliquer' }));
-
-    const days = studentRows().map((row) => within(row).getAllByRole('cell')[1].textContent);
-    // Chaque ligne restante est bien dans la plage retenue.
-    days.forEach((value) => expect(value).not.toBe('Non démarré'));
+    renderSheet();
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Impossible de charger les inscriptions.',
+    );
+    expect(screen.queryByText(/Aucun étudiant/)).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Réessayer les inscriptions' }));
+    expect(await screen.findByText('alice@example.com')).toBeInTheDocument();
+    expect(api.enrollments).toHaveBeenCalledTimes(2);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
-  it('ne réaffiche pas l’infobulle quand on ferme le popover', async () => {
+  it('annonce un effectif réellement vide depuis le résumé serveur', async () => {
+    api.enrollments.mockResolvedValue(page([], { summary: { total: 0, status_counts: {} } }));
+    renderSheet();
+    expect(
+      await screen.findByText('Aucun étudiant inscrit à cette formation.'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('0 sur 0 inscriptions')).toBeInTheDocument();
+    expect(rows()).toHaveLength(0);
+    expect(
+      screen.queryByRole('navigation', { name: 'Pagination des inscriptions' }),
+    ).not.toBeInTheDocument();
+    expect(historyApi.history).not.toHaveBeenCalled();
+  });
+
+  it('gère le chargement et la nouvelle tentative de l’historique sans recharger les inscriptions', async () => {
+    historyApi.history.mockRejectedValueOnce(new Error('historique indisponible'));
+    const pending = deferred<EnrollmentHistoryResponse>();
+    historyApi.history.mockReturnValueOnce(pending.promise);
     const user = userEvent.setup();
-    render(<Harness status="failed" />);
-    const trigger = screen.getByRole('button', { name: 'Filtrer par Début' });
+    renderSheet();
+    await screen.findByText('alice@example.com');
+    await user.click(studentButton());
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Impossible de charger l’historique',
+    );
+    await user.click(screen.getByRole('button', { name: 'Réessayer l’historique' }));
+    expect(
+      await screen.findByText('Chargement de l’historique des tentatives…'),
+    ).toBeInTheDocument();
+    await act(async () => pending.resolve(history()));
+    expect(await screen.findByRole('button', { name: /^Tentative 3/ })).toBeInTheDocument();
+    expect(api.enrollments).toHaveBeenCalledTimes(1);
+    expect(historyApi.history).toHaveBeenCalledTimes(2);
+    expect(historyApi.detail).not.toHaveBeenCalled();
+  });
 
-    await user.hover(trigger);
-    expect(await screen.findByRole('tooltip')).toBeInTheDocument();
+  it.each(['formation', 'statut'] as const)(
+    'réinitialise sélection, page, recherche et dates au changement de %s',
+    async (change) => {
+      api.enrollments.mockImplementation(async (_id, params = {}) =>
+        page([enrollment], { total: 21, page: params.page ?? 1 }),
+      );
+      const { changeSelection } = renderSheet();
+      const user = await selectStudent();
+      fireEvent.change(searchBox(), { target: { value: 'Alice' } });
+      await waitFor(() =>
+        expect(api.enrollments).toHaveBeenLastCalledWith(
+          formation.id,
+          expect.objectContaining({ q: 'Alice' }),
+          expect.any(AbortSignal),
+        ),
+      );
+      await user.click(screen.getByRole('button', { name: 'Filtrer par Début' }));
+      await user.click(screen.getByRole('button', { name: 'Choisir une plage' }));
+      await user.click(screen.getByRole('button', { name: 'Appliquer' }));
+      await waitFor(() => expect(table()).toHaveAttribute('aria-busy', 'false'));
+      await user.click(screen.getByRole('button', { name: 'Inscriptions suivantes' }));
+      await screen.findByText('Page 2 sur 2');
+      const next = {
+        formation:
+          change === 'formation'
+            ? { ...formation, id: 'formation-2', name: 'Autre formation' }
+            : formation,
+        status: change === 'statut' ? ('expired' as const) : null,
+      };
+      api.enrollments.mockReturnValue(new Promise(() => {}));
+      changeSelection(next);
+      expect(detailPane()).not.toBeInTheDocument();
+      expect(searchBox()).toHaveValue('');
+      expect(screen.getByRole('button', { name: 'Filtrer par Début' })).toBeInTheDocument();
+      expect(screen.queryByText('alice@example.com')).not.toBeInTheDocument();
+      await waitFor(() =>
+        expect(api.enrollments).toHaveBeenLastCalledWith(
+          next.formation.id,
+          expect.objectContaining({
+            q: '',
+            page: 1,
+            status: next.status ?? undefined,
+            started_at_from: undefined,
+            started_at_to: undefined,
+          }),
+          expect.any(AbortSignal),
+        ),
+      );
+      expect(historyApi.history).toHaveBeenCalledTimes(1);
+    },
+  );
 
-    // Le popover masque l'infobulle…
-    await user.click(trigger);
-    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+  it.each(['identité', 'session', 'tenant'] as const)(
+    'ne réutilise ni sélection ni données en changeant de %s, même avec un cache conservé',
+    async (scope) => {
+      renderSheet();
+      await selectStudent();
+      api.enrollments.mockReturnValue(new Promise(() => {}));
+      act(() => {
+        if (scope === 'identité')
+          useAuthStore.setState({
+            user: {
+              id: 'editor-2',
+              name: 'Autre éditeur',
+              email: 'other@example.com',
+              role: Role.EDITOR,
+            },
+          });
+        else if (scope === 'session') useAuthStore.setState({ sessionId: 'session-2' });
+        else
+          useTenantStore.setState({
+            tenant: { id: 'tenant-2' } as NonNullable<
+              ReturnType<typeof useTenantStore.getState>['tenant']
+            >,
+          });
+      });
+      expect(detailPane()).not.toBeInTheDocument();
+      expect(screen.queryByText('alice@example.com')).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /^Tentative 3/ })).not.toBeInTheDocument();
+      expect(screen.getByRole('status')).toHaveTextContent('Chargement des inscriptions');
+      await waitFor(() => expect(api.enrollments).toHaveBeenCalledTimes(2));
+      expect(historyApi.history).toHaveBeenCalledTimes(1);
+    },
+  );
 
-    // …et la fermeture rend le focus au bouton, ce qui la rouvrirait sans verrou.
+  it('ferme le panneau et ne lance plus de requêtes après déconnexion', async () => {
+    renderSheet();
+    await selectStudent();
+    act(() => useAuthStore.setState({ user: null, role: null, sessionId: null }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.queryByText('alice@example.com')).not.toBeInTheDocument();
+    expect(api.enrollments).toHaveBeenCalledTimes(1);
+    expect(historyApi.history).toHaveBeenCalledTimes(1);
+  });
+
+  it('ouvre au clavier, ferme avec Échap et restitue le focus sans garder de sélection à la réouverture', async () => {
+    function Harness() {
+      const trigger = useRef<HTMLButtonElement>(null);
+      const [selection, setSelection] = useState<FormationStudentSelection | null>(null);
+      return (
+        <>
+          <button ref={trigger} onClick={() => setSelection({ formation, status: null })}>
+            Ouvrir
+          </button>
+          <FormationStudentsSheet
+            selection={selection}
+            onClose={() => setSelection(null)}
+            onRestoreFocus={() => trigger.current?.focus()}
+          />
+        </>
+      );
+    }
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    clients.push(client);
+    render(
+      <QueryClientProvider client={client}>
+        <TooltipProvider>
+          <Harness />
+        </TooltipProvider>
+      </QueryClientProvider>,
+    );
+    const user = userEvent.setup();
+    const trigger = screen.getByRole('button', { name: 'Ouvrir' });
+    trigger.focus();
+    await user.keyboard('{Enter}');
+    await selectStudent();
+    await user.click(screen.getByRole('button', { name: /^Tentative 3/ }));
     await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(trigger).toHaveFocus();
-    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
-  });
-
-  it('redonne l’infobulle après être ressorti du bouton', async () => {
-    const user = userEvent.setup();
-    render(<Harness status="failed" />);
-    const trigger = screen.getByRole('button', { name: 'Filtrer par Début' });
-
     await user.click(trigger);
-    await user.keyboard('{Escape}');
-    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
-
-    await user.unhover(trigger);
-    await user.hover(trigger);
-
-    expect(await screen.findByRole('tooltip')).toHaveTextContent('Filtrer par plage de dates');
-  });
-
-  it('cumule les plages de deux colonnes', async () => {
-    const user = userEvent.setup();
-    render(<Harness status="failed" />);
-
-    await openFilter(user, 'Début');
-    await user.click(dayButton(thisMonth(2)));
-    await user.click(screen.getByRole('button', { name: 'Appliquer' }));
-
-    await openFilter(user, 'Accès valable jusqu’au');
-    await user.click(dayButton(thisMonth(3)));
-    await user.click(screen.getByRole('button', { name: 'Appliquer' }));
-
-    expect(
-      screen.getByRole('button', { name: 'Filtrer par Début — filtre actif' }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: 'Filtrer par Accès valable jusqu’au — filtre actif' }),
-    ).toBeInTheDocument();
+    await screen.findByText('alice@example.com');
+    expect(detailPane()).not.toBeInTheDocument();
+    expect(studentButton()).toHaveAttribute('aria-current', 'false');
+    expect(historyApi.history).toHaveBeenCalledTimes(1);
+    expect(historyApi.detail).toHaveBeenCalledTimes(1);
   });
 });

@@ -1,6 +1,6 @@
 import { GraduationCap, Users } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { dashboardEnrollmentStatuses } from '../data/enrollmentStatuses';
+import { dashboardEnrollmentStatuses } from '@/modules/shared/lib/dashboardEnrollmentStatuses';
 import type { DashboardOverview } from '../types';
 import { AverageProgressIndicator } from './AverageProgressIndicator';
 

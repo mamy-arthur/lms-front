@@ -19,19 +19,22 @@ export interface ApiClientDashboardStudent {
   enrolled_at: string;
   started_at: string | null;
   completed_at: string | null;
+  ended_at: string | null;
   expires_at: string | null;
 }
 
 export interface DashboardStudent {
   id: string;
   name: string;
+  email: string | null;
   initials: string;
   avatarUrl?: string;
   courseId: string;
   course: string;
   progress: number;
   status: EnrollmentStatus;
-  enrolledAt: string;
+  startedAt: string | null;
+  endedAt: string | null;
   deadline?: string;
 }
 
@@ -40,6 +43,7 @@ export function normalizeClientStudent(row: ApiClientDashboardStudent): Dashboar
   return {
     id: row.id,
     name: name || row.learner.email || 'Apprenant',
+    email: row.learner.email,
     initials:
       [row.learner.first_name, row.learner.last_name]
         .filter(Boolean)
@@ -48,7 +52,8 @@ export function normalizeClientStudent(row: ApiClientDashboardStudent): Dashboar
         .toUpperCase() || '?',
     courseId: row.learning_path.id,
     course: row.learning_path.name,
-    enrolledAt: row.enrolled_at,
+    startedAt: row.started_at,
+    endedAt: row.ended_at,
     progress: row.progress_percent,
     status: row.status,
     deadline: row.expires_at?.slice(0, 10),

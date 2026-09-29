@@ -1,23 +1,30 @@
 import { apiGet } from '@/shared/lib/apiClient';
 import type {
-  ApiDashboardEnrollment,
+  ApiDashboardEnrollmentsPage,
   ApiDashboardFormation,
   ApiDashboardOverview,
   ApiDashboardPage,
   DashboardFormationsParams,
+  DashboardEnrollmentsParams,
 } from '@/shared/types/dashboard.types';
-import type { EnrollmentStatus } from '@/shared/types/enrollment.types';
 
 export const editorDashboardApi = {
-  overview: () => apiGet<{ data: ApiDashboardOverview }>('platform/dashboard/overview'),
-  formations: (params: DashboardFormationsParams) =>
-    apiGet<ApiDashboardPage<ApiDashboardFormation>>('platform/dashboard/formations', { ...params }),
+  overview: (signal?: AbortSignal) =>
+    apiGet<{ data: ApiDashboardOverview }>('platform/dashboard/overview', undefined, { signal }),
+  formations: (params: DashboardFormationsParams, signal?: AbortSignal) =>
+    apiGet<ApiDashboardPage<ApiDashboardFormation>>(
+      'platform/dashboard/formations',
+      { ...params },
+      { signal },
+    ),
   enrollments: (
     formationId: string,
-    params: { status?: EnrollmentStatus; page?: number; per_page?: number } = {},
+    params: DashboardEnrollmentsParams = {},
+    signal?: AbortSignal,
   ) =>
-    apiGet<ApiDashboardPage<ApiDashboardEnrollment>>(
-      `platform/dashboard/formations/${formationId}/enrollments`,
-      params,
+    apiGet<ApiDashboardEnrollmentsPage>(
+      `platform/dashboard/formations/${encodeURIComponent(formationId)}/enrollments`,
+      { ...params },
+      { signal },
     ),
 };
