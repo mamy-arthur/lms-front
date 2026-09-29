@@ -19,7 +19,7 @@ export function useClientDashboardQuery() {
   };
   const overview = useQuery({
     ...options,
-    queryKey: [...scope.key, 'overview'],
+    queryKey: [...scope.key, 'overview', 'enrollments'],
     queryFn: async ({ signal }) => (await clientDashboardApi.overview(signal)).data,
   });
   const students = useQuery({

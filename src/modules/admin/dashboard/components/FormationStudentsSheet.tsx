@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useId, useRef, useState } from 'react';
-import { ChevronRight, Clock, PanelRightClose, Search } from 'lucide-react';
+import { ChevronRight, Clock, Loader2, PanelRightClose, Search } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -306,7 +306,13 @@ function FormationStudentsContent({
                 onClick={() => updateStatus(null)}
                 className="rounded-sm  px-2 py-1 text-xs transition-colors hover:bg-muted aria-pressed:border-(--color-primary) aria-pressed:bg-(--color-primary)/10"
               >
-                Tous ({meta?.summary.total ?? '…'})
+                Tous (
+                {meta ? (
+                  meta.summary.total
+                ) : (
+                  <Loader2 aria-hidden="true" className="inline size-3 animate-spin" />
+                )}
+                )
               </button>
               {STATUS_FILTERS.map((value) => (
                 <button
@@ -320,7 +326,12 @@ function FormationStudentsContent({
                   )}
                 >
                   {STUDENT_STATUS[value].label} (
-                  {meta ? (meta.summary.status_counts[value] ?? 0) : '…'})
+                  {meta ? (
+                    (meta.summary.status_counts[value] ?? 0)
+                  ) : (
+                    <Loader2 aria-hidden="true" className="inline size-3 animate-spin" />
+                  )}
+                  )
                 </button>
               ))}
             </div>

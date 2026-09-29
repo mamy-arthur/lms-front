@@ -10,21 +10,21 @@ const kpis = [
     position: 'col-start-1 row-start-1',
   },
   {
-    label: 'Terminés',
-    description: 'Modules terminés',
+    label: 'Terminées',
+    description: 'Inscriptions terminées',
     key: 'completed',
     position: 'col-start-2 row-start-1',
     highlighted: true,
   },
   {
     label: 'En cours',
-    description: 'Modules en cours',
+    description: 'Inscriptions en cours',
     key: 'in_progress',
     position: 'col-start-1 row-start-2',
   },
   {
     label: 'À faire',
-    description: 'Modules à réaliser',
+    description: 'Inscriptions non commencées',
     key: 'not_started',
     position: 'col-start-2 row-start-2',
   },
@@ -91,7 +91,7 @@ export function KpiCards({ data }: { data: ClientDashboardOverview | undefined }
                 {data
                   ? kpi.key === 'learning_paths'
                     ? data.learning_paths
-                    : data.modules[kpi.key]
+                    : data.enrollments[kpi.key]
                   : '—'}
               </p>
             </CardContent>

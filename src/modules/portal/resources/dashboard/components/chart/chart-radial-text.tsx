@@ -62,20 +62,20 @@ export function ProgressCard({
     [students],
   );
 
-  const progress = useMemo(() => {
+  const completionRate = useMemo(() => {
     const subset =
       courseFilter === 'all'
         ? (students ?? [])
         : (students ?? []).filter((s) => s.courseId === courseFilter);
     if (subset.length === 0) return 0;
-    const avg = subset.reduce((sum, s) => sum + s.progress, 0) / subset.length;
-    return Math.round(avg);
+    const completedCount = subset.filter((s) => s.status === 'completed').length;
+    return Math.round((completedCount / subset.length) * 100);
   }, [courseFilter, students]);
 
   const chartData = [
     {
       name: 'progress',
-      value: progress,
+      value: completionRate,
       fill: 'var(--color-primary)',
     },
   ];
@@ -84,8 +84,10 @@ export function ProgressCard({
     <Card className={cn('h-full min-w-0', className)}>
       <CardHeader className="flex flex-wrap items-start justify-between gap-2 pb-0">
         <div className="min-w-0 flex-1 basis-48">
-          <CardTitle>Progression global</CardTitle>
-          <CardDescription>Progression moyenne sur l’ensemble des formations.</CardDescription>
+          <CardTitle>Progression globale</CardTitle>
+          <CardDescription>
+            Part des inscriptions terminées, toutes formations confondues.
+          </CardDescription>
         </div>
         <Select value={courseFilter} onValueChange={setCourseFilter}>
           <SelectTrigger
@@ -108,13 +110,13 @@ export function ProgressCard({
         <div
           className="flex flex-col items-center gap-4"
           role="img"
-          aria-label={`Progression moyenne : ${students ? `${progress}%` : 'indisponible'}`}
+          aria-label={`Progression globale : ${students ? `${completionRate}%` : 'indisponible'}`}
         >
           <ChartContainer config={chartConfig} className="mx-auto aspect-square w-full max-w-56">
             <RadialBarChart
               data={chartData}
               startAngle={90}
-              endAngle={90 - (360 * progress) / 100}
+              endAngle={90 - (360 * completionRate) / 100}
               margin={{ top: 12, right: 12, bottom: 12, left: 12 }}
               innerRadius="80%"
               outerRadius="100%"
@@ -139,7 +141,7 @@ export function ProgressCard({
                             y={viewBox.cy - 6}
                             className="fill-foreground text-2xl font-bold"
                           >
-                            {students ? `${progress}%` : '—'}
+                            {students ? `${completionRate}%` : '—'}
                           </tspan>
                         </text>
                       );

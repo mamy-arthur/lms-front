@@ -158,7 +158,7 @@ beforeEach(() => {
   });
   useTenantStore.setState({ tenant: null, resolutionStatus: 'resolved' });
   api.overview.mockResolvedValue({
-    data: { learning_paths: 12, modules: { completed: 65, in_progress: 19, not_started: 7 } },
+    data: { learning_paths: 12, enrollments: { completed: 65, in_progress: 19, not_started: 7 } },
   });
   api.students.mockResolvedValue({ data: [row], meta: { total: 1, page: 1, per_page: 100 } });
   historyApi.history.mockReset().mockImplementation(async (enrollmentId, page = 1) => ({
@@ -189,7 +189,7 @@ it('garde les quatre cartes et la table mais remplace leurs données de démonst
   for (const value of ['12', '65', '19', '7']) expect(screen.getByText(value)).toBeInTheDocument();
   expect(screen.getByText('Formation réelle')).toBeInTheDocument();
   expect(screen.getByText('40%')).toBeInTheDocument();
-  expect(screen.getByRole('img', { name: 'Progression moyenne : 40%' })).toBeInTheDocument();
+  expect(screen.getByRole('img', { name: 'Progression globale : 0%' })).toBeInTheDocument();
   expect(screen.queryByText('Amélie Laurent')).not.toBeInTheDocument();
   expect(screen.queryByText('January - June 2024')).not.toBeInTheDocument();
   const detail = screen.getByRole('button', { name: 'Voir le détail de Alice Martin' });
@@ -335,7 +335,7 @@ it('combine les trois dates avec la recherche et le parcours, puis réinitialise
 it('garde les statistiques en grille 2×2 et place la progression dessous uniquement sur mobile', async () => {
   renderDashboard();
   await screen.findByText('65');
-  const progressCard = screen.getByText('Progression global').closest('[data-slot="card"]');
+  const progressCard = screen.getByText('Progression globale').closest('[data-slot="card"]');
   const grid = progressCard?.parentElement;
   expect(grid).toHaveClass('grid', 'grid-cols-2', 'md:grid-cols-4', 'md:grid-rows-2');
   expect(progressCard).toHaveClass(
@@ -349,9 +349,9 @@ it('garde les statistiques en grille 2×2 et place la progression dessous unique
   );
   for (const [description, column, row] of [
     ['Nombre de parcours suivis', 1, 1],
-    ['Modules terminés', 2, 1],
-    ['Modules en cours', 1, 2],
-    ['Modules à réaliser', 2, 2],
+    ['Inscriptions terminées', 2, 1],
+    ['Inscriptions en cours', 1, 2],
+    ['Inscriptions non commencées', 2, 2],
   ] as const) {
     const card = screen.getByText(description).closest('[data-slot="card"]');
     expect(card?.parentElement).toBe(grid);
@@ -373,9 +373,9 @@ it('garde les statistiques en grille 2×2 et place la progression dessous unique
 
 it.each([
   ['Nombre de parcours suivis', false],
-  ['Modules terminés', true],
-  ['Modules en cours', false],
-  ['Modules à réaliser', false],
+  ['Inscriptions terminées', true],
+  ['Inscriptions en cours', false],
+  ['Inscriptions non commencées', false],
 ] as const)('ajoute le motif de fond décoratif à la carte %s', async (description, highlighted) => {
   renderDashboard();
   await screen.findByText('65');
@@ -389,27 +389,57 @@ it.each([
   expect(card?.querySelector('[data-slot="card-content"]')).toHaveClass('relative', 'z-10');
 });
 
-it('attend toutes les pages avant de calculer une moyenne et permet de chercher sur toutes les lignes', async () => {
+it('utilise toutes les pages pour calculer le ratio terminé / total et permet de chercher sur toutes les lignes', async () => {
   api.students.mockImplementation(async (page = 1) => ({
     data: [
       {
         ...row,
         id: `enrollment-${page}`,
         learner: { ...row.learner, first_name: page === 1 ? 'Alice' : 'Béatrice' },
-        progress_percent: page === 1 ? 40 : 80,
+        status: page === 1 ? 'in_progress' : 'completed',
+        progress_percent: page === 1 ? 40 : 100,
       },
     ],
     meta: { total: 2, page, per_page: 1 },
   }));
   renderDashboard();
   expect(await screen.findByText('Béatrice Martin')).toBeInTheDocument();
-  expect(screen.getByRole('img', { name: 'Progression moyenne : 60%' })).toBeInTheDocument();
+  expect(screen.getByRole('img', { name: 'Progression globale : 50%' })).toBeInTheDocument();
   fireEvent.change(screen.getByRole('textbox', { name: 'Rechercher un étudiant' }), {
     target: { value: '  Béatrice  ' },
   });
   expect(screen.queryByText('Alice Martin')).not.toBeInTheDocument();
   expect(screen.getByText('Béatrice Martin')).toBeInTheDocument();
   expect(api.students).toHaveBeenCalledTimes(2);
+});
+
+it('calcule terminé / total par inscription et par parcours, sans moyenner les progressions', async () => {
+  const statuses = ['completed', 'in_progress', 'not_started', 'failed', 'expired'] as const;
+  api.students.mockResolvedValue({
+    data: statuses.map((status, index) => ({
+      ...row,
+      id: 'enrollment-' + index,
+      status,
+      progress_percent: 100,
+      learning_path: index < 2 ? row.learning_path : { id: 'path-2', name: 'Autre parcours' },
+    })),
+    meta: { total: 5, page: 1, per_page: 100 },
+  });
+  const user = userEvent.setup();
+  renderDashboard();
+  expect(await screen.findByRole('img', { name: 'Progression globale : 20%' })).toBeInTheDocument();
+  const card = within(
+    screen.getByText('Progression globale').closest('[data-slot="card"]') as HTMLElement,
+  );
+  await user.click(card.getByRole('combobox', { name: 'Filtrer par parcours' }));
+  await user.click(screen.getByRole('option', { name: 'Formation réelle' }));
+  expect(screen.getByRole('img', { name: 'Progression globale : 50%' })).toBeInTheDocument();
+  await user.click(card.getByRole('combobox', { name: 'Filtrer par parcours' }));
+  await user.click(screen.getByRole('option', { name: 'Autre parcours' }));
+  expect(screen.getByRole('img', { name: 'Progression globale : 0%' })).toBeInTheDocument();
+  await user.click(card.getByRole('combobox', { name: 'Filtrer par parcours' }));
+  await user.click(screen.getByRole('option', { name: 'Tous les parcours' }));
+  expect(screen.getByRole('img', { name: 'Progression globale : 20%' })).toBeInTheDocument();
 });
 
 it('ne montre aucun nombre fictif pendant le chargement', () => {
@@ -426,7 +456,7 @@ it('ne montre aucun nombre fictif pendant le chargement', () => {
   expect(screen.queryByText('86')).not.toBeInTheDocument();
   expect(screen.queryByText('Aucun étudiant trouvé')).not.toBeInTheDocument();
   expect(
-    screen.getByRole('img', { name: 'Progression moyenne : indisponible' }),
+    screen.getByRole('img', { name: 'Progression globale : indisponible' }),
   ).toBeInTheDocument();
 });
 
@@ -449,7 +479,7 @@ it('gère une synthèse en erreur et une liste vide sans données de secours', a
     'Impossible de charger les indicateurs',
   );
   expect(screen.getByText('Aucun étudiant trouvé')).toBeInTheDocument();
-  expect(screen.getByRole('img', { name: 'Progression moyenne : 0%' })).toBeInTheDocument();
+  expect(screen.getByRole('img', { name: 'Progression globale : 0%' })).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Réessayer' }));
   expect(await screen.findByText('65')).toBeInTheDocument();
 });

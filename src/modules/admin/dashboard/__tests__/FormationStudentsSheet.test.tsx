@@ -667,7 +667,8 @@ describe('chargement, erreurs et isolation', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Chargement des inscriptions…');
     expect(table()).toHaveAttribute('aria-busy', 'true');
     expect(screen.queryByText(/Aucun étudiant/)).not.toBeInTheDocument();
-    expect(statusButton(/^Tous/)).toHaveTextContent('Tous (…)');
+    expect(statusButton(/^Tous/)).toHaveTextContent('Tous ()');
+    expect(statusButton(/^Tous/).querySelector('.animate-spin')).toBeInTheDocument();
     expect(rows()).toHaveLength(0);
     await act(async () => pending.resolve(page()));
     expect(await screen.findByText('alice@example.com')).toBeInTheDocument();

@@ -2,7 +2,7 @@ import type { EnrollmentStatus } from '@/shared/types/enrollment.types';
 
 export interface ClientDashboardOverview {
   learning_paths: number;
-  modules: { completed: number; in_progress: number; not_started: number };
+  enrollments: { completed: number; in_progress: number; not_started: number };
 }
 
 export interface ApiClientDashboardStudent {
