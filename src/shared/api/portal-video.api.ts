@@ -36,13 +36,22 @@ function path(context: VideoProgressContext) {
 export const portalVideoApi = {
   get: async (context: VideoProgressContext, signal: AbortSignal): Promise<VideoProgress> => {
     const { json } = await httpClient(
-      `${path(context)}?competency_id=${encodeURIComponent(context.competencyId)}&node_execution_id=${encodeURIComponent(context.nodeExecutionId)}`, { signal },
+      `${path(context)}?competency_id=${encodeURIComponent(context.competencyId)}&node_execution_id=${encodeURIComponent(context.nodeExecutionId)}`,
+      { signal },
     );
     return (json as { data: VideoProgress }).data;
   },
-  save: async (context: VideoProgressContext, payload: VideoProgressPayload, signal: AbortSignal, keepalive: boolean): Promise<VideoProgress> => {
+  save: async (
+    context: VideoProgressContext,
+    payload: VideoProgressPayload,
+    signal: AbortSignal,
+    keepalive: boolean,
+  ): Promise<VideoProgress> => {
     const { json } = await httpClient(path(context), {
-      method: 'PUT', body: JSON.stringify(payload), signal, keepalive,
+      method: 'PUT',
+      body: JSON.stringify(payload),
+      signal,
+      keepalive,
     });
     return (json as { data: VideoProgress }).data;
   },

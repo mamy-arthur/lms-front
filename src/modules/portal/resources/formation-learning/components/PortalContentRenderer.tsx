@@ -48,7 +48,15 @@ function MediaPlayer({ media, tracking }: { media: ResolvedMedia; tracking?: Vid
   const category = getMediaCategory(media.mime_type);
 
   if (category === 'video') {
-    if (tracking && typeof media.id === 'string' && media.id) return <TrackedVideoPlayer key={media.id} src={secureUrl(media.url)} mediaId={media.id} {...tracking} />;
+    if (tracking && typeof media.id === 'string' && media.id)
+      return (
+        <TrackedVideoPlayer
+          key={media.id}
+          src={secureUrl(media.url)}
+          mediaId={media.id}
+          {...tracking}
+        />
+      );
     return (
       <video
         src={secureUrl(media.url)}
@@ -250,13 +258,21 @@ export default function PortalContentRenderer({
     );
   }
 
-  const tracking: VideoTrackingProps | undefined = courseId && competencyId && nodeExecutionId ? {
-    context: { enrollmentId, courseId, entryId: entry.id, competencyId, nodeExecutionId },
-    execution: nodeExecutionId && expectedStateRevision !== null
-      ? { node_execution_id: nodeExecutionId, expected_state_revision: expectedStateRevision } : null,
-    readOnly,
-    registerVideoSession,
-  } : undefined;
+  const tracking: VideoTrackingProps | undefined =
+    courseId && competencyId && nodeExecutionId
+      ? {
+          context: { enrollmentId, courseId, entryId: entry.id, competencyId, nodeExecutionId },
+          execution:
+            nodeExecutionId && expectedStateRevision !== null
+              ? {
+                  node_execution_id: nodeExecutionId,
+                  expected_state_revision: expectedStateRevision,
+                }
+              : null,
+          readOnly,
+          registerVideoSession,
+        }
+      : undefined;
 
   // module_type === 'folder' is the only other special case needing a different layout.
   if (entry.module_type === 'folder') {

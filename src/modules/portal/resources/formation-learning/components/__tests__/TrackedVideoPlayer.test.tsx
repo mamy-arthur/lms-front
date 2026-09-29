@@ -41,14 +41,12 @@ beforeEach(() => {
   });
   useSimulationStore.setState({ phase: 'idle', epoch: 0 });
   jest.mocked(portalVideoApi.get).mockResolvedValue(empty);
-  jest
-    .mocked(portalVideoApi.save)
-    .mockImplementation(async (_c, p) => ({
-      ...empty,
-      ...p,
-      version: p.version + 1,
-      last_commit_id: p.commit_id,
-    }));
+  jest.mocked(portalVideoApi.save).mockImplementation(async (_c, p) => ({
+    ...empty,
+    ...p,
+    version: p.version + 1,
+    last_commit_id: p.commit_id,
+  }));
 });
 
 it('shows native controls and seeks ten seconds in either direction from the restored position', async () => {
