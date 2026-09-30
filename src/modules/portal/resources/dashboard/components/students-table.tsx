@@ -20,53 +20,85 @@ import {
   TableRow,
 } from '@/components/ui/table';
 
-import { type Student, type StudentStatus } from '../lib/students-data';
+import type { DashboardStudent } from '../types';
+import {
+  DateRangeColumnFilter,
+  EMPTY_DATE_RANGE,
+  isDateRangeActive,
+  matchesDateRange,
+  type DateRange,
+} from '@/modules/shared/components/dashboard/DateRangeColumnFilter';
+import { formatShortDate } from '@/modules/shared/lib/studentProgressFormatters';
+import { normalizeSearch } from '@/shared/lib/string/normalizeSearch';
 import { StudentsTableSkeleton } from './students-table-skeleton';
 import { ProgressVariant } from '@/shared/components/ui/progress/Progress';
 import { DeadlineBadge } from './DeadlineBadge';
+import { EnrollmentStatusBadge } from './EnrollmentStatusBadge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { DatePickerWithRange } from '@/shared/components/ui/date/DatePickerRange';
 
 interface StudentsTableProps {
-  students: Student[];
+  students: DashboardStudent[];
   loading?: boolean;
-  onSelect: (student: Student) => void;
+  error?: boolean;
+  onSelect?: (student: DashboardStudent, trigger: HTMLElement) => void;
 }
 
 const PAGE_SIZE = 5;
+const DATE_COLUMNS = [
+  { key: 'startedAt', label: 'Début' },
+  { key: 'endedAt', label: 'Fin' },
+  { key: 'deadline', label: 'Accès valable jusqu’au' },
+] as const;
+type DateColumnKey = (typeof DATE_COLUMNS)[number]['key'];
+const INITIAL_DATE_FILTERS: Record<DateColumnKey, DateRange> = {
+  startedAt: EMPTY_DATE_RANGE,
+  endedAt: EMPTY_DATE_RANGE,
+  deadline: EMPTY_DATE_RANGE,
+};
 
-export function StudentsTable({ students, loading, onSelect }: StudentsTableProps) {
+export function StudentsTable({ students, loading, error, onSelect }: StudentsTableProps) {
   const [query, setQuery] = useState('');
-  const [statusFilter] = useState<StudentStatus | 'all'>('all');
   const [courseFilter, setCourseFilter] = useState<string>('all');
+  const [dateFilters, setDateFilters] = useState(INITIAL_DATE_FILTERS);
+  const activeDateFilters = DATE_COLUMNS.filter(({ key }) =>
+    isDateRangeActive(dateFilters[key]),
+  ).length;
+  const isFiltered = query.trim() !== '' || courseFilter !== 'all' || activeDateFilters > 0;
 
   const courses = useMemo(
-    () => Array.from(new Set(students.map((s) => s.course))).sort(),
+    () =>
+      [...new Map(students.map((s) => [s.courseId, s.course])).entries()].sort((a, b) =>
+        a[1].localeCompare(b[1]),
+      ),
     [students],
   );
 
   const filtered = useMemo(() => {
+    const normalizedQuery = normalizeSearch(query);
     return students.filter((s) => {
       const matchesQuery =
-        query.trim() === '' ||
-        s.name.toLowerCase().includes(query.toLowerCase()) ||
-        s.course.toLowerCase().includes(query.toLowerCase());
-      const matchesStatus = statusFilter === 'all' || s.status === statusFilter;
-      const matchesCourse = courseFilter === 'all' || s.course === courseFilter;
-      return matchesQuery && matchesStatus && matchesCourse;
+        normalizedQuery === '' ||
+        normalizeSearch(s.name).includes(normalizedQuery) ||
+        normalizeSearch(s.course).includes(normalizedQuery);
+      const matchesCourse = courseFilter === 'all' || s.courseId === courseFilter;
+      const matchesDates = DATE_COLUMNS.every(({ key }) =>
+        matchesDateRange(s[key] ?? undefined, dateFilters[key]),
+      );
+      return matchesQuery && matchesCourse && matchesDates;
     });
-  }, [students, query, statusFilter, courseFilter]);
-
-  // const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  // const currentPage = Math.min(page, totalPages);
-  // const paginated = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  }, [students, query, courseFilter, dateFilters]);
 
   return (
     <Card className="flex flex-col">
-      <CardHeader className="items-center pb-0 flex justify-between">
+      <CardHeader className="flex flex-col gap-3 pb-0 xl:flex-row xl:items-center xl:justify-between">
         <div>
           <CardTitle>Progression des étudiants par formation</CardTitle>
-          <CardDescription>January - June 2024</CardDescription>
+          <CardDescription role="status" aria-live="polite">
+            {activeDateFilters > 0
+              ? `${activeDateFilters} filtre${activeDateFilters > 1 ? 's' : ''} de dates actif${activeDateFilters > 1 ? 's' : ''}`
+              : 'Toutes les périodes'}
+            {!loading && !error && ` · ${filtered.length} sur ${students.length} inscriptions`}
+          </CardDescription>
         </div>
         <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
           <div className="relative w-full sm:max-w-50">
@@ -90,35 +122,67 @@ export function StudentsTable({ students, loading, onSelect }: StudentsTableProp
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Tous les parcours</SelectItem>
-              {courses.map((c) => (
-                <SelectItem key={c} value={c}>
-                  {c}
+              {courses.map(([id, name]) => (
+                <SelectItem key={id} value={id}>
+                  {name}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
-          <DatePickerWithRange />
+          {isFiltered && (
+            <Button
+              variant="ghost"
+              className="h-8 text-xs"
+              onClick={() => {
+                setQuery('');
+                setCourseFilter('all');
+                setDateFilters(INITIAL_DATE_FILTERS);
+              }}
+            >
+              Réinitialiser les filtres
+            </Button>
+          )}
         </div>
       </CardHeader>
       <CardContent className="flex-1 pb-0">
         <div className="space-y-4">
           <div className="overflow-hidden rounded-2xl border border-border/60 bg-card">
-            <Table>
+            <Table aria-label="Progression des étudiants par formation">
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  <TableHead className="w-[20%]">Étudiant</TableHead>
-                  <TableHead className="w-[20%]">Parcours</TableHead>
-                  <TableHead className="w-[25%]">Échéance</TableHead>
-                  <TableHead className="w-[25%]">Progression</TableHead>
+                  <TableHead>Étudiant</TableHead>
+                  <TableHead>Parcours</TableHead>
+                  <TableHead>Statut</TableHead>
+                  {DATE_COLUMNS.map(({ key, label }) => (
+                    <TableHead key={key}>
+                      <div className="flex items-center gap-2 whitespace-nowrap">
+                        {label}
+                        <DateRangeColumnFilter
+                          label={label}
+                          range={dateFilters[key]}
+                          onApply={(range) =>
+                            setDateFilters((previous) => ({ ...previous, [key]: range }))
+                          }
+                        />
+                      </div>
+                    </TableHead>
+                  ))}
+                  <TableHead className="min-w-40">Progression</TableHead>
                   <TableHead className="text-right"> </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <StudentsTableSkeleton rows={PAGE_SIZE} />
+                ) : error ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="py-16 text-center">
+                      Les étudiants sont indisponibles.
+                    </TableCell>
+                  </TableRow>
                 ) : filtered.length === 0 ? (
                   <TableRow className="hover:bg-transparent">
-                    <TableCell colSpan={6} className="py-16">
+                    <TableCell colSpan={8} className="py-16">
                       <div className="flex flex-col items-center justify-center gap-3 text-center">
                         <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
                           <Inbox className="h-5 w-5 text-muted-foreground" aria-hidden />
@@ -138,13 +202,19 @@ export function StudentsTable({ students, loading, onSelect }: StudentsTableProp
                   filtered.map((s) => (
                     <TableRow
                       key={s.id}
-                      className="cursor-pointer transition-colors"
-                      onClick={() => onSelect(s)}
-                      tabIndex={0}
+                      className={
+                        onSelect ? 'cursor-pointer transition-colors' : 'transition-colors'
+                      }
+                      onClick={onSelect ? (event) => onSelect(s, event.currentTarget) : undefined}
+                      tabIndex={onSelect ? 0 : undefined}
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
+                        if (
+                          onSelect &&
+                          e.target === e.currentTarget &&
+                          (e.key === 'Enter' || e.key === ' ')
+                        ) {
                           e.preventDefault();
-                          onSelect(s);
+                          onSelect(s, e.currentTarget);
                         }
                       }}
                     >
@@ -160,16 +230,31 @@ export function StudentsTable({ students, loading, onSelect }: StudentsTableProp
                         </div>
                       </TableCell>
                       <TableCell className="text-muted-foreground">{s.course}</TableCell>
+                      <TableCell>
+                        <EnrollmentStatusBadge status={s.status} />
+                      </TableCell>
+                      {[s.startedAt, s.endedAt].map((date, index) => (
+                        <TableCell
+                          key={index}
+                          className="whitespace-nowrap text-xs tabular-nums text-muted-foreground"
+                        >
+                          {date ? <time dateTime={date}>{formatShortDate(date)}</time> : '—'}
+                        </TableCell>
+                      ))}
                       <TableCell className="text-xs tabular-nums text-muted-foreground">
                         <div className="flex gap-5">
-                          {s.deadline
-                            ? new Date(s.deadline + 'T00:00:00').toLocaleDateString('fr-FR', {
-                                day: '2-digit',
-                                month: 'short',
-                                year: 'numeric',
-                              })
-                            : '—'}
-                          <DeadlineBadge deadline={s.deadline} progress={s.progress} />
+                          {s.deadline ? (
+                            <time dateTime={s.deadline}>{formatShortDate(s.deadline)}</time>
+                          ) : (
+                            'Sans échéance'
+                          )}
+                          <div className="flex flex-wrap items-center gap-2">
+                            <DeadlineBadge
+                              deadline={s.deadline}
+                              progress={s.progress}
+                              status={s.status}
+                            />
+                          </div>
                         </div>
                       </TableCell>
                       <TableCell>
@@ -193,10 +278,12 @@ export function StudentsTable({ students, loading, onSelect }: StudentsTableProp
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 rounded-lg"
+                          disabled={!onSelect}
                           aria-label={`Voir le détail de ${s.name}`}
+                          aria-haspopup="dialog"
                           onClick={(e) => {
                             e.stopPropagation();
-                            onSelect(s);
+                            onSelect?.(s, e.currentTarget);
                           }}
                         >
                           <ChevronRightIcon className="h-4 w-4" aria-hidden />

@@ -1485,12 +1485,329 @@ describe('isolated simulation business API', () => {
     expect((await request<List>('users')).data).toHaveLength(1);
   });
 
+  it('supports the client manager dashboard reads that role simulation previously rejected', async () => {
+    resetSimulationData(Role.CLIENT_MANAGER);
+    type Overview = Detail<{
+      learning_paths: number;
+      enrollments: Record<
+        'completed' | 'in_progress' | 'not_started' | 'failed' | 'expired' | 'total',
+        number
+      >;
+    }>;
+    type StudentsPage = {
+      data: Array<{
+        id: string;
+        status: string;
+        progress_percent: number;
+        learning_path: { id: string };
+      }>;
+      meta: { total: number; page: number; per_page: number };
+    };
+    const overview = await request<Overview>('dashboard/client/overview');
+    expect(overview.data).toEqual({
+      learning_paths: 2,
+      enrollments: {
+        completed: 0,
+        in_progress: 0,
+        not_started: 2,
+        failed: 0,
+        expired: 0,
+        total: 2,
+      },
+    });
+    const students = await request<StudentsPage>('dashboard/client/students');
+    expect(students.meta).toEqual({ total: 2, page: 1, per_page: 20 });
+    expect(students.data.find((row) => row.id === id.enrollment)).toMatchObject({
+      status: 'not_started',
+      progress_percent: 0,
+      learning_path: { id: id.learningPath },
+    });
+
+    await request(
+      `enrollments/${id.enrollment}/competencies/${id.competency}/courses/${id.course}/entries/${id.entry}/complete`,
+      'POST',
+    );
+    await request(
+      `enrollments/${id.enrollment}/courses/${id.course}/entries/${id.entry}/time-sessions/${simulationId(900)}`,
+      'PUT',
+      {
+        competency_id: id.competency,
+        started_at: '2026-09-18T09:00:00Z',
+        ended_at: '2026-09-18T09:00:10Z',
+        time_spent: 10,
+      },
+    );
+    const attempt = (
+      await request<Detail<ApiEvaluationAttempt>>(
+        `enrollments/${id.enrollment}/evaluations/${id.evaluation}/attempts`,
+        'POST',
+      )
+    ).data;
+    await request(
+      `evaluation-attempts/${attempt.id}/quizzes/${attempt.quizzes[0].id}/answer`,
+      'POST',
+      { answer: true },
+    );
+    await request(`evaluation-attempts/${attempt.id}/submit`, 'POST');
+
+    const overviewAfter = await request<Overview>('dashboard/client/overview');
+    expect(overviewAfter.data.enrollments).toEqual({
+      completed: 1,
+      in_progress: 0,
+      not_started: 1,
+      failed: 0,
+      expired: 0,
+      total: 2,
+    });
+    const studentsAfter = await request<StudentsPage>('dashboard/client/students');
+    expect(studentsAfter.data.find((row) => row.id === id.enrollment)).toMatchObject({
+      status: 'completed',
+      progress_percent: 100,
+    });
+
+    await expect(request('dashboard/client/overview', 'POST')).rejects.toMatchObject({
+      status: 501,
+      json: { code: 'SIMULATION_ROUTE_UNSUPPORTED' },
+    });
+  });
+
+  it('supports the editor dashboard reads and formation enrollment detail that role simulation previously rejected', async () => {
+    resetSimulationData(Role.EDITOR);
+    type Overview = Detail<{
+      catalog: { total: number; published: number; unpublished: number };
+      students: {
+        unique_students: number;
+        total_enrollments: number;
+        status_counts: Record<string, number>;
+      };
+    }>;
+    type FormationsPage = {
+      data: Array<{
+        id: string;
+        name: string;
+        is_published: boolean;
+        total_enrollments: number;
+        completion_rate: number;
+      }>;
+      meta: { total: number; page: number; per_page: number };
+    };
+    type EnrollmentsPage = {
+      data: Array<{
+        id: string;
+        status: string;
+        attempts_count: number;
+        time_spent_seconds: number;
+      }>;
+      meta: {
+        total: number;
+        page: number;
+        per_page: number;
+        summary: { total: number };
+        formation: { duration_minutes: number | null };
+      };
+    };
+    const overview = await request<Overview>('platform/dashboard/overview');
+    expect(overview.data).toEqual({
+      catalog: { total: 2, published: 2, unpublished: 0 },
+      students: {
+        unique_students: 1,
+        total_enrollments: 2,
+        status_counts: { completed: 0, in_progress: 0, not_started: 2, failed: 0, expired: 0 },
+      },
+    });
+
+    const formations = await request<FormationsPage>(
+      'platform/dashboard/formations?sort_by=enrolled',
+    );
+    expect(formations.meta).toEqual({ total: 2, page: 1, per_page: 20 });
+    expect(formations.data.find((row) => row.id === id.learningPath)).toMatchObject({
+      is_published: true,
+      total_enrollments: 1,
+      completion_rate: 0,
+    });
+    const searched = await request<FormationsPage>(
+      `platform/dashboard/formations?q=${encodeURIComponent('Approfondissement')}`,
+    );
+    expect(searched.data.map((row) => row.id)).toEqual([id.secondLearningPath]);
+
+    const enrollmentsBefore = await request<EnrollmentsPage>(
+      `platform/dashboard/formations/${id.learningPath}/enrollments`,
+    );
+    expect(enrollmentsBefore.data).toEqual([
+      expect.objectContaining({
+        id: id.enrollment,
+        status: 'not_started',
+        attempts_count: 0,
+        time_spent_seconds: 0,
+      }),
+    ]);
+    expect(enrollmentsBefore.meta).toMatchObject({
+      total: 1,
+      summary: { total: 1 },
+      formation: { duration_minutes: 30 },
+    });
+
+    await request(
+      `enrollments/${id.enrollment}/competencies/${id.competency}/courses/${id.course}/entries/${id.entry}/complete`,
+      'POST',
+    );
+    await request(
+      `enrollments/${id.enrollment}/courses/${id.course}/entries/${id.entry}/time-sessions/${simulationId(900)}`,
+      'PUT',
+      {
+        competency_id: id.competency,
+        started_at: '2026-09-18T09:00:00Z',
+        ended_at: '2026-09-18T09:00:10Z',
+        time_spent: 10,
+      },
+    );
+    const attempt = (
+      await request<Detail<ApiEvaluationAttempt>>(
+        `enrollments/${id.enrollment}/evaluations/${id.evaluation}/attempts`,
+        'POST',
+      )
+    ).data;
+    await request(
+      `evaluation-attempts/${attempt.id}/quizzes/${attempt.quizzes[0].id}/answer`,
+      'POST',
+      { answer: true },
+    );
+    await request(`evaluation-attempts/${attempt.id}/submit`, 'POST');
+
+    const enrollmentsAfter = await request<EnrollmentsPage>(
+      `platform/dashboard/formations/${id.learningPath}/enrollments?status=completed`,
+    );
+    expect(enrollmentsAfter.data).toEqual([
+      expect.objectContaining({
+        id: id.enrollment,
+        status: 'completed',
+        attempts_count: 1,
+        time_spent_seconds: 10,
+      }),
+    ]);
+    expect(
+      (await request<FormationsPage>('platform/dashboard/formations')).data.find(
+        (row) => row.id === id.learningPath,
+      ),
+    ).toMatchObject({ completion_rate: 100 });
+
+    await expect(
+      request(`platform/dashboard/formations/${simulationId(9999)}/enrollments`),
+    ).rejects.toMatchObject({ status: 404 });
+  });
+
+  it('builds enrollment attempt history and detail for started and unstarted enrollments, on learner and platform routes', async () => {
+    resetSimulationData(Role.CLIENT_MANAGER);
+    type HistoryPage = {
+      data: {
+        enrollment: { id: string; status: string };
+        attempts: Array<{
+          id: string;
+          status: string;
+          time_spent_seconds: number;
+          interruption_reason: unknown;
+        }>;
+      };
+      meta: { total: number; page: number; per_page: number };
+    };
+    type AttemptDetail = Detail<{
+      attempt: { id: string; status: string };
+      nodes: Array<{
+        key: string;
+        type: string;
+        display_status: string;
+        tracked_time_seconds: number;
+        result: string | null;
+        score: number | null;
+        attempts_used: number | null;
+        courses: Array<{ status: string; tracked_time_seconds: number }>;
+      }>;
+    }>;
+
+    const untouched = await request<HistoryPage>(`enrollments/${id.scormEnrollment}/history`);
+    expect(untouched.data.attempts).toEqual([]);
+    expect(untouched.meta.total).toBe(0);
+
+    await request(
+      `enrollments/${id.enrollment}/competencies/${id.competency}/courses/${id.course}/entries/${id.entry}/complete`,
+      'POST',
+    );
+    await request(
+      `enrollments/${id.enrollment}/courses/${id.course}/entries/${id.entry}/time-sessions/${simulationId(900)}`,
+      'PUT',
+      {
+        competency_id: id.competency,
+        started_at: '2026-09-18T09:00:00Z',
+        ended_at: '2026-09-18T09:00:10Z',
+        time_spent: 10,
+      },
+    );
+    const attempt = (
+      await request<Detail<ApiEvaluationAttempt>>(
+        `enrollments/${id.enrollment}/evaluations/${id.evaluation}/attempts`,
+        'POST',
+      )
+    ).data;
+    await request(
+      `evaluation-attempts/${attempt.id}/quizzes/${attempt.quizzes[0].id}/answer`,
+      'POST',
+      { answer: true },
+    );
+    await request(`evaluation-attempts/${attempt.id}/submit`, 'POST');
+
+    const history = await request<HistoryPage>(`enrollments/${id.enrollment}/history`);
+    expect(history.meta).toEqual({ total: 1, page: 1, per_page: 20 });
+    const [firstAttempt] = history.data.attempts;
+    expect(firstAttempt).toMatchObject({
+      status: 'completed',
+      time_spent_seconds: 10,
+      interruption_reason: null,
+    });
+
+    const detail = await request<AttemptDetail>(
+      `enrollments/${id.enrollment}/history/attempts/${firstAttempt.id}`,
+    );
+    expect(detail.data.attempt).toEqual(firstAttempt);
+    const moduleNode = detail.data.nodes.find((node) => node.key === `module:${id.competency}`);
+    expect(moduleNode).toMatchObject({ display_status: 'completed', tracked_time_seconds: 10 });
+    expect(moduleNode?.courses[0]).toMatchObject({ status: 'completed', tracked_time_seconds: 10 });
+    const evaluationNode = detail.data.nodes.find(
+      (node) => node.key === `evaluation:${id.evaluation}`,
+    );
+    expect(evaluationNode).toMatchObject({
+      display_status: 'completed',
+      result: 'passed',
+      score: 100,
+      attempts_used: 1,
+    });
+
+    // The platform-prefixed route (used by editors) serves the same enrollment/attempt contract.
+    resetSimulationData(Role.EDITOR);
+    await request(
+      `enrollments/${id.enrollment}/competencies/${id.competency}/courses/${id.course}/entries/${id.entry}/complete`,
+      'POST',
+    );
+    const platformHistory = await request<HistoryPage>(
+      `platform/enrollments/${id.enrollment}/history`,
+    );
+    expect(platformHistory.data.attempts[0]).toMatchObject({ status: 'in_progress' });
+    await expect(
+      request(`platform/enrollments/${simulationId(9999)}/history`),
+    ).rejects.toMatchObject({ status: 404 });
+    await expect(
+      request(`enrollments/${id.enrollment}/history/attempts/${simulationId(9999)}`),
+    ).rejects.toMatchObject({ status: 404, json: { code: 'SIMULATION_NOT_FOUND' } });
+  });
+
   it('publishes coverage and limitations instead of claiming unsupported features', () => {
     expect(SIMULATION_ROUTES).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ path: 'platform/courses' }),
         expect.objectContaining({ path: 'carts/items' }),
         expect.objectContaining({ path: 'enrollments/:id/evaluations/:evaluationId/attempts' }),
+        expect.objectContaining({ path: 'dashboard/client/overview' }),
+        expect.objectContaining({ path: 'platform/dashboard/formations/:id/enrollments' }),
+        expect.objectContaining({ path: '{platform/,}enrollments/:id/history' }),
       ]),
     );
     expect(SIMULATION_LIMITATIONS.join(' ')).toMatch(/Wallet[\s\S]*SCORM/);

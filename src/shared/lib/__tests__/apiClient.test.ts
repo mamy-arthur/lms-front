@@ -184,6 +184,29 @@ describe('apiGet', () => {
     const [url] = (global.fetch as jest.Mock).mock.calls[0];
     expect(url).toBe('/api/v1/resource/1');
   });
+
+  it('transmet l’annulation au fetch sans changer les paramètres ni les cookies', async () => {
+    const controller = new AbortController();
+    global.fetch = jest.fn(
+      (_url, options) =>
+        new Promise((_resolve, reject) => {
+          options?.signal?.addEventListener(
+            'abort',
+            () => reject(new DOMException('Aborted', 'AbortError')),
+            { once: true },
+          );
+        }),
+    );
+    const request = apiGet('resource', { page: 2, search: 'a & b' }, { signal: controller.signal });
+    const rejection = expect(request).rejects.toMatchObject({ name: 'AbortError' });
+    const [url, options] = jest.mocked(global.fetch).mock.calls[0];
+    expect(url).toBe('/api/v1/resource?page=2&search=a%20%26%20b');
+    expect(options?.credentials).toBe('include');
+    controller.abort();
+    expect(options?.signal?.aborted).toBe(true);
+    await rejection;
+    expect(mockClearAuth).not.toHaveBeenCalled();
+  });
 });
 
 describe('apiPost', () => {
