@@ -19,6 +19,8 @@ export type ProgressionRuleDialogState = {
   sourceNodeType: 'module' | 'evaluation';
   initialFormData?: ProgressionRuleFormData;
   hasExistingRule: boolean;
+  /** Consultation only — the learning path is locked */
+  readOnly?: boolean;
 };
 
 export type EditEmailDialogState = {
@@ -167,6 +169,7 @@ export function FlowDialogs({
         initialFormData={progressionRuleDialog?.initialFormData}
         nodeOptions={retakeNodeOptions}
         onSave={onProgressionRuleSave}
+        readOnly={progressionRuleDialog?.readOnly ?? false}
       />
 
       {/* ── Edit-node dialogs ── */}
