@@ -1,5 +1,6 @@
 'use client';
 
+import { useRef } from 'react';
 import { GraduationCap, Search, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -57,6 +58,9 @@ export function FormationProgressCards({
   const pages = Math.max(1, Math.ceil(total / perPage));
   // Le serveur peut renvoyer moins de pages que demandé si le catalogue a rétréci entre-temps.
   const currentPage = Math.min(Math.max(page, 1), pages);
+  // Le clic sur le fond de la carte doit restaurer le focus sur un élément focusable :
+  // on mémorise le bouton de titre plutôt que le <li> qui l'entoure.
+  const titleButtonRefs = useRef(new Map<string, HTMLButtonElement>());
 
   return (
     <section aria-labelledby="formation-progress-title" className="space-y-3">
@@ -146,7 +150,10 @@ export function FormationProgressCards({
             return (
               <li
                 key={formation.id}
-                onClick={(event) => onSelect(formation, null, event.currentTarget)}
+                onClick={(event) => {
+                  const titleButton = titleButtonRefs.current.get(formation.id);
+                  onSelect(formation, null, titleButton ?? event.currentTarget);
+                }}
                 className="cursor-pointer space-y-4 rounded-sm border bg-card p-4 text-card-foreground transition-colors hover:bg-muted/40"
               >
                 <div className="flex flex-wrap items-center justify-between gap-3">
@@ -157,6 +164,10 @@ export function FormationProgressCards({
                     <div className="min-w-0 space-y-1">
                       <h3 className="wrap-break-word text-sm font-semibold">
                         <button
+                          ref={(node) => {
+                            if (node) titleButtonRefs.current.set(formation.id, node);
+                            else titleButtonRefs.current.delete(formation.id);
+                          }}
                           type="button"
                           aria-label={`Voir les étudiants de ${formation.name}`}
                           aria-haspopup="dialog"

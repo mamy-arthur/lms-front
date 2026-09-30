@@ -158,7 +158,17 @@ beforeEach(() => {
   });
   useTenantStore.setState({ tenant: null, resolutionStatus: 'resolved' });
   api.overview.mockResolvedValue({
-    data: { learning_paths: 12, enrollments: { completed: 65, in_progress: 19, not_started: 7 } },
+    data: {
+      learning_paths: 12,
+      enrollments: {
+        completed: 65,
+        in_progress: 19,
+        not_started: 7,
+        failed: 0,
+        expired: 0,
+        total: 91,
+      },
+    },
   });
   api.students.mockResolvedValue({ data: [row], meta: { total: 1, page: 1, per_page: 100 } });
   historyApi.history.mockReset().mockImplementation(async (enrollmentId, page = 1) => ({
@@ -189,7 +199,8 @@ it('garde les quatre cartes et la table mais remplace leurs données de démonst
   for (const value of ['12', '65', '19', '7']) expect(screen.getByText(value)).toBeInTheDocument();
   expect(screen.getByText('Formation réelle')).toBeInTheDocument();
   expect(screen.getByText('40%')).toBeInTheDocument();
-  expect(screen.getByRole('img', { name: 'Progression globale : 0%' })).toBeInTheDocument();
+  // Vient de la synthèse (65/91), pas de l'unique ligne d'étudiant chargée (qui serait à 0 %).
+  expect(screen.getByRole('img', { name: 'Progression globale : 71%' })).toBeInTheDocument();
   expect(screen.queryByText('Amélie Laurent')).not.toBeInTheDocument();
   expect(screen.queryByText('January - June 2024')).not.toBeInTheDocument();
   const detail = screen.getByRole('button', { name: 'Voir le détail de Alice Martin' });
@@ -389,7 +400,20 @@ it.each([
   expect(card?.querySelector('[data-slot="card-content"]')).toHaveClass('relative', 'z-10');
 });
 
-it('utilise toutes les pages pour calculer le ratio terminé / total et permet de chercher sur toutes les lignes', async () => {
+it('charge toutes les pages pour permettre la recherche sur toutes les lignes, sans attendre les étudiants pour la progression globale', async () => {
+  api.overview.mockResolvedValue({
+    data: {
+      learning_paths: 2,
+      enrollments: {
+        completed: 1,
+        in_progress: 1,
+        not_started: 2,
+        failed: 0,
+        expired: 0,
+        total: 4,
+      },
+    },
+  });
   api.students.mockImplementation(async (page = 1) => ({
     data: [
       {
@@ -403,8 +427,9 @@ it('utilise toutes les pages pour calculer le ratio terminé / total et permet d
     meta: { total: 2, page, per_page: 1 },
   }));
   renderDashboard();
+  // 25 % vient de la synthèse (1/4), pas des deux lignes chargées (qui donneraient 50 %).
+  expect(await screen.findByRole('img', { name: 'Progression globale : 25%' })).toBeInTheDocument();
   expect(await screen.findByText('Béatrice Martin')).toBeInTheDocument();
-  expect(screen.getByRole('img', { name: 'Progression globale : 50%' })).toBeInTheDocument();
   fireEvent.change(screen.getByRole('textbox', { name: 'Rechercher un étudiant' }), {
     target: { value: '  Béatrice  ' },
   });
@@ -413,8 +438,48 @@ it('utilise toutes les pages pour calculer le ratio terminé / total et permet d
   expect(api.students).toHaveBeenCalledTimes(2);
 });
 
+it('affiche la progression globale dès la synthèse, avant même que les étudiants aient fini de charger', async () => {
+  api.overview.mockResolvedValue({
+    data: {
+      learning_paths: 2,
+      enrollments: {
+        completed: 1,
+        in_progress: 1,
+        not_started: 2,
+        failed: 0,
+        expired: 0,
+        total: 4,
+      },
+    },
+  });
+  let resolveStudents!: (value: Awaited<ReturnType<typeof clientDashboardApi.students>>) => void;
+  api.students.mockImplementation(
+    () =>
+      new Promise((resolve) => {
+        resolveStudents = resolve;
+      }),
+  );
+  renderDashboard();
+  expect(await screen.findByRole('img', { name: 'Progression globale : 25%' })).toBeInTheDocument();
+  resolveStudents({ data: [row], meta: { total: 1, page: 1, per_page: 100 } });
+  expect(await screen.findByText('Alice Martin')).toBeInTheDocument();
+});
+
 it('calcule terminé / total par inscription et par parcours, sans moyenner les progressions', async () => {
   const statuses = ['completed', 'in_progress', 'not_started', 'failed', 'expired'] as const;
+  api.overview.mockResolvedValue({
+    data: {
+      learning_paths: 2,
+      enrollments: {
+        completed: 1,
+        in_progress: 1,
+        not_started: 1,
+        failed: 1,
+        expired: 1,
+        total: 5,
+      },
+    },
+  });
   api.students.mockResolvedValue({
     data: statuses.map((status, index) => ({
       ...row,

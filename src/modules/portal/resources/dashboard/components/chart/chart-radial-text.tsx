@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
-import type { DashboardStudent } from '../../types';
+import type { ClientDashboardOverview, DashboardStudent } from '../../types';
 
 const chartConfig = {
   progress: {
@@ -48,9 +48,11 @@ function ProgressGrid() {
 export function ProgressCard({
   className,
   students,
+  overview,
 }: {
   className?: string;
   students: DashboardStudent[] | undefined;
+  overview?: ClientDashboardOverview;
 }) {
   const [courseFilter, setCourseFilter] = useState<string>('all');
 
@@ -63,6 +65,12 @@ export function ProgressCard({
   );
 
   const completionRate = useMemo(() => {
+    // Tous parcours confondus, la synthèse porte déjà le ratio complet : inutile d'attendre
+    // le chargement de toutes les pages d'étudiants pour l'afficher.
+    if (courseFilter === 'all' && overview) {
+      const { completed, total } = overview.enrollments;
+      return total > 0 ? Math.round((100 * completed) / total) : 0;
+    }
     const subset =
       courseFilter === 'all'
         ? (students ?? [])
@@ -70,7 +78,9 @@ export function ProgressCard({
     if (subset.length === 0) return 0;
     const completedCount = subset.filter((s) => s.status === 'completed').length;
     return Math.round((completedCount / subset.length) * 100);
-  }, [courseFilter, students]);
+  }, [courseFilter, students, overview]);
+
+  const dataAvailable = overview !== undefined || students !== undefined;
 
   const chartData = [
     {
@@ -110,7 +120,7 @@ export function ProgressCard({
         <div
           className="flex flex-col items-center gap-4"
           role="img"
-          aria-label={`Progression globale : ${students ? `${completionRate}%` : 'indisponible'}`}
+          aria-label={`Progression globale : ${dataAvailable ? `${completionRate}%` : 'indisponible'}`}
         >
           <ChartContainer config={chartConfig} className="mx-auto aspect-square w-full max-w-56">
             <RadialBarChart
@@ -141,7 +151,7 @@ export function ProgressCard({
                             y={viewBox.cy - 6}
                             className="fill-foreground text-2xl font-bold"
                           >
-                            {students ? `${completionRate}%` : '—'}
+                            {dataAvailable ? `${completionRate}%` : '—'}
                           </tspan>
                         </text>
                       );

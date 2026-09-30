@@ -287,10 +287,13 @@ describe('dashboard éditeur connecté', () => {
     expect(historyApi.history).toHaveBeenCalledTimes(1);
   });
 
-  it('ouvre toutes les inscriptions en cliquant n’importe où sur la ligne, sans filtrer par statut', async () => {
+  it('ouvre toutes les inscriptions en cliquant n’importe où sur la ligne, sans filtrer par statut, et restaure le focus sur le titre à la fermeture', async () => {
     const user = userEvent.setup();
     renderDashboard();
     const card = await within(formationSection()).findByRole('listitem');
+    const titleButton = within(card).getByRole('button', {
+      name: `Voir les étudiants de ${formation.name}`,
+    });
     await user.click(card);
     const dialog = await screen.findByRole('dialog', { name: formation.name });
     await within(dialog).findByText('alice@example.com');
@@ -303,6 +306,10 @@ describe('dashboard éditeur connecté', () => {
       'aria-pressed',
       'true',
     );
+    await user.click(within(dialog).getByRole('button', { name: 'Close' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    // Le <li> cliqué n'est pas focusable : la cible mémorisée doit être le bouton de titre.
+    expect(titleButton).toHaveFocus();
   });
 
   it.each(['identité', 'session', 'tenant'] as const)(

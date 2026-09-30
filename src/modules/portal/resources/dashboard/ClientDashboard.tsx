@@ -58,6 +58,7 @@ function ClientDashboardContent({ enabled }: { enabled: boolean }) {
             <KpiCards data={overview.data} />
             <ProgressCard
               students={students.data}
+              overview={overview.data}
               className="col-span-2 col-start-1 row-start-3 md:col-start-3 md:row-start-1 md:row-span-2"
             />
           </div>
