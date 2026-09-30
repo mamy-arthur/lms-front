@@ -131,7 +131,7 @@ export default function FormationContentView({
             expectedStateRevision={formation.execution.stateRevision}
             readOnly={!canMutate || content.completed || readOnlyScorm}
             onScormCompleted={canComplete ? () => onMarkComplete() : undefined}
-            onScormExecutionConflict={onExecutionConflict}
+            onExecutionConflict={onExecutionConflict}
             registerScormSession={registerScormSession}
             registerVideoSession={registerVideoSession}
           />
@@ -147,7 +147,12 @@ export default function FormationContentView({
         onNavigate={onNavigate}
         isCompleted={content.completed === true}
         onMarkComplete={canComplete ? onMarkComplete : undefined}
-        isCompleting={isCompleting || (simulatedScorm && phase !== 'ready')}
+        isCompleting={
+          isCompleting ||
+          portalEntryLoading ||
+          !portalEntry ||
+          (simulatedScorm && phase !== 'ready')
+        }
       />
     </div>
   );

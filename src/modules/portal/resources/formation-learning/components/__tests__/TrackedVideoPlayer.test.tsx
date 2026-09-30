@@ -1,6 +1,6 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import TrackedVideoPlayer from '../TrackedVideoPlayer';
+import TrackedVideoPlayer from '../tracked-video-player';
 import PortalContentRenderer from '../PortalContentRenderer';
 import { portalVideoApi } from '@/shared/api/portal-video.api';
 import { useAuthStore } from '@/shared/stores/auth.store';
@@ -49,7 +49,7 @@ beforeEach(() => {
   }));
 });
 
-it('shows native controls and seeks ten seconds in either direction from the restored position', async () => {
+it('affiche les contrôles natifs et avance ou recule de dix secondes depuis la position restaurée', async () => {
   const { container } = render(
     <TrackedVideoPlayer
       src="/video.mp4"
@@ -90,7 +90,7 @@ it('shows native controls and seeks ten seconds in either direction from the res
   expect(video.paused).toBe(true);
 });
 
-it('overlays controls on hover or keyboard focus, with a touch-screen fallback', async () => {
+it('superpose les contrôles au survol ou au focus clavier, avec une solution de repli pour les écrans tactiles', async () => {
   render(
     <TrackedVideoPlayer
       src="/video.mp4"
@@ -126,7 +126,7 @@ it('overlays controls on hover or keyboard focus, with a touch-screen fallback',
   }
 });
 
-it('tracks multiple video media independently but not audio/PDF and never calls completion on ended', async () => {
+it('suit plusieurs médias vidéo indépendamment, mais pas les fichiers audio ou PDF, et ne déclenche jamais la complétion en fin de lecture', async () => {
   const onCompleted = jest.fn();
   const entry: ApiPortalContentEntry = {
     id: 'entry',
@@ -184,7 +184,7 @@ it('tracks multiple video media independently but not audio/PDF and never calls 
   expect(onCompleted).not.toHaveBeenCalled();
 });
 
-it('keeps seeking available during retries and conflicts without restoring the removed status banner', async () => {
+it('maintient le déplacement dans la vidéo disponible pendant les nouvelles tentatives et les conflits sans rétablir le bandeau de statut supprimé', async () => {
   jest.mocked(portalVideoApi.get).mockRejectedValueOnce(new Error('offline'));
   const { container } = render(
     <TrackedVideoPlayer
@@ -219,7 +219,7 @@ it('keeps seeking available during retries and conflicts without restoring the r
 });
 
 it.each(['simulation', 'history', 'missing-execution'])(
-  'keeps playback available without claiming writable tracking in %s',
+  'maintient la lecture disponible sans prétendre que le suivi est accessible en écriture en mode %s',
   async (mode) => {
     if (mode === 'simulation') useAuthStore.getState().setSimulatedRole(Role.TRAINEE);
     const { container } = render(
@@ -256,7 +256,40 @@ it.each(['simulation', 'history', 'missing-execution'])(
   },
 );
 
-it('updates the execution revision without reloading or rewinding the video', async () => {
+it('utilise le dernier callback de conflit sans recréer la session vidéo', async () => {
+  const previousConflict = jest.fn();
+  const currentConflict = jest.fn();
+  const register = jest.fn(() => jest.fn());
+  const props = {
+    src: '/video.mp4',
+    mediaId: 'media',
+    context,
+    execution,
+    readOnly: false,
+    registerVideoSession: register,
+  };
+  const { rerender } = render(
+    <TrackedVideoPlayer {...props} onExecutionConflict={previousConflict} />,
+  );
+  const video = screen.getByLabelText<HTMLVideoElement>('Vidéo de formation');
+  Object.defineProperty(video, 'duration', { configurable: true, value: 600 });
+  await waitFor(() => expect(video.currentTime).toBe(270));
+  rerender(<TrackedVideoPlayer {...props} onExecutionConflict={currentConflict} />);
+  const error = { status: 409, json: { error_code: 'execution_conflict' } };
+  jest.mocked(portalVideoApi.save).mockRejectedValueOnce(error);
+  await act(async () => {
+    video.currentTime = 280;
+    fireEvent.seeking(video);
+    fireEvent.seeked(video);
+  });
+  expect(currentConflict).toHaveBeenCalledTimes(1);
+  expect(currentConflict).toHaveBeenCalledWith(error);
+  expect(previousConflict).not.toHaveBeenCalled();
+  expect(register).toHaveBeenCalledTimes(1);
+  expect(portalVideoApi.get).toHaveBeenCalledTimes(1);
+});
+
+it('met à jour la révision d’exécution sans recharger ni rembobiner la vidéo', async () => {
   const unregister = jest.fn();
   const register = jest.fn(() => unregister);
   const { container, rerender, unmount } = render(
@@ -300,7 +333,7 @@ it('updates the execution revision without reloading or rewinding the video', as
   expect(unregister).toHaveBeenCalledTimes(1);
 });
 
-it('plays legacy media without an ID without sending an invalid progress request', async () => {
+it('lit les anciens médias sans identifiant sans envoyer de requête de progression invalide', async () => {
   const entry: ApiPortalContentEntry = {
     id: 'entry',
     content_type_id: 'media-type',
@@ -326,7 +359,7 @@ it('plays legacy media without an ID without sending an invalid progress request
   expect(portalVideoApi.get).not.toHaveBeenCalled();
 });
 
-it('creates a fresh session for a new visit of the same node and video', async () => {
+it('crée une nouvelle session pour une nouvelle visite du même nœud et de la même vidéo', async () => {
   const { container, rerender } = render(
     <TrackedVideoPlayer
       src="/video.mp4"
@@ -374,7 +407,7 @@ it('creates a fresh session for a new visit of the same node and video', async (
 it.each([
   ['Reculer de 10 secondes', 4, 0],
   ['Avancer de 10 secondes', 595, 600],
-] as const)('clamps %s to the video boundaries', async (name, start, end) => {
+] as const)('limite le déplacement « %s » aux bornes de la vidéo', async (name, start, end) => {
   render(
     <TrackedVideoPlayer
       src="/video.mp4"
@@ -404,7 +437,7 @@ it.each([
 });
 
 it.each([NaN, Infinity, 0])(
-  'disables seek buttons without a finite positive duration (%s)',
+  'désactive les boutons de déplacement en l’absence de durée finie strictement positive (%s)',
   async (duration) => {
     render(
       <TrackedVideoPlayer
@@ -427,7 +460,7 @@ it.each([NaN, Infinity, 0])(
   },
 );
 
-it('supports keyboard activation without pausing or restarting playback', async () => {
+it('permet l’activation au clavier sans mettre en pause ni redémarrer la lecture', async () => {
   const user = userEvent.setup();
   render(
     <TrackedVideoPlayer
@@ -455,7 +488,7 @@ it('supports keyboard activation without pausing or restarting playback', async 
   expect(video.pause).not.toHaveBeenCalled();
 });
 
-it('waits for new metadata when the source changes or playback becomes unavailable', async () => {
+it('attend de nouvelles métadonnées lorsque la source change ou que la lecture devient indisponible', async () => {
   const props = { mediaId: 'media', context, execution, readOnly: false };
   const { rerender } = render(<TrackedVideoPlayer src="/one.mp4" {...props} />);
   const video = screen.getByLabelText<HTMLVideoElement>('Vidéo de formation');
@@ -478,7 +511,7 @@ it('waits for new metadata when the source changes or playback becomes unavailab
   expect(screen.getByRole('button', { name: 'Avancer de 10 secondes' })).toBeDisabled();
 });
 
-it('keeps a video without a readable visit untracked', async () => {
+it('ne suit pas une vidéo sans visite accessible en lecture', async () => {
   const entry: ApiPortalContentEntry = {
     id: 'entry',
     content_type_id: 'media-type',
@@ -504,7 +537,7 @@ it('keeps a video without a readable visit untracked', async () => {
   expect(portalVideoApi.get).not.toHaveBeenCalled();
 });
 
-describe('fullscreen with video controls', () => {
+describe('plein écran avec les contrôles vidéo', () => {
   const restores: Array<() => void> = [];
 
   function property(target: object, key: string, value: unknown) {
@@ -544,7 +577,7 @@ describe('fullscreen with video controls', () => {
       .forEach((restore) => restore());
   });
 
-  it('requests fullscreen on the wrapper and preserves the same video, seek buttons and tracking session', async () => {
+  it('demande le plein écran sur le conteneur et conserve la même vidéo, les boutons de déplacement et la session de suivi', async () => {
     const { video, wrapper, register } = await mount();
     const request = jest.fn(async () => {
       property(document, 'fullscreenElement', wrapper);
@@ -592,7 +625,7 @@ describe('fullscreen with video controls', () => {
     expect(portalVideoApi.get).toHaveBeenCalledTimes(1);
   });
 
-  it('follows browser exit events and ignores fullscreen on unrelated elements', async () => {
+  it('réagit aux événements de sortie du navigateur et ignore le plein écran sur les éléments sans rapport', async () => {
     const { wrapper } = await mount();
     property(document, 'fullscreenElement', wrapper);
     fireEvent(document, new Event('fullscreenchange'));
@@ -606,7 +639,7 @@ describe('fullscreen with video controls', () => {
   });
 
   it.each(['absent', 'rejected'])(
-    'keeps controls in a viewport overlay when the fullscreen API is %s',
+    'conserve les contrôles dans une surcouche couvrant la fenêtre lorsque l’API de plein écran est dans l’état %s',
     async (mode) => {
       const { video, wrapper } = await mount();
       property(
@@ -632,7 +665,7 @@ describe('fullscreen with video controls', () => {
     },
   );
 
-  it('supports the prefixed container API without invoking video-only fullscreen', async () => {
+  it('prend en charge l’API préfixée du conteneur sans activer le plein écran limité à la vidéo', async () => {
     const { wrapper } = await mount();
     property(document, 'fullscreenElement', undefined);
     property(wrapper, 'requestFullscreen', undefined);
@@ -659,7 +692,7 @@ describe('fullscreen with video controls', () => {
     expect(wrapper).not.toHaveClass('fixed');
   });
 
-  it('promotes native video fullscreen to the container if the browser ignores nofullscreen', async () => {
+  it('étend le plein écran natif de la vidéo au conteneur si le navigateur ignore nofullscreen', async () => {
     const { video, wrapper } = await mount();
     const request = jest.fn(async () => {
       property(document, 'fullscreenElement', wrapper);
@@ -677,7 +710,7 @@ describe('fullscreen with video controls', () => {
     );
   });
 
-  it('exits video-only fullscreen before using the overlay when container fullscreen is refused', async () => {
+  it('quitte le plein écran limité à la vidéo avant d’utiliser la surcouche lorsque le plein écran du conteneur est refusé', async () => {
     const { video, wrapper } = await mount();
     property(wrapper, 'requestFullscreen', jest.fn().mockRejectedValue(new Error('denied')));
     const exit = jest.fn(async () => {
@@ -697,7 +730,7 @@ describe('fullscreen with video controls', () => {
     expect(wrapper).not.toHaveClass('fixed');
   });
 
-  it('leaves Safari video-only fullscreen and restores scrolling on unmount', async () => {
+  it('quitte le plein écran limité à la vidéo de Safari et rétablit le défilement au démontage', async () => {
     const { video, wrapper, unmount } = await mount();
     const exit = jest.fn();
     property(video, 'webkitExitFullscreen', exit);

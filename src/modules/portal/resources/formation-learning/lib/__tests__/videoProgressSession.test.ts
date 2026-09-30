@@ -43,10 +43,11 @@ const settle = async () => {
   for (let i = 0; i < 12; i++) await Promise.resolve();
 };
 
-describe('native video progress', () => {
+describe('progression de la vidéo native', () => {
   let video: HTMLVideoElement;
   let session: VideoProgressSession;
   let status: jest.Mock;
+  let onExecutionConflict: jest.Mock;
 
   beforeEach(() => {
     jest.useFakeTimers();
@@ -68,6 +69,7 @@ describe('native video progress', () => {
       video.dispatchEvent(new Event('pause'));
     });
     status = jest.fn();
+    onExecutionConflict = jest.fn();
     get.mockResolvedValue({ ...empty });
     save.mockImplementation(async (_context, payload) => ({
       ...empty,
@@ -75,7 +77,14 @@ describe('native video progress', () => {
       version: payload.version + 1,
       last_commit_id: payload.commit_id,
     }));
-    session = new VideoProgressSession(video, context, execution, false, status);
+    session = new VideoProgressSession(
+      video,
+      context,
+      execution,
+      false,
+      status,
+      onExecutionConflict,
+    );
   });
 
   afterEach(async () => {
@@ -107,7 +116,7 @@ describe('native video progress', () => {
     event('seeked');
   }
 
-  it('restores 4:30 only once metadata is available, without autoplay', async () => {
+  it('restaure la position à 4:30 uniquement lorsque les métadonnées sont disponibles, sans lecture automatique', async () => {
     Object.assign(video, { duration: NaN });
     get.mockResolvedValue({ ...empty, position: 270, version: 1 });
     session.start();
@@ -120,7 +129,7 @@ describe('native video progress', () => {
     expect(save).not.toHaveBeenCalled();
   });
 
-  it('does not rewind a learner who already started during a slow read', async () => {
+  it('ne fait pas reculer un apprenant ayant déjà commencé la lecture pendant une récupération lente', async () => {
     let resolve!: (value: VideoProgress) => void;
     get.mockImplementationOnce(
       () =>
@@ -143,7 +152,7 @@ describe('native video progress', () => {
     );
   });
 
-  it('saves every ten seconds and on pause with actual watched coverage', async () => {
+  it('sauvegarde toutes les dix secondes et à la pause avec les intervalles réellement visionnés', async () => {
     session.start();
     await settle();
     play();
@@ -164,7 +173,7 @@ describe('native video progress', () => {
     expect(save).toHaveBeenCalledTimes(2);
   });
 
-  it('allows forward/backward seek and restart zero without counting skipped segments', async () => {
+  it('permet d’avancer, de reculer et de recommencer à zéro sans comptabiliser les segments sautés', async () => {
     session.start();
     await settle();
     play();
@@ -181,7 +190,7 @@ describe('native video progress', () => {
     expect(save.mock.calls[2][1]).toMatchObject({ position: 0, watched_ranges: [] });
   });
 
-  it('saving a seek to the end records no watched coverage', async () => {
+  it('n’enregistre aucun intervalle visionné lors de la sauvegarde d’un déplacement jusqu’à la fin', async () => {
     session.start();
     await settle();
     seek(600);
@@ -191,7 +200,7 @@ describe('native video progress', () => {
     expect(save).toHaveBeenCalledTimes(1);
   });
 
-  it('saves button seeks immediately without crediting skipped intervals', async () => {
+  it('sauvegarde immédiatement les déplacements par bouton sans comptabiliser les intervalles sautés', async () => {
     session.start();
     await settle();
     play();
@@ -208,7 +217,7 @@ describe('native video progress', () => {
     expect(video.paused).toBe(false);
   });
 
-  it('does not undo a button seek when the initial bookmark arrives late', async () => {
+  it('n’annule pas un déplacement par bouton lorsque la position de reprise initiale arrive tardivement', async () => {
     let resolve!: (value: VideoProgress) => void;
     get.mockImplementationOnce(
       () =>
@@ -226,7 +235,7 @@ describe('native video progress', () => {
     expect(video.paused).toBe(true);
   });
 
-  it('ignores button seeks during completion and after disposal', async () => {
+  it('ignore les déplacements par bouton pendant la complétion et après la destruction de la session', async () => {
     session.start();
     await settle();
     await session.prepareCompletion();
@@ -242,16 +251,19 @@ describe('native video progress', () => {
     expect(video.currentTime).toBe(10);
   });
 
-  it.each([NaN, Infinity, 0])('ignores button seeks with duration %s', async (duration) => {
-    Object.assign(video, { duration });
-    session.start();
-    await settle();
-    session.seekBy(10);
-    expect(video.currentTime).toBe(0);
-    expect(save).not.toHaveBeenCalled();
-  });
+  it.each([NaN, Infinity, 0])(
+    'ignore les déplacements par bouton avec une durée de %s',
+    async (duration) => {
+      Object.assign(video, { duration });
+      session.start();
+      await settle();
+      session.seekBy(10);
+      expect(video.currentTime).toBe(0);
+      expect(save).not.toHaveBeenCalled();
+    },
+  );
 
-  it('does not count unannounced jumps, buffering, hidden tabs or pauses', async () => {
+  it('ne comptabilise pas les sauts non signalés, la mise en mémoire tampon, les onglets masqués ni les pauses', async () => {
     session.start();
     await settle();
     play();
@@ -275,7 +287,7 @@ describe('native video progress', () => {
     ]);
   });
 
-  it('accepts real accelerated playback without treating it as a seek', async () => {
+  it('accepte une lecture réellement accélérée sans la traiter comme un déplacement', async () => {
     session.start();
     await settle();
     video.playbackRate = 2;
@@ -286,7 +298,7 @@ describe('native video progress', () => {
     expect(save.mock.calls[0][1].watched_ranges).toEqual([[0, 2]]);
   });
 
-  it.each(['pagehide', 'dispose'])('saves with keepalive on %s', async (exit) => {
+  it.each(['pagehide', 'dispose'])('sauvegarde avec keepalive lors de %s', async (exit) => {
     session.start();
     await settle();
     play();
@@ -302,7 +314,7 @@ describe('native video progress', () => {
     );
   });
 
-  it('serializes an in-flight periodic save and the latest backward seek', async () => {
+  it('sérialise une sauvegarde périodique en cours et le dernier déplacement en arrière', async () => {
     let resolve!: (value: VideoProgress) => void;
     save.mockImplementationOnce(
       () =>
@@ -322,7 +334,7 @@ describe('native video progress', () => {
     expect(save.mock.calls[1][1]).toMatchObject({ position: 2, version: 1 });
   });
 
-  it('retries the same commit after failure, then saves the newer position', async () => {
+  it('réessaie le même envoi après un échec, puis sauvegarde la position la plus récente', async () => {
     save.mockRejectedValueOnce(new Error('offline'));
     session.start();
     await settle();
@@ -337,7 +349,7 @@ describe('native video progress', () => {
     expect(video.paused).toBe(false);
   });
 
-  it('restores the local pending position after refresh and a lost acknowledgement', async () => {
+  it('restaure la position locale en attente après une actualisation et la perte d’un accusé de réception', async () => {
     save.mockRejectedValue(new Error('offline'));
     session.start();
     await settle();
@@ -366,7 +378,7 @@ describe('native video progress', () => {
     expect(save.mock.lastCall?.[1].version).toBe(1);
   });
 
-  it('does not overwrite a newer server bookmark with an old local draft', async () => {
+  it('n’écrase pas une position de reprise serveur plus récente avec un ancien brouillon local', async () => {
     save.mockRejectedValue(new Error('offline'));
     session.start();
     await settle();
@@ -384,7 +396,7 @@ describe('native video progress', () => {
     expect(save).not.toHaveBeenCalled();
   });
 
-  it('keeps recovered watched ranges when playback starts before the read finishes', async () => {
+  it('conserve les intervalles visionnés récupérés lorsque la lecture commence avant la fin de la récupération', async () => {
     save.mockRejectedValue(new Error('offline'));
     session.start();
     await settle();
@@ -426,7 +438,7 @@ describe('native video progress', () => {
     });
   });
 
-  it('saves the final snapshot when the initial read finishes after unmount', async () => {
+  it('sauvegarde l’instantané final lorsque la récupération initiale se termine après le démontage', async () => {
     let resolve!: (value: VideoProgress) => void;
     get.mockImplementationOnce(
       () =>
@@ -450,7 +462,7 @@ describe('native video progress', () => {
     );
   });
 
-  it('waits for the initial read and final save before completing', async () => {
+  it('attend la récupération initiale et la sauvegarde finale avant la complétion', async () => {
     let resolve!: (value: VideoProgress) => void;
     get.mockImplementationOnce(
       () =>
@@ -470,7 +482,7 @@ describe('native video progress', () => {
     expect(save.mock.lastCall?.[1]).toMatchObject({ position: 2, watched_ranges: [[0, 2]] });
   });
 
-  it('freezes tracking during completion and resumes it only after failure', async () => {
+  it('fige le suivi pendant la complétion et ne le reprend qu’après un échec', async () => {
     session.start();
     await settle();
     play();
@@ -491,7 +503,7 @@ describe('native video progress', () => {
   });
 
   it.each([Infinity, NaN, 0, 604801])(
-    'does not send invalid video duration %s',
+    'n’envoie pas la durée vidéo invalide %s',
     async (duration) => {
       Object.assign(video, { duration });
       session.start();
@@ -505,56 +517,59 @@ describe('native video progress', () => {
     },
   );
 
-  it.each(['node', 'visit'])('never replays another %s draft for the same video', async (scope) => {
-    save.mockRejectedValue(new Error('offline'));
-    session.start();
-    await settle();
-    seek(270);
-    await settle();
-    session.dispose();
-    await settle();
-    const originalDrafts = localStorage.getItem('learneo:video-progress:v1');
-    save.mockClear();
-    video.currentTime = 0;
-    const nextContext = {
-      ...context,
-      competencyId: scope === 'node' ? 'module-2' : context.competencyId,
-      nodeExecutionId: 'execution-2',
-    };
-    get.mockResolvedValue({
-      ...empty,
-      node_id: nextContext.competencyId,
-      node_execution_id: nextContext.nodeExecutionId,
-    });
-    session = new VideoProgressSession(
-      video,
-      nextContext,
-      { ...execution, node_execution_id: nextContext.nodeExecutionId },
-      false,
-      status,
-    );
-    session.start();
-    await settle();
-    expect(video.currentTime).toBe(0);
-    expect(save).not.toHaveBeenCalled();
-    expect(localStorage.getItem('learneo:video-progress:v1')).toBe(originalDrafts);
-    seek(30);
-    await settle();
-    expect(save.mock.lastCall?.[0]).toEqual(nextContext);
-    expect(save.mock.lastCall?.[1]).toMatchObject({
-      competency_id: nextContext.competencyId,
-      node_execution_id: 'execution-2',
-      position: 30,
-      watched_ranges: [],
-      version: 0,
-    });
-    expect(
-      Object.keys(JSON.parse(localStorage.getItem('learneo:video-progress:v1')!)),
-    ).toHaveLength(2);
-  });
+  it.each(['node', 'visit'])(
+    'ne rejoue jamais le brouillon d’un autre contexte %s pour la même vidéo',
+    async (scope) => {
+      save.mockRejectedValue(new Error('offline'));
+      session.start();
+      await settle();
+      seek(270);
+      await settle();
+      session.dispose();
+      await settle();
+      const originalDrafts = localStorage.getItem('learneo:video-progress:v1');
+      save.mockClear();
+      video.currentTime = 0;
+      const nextContext = {
+        ...context,
+        competencyId: scope === 'node' ? 'module-2' : context.competencyId,
+        nodeExecutionId: 'execution-2',
+      };
+      get.mockResolvedValue({
+        ...empty,
+        node_id: nextContext.competencyId,
+        node_execution_id: nextContext.nodeExecutionId,
+      });
+      session = new VideoProgressSession(
+        video,
+        nextContext,
+        { ...execution, node_execution_id: nextContext.nodeExecutionId },
+        false,
+        status,
+      );
+      session.start();
+      await settle();
+      expect(video.currentTime).toBe(0);
+      expect(save).not.toHaveBeenCalled();
+      expect(localStorage.getItem('learneo:video-progress:v1')).toBe(originalDrafts);
+      seek(30);
+      await settle();
+      expect(save.mock.lastCall?.[0]).toEqual(nextContext);
+      expect(save.mock.lastCall?.[1]).toMatchObject({
+        competency_id: nextContext.competencyId,
+        node_execution_id: 'execution-2',
+        position: 30,
+        watched_ranges: [],
+        version: 0,
+      });
+      expect(
+        Object.keys(JSON.parse(localStorage.getItem('learneo:video-progress:v1')!)),
+      ).toHaveLength(2);
+    },
+  );
 
   it.each(['node_id', 'node_execution_id'] as const)(
-    'rejects a read response with another %s',
+    'rejette une réponse de lecture avec un autre %s',
     async (field) => {
       get.mockResolvedValue({ ...empty, position: 270, [field]: 'other' });
       session.start();
@@ -568,7 +583,7 @@ describe('native video progress', () => {
     },
   );
 
-  it('rejects an acknowledgement from a different visit', async () => {
+  it('rejette un accusé de réception provenant d’une autre visite', async () => {
     save.mockResolvedValue({ ...empty, node_execution_id: 'other', version: 1 });
     session.start();
     await settle();
@@ -580,7 +595,7 @@ describe('native video progress', () => {
     expect(save).toHaveBeenCalledTimes(1);
   });
 
-  it('cannot reuse a session with a mutation context from another visit', async () => {
+  it('ne permet pas de réutiliser une session avec le contexte de mutation d’une autre visite', async () => {
     session.start();
     await settle();
     session.updateExecution({ ...execution, node_execution_id: 'execution-2' });
@@ -589,7 +604,7 @@ describe('native video progress', () => {
     expect(save).not.toHaveBeenCalled();
   });
 
-  it('ignores legacy drafts without a node or visit identity', async () => {
+  it('ignore les anciens brouillons sans identifiant de nœud ou de visite', async () => {
     const oldKey = JSON.stringify([
       null,
       user.id,
@@ -617,7 +632,7 @@ describe('native video progress', () => {
     expect(save).not.toHaveBeenCalled();
   });
 
-  it('stops conflicting writes without interrupting playback', async () => {
+  it('arrête les écritures en conflit sans interrompre la lecture', async () => {
     save.mockRejectedValue({ status: 409 });
     session.start();
     await settle();
@@ -631,7 +646,65 @@ describe('native video progress', () => {
     expect(video.paused).toBe(false);
   });
 
-  it('retries failed reads and does not reset playback on delayed success', async () => {
+  describe.each([
+    { status: 409, json: { error_code: 'execution_conflict' } },
+    { status: 422, json: { errors: { node_execution_id: ['Visite invalide'] } } },
+    { status: 422, json: { errors: { expected_state_revision: ['Révision invalide'] } } },
+  ])('refus du contexte d’exécution ($status)', (error) => {
+    it.each(['lecture', 'sauvegarde'])('propage le refus de %s sans le rejouer', async (step) => {
+      if (step === 'lecture') get.mockRejectedValueOnce(error);
+      else save.mockRejectedValueOnce(error);
+      session.start();
+      await settle();
+      seek(30);
+      await settle();
+      expect(onExecutionConflict).toHaveBeenCalledTimes(1);
+      expect(onExecutionConflict).toHaveBeenCalledWith(error);
+      expect(status).toHaveBeenLastCalledWith('conflict');
+      expect(JSON.parse(localStorage.getItem('learneo:video-progress:v1') ?? '{}')).toEqual({});
+      session.updateExecution({ ...execution, expected_state_revision: 2 });
+      seek(40);
+      window.dispatchEvent(new Event('online'));
+      jest.advanceTimersByTime(20_000);
+      await settle();
+      expect(get).toHaveBeenCalledTimes(1);
+      expect(save).toHaveBeenCalledTimes(step === 'lecture' ? 0 : 1);
+      expect(onExecutionConflict).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it.each([
+    { status: 409, json: { error_code: 'video_progress_conflict' } },
+    { status: 422, json: { errors: { position: ['Position invalide'] } } },
+    { status: 403 },
+    { status: 408 },
+    { status: 429 },
+    { status: 500 },
+    new Error('offline'),
+  ])('ne déclenche pas de récupération du contexte pour une autre erreur (%j)', async (error) => {
+    save.mockRejectedValueOnce(error);
+    session.start();
+    await settle();
+    seek(30);
+    await settle();
+    expect(onExecutionConflict).not.toHaveBeenCalled();
+  });
+
+  it('ignore un refus d’exécution reçu après la révocation de la session', async () => {
+    let reject!: (error: unknown) => void;
+    get.mockReturnValueOnce(
+      new Promise((_resolve, fail) => {
+        reject = fail;
+      }),
+    );
+    session.start();
+    useAuthStore.getState().clearAuth();
+    reject({ status: 409, json: { error_code: 'execution_conflict' } });
+    await settle();
+    expect(onExecutionConflict).not.toHaveBeenCalled();
+  });
+
+  it('réessaie les lectures échouées sans réinitialiser la lecture vidéo en cas de succès tardif', async () => {
     get.mockRejectedValueOnce(new Error('offline'));
     session.start();
     await settle();
@@ -644,7 +717,7 @@ describe('native video progress', () => {
   });
 
   it.each(['logout', 'simulation', 'transition', 'tenant'])(
-    'revokes old tracking immediately on %s',
+    'révoque immédiatement l’ancien suivi lors de %s',
     async (boundary) => {
       session.start();
       await settle();
@@ -666,7 +739,7 @@ describe('native video progress', () => {
     },
   );
 
-  it('never reads or writes progress in simulation', async () => {
+  it('ne lit ni n’écrit jamais de progression en simulation', async () => {
     useAuthStore.getState().setSimulatedRole(Role.TRAINEE);
     session.start();
     play();
@@ -679,7 +752,7 @@ describe('native video progress', () => {
   });
 
   it.each(['learner', 'enrollment', 'media'])(
-    'does not restore another %s pending draft',
+    'ne restaure pas le brouillon en attente d’un autre contexte %s',
     async (scope) => {
       save.mockRejectedValue(new Error('offline'));
       session.start();
@@ -710,7 +783,7 @@ describe('native video progress', () => {
     },
   );
 
-  it('keeps historical playback read-only but allows resume and restart', async () => {
+  it('maintient la lecture historique en lecture seule tout en permettant la reprise et le redémarrage', async () => {
     get.mockResolvedValue({ ...empty, position: 270, version: 1 });
     session = new VideoProgressSession(video, context, execution, true, status);
     session.start();
@@ -724,7 +797,7 @@ describe('native video progress', () => {
     expect(save).not.toHaveBeenCalled();
   });
 
-  it('flushes and pauses before manual completion, even if the network fails', async () => {
+  it('envoie les données en attente et met en pause avant la complétion manuelle, même en cas de panne réseau', async () => {
     save.mockRejectedValue(new Error('offline'));
     session.start();
     await settle();
@@ -735,7 +808,7 @@ describe('native video progress', () => {
     expect(video.paused).toBe(true);
   });
 
-  it('merges overlaps without filling unwatched gaps', () => {
+  it('fusionne les chevauchements sans combler les intervalles non visionnés', () => {
     expect(
       mergeWatchedRanges([
         [10, 20],

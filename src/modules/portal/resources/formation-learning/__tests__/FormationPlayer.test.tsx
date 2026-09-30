@@ -16,7 +16,7 @@ import {
   type ApiScormTrackingState,
 } from '@/shared/api/portal-scorm.api';
 import { Role } from '@/shared/constants/roles';
-import { portalLearningPathKeys } from '@/shared/queries/keys';
+import { portalLearningPathKeys, portalMyEnrollmentsKeys } from '@/shared/queries/keys';
 import { useAuthStore } from '@/shared/stores/auth.store';
 import { useSimulationStore } from '@/shared/simulation/simulation.store';
 import type {
@@ -767,6 +767,117 @@ describe('Parcours du stagiaire piloté par le snapshot d’exécution', () => {
       await restoreVideos(30);
     });
 
+    it.each(['lecture', 'sauvegarde'])(
+      'recharge la visite après un conflit vidéo en %s sans rejouer le signet',
+      async (step) => {
+        let reject!: (error: unknown) => void;
+        const pending = new Promise<VideoProgress>((_resolve, fail) => {
+          reject = fail;
+        });
+        jest.mocked(portalVideoApi.get).mockImplementation(async (context) => ({
+          ...empty,
+          node_execution_id: context.nodeExecutionId,
+        }));
+        if (step === 'lecture') jest.mocked(portalVideoApi.get).mockReturnValueOnce(pending);
+        else jest.mocked(portalVideoApi.save).mockReturnValueOnce(pending);
+        const { client } = setup();
+        const invalidate = jest.spyOn(client, 'invalidateQueries');
+        const videos = await screen.findAllByLabelText<HTMLVideoElement>('Vidéo de formation');
+        await waitFor(() => expect(portalVideoApi.get).toHaveBeenCalledTimes(2));
+        if (step === 'sauvegarde') {
+          Object.defineProperty(videos[0], 'duration', { configurable: true, value: 600 });
+          await act(async () => {
+            videos[0].currentTime = 30;
+            fireEvent.seeking(videos[0]);
+            fireEvent.seeked(videos[0]);
+          });
+          expect(portalVideoApi.save).toHaveBeenCalledTimes(1);
+        }
+        summary = buildExecutionSummary({
+          stateRevision: 8,
+          modules: sharedCourseModules().map((module, index) =>
+            index === 0 ? { ...module, executionId: 'exec-module-1-new' } : module,
+          ),
+        });
+        await act(async () => {
+          reject({ status: 409, json: { error_code: 'execution_conflict' } });
+        });
+        await waitFor(() =>
+          expect(portalVideoApi.get).toHaveBeenCalledWith(
+            expect.objectContaining({ nodeExecutionId: 'exec-module-1-new' }),
+            expect.any(AbortSignal),
+          ),
+        );
+        expect(invalidate).toHaveBeenCalledWith({
+          queryKey: portalLearningPathKeys.summary(ENROLLMENT_ID),
+        });
+        expect(invalidate).toHaveBeenCalledWith({ queryKey: portalMyEnrollmentsKeys.all });
+        expect(videos[0]).not.toBeInTheDocument();
+        expect(portalVideoApi.save).toHaveBeenCalledTimes(step === 'lecture' ? 0 : 1);
+        expect(mockComplete).not.toHaveBeenCalled();
+      },
+    );
+
+    it('bloque la validation pendant le chargement du contenu puis attend le signet et sa sauvegarde', async () => {
+      const entry = await mockGetEntry(ENROLLMENT_ID, 'shared-course', 'shared-entry-1');
+      mockGetEntry.mockClear();
+      let loadEntry!: () => void;
+      mockGetEntry.mockReturnValueOnce(
+        new Promise((resolve) => {
+          loadEntry = () => resolve(entry);
+        }),
+      );
+      let loadBookmark!: () => void;
+      jest.mocked(portalVideoApi.get).mockReturnValueOnce(
+        new Promise((resolve) => {
+          loadBookmark = () => resolve(empty);
+        }),
+      );
+      let saveBookmark!: () => void;
+      jest.mocked(portalVideoApi.save).mockImplementationOnce(
+        (_context, payload) =>
+          new Promise((resolve) => {
+            saveBookmark = () =>
+              resolve({
+                ...empty,
+                ...payload,
+                version: 1,
+                last_commit_id: payload.commit_id,
+              });
+          }),
+      );
+      const { user } = setup();
+      const complete = await screen.findByRole('button', { name: 'Terminer et continuer' });
+      expect(complete).toBeDisabled();
+      await user.click(complete);
+      expect(mockComplete).not.toHaveBeenCalled();
+      expect(mockRecordTime).not.toHaveBeenCalled();
+      expect(portalVideoApi.get).not.toHaveBeenCalled();
+
+      await act(async () => loadEntry());
+      const videos = await screen.findAllByLabelText<HTMLVideoElement>('Vidéo de formation');
+      await waitFor(() => expect(complete).toBeEnabled());
+      Object.defineProperty(videos[0], 'duration', { configurable: true, value: 600 });
+      videos.forEach((video) => {
+        video.pause = jest.fn(() => fireEvent.pause(video));
+      });
+      fireEvent.seeking(videos[0]);
+      videos[0].currentTime = 30;
+      fireEvent.seeked(videos[0]);
+      await user.click(complete);
+      expect(complete).toBeDisabled();
+      expect(portalVideoApi.save).not.toHaveBeenCalled();
+      expect(mockComplete).not.toHaveBeenCalled();
+
+      await act(async () => loadBookmark());
+      await waitFor(() => expect(portalVideoApi.save).toHaveBeenCalledTimes(1));
+      expect(mockComplete).not.toHaveBeenCalled();
+      expect(mockRecordTime).not.toHaveBeenCalled();
+      expect(jest.mocked(portalVideoApi.save).mock.calls[0][1]).toMatchObject({ position: 30 });
+      await act(async () => saveBookmark());
+      await waitFor(() => expect(mockComplete).toHaveBeenCalledTimes(1));
+    });
+
     it('attend toutes les vidéos avant le temps puis la validation de la visite', async () => {
       const acknowledgements: Array<() => void> = [];
       jest.mocked(portalVideoApi.save).mockImplementation(
@@ -1412,7 +1523,11 @@ describe('Parcours du stagiaire piloté par le snapshot d’exécution', () => {
           await user.click(screen.getByRole('button', { name: 'Contenu 2' }));
           expect(cachedContent(client, scormEntry.id)).toMatchObject({ completed: false });
         } else {
-          expect(screen.getByRole('button', { name: 'Terminer et continuer' })).toBeEnabled();
+          expect(screen.getByRole('button', { name: 'Terminer et continuer' })).toBeDisabled();
+          await act(async () => finishEntry());
+          await waitFor(() =>
+            expect(screen.getByRole('button', { name: 'Terminer et continuer' })).toBeEnabled(),
+          );
           expect(screen.getByRole('button', { name: 'Contenu 3' })).toBeDisabled();
         }
         expect(mockComplete).not.toHaveBeenCalled();

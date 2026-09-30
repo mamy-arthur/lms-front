@@ -5,6 +5,7 @@ import {
   type WatchedRange,
 } from '@/shared/api/portal-video.api';
 import type { ExecutionMutationContext } from '@/shared/types/progression.types';
+import { isExecutionContextRejection } from '@/shared/lib/execution-conflict';
 import { selectSessionIdentity, useAuthStore } from '@/shared/stores/auth.store';
 import { useTenantStore } from '@/shared/stores/tenant.store';
 import { useSimulationStore } from '@/shared/simulation/simulation.store';
@@ -65,6 +66,7 @@ export class VideoProgressSession {
     private execution: ExecutionMutationContext | null,
     private readonly readOnly: boolean,
     private readonly onStatus: (status: VideoSaveStatus) => void,
+    private readonly onExecutionConflict?: (error: unknown) => void,
   ) {
     this.storageKey = JSON.stringify([
       this.tenant,
@@ -468,6 +470,13 @@ export class VideoProgressSession {
 
   private failed(error: unknown): void {
     if (!this.allowed()) return;
+    if (isExecutionContextRejection(error)) {
+      this.stopped = true;
+      clearVideoDraft(this.storageKey, this.pending?.commit_id ?? null);
+      this.status('conflict');
+      this.onExecutionConflict?.(error);
+      return;
+    }
     const status = (error as { status?: number })?.status;
     if (status && status >= 400 && status < 500 && status !== 408 && status !== 429) {
       this.stopped = true;

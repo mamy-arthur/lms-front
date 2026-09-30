@@ -5,7 +5,7 @@ import { getHttpContentUrl, toYouTubeEmbedUrl } from '@/lib/utils';
 import { getMediaCategory } from '@/modules/shared/components/courses/contents/forms/fields/media-utils';
 import ScormPlayer from './ScormPlayer';
 import type { RegisterScormSession } from '../lib/scormRuntime';
-import TrackedVideoPlayer, { type VideoTrackingProps } from './TrackedVideoPlayer';
+import TrackedVideoPlayer, { type VideoTrackingProps } from './tracked-video-player';
 import type { RegisterVideoSession } from '../lib/videoProgressSession';
 
 interface Props {
@@ -20,7 +20,7 @@ interface Props {
   expectedStateRevision: number | null;
   readOnly: boolean;
   onScormCompleted?: () => void;
-  onScormExecutionConflict?: (error: unknown) => void;
+  onExecutionConflict?: (error: unknown) => void;
   registerScormSession?: RegisterScormSession;
   registerVideoSession?: RegisterVideoSession;
 }
@@ -211,7 +211,7 @@ export default function PortalContentRenderer({
   expectedStateRevision,
   readOnly,
   onScormCompleted,
-  onScormExecutionConflict,
+  onExecutionConflict,
   registerScormSession,
   registerVideoSession,
 }: Props) {
@@ -252,7 +252,7 @@ export default function PortalContentRenderer({
         expectedStateRevision={expectedStateRevision}
         readOnly={readOnly}
         onCompleted={onScormCompleted}
-        onExecutionConflict={onScormExecutionConflict}
+        onExecutionConflict={onExecutionConflict}
         registerSession={registerScormSession}
       />
     );
@@ -270,6 +270,7 @@ export default function PortalContentRenderer({
                 }
               : null,
           readOnly,
+          onExecutionConflict,
           registerVideoSession,
         }
       : undefined;

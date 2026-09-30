@@ -36,7 +36,7 @@ beforeEach(() => {
   });
 });
 
-it('loads the video bookmark through the authenticated tenant transport', async () => {
+it('charge la position de reprise vidéo via le transport authentifié du tenant', async () => {
   const { signal } = new AbortController();
   await expect(portalVideoApi.get(context, signal)).resolves.toEqual(progress);
   expect(httpClient).toHaveBeenCalledWith(`${path}?competency_id=module&node_execution_id=visit`, {
@@ -44,7 +44,7 @@ it('loads the video bookmark through the authenticated tenant transport', async 
   });
 });
 
-it('sends execution, version and commit identity with keepalive on exit', async () => {
+it('envoie l’exécution, la version et l’identifiant de l’envoi avec keepalive à la sortie', async () => {
   const { signal } = new AbortController();
   const payload: VideoProgressPayload = {
     competency_id: 'module',
@@ -65,7 +65,7 @@ it('sends execution, version and commit identity with keepalive on exit', async 
   });
 });
 
-it('propagates conflicts so the session stops stale writes', async () => {
+it('propage les conflits pour que la session arrête les écritures obsolètes', async () => {
   const error = Object.assign(new Error('Conflict'), { status: 409 });
   jest.mocked(httpClient).mockRejectedValueOnce(error);
   await expect(portalVideoApi.get(context, new AbortController().signal)).rejects.toBe(error);

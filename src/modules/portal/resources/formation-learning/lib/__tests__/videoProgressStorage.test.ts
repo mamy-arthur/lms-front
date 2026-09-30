@@ -19,7 +19,7 @@ const draft = (overrides: Partial<VideoDraft> = {}): VideoDraft => ({
 beforeEach(() => localStorage.clear());
 afterEach(() => jest.restoreAllMocks());
 
-it('stores separate drafts and only clears the acknowledged commit', () => {
+it('stocke des brouillons distincts et ne supprime que l’envoi dont la réception a été confirmée', () => {
   writeVideoDraft('learner-1/video-1', draft());
   writeVideoDraft('learner-2/video-1', draft({ position: 40, pendingCommitId: 'newer' }));
   clearVideoDraft('learner-1/video-1', 'old');
@@ -37,12 +37,12 @@ it.each([
   { ranges: [[0, 601]] },
   { ranges: [[20, 10]] },
   { updatedAt: Date.now() - 24 * 60 * 60 * 1000 },
-])('ignores invalid or expired drafts: %j', (invalid) => {
+])('ignore les brouillons invalides ou expirés : %j', (invalid) => {
   localStorage.setItem(storageKey, JSON.stringify({ video: { ...draft(), ...invalid } }));
   expect(readVideoDraft('video')).toBeUndefined();
 });
 
-it('bounds storage to the twenty most recent drafts', () => {
+it('limite le stockage aux vingt brouillons les plus récents', () => {
   for (let i = 0; i < 22; i++)
     writeVideoDraft(`video-${i}`, draft({ updatedAt: Date.now() - 100 + i }));
   expect(readVideoDraft('video-0')).toBeUndefined();
@@ -51,7 +51,7 @@ it('bounds storage to the twenty most recent drafts', () => {
   expect(Object.keys(JSON.parse(localStorage.getItem(storageKey)!))).toHaveLength(20);
 });
 
-it('keeps playback safe when storage is corrupt or unavailable', () => {
+it('préserve la lecture lorsque le stockage est corrompu ou indisponible', () => {
   localStorage.setItem(storageKey, '{invalid');
   expect(readVideoDraft('video')).toBeUndefined();
   jest.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {

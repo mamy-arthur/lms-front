@@ -19,6 +19,7 @@ export interface VideoTrackingProps {
   context: Omit<VideoProgressContext, 'mediaId'>;
   execution: ExecutionMutationContext | null;
   readOnly: boolean;
+  onExecutionConflict?: (error: unknown) => void;
   registerVideoSession?: RegisterVideoSession;
 }
 
@@ -28,6 +29,7 @@ export default function TrackedVideoPlayer({
   context,
   execution,
   readOnly,
+  onExecutionConflict,
   registerVideoSession,
 }: VideoTrackingProps & { src: string; mediaId: string }) {
   const { containerRef, videoRef, toggleRef, expanded, toggleFullscreen } = useVideoFullscreen();
@@ -41,6 +43,10 @@ export default function TrackedVideoPlayer({
   const phase = useSimulationStore((state) => state.phase);
   const { enrollmentId, courseId, entryId, competencyId, nodeExecutionId } = context;
   const executionRef = useRef(execution);
+  const onExecutionConflictRef = useRef(onExecutionConflict);
+  useEffect(() => {
+    onExecutionConflictRef.current = onExecutionConflict;
+  }, [onExecutionConflict]);
   useEffect(() => {
     executionRef.current = execution;
     sessionRef.current?.updateExecution(execution);
@@ -54,6 +60,7 @@ export default function TrackedVideoPlayer({
       executionRef.current,
       readOnly,
       setStatus,
+      (error) => onExecutionConflictRef.current?.(error),
     );
     sessionRef.current = session;
     session.start();

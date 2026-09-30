@@ -79,9 +79,8 @@ export default function FormationPlayer({ enrollmentId }: Props) {
 
   const recoverFromConflict = useExecutionConflictRecovery(enrollmentId);
 
-  // Un commit SCORM est automatique et invisible : le signaler à l'apprenant
-  // l'alarmerait sans qu'il ait rien à faire. L'état est rechargé, et le commit
-  // suivant repart avec la bonne révision — le runtime réémet l'état complet.
+  // Les sauvegardes automatiques SCORM et vidéo rechargent l'état serveur
+  // sans alarmer l'apprenant ni rejouer une mutation d'une visite périmée.
   function handleExecutionConflict(err: unknown) {
     recoverFromConflict(err);
   }
@@ -132,6 +131,8 @@ export default function FormationPlayer({ enrollmentId }: Props) {
       !activeCourseId ||
       !activeEntryId ||
       !executionContext ||
+      entryQuery.isLoading ||
+      !entryQuery.data ||
       completingRef.current ||
       isCompleting ||
       !canMutate ||
@@ -142,6 +143,8 @@ export default function FormationPlayer({ enrollmentId }: Props) {
     }
     completingRef.current = true;
     setIsFlushingTime(true);
+    // The content must be mounted before taking this snapshot: otherwise its
+    // video sessions could register during the time flush, after this barrier.
     // Bookmark failures never change the existing manual completion policy.
     // Flush before closing the visit, while writes are still authorized.
     await Promise.allSettled(
