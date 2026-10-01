@@ -412,11 +412,11 @@ export function AddEvaluationDialog({
                 <div className="flex items-center justify-center py-4">
                   <Loader2 className="size-4 animate-spin text-muted-foreground" />
                 </div>
-              ) : isErrorPool ? (
+              ) : isErrorPool && !readOnly ? (
                 <p className="py-4 text-center text-xs text-destructive">
                   Impossible de vérifier les questions disponibles. Réessayez.
                 </p>
-              ) : isLoadingPool && effectiveModuleIds.length > 0 ? (
+              ) : !readOnly && isLoadingPool && effectiveModuleIds.length > 0 ? (
                 <div className="flex items-center justify-center py-4">
                   <Loader2 className="size-4 animate-spin text-muted-foreground" />
                 </div>

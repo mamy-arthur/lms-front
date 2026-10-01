@@ -40,6 +40,13 @@ function ProgramStepNode({ id, data, isConnectable }: NodeProps<StepNode>) {
       !isLocked || isConfigured
     : !isLocked && !(isConfigured && !isEmail && !isAttestation);
 
+  const stepContent = (
+    <>
+      <Icon className={cn('size-4 shrink-0', cfg.iconColor)} />
+      <span className="truncate text-sm font-semibold text-foreground">{data.label}</span>
+    </>
+  );
+
   return (
     <div
       className={cn(
@@ -53,10 +60,21 @@ function ProgramStepNode({ id, data, isConnectable }: NodeProps<StepNode>) {
       <Handle type="target" position={Position.Top} isConnectable={isConnectable && !isLocked} />
 
       <div className="flex items-center justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-2">
-          <Icon className={cn('size-4 shrink-0', cfg.iconColor)} />
-          <span className="truncate text-sm font-semibold text-foreground">{data.label}</span>
-        </div>
+        {isClickable ? (
+          <button
+            type="button"
+            aria-label={`${isLocked ? 'Consulter' : 'Configurer'} l’étape ${data.label}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              onEditNode(id);
+            }}
+            className="flex min-w-0 items-center gap-2 rounded-sm text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            {stepContent}
+          </button>
+        ) : (
+          <div className="flex min-w-0 items-center gap-2">{stepContent}</div>
+        )}
         {!isEmail && !isLocked && id === lastNodeId && (
           <Popover open={confirmOpen} onOpenChange={setConfirmOpen}>
             <PopoverTrigger asChild>

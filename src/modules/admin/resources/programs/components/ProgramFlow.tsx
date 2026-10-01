@@ -1147,6 +1147,8 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
             edgeTypes={edgeTypes}
             nodesDraggable={!isLocked}
             nodesConnectable={!isLocked}
+            // Le focus clavier est porté par les contrôles internes du nœud, pas par son conteneur
+            nodesFocusable={false}
             fitView
             fitViewOptions={{ padding: 0.8, maxZoom: 0.9 }}
             proOptions={{ hideAttribution: true }}
