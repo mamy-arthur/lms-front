@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useCallback, useEffect, useMemo, useRef } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { TENANT_USERS_QUERY_KEY } from '../hooks/useClientUsersQuery';
@@ -97,6 +97,9 @@ function UserFormDrawerBase({ open, onClose, onSuccess, user }: UserFormDrawerPr
   const { tenant } = useTenant();
   const tenantId = tenant?.id ?? null;
   const pendingPhotoRef = useRef<File | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  // Ref et non state : deux clics dans le meme tick liraient la meme valeur.
+  const submittingRef = useRef(false);
   const queryClient = useQueryClient();
 
   const schema = isEdit ? updateSchema : createSchema;
@@ -178,8 +181,8 @@ function UserFormDrawerBase({ open, onClose, onSuccess, user }: UserFormDrawerPr
     }
   }, [open, defaultValues, formState.form]);
 
-  // Submit avec upload photo si fichier sélectionné
-  const onSubmitWithPhoto = useCallback(
+  // Corps de la soumission, englobe par le verrou pose dans onSubmitWithPhoto.
+  const runSubmit = useCallback(
     async (values: Record<string, unknown>) => {
       if (isEdit && user && pendingPhotoRef.current) {
         // PATCH d'abord — l'upload photo n'a lieu qu'après la sauvegarde réussie
@@ -265,6 +268,31 @@ function UserFormDrawerBase({ open, onClose, onSuccess, user }: UserFormDrawerPr
     [isEdit, user, createMutation, updateMutation, formState, handleSuccess, onClose, tenantId],
   );
 
+  // Un seul verrou pour toute la soumission : la mutation se resout bien avant
+  // l'upload puis le rafraichissement des listes.
+  const onSubmitWithPhoto = useCallback(
+    async (values: Record<string, unknown>) => {
+      if (submittingRef.current) {
+        return;
+      }
+      submittingRef.current = true;
+      setIsSubmitting(true);
+
+      try {
+        await runSubmit(values);
+      } finally {
+        submittingRef.current = false;
+        setIsSubmitting(false);
+      }
+    },
+    [runSubmit],
+  );
+
+  const submitMutation = useMemo(
+    () => ({ ...formState.mutation, isPending: formState.mutation.isPending || isSubmitting }),
+    [formState.mutation, isSubmitting],
+  );
+
   const activeField = (
     <FieldRoot
       control={formState.form.control}
@@ -299,7 +327,7 @@ function UserFormDrawerBase({ open, onClose, onSuccess, user }: UserFormDrawerPr
         </SheetHeader>
         <UserForm
           form={formState.form}
-          mutation={formState.mutation}
+          mutation={submitMutation}
           isEdit={formState.isEdit}
           handleClose={formState.handleClose}
           onSubmit={onSubmitWithPhoto}

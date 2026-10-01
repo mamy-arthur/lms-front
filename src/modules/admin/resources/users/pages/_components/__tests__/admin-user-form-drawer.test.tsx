@@ -274,6 +274,7 @@ describe('AdminUserFormDrawer - rattachement client', () => {
     await waitFor(() => expect(toast.warning).toHaveBeenCalled());
     expect(toast.error).not.toHaveBeenCalledWith("Échec de la création de l'utilisateur.");
     expect(uploadUserProfilePhoto).not.toHaveBeenCalled();
+    expect(mockCreateAsync).toHaveBeenCalledTimes(1);
   });
 
   it("n'envoie pas la photo quand le PATCH est refuse", async () => {
@@ -327,6 +328,60 @@ describe('AdminUserFormDrawer - rattachement client', () => {
     expect(screen.getByRole('button', { name: /Enregistrement/ })).toBeDisabled();
 
     releaseUpload();
+  });
+
+  it('reste verrouille tant que le rafraichissement des listes n a pas abouti', async () => {
+    jest.mocked(uploadUserProfilePhoto).mockResolvedValue({
+      id: 'media-1',
+      url: '/media-1',
+      mime_type: 'image/png',
+    });
+    const interaction = userEvent.setup();
+    const view = renderWithQueryClient(<AdminUserFormDrawer open onClose={jest.fn()} />);
+
+    let releaseRefresh: () => void = () => {};
+    jest.spyOn(view.queryClient, 'invalidateQueries').mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          releaseRefresh = resolve;
+        }),
+    );
+
+    await interaction.upload(
+      document.querySelector<HTMLInputElement>('input[type="file"]')!,
+      new File(['creation'], 'creation.png', { type: 'image/png' }),
+    );
+    await screen.findByText(/Photo sélectionnée/);
+    await fillCreationForm(interaction);
+    await interaction.click(screen.getByRole('button', { name: 'Enregistrer' }));
+
+    await waitFor(() => expect(uploadUserProfilePhoto).toHaveBeenCalled());
+
+    // L'upload est fini mais le rafraichissement traine : le bouton doit rester
+    // verrouille, sinon un second clic relancerait une creation.
+    const submit = screen.getByRole('button', { name: /Enregistrement/ });
+    expect(submit).toBeDisabled();
+
+    fireEvent.click(submit);
+    expect(mockCreateAsync).toHaveBeenCalledTimes(1);
+
+    releaseRefresh();
+  });
+
+  it('ne cree qu une fois meme si l upload echoue', async () => {
+    jest.mocked(uploadUserProfilePhoto).mockRejectedValue(new Error('upload down'));
+    const interaction = userEvent.setup();
+    renderWithQueryClient(<AdminUserFormDrawer open onClose={jest.fn()} />);
+    await interaction.upload(
+      document.querySelector<HTMLInputElement>('input[type="file"]')!,
+      new File(['creation'], 'creation.png', { type: 'image/png' }),
+    );
+    await screen.findByText(/Photo sélectionnée/);
+    await fillCreationForm(interaction);
+    await interaction.click(screen.getByRole('button', { name: 'Enregistrer' }));
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalled());
+    expect(mockCreateAsync).toHaveBeenCalledTimes(1);
   });
 
   it.each([

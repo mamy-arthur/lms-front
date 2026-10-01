@@ -183,8 +183,12 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
   const createMutation = useCreateUser();
   const updateMutation = useUpdateUser();
   const pendingPhotoRef = useRef<File | null>(null);
-  // L'upload photo suit la mutation : sans ce verrou le bouton se réactive entre les deux.
-  const [isUploading, setIsUploading] = useState(false);
+  // Un seul verrou pour toute la soumission : la mutation se resout bien avant
+  // l'upload puis le rafraichissement des listes, qui laisseraient sinon le
+  // bouton actif alors que le formulaire est encore ouvert.
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  // Ref et non state : deux clics dans le meme tick liraient la meme valeur.
+  const submittingRef = useRef(false);
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -333,8 +337,8 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
     isSuperAdmin ? selectedTenantId : null,
   );
 
-  // Submit avec upload photo si fichier sélectionné
-  const onSubmitWithPhoto = useCallback(
+  // Corps de la soumission, englobe par le verrou pose dans onSubmitWithPhoto.
+  const runSubmit = useCallback(
     async (values: Record<string, unknown>) => {
       const pendingPhoto = pendingPhotoRef.current;
       if (isEdit && user && pendingPhoto) {
@@ -365,7 +369,6 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
           return;
         }
         // L'endpoint profile-photo lie déjà la photo côté backend — best-effort
-        setIsUploading(true);
         try {
           await uploadUserProfilePhoto(user.id, pendingPhoto, 'platform/users');
           await queryClient.invalidateQueries({
@@ -373,8 +376,6 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
           });
         } catch {
           toast.warning("Données sauvegardées, mais l'upload photo a échoué.");
-        } finally {
-          setIsUploading(false);
         }
         pendingPhotoRef.current = null;
         handleSuccess();
@@ -417,13 +418,10 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
 
         if (newUserId) {
           // Upload séparé — l'utilisateur est déjà créé, l'échec photo ne bloque pas
-          setIsUploading(true);
           try {
             await uploadUserProfilePhoto(newUserId, pendingPhoto, 'platform/users');
           } catch {
             toast.error("Utilisateur créé, mais l'upload photo a échoué.");
-          } finally {
-            setIsUploading(false);
           }
         } else {
           toast.warning("Utilisateur créé, mais la photo n'a pas pu lui être associée.");
@@ -452,9 +450,28 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
     ],
   );
 
+  // Submit avec upload photo si fichier sélectionné
+  const onSubmitWithPhoto = useCallback(
+    async (values: Record<string, unknown>) => {
+      if (submittingRef.current) {
+        return;
+      }
+      submittingRef.current = true;
+      setIsSubmitting(true);
+
+      try {
+        await runSubmit(values);
+      } finally {
+        submittingRef.current = false;
+        setIsSubmitting(false);
+      }
+    },
+    [runSubmit],
+  );
+
   const submitMutation = useMemo(
-    () => ({ ...formState.mutation, isPending: formState.mutation.isPending || isUploading }),
-    [formState.mutation, isUploading],
+    () => ({ ...formState.mutation, isPending: formState.mutation.isPending || isSubmitting }),
+    [formState.mutation, isSubmitting],
   );
 
   // Champ is_active — toggle actif/inactif
