@@ -4,7 +4,6 @@ import {
   AlertCircleIcon,
   AlertTriangle,
   AlertTriangleIcon,
-  BookOpenCheck,
   Loader2,
   PlayCircle,
   RotateCcw,
@@ -37,7 +36,7 @@ interface EvaluationSplashProps {
 
 export default function EvaluationSplash({
   title,
-  evaluationType,
+  // evaluationType,
   onStart,
   isLoading = false,
   isCheckingAttempts = false,
@@ -49,8 +48,6 @@ export default function EvaluationSplash({
   lockedReason,
   timeLimitMinutes,
 }: EvaluationSplashProps) {
-  const typLabel = evaluationType === 'intermediate' ? 'Intermédiaire' : 'Finale';
-
   // Only decidable once the data has settled. Treating `undefined` as "attempts
   // remain" made this fail *open*: the CTA rendered enabled while the quota was
   // still unknown, so learners clicked Commencer on an already-exhausted
@@ -62,24 +59,13 @@ export default function EvaluationSplash({
     attemptsRemaining !== null &&
     attemptsRemaining <= 0;
 
-  // The button is only offered once we know it can actually succeed.
-  const canStart = attemptsKnown && !exhausted && !isLocked;
-
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col px-4 py-10">
       {/* Header */}
       <div className="mb-4 flex flex-col items-center text-center">
-        <div className="mb-5 flex size-16 items-center justify-center rounded-sm bg-gray-100/50">
-          <BookOpenCheck className="size-8 text-primary" />
-        </div>
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">{title}</h1>
 
-        <span className="mb-2 text-xs font-semibold uppercase  text-primary">
-          Évaluation {typLabel}
-        </span>
-
-        <h1 className="text-3xl font-bold tracking-tight text-foreground">{title}</h1>
-
-        <p className="mt-3 max-w-xl text-sm text-muted-foreground">
+        <p className="mt-3 max-w-lg text-xs text-muted-foreground">
           Prenez quelques instants pour lire les informations ci-dessous avant de commencer votre
           évaluation.
         </p>
@@ -92,7 +78,7 @@ export default function EvaluationSplash({
 
         {attemptsKnown && maxAttempts != null && !exhausted && (attemptsRemaining ?? 0) > 0 && (
           <div className="mt-4 w-full">
-            <Alert>
+            <Alert className="rounded-sm">
               <RotateCcw className="size-3.5" />
               <AlertDescription className="text-xs">
                 <span className="font-semibold">{attemptsRemaining}</span> tentative
@@ -112,25 +98,25 @@ export default function EvaluationSplash({
           </div>
 
           <div>
-            <h2 className="font-semibold text-foreground">Informations importantes</h2>
-            <p className="text-sm text-muted-foreground">À lire avant de commencer</p>
+            <h2 className="font-semibold text-foreground text-sm">Informations importantes</h2>
+            <p className="text-xs text-muted-foreground">À lire avant de commencer</p>
           </div>
         </div>
 
         <div className="space-y-4 p-5">
-          <p className="text-sm font-medium">
+          <p className="text-xs font-medium text-destructive">
             {timeLimitMinutes != null
               ? `Temps limité : ${timeLimitMinutes} minute${timeLimitMinutes > 1 ? 's' : ''}. Le compte à rebours commence uniquement après votre démarrage.`
               : 'Cette évaluation ne comporte pas de limite de temps.'}
           </p>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             Pendant la tentative, la navigation hors de l'évaluation est désactivée. Actualiser ou
             quitter la page termine automatiquement la tentative à votre retour, avec les réponses
             déjà enregistrées. Changer d'onglet ne termine pas la tentative.
           </p>
           <div className="flex gap-3">
             <div className="mt-1 size-1 shrink-0 rounded-full bg-primary" />
-            <p className="text-sm text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               Une fois l'évaluation commencée, assurez-vous de disposer de suffisamment de temps
               pour la terminer.
             </p>
@@ -138,7 +124,7 @@ export default function EvaluationSplash({
 
           <div className="flex gap-3">
             <div className="mt-1 size-1 shrink-0 rounded-full bg-primary" />
-            <p className="text-sm text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               Veillez à disposer d'une connexion Internet stable pendant toute la durée de
               l'évaluation.
             </p>
@@ -146,14 +132,14 @@ export default function EvaluationSplash({
 
           <div className="flex gap-3">
             <div className="mt-1 size-1 shrink-0 rounded-full bg-primary" />
-            <p className="text-sm text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               Vos réponses sont enregistrées au fur et à mesure de votre progression.
             </p>
           </div>
 
           <div className="flex gap-3">
             <div className="mt-1 size-1 shrink-0 rounded-full bg-primary" />
-            <p className="text-sm text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               Vous pourrez faire l'évaluation sur votre ordinateur, tablette ou smartphone, mais il
               est recommandé d'utiliser un ordinateur pour une meilleure expérience.
             </p>
@@ -163,7 +149,7 @@ export default function EvaluationSplash({
 
       {/* Warning */}
       <div className="mb-4">
-        <Alert className="border-amber-200 text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-50">
+        <Alert className="border-amber-200 text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-50 rounded-sm">
           <AlertTriangleIcon />
           <AlertTitle>Attention</AlertTitle>
           <AlertDescription>
@@ -235,12 +221,6 @@ export default function EvaluationSplash({
             )}
             {isLoading ? 'Démarrage…' : "Commencer l'évaluation"}
           </Button>
-        )}
-
-        {canStart && (
-          <p className="text-xs text-muted-foreground">
-            Vous pourrez commencer lorsque vous serez prêt.
-          </p>
         )}
       </div>
     </div>
