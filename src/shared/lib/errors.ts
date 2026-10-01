@@ -84,3 +84,12 @@ export function getFormValidationMessage(
   if (messages.length === 1) return messages[0];
   return messages.join(' · ');
 }
+
+/** Met en forme un délai `Retry-After` pour l'afficher à l'utilisateur. */
+export function formatRetryDelay(seconds: number): string {
+  if (seconds < 60) return `${Math.max(seconds, 1)} seconde${seconds > 1 ? 's' : ''}`;
+
+  const minutes = Math.ceil(seconds / 60);
+
+  return `${minutes} minute${minutes > 1 ? 's' : ''}`;
+}

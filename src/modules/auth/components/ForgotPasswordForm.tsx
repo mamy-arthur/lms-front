@@ -4,12 +4,15 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import Link from 'next/link';
+import { ArrowRight, Loader2 } from 'lucide-react';
 
 import { forgotPasswordSchema, type ForgotPasswordSchema } from '@/shared/schemas/auth.schema';
 import { authApi } from '@/shared/api/auth.api';
+import { mapPasswordResetError } from '@/modules/auth/lib/passwordResetErrors';
 import { ROUTES } from '@/shared/constants/routes';
-import { Button } from '@/shared/components/ui/Button/Button';
-import { cn } from '@/shared/lib/cn';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 export function ForgotPasswordForm() {
   const [submitted, setSubmitted] = useState(false);
@@ -29,65 +32,73 @@ export function ForgotPasswordForm() {
     try {
       await authApi.forgotPassword(data.email);
       setSubmitted(true);
-    } catch {
-      setServerError('Une erreur est survenue. Veuillez réessayer.');
+    } catch (err) {
+      setServerError(mapPasswordResetError(err).message);
     }
   };
 
   if (submitted) {
     return (
-      <div className="space-y-4">
-        <div className="rounded-md bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700">
+      <div className="space-y-5">
+        <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-xs text-green-700">
           Un lien de réinitialisation a été envoyé à <strong>{getValues('email')}</strong>. Pensez à
           vérifier vos spams.
         </div>
-        <Link
-          href={ROUTES.auth.login}
-          className="block text-center text-sm text-blue-600 hover:underline"
-        >
-          Retour à la connexion
-        </Link>
+
+        <p className="text-center text-xs text-muted-foreground">
+          <Link href={ROUTES.auth.login} className="font-semibold text-primary hover:underline">
+            Retour à la connexion
+          </Link>
+        </p>
       </div>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
+    <form onSubmit={handleSubmit(onSubmit)} noValidate className="mt-8 space-y-5">
+      <div className="space-y-2">
+        <Label htmlFor="email">Adresse email</Label>
+
+        <Input
+          id="email"
+          type="email"
+          autoComplete="email"
+          placeholder="vous@exemple.com"
+          {...register('email')}
+        />
+
+        {errors.email && <p className="text-sm text-red-500">{errors.email.message}</p>}
+      </div>
+
       {serverError && (
-        <div className="rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-600">
           {serverError}
         </div>
       )}
 
-      <div className="space-y-1">
-        <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-          Email
-        </label>
-        <input
-          id="email"
-          type="email"
-          autoComplete="email"
-          {...register('email')}
-          className={cn(
-            'w-full rounded-md border px-3 py-2 text-sm shadow-sm outline-none',
-            'placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500',
-            errors.email ? 'border-red-400 bg-red-50' : 'border-gray-300 bg-white',
-          )}
-          placeholder="vous@exemple.com"
-        />
-        {errors.email && <p className="text-xs text-red-600">{errors.email.message}</p>}
-      </div>
-
-      <Button type="submit" size="lg" loading={isSubmitting} className="w-full">
-        Envoyer le lien
+      <Button
+        type="submit"
+        disabled={isSubmitting}
+        className="h-12 w-full bg-(--color-primary) hover:bg-(--color-primary)/80"
+      >
+        {isSubmitting ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Envoi...
+          </>
+        ) : (
+          <>
+            Envoyer le lien
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </>
+        )}
       </Button>
 
-      <Link
-        href={ROUTES.auth.login}
-        className="block text-center text-sm text-gray-500 hover:text-gray-700"
-      >
-        ← Retour à la connexion
-      </Link>
+      <p className="text-center text-xs text-muted-foreground">
+        <Link href={ROUTES.auth.login} className="font-semibold text-primary hover:underline">
+          Retour à la connexion
+        </Link>
+      </p>
     </form>
   );
 }

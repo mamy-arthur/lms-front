@@ -35,6 +35,7 @@ import {
   createSimulationFixtures,
   newSimulationEntity,
   simulationId,
+  simulationClientSlug,
   SIMULATION_DATE,
   SIMULATION_IDS,
   SIMULATION_IMAGE,
@@ -89,6 +90,7 @@ const RESOURCE_ROUTES: Record<string, RouteSpec> = {
 
 /** Machine-readable coverage manifest. Paths are relative to /api/v1. */
 export const SIMULATION_ROUTES = [
+  { methods: ['GET'], path: 'platform/clients' },
   ...Object.entries(RESOURCE_ROUTES).flatMap(([path, spec]) => [
     ...(!spec.detailOnly ? [{ methods: ['GET', 'POST'], path }] : []),
     { methods: spec.methods ?? ['GET', 'PATCH', 'PUT', 'DELETE'], path: `${path}/:id` },
@@ -499,6 +501,40 @@ function updateEntity(
   }
   if (resource === 'users') {
     if (!Object.values(Role).includes(result.role as Role)) invalid('Rôle inconnu.');
+    if (result.role === Role.EDITOR || result.role === Role.SUPER_ADMIN) {
+      result.client_id = null;
+    } else if (data.role === Role.CLIENT_MANAGER || data.role === Role.TRAINEE) {
+      if (payload.client_id != null && payload.client_id !== SIMULATION_IDS.client) {
+        invalid('Le client doit correspondre au compte simulé.');
+      }
+      result.client_id = SIMULATION_IDS.client;
+    } else if (payload.client_id != null) {
+      const client = data.clients.find(
+        (candidate) =>
+          candidate.id === payload.client_id && candidate.tenant_id === result.tenant_id,
+      );
+      if (!client) invalid('Client introuvable dans le tenant simulé.');
+      result.client_id = client.id;
+    } else if (result.role === Role.CLIENT_MANAGER && payload.client_name != null) {
+      const name = text(safeValue(payload.client_name)).trim();
+      if (!name || name.length > 255) invalid('Nom du client invalide.');
+      const slug = simulationClientSlug(name);
+      let client = data.clients.find(
+        (candidate) => candidate.slug === slug && candidate.tenant_id === result.tenant_id,
+      );
+      if (!client) {
+        client = {
+          id: nextId(data),
+          tenant_id: text(result.tenant_id),
+          name,
+          slug,
+          is_active: true,
+          created_at: SIMULATION_DATE,
+        };
+        data.clients.push(client);
+      }
+      result.client_id = client.id;
+    }
     result.full_name = `${text(result.first_name)} ${text(result.last_name)}`.trim();
     if ('profile_photo_media_id' in patch)
       result.profile_photo = patch.profile_photo_media_id
@@ -737,6 +773,7 @@ function listResponse(rows: readonly JsonObject[], params: URLSearchParams): Sim
     competency_ids: 'competency_id',
     competency_id: 'competency_id',
     tenant_id: 'tenant_id',
+    client_id: 'client_id',
   };
   for (const [param, field] of Object.entries(filters)) {
     const value = params.get(param);
@@ -2610,6 +2647,27 @@ async function dispatchSimulationRequest(
   }
   if (!['GET', 'POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) return unsupported(method, path);
   const params = parsed.searchParams;
+
+  if (path === 'platform/clients' && method === 'GET') {
+    const tenantId =
+      data.role === Role.SUPER_ADMIN
+        ? (params.get('tenant_id') ?? SIMULATION_IDS.tenant)
+        : SIMULATION_IDS.tenant;
+    const clients = data.clients.filter(
+      (client) =>
+        client.tenant_id === tenantId &&
+        ([Role.SUPER_ADMIN, Role.EDITOR].includes(data.role) ||
+          client.id === SIMULATION_IDS.client),
+    );
+    const name = params.get('name');
+    if (name !== null && (!name.trim() || name.length > 255)) invalid('Nom du client invalide.');
+    return response({
+      data: clients,
+      ...(name !== null
+        ? { meta: { name_slug: simulationClientSlug(text(safeValue(name))) } }
+        : {}),
+    });
+  }
 
   const previewLaunch =
     /^enrollments\/([^/]+)\/courses\/([^/]+)\/entries\/([^/]+)\/scorm\/launch$/.exec(path);

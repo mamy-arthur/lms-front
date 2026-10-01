@@ -1,13 +1,26 @@
+import { LoginBrandingPanel } from '@/app/(auth)/_components/LoginBrandingPanel';
 import { ForgotPasswordForm } from '@/modules/auth/components/ForgotPasswordForm';
 
 export default function ForgotPasswordPage() {
   return (
-    <div className="w-full max-w-md mx-auto rounded-3xl bg-white px-10 py-12 shadow-[0_24px_80px_rgba(0,0,0,0.45)]">
-      <h1 className="text-2xl font-bold text-gray-900 mb-1">Mot de passe oublié</h1>
-      <p className="text-sm text-gray-500 mb-8">
-        Entrez votre email pour recevoir un lien de réinitialisation.
-      </p>
-      <ForgotPasswordForm />
-    </div>
+    <main className="min-h-screen bg-background w-full">
+      <div className="grid min-h-screen lg:grid-cols-2">
+        <LoginBrandingPanel />
+
+        <section className="flex items-center justify-center px-6 py-10 sm:px-10">
+          <div className="w-full max-w-md">
+            <div>
+              <h1 className="text-3xl font-bold">Mot de passe oublié</h1>
+
+              <p className="mt-2 text-muted-foreground text-sm">
+                Entrez votre email pour recevoir un lien de réinitialisation.
+              </p>
+            </div>
+
+            <ForgotPasswordForm />
+          </div>
+        </section>
+      </div>
+    </main>
   );
 }

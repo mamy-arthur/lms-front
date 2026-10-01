@@ -10,13 +10,18 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { SessionConflictModal } from '@/modules/auth/components/SessionConflictModal';
+import { PasswordResetSuccessNotice } from '@/modules/auth/components/PasswordResetSuccessNotice';
 import { TwoFactorChallengeStep } from '@/modules/auth/components/TwoFactorChallengeStep';
 import { useLoginFlow } from '@/modules/auth/hooks/useLoginFlow';
 import { resolveLogin } from '@/modules/auth/utils/loginUtils';
 import { authApi } from '@/shared/api/auth.api';
 import { type LoginSchema, loginSchema } from '@/shared/schemas/auth.schema';
 
-export function LoginForm() {
+interface LoginFormProps {
+  resetSuccess?: boolean;
+}
+
+export function LoginForm({ resetSuccess = false }: LoginFormProps) {
   const [showPassword, setShowPassword] = useState(false);
 
   const {
@@ -79,6 +84,8 @@ export function LoginForm() {
             />
           ) : (
             <form onSubmit={handleSubmit(submit)} className="mt-8 space-y-5">
+              {resetSuccess && <PasswordResetSuccessNotice />}
+
               {/* EMAIL */}
               <div className="space-y-2">
                 <Label htmlFor="email">Adresse email</Label>
@@ -106,6 +113,9 @@ export function LoginForm() {
 
                   <button
                     type="button"
+                    aria-label={
+                      showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'
+                    }
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
                   >

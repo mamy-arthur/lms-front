@@ -1,10 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 
 const PUBLIC_PATHS = [
   '/login',
   '/admin/login',
   '/forgot-password',
   '/reset-password',
+  '/admin/forgot-password',
+  '/admin/reset-password',
   '/tenant-not-found',
   '/tenant-inactive',
 ];

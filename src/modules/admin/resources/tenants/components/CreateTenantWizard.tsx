@@ -84,7 +84,6 @@ export function CreateTenantWizard({ open, onOpenChange }: Props) {
       try {
         const result = await mutateAsync({
           editor_name: form.getValues('name'),
-          client_name: form.getValues('name'),
           tenant_name: form.getValues('name'),
           subdomain: form.getValues('subdomain'),
           primary_color: form.getValues('color'),

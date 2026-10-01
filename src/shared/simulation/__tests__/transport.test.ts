@@ -13,6 +13,8 @@ import { Role } from '@/shared/constants/roles';
 import { useSimulationStore } from '../simulation.store';
 import { resetSimulationData, clearSimulationData } from '../local-api';
 import { SIMULATION_IDS as ids } from '../fixtures';
+import { adminClientsApi } from '@/modules/admin/resources/clients';
+import { adminUsersApi } from '@/modules/admin/resources/users/api';
 import { cancelSimulationRequests } from '../transport';
 
 const realUser = {
@@ -67,6 +69,66 @@ it('intercepts GET, POST, PUT, PATCH and DELETE and rereads local state without 
   expect(fetch).not.toHaveBeenCalled();
   expect(useAuthStore.getState().user).toBe(realUser);
   expect(useAuthStore.getState().sessionId).toBe('real-session');
+});
+
+it('resout les clients et cree un responsable puis un stagiaire sans appel reseau', async () => {
+  useAuthStore.getState().setSimulatedRole(Role.EDITOR);
+  resetSimulationData(Role.EDITOR);
+  const initial = await adminClientsApi.list(ids.tenant);
+  expect(initial.data).toEqual([
+    expect.objectContaining({ id: ids.client, tenant_id: ids.tenant }),
+  ]);
+  const name = 'Equipe test';
+  const resolved = await adminClientsApi.resolveName(name, ids.tenant);
+  expect(resolved.meta.name_slug).toBeTruthy();
+  expect(resolved.data.some((client) => client.slug === resolved.meta.name_slug)).toBe(false);
+
+  const manager = await adminUsersApi.create({
+    first_name: 'Alex',
+    last_name: 'Demo',
+    email: 'alex@example.test',
+    password: 'Password123',
+    role: Role.CLIENT_MANAGER,
+    client_name: name,
+  });
+  const after = await adminClientsApi.resolveName(name, ids.tenant);
+  expect(after.data).toContainEqual(
+    expect.objectContaining({ id: manager.data.client_id, slug: resolved.meta.name_slug }),
+  );
+  const learner = await adminUsersApi.create({
+    first_name: 'Sam',
+    last_name: 'Demo',
+    email: 'sam@example.test',
+    password: 'Password123',
+    role: Role.TRAINEE,
+    client_id: manager.data.client_id,
+  });
+  const filtered = await adminUsersApi.list({ client_id: manager.data.client_id! });
+  expect(filtered.data.map((user) => user.id)).toEqual([manager.data.id, learner.data.id]);
+  expect(fetch).not.toHaveBeenCalled();
+  expect(useAuthStore.getState().user).toBe(realUser);
+});
+
+it('limite les clients du responsable simule a son propre client', async () => {
+  const clients = await adminClientsApi.list('another-real-tenant');
+  expect(clients.data.map((client) => client.id)).toEqual([ids.client]);
+  const user = await apiPost<{ data: { client_id: string } }>('users', {
+    first_name: 'Sam',
+    last_name: 'Demo',
+    email: 'sam@example.test',
+    role: Role.CLIENT_MANAGER,
+  });
+  expect(user.data.client_id).toBe(ids.client);
+  await expect(
+    apiPost('users', {
+      first_name: 'Sam',
+      last_name: 'Demo',
+      email: 'sam@example.test',
+      role: Role.TRAINEE,
+      client_id: 'real-client',
+    }),
+  ).rejects.toMatchObject({ status: 422 });
+  expect(fetch).not.toHaveBeenCalled();
 });
 
 it('intercepts multipart and XHR uploads before constructing a network request', async () => {

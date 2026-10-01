@@ -13,6 +13,7 @@ export const adminUsersApi = {
     if (params?.roles?.length) query.roles = params.roles;
     if (params?.is_active !== undefined) query.is_active = params.is_active;
     if (params?.tenant_id) query.tenant_id = params.tenant_id;
+    if (params?.client_id) query.client_id = params.client_id;
     if (params?.sort_by) query.sort_by = params.sort_by;
     if (params?.sort_dir) query.sort_dir = params.sort_dir;
     if (params?.page !== undefined) query.page = params.page;

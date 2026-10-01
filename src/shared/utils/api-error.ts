@@ -1,3 +1,23 @@
+import { getApiErrorStatus } from '@/shared/lib/errors';
+
+/**
+ * Le backend refuse la gestion d'un utilisateur dont le rôle n'est pas strictement
+ * inférieur à celui du demandeur, y compris un pair que celui-ci a pu créer.
+ */
+export const PEER_MANAGEMENT_REFUSED =
+  'Vous ne pouvez pas gérer un utilisateur dont le rôle est équivalent ou supérieur au vôtre.';
+
+/** Message d'un refus portant sur un utilisateur, l'API n'en fournissant qu'un générique en anglais. */
+export function extractUserFormError(err: unknown, isEdit: boolean): string {
+  if (getApiErrorStatus(err) === 403) {
+    return isEdit
+      ? PEER_MANAGEMENT_REFUSED
+      : "Vous n'avez pas les droits pour créer cet utilisateur.";
+  }
+
+  return extractApiError(err, isEdit);
+}
+
 /**
  * The server's own message when it sent one, the caller's fallback otherwise.
  *

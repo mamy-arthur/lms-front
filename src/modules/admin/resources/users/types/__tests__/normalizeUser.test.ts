@@ -17,6 +17,7 @@ const RAW_FULL = {
   id: 'u-001',
   tenant_id: 'tenant-1',
   editor_id: 'editor-1',
+  client_id: 'client-1',
   first_name: 'Alice',
   last_name: 'Dupont',
   full_name: 'Alice Dupont',
@@ -38,6 +39,11 @@ const RAW_FULL = {
 
 describe('normalizeUser — champs canoniques', () => {
   it('mappe id', () => expect(normalizeUser(RAW_FULL).id).toBe('u-001'));
+
+  it('mappe client_id', () => expect(normalizeUser(RAW_FULL).client_id).toBe('client-1'));
+
+  it('rend client_id null pour un utilisateur sans client', () =>
+    expect(normalizeUser({}).client_id).toBeNull());
   it('mappe tenant_id', () => expect(normalizeUser(RAW_FULL).tenant_id).toBe('tenant-1'));
   it('mappe editor_id', () => expect(normalizeUser(RAW_FULL).editor_id).toBe('editor-1'));
   it('mappe first_name', () => expect(normalizeUser(RAW_FULL).first_name).toBe('Alice'));
