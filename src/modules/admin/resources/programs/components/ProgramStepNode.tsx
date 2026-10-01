@@ -20,6 +20,8 @@ function ProgramStepNode({ id, data, isConnectable }: NodeProps<StepNode>) {
   const { Icon } = cfg;
   const isEmail = data.stepType === 'email';
   const isAttestation = data.stepType === 'attestation';
+  const isEvaluation =
+    data.stepType === 'evaluation-intermediate' || data.stepType === 'evaluation-final';
 
   const isConfigured =
     (data.stepType === 'email' && !!data.emailTemplateId) ||
@@ -33,7 +35,10 @@ function ProgramStepNode({ id, data, isConnectable }: NodeProps<StepNode>) {
     onDeleteNode(id);
   };
 
-  const isClickable = !isLocked && !(isConfigured && !isEmail && !isAttestation);
+  const isClickable = isEvaluation
+    ? // Une évaluation reste ouvrable : modifiable, ou consultable si le parcours est verrouillé
+      !isLocked || isConfigured
+    : !isLocked && !(isConfigured && !isEmail && !isAttestation);
 
   return (
     <div

@@ -6,7 +6,7 @@
  * - Parcours modifiable : l'enregistrement d'une règle reste possible
  */
 
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {
   ProgressionRuleDialog,
@@ -29,7 +29,7 @@ const EXISTING_RULE: ProgressionRuleFormData = {
 
 function renderDialog(props: Partial<React.ComponentProps<typeof ProgressionRuleDialog>> = {}) {
   const onSave = jest.fn();
-  render(
+  const view = render(
     <ProgressionRuleDialog
       open
       onOpenChange={jest.fn()}
@@ -41,7 +41,12 @@ function renderDialog(props: Partial<React.ComponentProps<typeof ProgressionRule
       {...props}
     />,
   );
-  return { onSave };
+  return { ...view, onSave };
+}
+
+async function openTarget(name: RegExp) {
+  fireEvent.keyDown(screen.getByRole('combobox', { name }), { key: 'ArrowDown' });
+  await screen.findByRole('listbox');
 }
 
 describe('ProgressionRuleDialog', () => {
@@ -79,6 +84,17 @@ describe('ProgressionRuleDialog', () => {
       await userEvent.click(screen.getByRole('button', { name: 'Fermer' }));
       expect(onSave).not.toHaveBeenCalled();
     });
+
+    it('garde visible la cible ultérieure d’une ancienne règle en consultation', () => {
+      renderDialog({
+        readOnly: true,
+        initialFormData: { ...EXISTING_RULE, failureTargetNodeId: 'n-eval' },
+      });
+      expect(screen.getByRole('combobox', { name: /^Rediriger vers/ })).toHaveTextContent(
+        'Évaluation finale',
+      );
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    });
   });
 
   describe('parcours modifiable', () => {
@@ -100,6 +116,120 @@ describe('ProgressionRuleDialog', () => {
       expect(onSave).toHaveBeenCalledWith(
         expect.objectContaining({ condition: null, failureTargetNodeId: null }),
       );
+    });
+
+    it.each([/^Rediriger vers/, /^Après épuisement/])(
+      'affiche uniquement les étapes autorisées dans %s',
+      async (name) => {
+        renderDialog();
+        await openTarget(name);
+        const labels = screen.getAllByRole('option').map((option) => option.textContent);
+        expect(labels).toEqual(
+          name.test('Après épuisement')
+            ? ['Échec de la formation', 'Module Sécurité', 'Évaluation finale']
+            : ['Module Sécurité', 'Évaluation finale'],
+        );
+      },
+    );
+
+    it('permet de retenter l’évaluation source dans les deux branches', async () => {
+      const { onSave } = renderDialog();
+      for (const name of [/^Rediriger vers/, /^Après épuisement/]) {
+        await openTarget(name);
+        await userEvent.click(screen.getByRole('option', { name: 'Évaluation finale' }));
+      }
+      await userEvent.click(screen.getByRole('button', { name: 'Appliquer' }));
+      expect(onSave).toHaveBeenCalledWith({
+        ...EXISTING_RULE,
+        failureTargetNodeId: 'n-eval',
+        exhaustedTargetNodeId: 'n-eval',
+      });
+    });
+
+    it.each(['failureTargetNodeId', 'exhaustedTargetNodeId'] as const)(
+      'bloque une ancienne cible ultérieure (%s) jusqu’à sa correction explicite',
+      async (field) => {
+        const { onSave } = renderDialog({
+          initialFormData: { ...EXISTING_RULE, [field]: 'n-later' },
+        });
+        expect(screen.getByRole('alert')).toHaveTextContent('n’est plus autorisée');
+        expect(screen.getByRole('button', { name: 'Appliquer' })).toBeDisabled();
+        await userEvent.click(screen.getByRole('button', { name: 'Appliquer' }));
+        expect(onSave).not.toHaveBeenCalled();
+
+        await openTarget(field === 'failureTargetNodeId' ? /^Rediriger vers/ : /^Après épuisement/);
+        expect(screen.queryByRole('option', { name: 'n-later' })).not.toBeInTheDocument();
+        await userEvent.click(screen.getByRole('option', { name: 'Module Sécurité' }));
+        expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+        await userEvent.click(screen.getByRole('button', { name: 'Appliquer' }));
+        expect(onSave).toHaveBeenCalledWith({ ...EXISTING_RULE, [field]: 'n-module' });
+      },
+    );
+
+    it('permet de remplacer une cible d’épuisement invalide par l’échec de la formation', async () => {
+      const { onSave } = renderDialog({
+        initialFormData: { ...EXISTING_RULE, exhaustedTargetNodeId: 'n-later' },
+      });
+      await openTarget(/^Après épuisement/);
+      await userEvent.click(screen.getByRole('option', { name: 'Échec de la formation' }));
+      await userEvent.click(screen.getByRole('button', { name: 'Appliquer' }));
+      expect(onSave).toHaveBeenCalledWith(EXISTING_RULE);
+    });
+
+    it('efface la cible d’épuisement lorsque les tentatives deviennent illimitées', async () => {
+      const { onSave } = renderDialog({
+        initialFormData: { ...EXISTING_RULE, exhaustedTargetNodeId: 'n-later' },
+      });
+      await userEvent.clear(screen.getByPlaceholderText('Illimité'));
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      expect(screen.queryByRole('combobox', { name: /^Après épuisement/ })).not.toBeInTheDocument();
+      await userEvent.click(screen.getByRole('button', { name: 'Appliquer' }));
+      expect(onSave).toHaveBeenCalledWith({ ...EXISTING_RULE, maxAttempts: null });
+    });
+
+    it('revalide une sélection si les cibles changent pendant l’édition sans la remplacer', async () => {
+      const { rerender, onSave } = renderDialog();
+      rerender(
+        <ProgressionRuleDialog
+          open
+          onOpenChange={jest.fn()}
+          sourceNodeType="evaluation"
+          hasExistingRule
+          initialFormData={EXISTING_RULE}
+          nodeOptions={[NODE_OPTIONS[2]]}
+          onSave={onSave}
+        />,
+      );
+      expect(screen.getByRole('button', { name: 'Appliquer' })).toBeDisabled();
+      expect(screen.getByRole('alert')).toHaveTextContent('n’est plus autorisée');
+      await userEvent.click(screen.getByLabelText('Aucune règle (désactiver)'));
+      await userEvent.click(screen.getByRole('button', { name: 'Appliquer' }));
+      expect(onSave).toHaveBeenCalledWith(
+        expect.objectContaining({ condition: null, failureTargetNodeId: null }),
+      );
+    });
+
+    it('sélectionne une cible autorisée par défaut en activant la condition de réussite', async () => {
+      const { onSave } = renderDialog({
+        hasExistingRule: false,
+        initialFormData: undefined,
+      });
+      await userEvent.click(screen.getByLabelText('Évaluation réussie avec un score minimum'));
+      await userEvent.click(screen.getByRole('button', { name: 'Appliquer' }));
+      expect(onSave).toHaveBeenCalledWith(
+        expect.objectContaining({ failureTargetNodeId: 'n-module' }),
+      );
+    });
+
+    it('bloque la condition de réussite sans aucune cible disponible', async () => {
+      const { onSave } = renderDialog({
+        initialFormData: undefined,
+        nodeOptions: [],
+      });
+      await userEvent.click(screen.getByLabelText('Évaluation réussie avec un score minimum'));
+      expect(screen.getByRole('button', { name: 'Appliquer' })).toBeDisabled();
+      expect(screen.getByRole('alert')).toHaveTextContent('Choisissez une cible en cas d’échec.');
+      expect(onSave).not.toHaveBeenCalled();
     });
   });
 });
