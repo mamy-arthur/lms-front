@@ -60,4 +60,24 @@ describe('evaluationsApi', () => {
 
     expect(mockApiDelete).toHaveBeenCalledWith('platform/evaluations/eval-1');
   });
+
+  it('transmet les minutes à la création et null à la suppression de la limite', async () => {
+    mockApiPost.mockResolvedValue({ data: { id: 'eval-1', time_limit_minutes: 90 } });
+    mockApiPatch.mockResolvedValue({ data: { id: 'eval-1', time_limit_minutes: null } });
+    await evaluationsApi.create('lp-1', {
+      title: 'Évaluation',
+      type: 'FINAL',
+      question_bank_ids: ['qb-1'],
+      question_count: 1,
+      time_limit_minutes: 90,
+    });
+    await evaluationsApi.update('eval-1', { time_limit_minutes: null });
+    expect(mockApiPost).toHaveBeenCalledWith(
+      'platform/learning-paths/lp-1/evaluations',
+      expect.objectContaining({ time_limit_minutes: 90 }),
+    );
+    expect(mockApiPatch).toHaveBeenCalledWith('platform/evaluations/eval-1', {
+      time_limit_minutes: null,
+    });
+  });
 });

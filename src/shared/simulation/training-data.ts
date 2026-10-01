@@ -516,6 +516,13 @@ export function importTrainingPreview(
       ]),
       learning_path_id: path.id,
       question_bank_ids: refs('question-banks', source.question_bank_ids),
+      time_limit_minutes:
+        typeof source.time_limit_minutes === 'number' &&
+        Number.isInteger(source.time_limit_minutes) &&
+        source.time_limit_minutes >= 1 &&
+        source.time_limit_minutes <= 2147483647
+          ? source.time_limit_minutes
+          : null,
       preceding_competency_id: id('competencies', source.preceding_competency_id) || null,
     });
   }

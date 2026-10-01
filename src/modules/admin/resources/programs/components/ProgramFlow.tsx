@@ -54,6 +54,7 @@ import { STEP_CONFIG } from './ProgramFlow.config';
 import { FlowActionsContext } from './ProgramFlow.context';
 import { nodeTypes } from './ProgramStepNode';
 import { edgeTypes } from './ConfigurableEdge';
+import { evaluationTimeLimitPayload } from '../lib/evaluation-time-limit';
 import type {
   EdgeRuleData,
   FlowConnectionPayload,
@@ -578,9 +579,7 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
           config: {
             stepType: node.data.stepType,
             title: node.data.evaluationConfig?.title ?? '',
-            durationEnabled: node.data.evaluationConfig?.durationEnabled ?? false,
-            durationHours: node.data.evaluationConfig?.durationHours ?? 0,
-            durationMinutes: node.data.evaluationConfig?.durationMinutes ?? 30,
+            timeLimitMinutes: node.data.evaluationConfig?.timeLimitMinutes ?? null,
             questionCount: node.data.evaluationConfig?.questionCount ?? 20,
             attemptCount: node.data.evaluationConfig?.attemptCount ?? 1,
             questionBankIds: node.data.evaluationConfig?.questionBankIds ?? [],
@@ -687,6 +686,7 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
             question_bank_ids: cfg.questionBankIds,
             question_count: cfg.questionCount,
             max_attempts: cfg.attemptCount > 0 ? cfg.attemptCount : null,
+            ...evaluationTimeLimitPayload(cfg),
             location_x: Math.round(CANVAS_X),
             location_y: Math.round(locationY),
             is_published: true,
@@ -755,6 +755,7 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
             question_bank_ids: cfg.questionBankIds.length > 0 ? cfg.questionBankIds : undefined,
             question_count: cfg.questionCount,
             max_attempts: cfg.attemptCount > 0 ? cfg.attemptCount : null,
+            ...evaluationTimeLimitPayload(cfg),
           });
         } catch (err) {
           toast.error(getApiErrorMessage(err, "Impossible de modifier l'évaluation."));
@@ -918,9 +919,7 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
             questionBankNames: d.evaluationConfig?.questionBankNames ?? [],
             questionCount: d.evaluationConfig?.questionCount ?? 0,
             attemptCount: d.evaluationConfig?.attemptCount ?? 0,
-            durationEnabled: d.evaluationConfig?.durationEnabled ?? false,
-            durationHours: d.evaluationConfig?.durationHours ?? 0,
-            durationMinutes: d.evaluationConfig?.durationMinutes ?? 0,
+            timeLimitMinutes: d.evaluationConfig?.timeLimitMinutes ?? null,
           };
         case 'attestation':
           return {

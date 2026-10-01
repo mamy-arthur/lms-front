@@ -48,6 +48,15 @@ export function normalizeAttemptQuiz(q: ApiAttemptQuiz): Question {
 }
 
 export function toApiPayload(quiz: ApiAttemptQuiz, answer: TraineeAnswer): Record<string, unknown> {
+  if (
+    answer == null ||
+    (answer instanceof Set && answer.size === 0) ||
+    (typeof answer === 'object' &&
+      !(answer instanceof Set) &&
+      Object.values(answer).every((value) => !value)) ||
+    answer === ''
+  )
+    return { clear: true };
   switch (quiz.type) {
     case 'single_choice':
       return { selected_option_ids: answer ? [answer as string] : [] };
@@ -60,13 +69,41 @@ export function toApiPayload(quiz: ApiAttemptQuiz, answer: TraineeAnswer): Recor
       const leftValues = quiz.left_values ?? [];
       const rightValues = quiz.right_values ?? [];
       return {
-        pairs: Object.entries(mapping).map(([leftIdx, rightIdx]) => ({
-          left: leftValues[Number(leftIdx)] ?? '',
-          right: rightValues[Number(rightIdx)] ?? '',
-        })),
+        pairs: Object.entries(mapping)
+          .filter(([, rightIdx]) => rightIdx !== '')
+          .map(([leftIdx, rightIdx]) => ({
+            left: leftValues[Number(leftIdx)] ?? '',
+            right: rightValues[Number(rightIdx)] ?? '',
+          })),
       };
     }
     default:
       return {};
+  }
+}
+
+/** Hydrate saved drafts without inventing a correct answer or discarding false. */
+export function fromApiAnswer(quiz: ApiAttemptQuiz): TraineeAnswer {
+  const value = quiz.submitted_answer as {
+    selected_option_ids?: string[];
+    answer?: boolean;
+    pairs?: { left: string; right: string }[];
+  } | null;
+  if (!value) return null;
+  switch (quiz.type) {
+    case 'single_choice':
+      return value.selected_option_ids?.[0] ?? null;
+    case 'multiple_choice':
+      return new Set(value.selected_option_ids ?? []);
+    case 'true_false':
+      return value.answer ?? null;
+    case 'matching':
+      return Object.fromEntries(
+        (value.pairs ?? []).flatMap(({ left, right }) => {
+          const l = quiz.left_values?.indexOf(left) ?? -1;
+          const r = quiz.right_values?.indexOf(right) ?? -1;
+          return l >= 0 && r >= 0 ? [[String(l), String(r)]] : [];
+        }),
+      );
   }
 }

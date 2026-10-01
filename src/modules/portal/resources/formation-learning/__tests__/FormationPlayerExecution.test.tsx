@@ -22,7 +22,13 @@ jest.mock('@/shared/api/portal.api', () => ({
   portalLearningPathsApi: { summary: jest.fn(), learnerEvaluations: jest.fn() },
   portalContentEntriesApi: { get: jest.fn(), markComplete: jest.fn() },
   portalContentTimeApi: { record: jest.fn().mockResolvedValue(undefined) },
-  evaluationAttemptsApi: { start: jest.fn(), answer: jest.fn(), submit: jest.fn() },
+  evaluationAttemptsApi: {
+    session: jest.fn(),
+    get: jest.fn(),
+    start: jest.fn(),
+    answer: jest.fn(),
+    submit: jest.fn(),
+  },
 }));
 jest.mock('@/shared/api/progression.api', () => ({
   progressionApi: {

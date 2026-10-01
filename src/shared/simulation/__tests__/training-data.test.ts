@@ -222,6 +222,31 @@ afterEach(() => {
 });
 
 describe('createTrainingPreview', () => {
+  it.each([1, 90, 2147483647, null, undefined])(
+    'importe la limite de temps %s sans modifier le graphe source',
+    (minutes) => {
+      const { data, preview } = setup();
+      const resources = graph();
+      const evaluation = resources.evaluations![0];
+      evaluation.time_limit_minutes = minutes;
+      const before = JSON.stringify(resources);
+      importTrainingPreview(data, preview, real.path, resources);
+      expect(data.resources.evaluations[0].time_limit_minutes).toBe(minutes ?? null);
+      expect(JSON.stringify(resources)).toBe(before);
+      evaluation.time_limit_minutes = null;
+      importTrainingPreview(data, preview, real.path, resources);
+      expect(data.resources.evaluations[0].time_limit_minutes).toBeNull();
+    },
+  );
+
+  it.each([0, -1, 1.5, 2147483648, '90'])('ignore la durée source invalide %s', (minutes) => {
+    const { data, preview } = setup();
+    const resources = graph();
+    resources.evaluations![0].time_limit_minutes = minutes;
+    importTrainingPreview(data, preview, real.path, resources);
+    expect(data.resources.evaluations[0].time_limit_minutes).toBeNull();
+  });
+
   it('replaces demo paths with synthetic catalog paths/enrollments and deduplicated categories', () => {
     const paths = [catalog(), catalog(real.secondPath), catalog()];
     const before = JSON.stringify(paths);

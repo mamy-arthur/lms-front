@@ -81,6 +81,8 @@ export interface FormationEvaluation {
   order: number;
   passingScore: number;
   maxAttempts?: number;
+  /** Frozen limit, distinct from estimated duration. Null = unlimited. */
+  timeLimitMinutes?: number | null;
   durationMin?: number;
   execution: NodeExecutionState;
 }

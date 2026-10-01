@@ -13,6 +13,7 @@ import type { ApiGroup } from '@/shared/types/group.types';
 import type { ApiQuestionBank, ApiQuizItem } from '@/shared/types/question-bank.types';
 import type { ApiPortalLearningPathSummary } from '@/shared/types/portal.types';
 import type { ApiPurchasedLearningPathsResponse } from '@/shared/types/purchased-learning-path.types';
+import type { EvaluationAttemptResponse } from '@/shared/api/portal.api';
 import type { ApiScormLaunch, ApiScormTrackingState } from '@/shared/api/portal-scorm.api';
 import type { ApiScormPackage } from '@/shared/api/scorm.api';
 import type {
@@ -531,7 +532,7 @@ describe('isolated simulation business API', () => {
       'POST',
       { answer: true },
     );
-    const submitted = await request<Detail<ApiEvaluationAttempt>>(
+    const submitted = await request<EvaluationAttemptResponse>(
       `evaluation-attempts/${attempt.id}/submit`,
       'POST',
     );
@@ -543,11 +544,30 @@ describe('isolated simulation business API', () => {
     expect((await request<List>(`enrollments/${id.enrollment}/evaluations`)).data[0]).toMatchObject(
       { attempts_used: 1, last_attempt_status: 'completed' },
     );
-    await expect(
-      request(`evaluation-attempts/${attempt.id}/quizzes/${attempt.quizzes[0].id}/answer`, 'POST', {
-        answer: false,
-      }),
-    ).rejects.toMatchObject({ status: 422 });
+    const replay = await request<EvaluationAttemptResponse>(
+      `evaluation-attempts/${attempt.id}/quizzes/${attempt.quizzes[0].id}/answer`,
+      'POST',
+      { answer: false },
+    );
+    expect(replay.data).toMatchObject({ ...submitted.data, server_now: expect.any(String) });
+    expect(replay.data.quizzes).toEqual(submitted.data.quizzes);
+    expect(replay.data.quizzes[0]).toMatchObject({
+      submitted_answer: { answer: true },
+      answer_revision: 1,
+    });
+    expect(submitted.execution).toBeDefined();
+    expect(replay.execution).toEqual(submitted.execution);
+    expect(
+      (await request<Detail<ApiPortalLearningPathSummary>>(`enrollments/${id.enrollment}/summary`))
+        .data.execution,
+    ).toEqual(submitted.execution);
+    expect(
+      (await request<Detail<ApiEvaluationAttempt>>(`evaluation-attempts/${attempt.id}`)).data
+        .quizzes,
+    ).toEqual(submitted.data.quizzes);
+    expect((await request<List>(`enrollments/${id.enrollment}/evaluations`)).data[0]).toMatchObject(
+      { attempts_used: 1, last_attempt_status: 'completed' },
+    );
   });
 
   it('scores incorrect answers honestly and rejects content outside an enrollment', async () => {

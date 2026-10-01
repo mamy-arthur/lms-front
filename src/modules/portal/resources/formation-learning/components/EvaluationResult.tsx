@@ -1,6 +1,7 @@
 import { CheckCircle, RotateCcw, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import type { EvaluationCompletionReason } from '@/shared/types/evaluation-attempt.types';
 
 interface Props {
   score: number;
@@ -9,6 +10,7 @@ interface Props {
   attemptsUsed?: number;
   attemptsRemaining?: number | null;
   onRetry?: () => void;
+  completionReason?: EvaluationCompletionReason | null;
 }
 
 export default function EvaluationResult({
@@ -18,6 +20,7 @@ export default function EvaluationResult({
   attemptsUsed,
   attemptsRemaining,
   onRetry,
+  completionReason,
 }: Props) {
   const passed = score >= passingScore;
 
@@ -37,6 +40,17 @@ export default function EvaluationResult({
       </div>
 
       <div className="text-center">
+        {(completionReason === 'timeout' || completionReason === 'page_reload') && (
+          <p
+            role="status"
+            className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"
+          >
+            {completionReason === 'timeout'
+              ? 'Temps écoulé : votre évaluation a été terminée automatiquement.'
+              : 'Votre évaluation a été terminée automatiquement après le rechargement ou la réouverture de la page.'}{' '}
+            Le résultat tient compte des réponses enregistrées.
+          </p>
+        )}
         <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
           Résultat de l'évaluation
         </p>

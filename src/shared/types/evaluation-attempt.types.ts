@@ -17,7 +17,11 @@ export interface ApiAttemptQuiz {
   /** Matching: answer pool shown on the right side (same length as left_values) */
   right_values?: string[];
   submitted_answer: unknown;
+  /** Optional only for legacy fixtures. Production responses include this counter. */
+  answer_revision?: number;
 }
+
+export type EvaluationCompletionReason = 'manual' | 'timeout' | 'page_reload';
 
 export interface ApiEvaluationAttempt {
   id: string;
@@ -26,5 +30,13 @@ export interface ApiEvaluationAttempt {
   score: number | null;
   started_at: string;
   completed_at: string | null;
+  time_limit_minutes?: number | null;
+  expires_at?: string | null;
+  server_now?: string;
+  completion_reason?: EvaluationCompletionReason | null;
+  page_session_id?: string | null;
+  enrollment_id?: string | null;
+  node_execution_id?: string | null;
+  validation_round_id?: string | null;
   quizzes: ApiAttemptQuiz[];
 }

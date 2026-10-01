@@ -258,16 +258,18 @@ it.each([Role.CLIENT_MANAGER, Role.EDITOR])(
       mapSummaryToFormation(refreshed.data),
       evaluationId,
     )!;
-    const attempt = await evaluationAttemptsApi.start(
-      registration.id,
-      evaluationId,
-      evaluationContext,
-    );
+    const attempt = await evaluationAttemptsApi.start(registration.id, evaluationId, {
+      ...evaluationContext,
+      page_session_id: '00000000-0000-4000-8000-000000000099',
+    });
     await apiPost(
       `evaluation-attempts/${attempt.data.id}/quizzes/${attempt.data.quizzes[0].id}/answer`,
-      { answer: true },
+      { answer: true, answer_revision: 1, page_session_id: '00000000-0000-4000-8000-000000000099' },
     );
     const submitted = await evaluationAttemptsApi.submit(attempt.data.id);
+    expect(submitted.execution).toBeDefined();
+    if (!submitted.execution)
+      throw new Error('Missing execution snapshot on evaluation submission');
     adoptExecutionSnapshot(queryClient, registration.id, submitted.execution);
     expect(submitted.execution.status).toBe('completed');
     expect(await apiGet(summaryPath)).toMatchObject({ data: { progress: { percent: 100 } } });

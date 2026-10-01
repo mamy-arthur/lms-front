@@ -26,6 +26,7 @@ interface EvaluationSplashProps {
   maxAttempts?: number | null;
   attemptsUsed?: number;
   attemptsRemaining?: number | null;
+  timeLimitMinutes?: number | null;
   /**
    * Le nœud n'est pas `actionable` : le serveur refuserait la tentative. Distinct
    * de « tentatives épuisées », qui décrit un budget consommé.
@@ -46,6 +47,7 @@ export default function EvaluationSplash({
   attemptsRemaining,
   isLocked = false,
   lockedReason,
+  timeLimitMinutes,
 }: EvaluationSplashProps) {
   const typLabel = evaluationType === 'intermediate' ? 'Intermédiaire' : 'Finale';
 
@@ -116,6 +118,16 @@ export default function EvaluationSplash({
         </div>
 
         <div className="space-y-4 p-5">
+          <p className="text-sm font-medium">
+            {timeLimitMinutes != null
+              ? `Temps limité : ${timeLimitMinutes} minute${timeLimitMinutes > 1 ? 's' : ''}. Le compte à rebours commence uniquement après votre démarrage.`
+              : 'Cette évaluation ne comporte pas de limite de temps.'}
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Pendant la tentative, la navigation hors de l'évaluation est désactivée. Actualiser ou
+            quitter la page termine automatiquement la tentative à votre retour, avec les réponses
+            déjà enregistrées. Changer d'onglet ne termine pas la tentative.
+          </p>
           <div className="flex gap-3">
             <div className="mt-1 size-1 shrink-0 rounded-full bg-primary" />
             <p className="text-sm text-muted-foreground">

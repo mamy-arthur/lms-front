@@ -13,12 +13,17 @@ import type { RegisterVideoSession } from '../lib/videoProgressSession';
 import { useAuthStore } from '@/shared/stores/auth.store';
 import { useSimulationStore } from '@/shared/simulation/simulation.store';
 import { Role } from '@/shared/constants/roles';
+import type { EvaluationCompletionReason } from '@/shared/types/evaluation-attempt.types';
 
 interface Props {
   formation: Formation;
   resolved: Resolved;
   onNavigate: (id: string | null) => void;
-  onEvaluationComplete: (score: number, passed: boolean) => void;
+  onEvaluationComplete: (
+    score: number,
+    passed: boolean,
+    reason?: EvaluationCompletionReason | null,
+  ) => void;
   portalEntry: ApiPortalContentEntry | null;
   portalEntryLoading: boolean;
   onMarkComplete: (onDone?: () => void) => void;

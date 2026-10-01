@@ -1,5 +1,7 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+Evaluation timers, document sessions and browser limitations: [docs/evaluation-timers.md](docs/evaluation-timers.md).
+
 ## Getting Started
 
 First, run the development server:

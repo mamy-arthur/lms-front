@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import type { Question } from '../../types';
 import type { TraineeAnswer } from '../../types';
 import { Button } from '@/components/ui/button';
+import { isQuestionAnswered } from '../../utils/answer-completeness';
 
 interface ExamFooterProps {
   isFirst: boolean;
@@ -16,32 +17,7 @@ interface ExamFooterProps {
   answers: Record<string, TraineeAnswer>;
   currentIndex: number;
   className?: string;
-}
-
-function isAnswered(a: TraineeAnswer): boolean {
-  if (a === null || a === undefined) return false;
-  if (a instanceof Set) return a.size > 0;
-  if (typeof a === 'object') return Object.keys(a).length > 0;
-  return true;
-}
-
-/** Checks completeness rules per question type (matching requires all pairs). */
-function isCurrentQuestionAnswered(question: Question, answer: TraineeAnswer): boolean {
-  switch (question.type) {
-    case 'true_false':
-      return answer !== null && answer !== undefined;
-    case 'single_choice':
-      return !!answer;
-    case 'multiple_choice':
-      return answer instanceof Set && answer.size > 0;
-    case 'matching': {
-      if (!answer || typeof answer !== 'object' || answer instanceof Set) return false;
-      const matched = Object.values(answer as Record<string, string>).filter(Boolean).length;
-      return matched === question.pairs.length;
-    }
-    default:
-      return true;
-  }
+  disabled?: boolean;
 }
 
 export function ExamFooter({
@@ -54,11 +30,11 @@ export function ExamFooter({
   answers,
   currentIndex,
   className,
+  disabled = false,
 }: ExamFooterProps) {
-  const currentQuestion = questions[currentIndex];
-  const canAdvance = currentQuestion
-    ? isCurrentQuestionAnswered(currentQuestion, answers[currentQuestion.id])
-    : true;
+  const allAnswered = questions.every((question) =>
+    isQuestionAnswered(question, answers[question.id]),
+  );
 
   return (
     <footer
@@ -71,7 +47,7 @@ export function ExamFooter({
       <div className="flex items-center justify-center gap-1 border-b border-border/30 px-6 py-2">
         <div className="mx-auto flex w-full max-w-5xl items-center justify-center gap-1">
           {questions.map((q, i) => {
-            const answered = isAnswered(answers[q.id]);
+            const answered = isQuestionAnswered(q, answers[q.id]);
             const isCurrent = i === currentIndex;
             return (
               <div
@@ -94,7 +70,7 @@ export function ExamFooter({
       {/* Navigation */}
       <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-4">
         {/* Previous */}
-        <Button onClick={onPrev} disabled={isFirst} variant={'ghost'}>
+        <Button onClick={onPrev} disabled={isFirst || disabled} variant={'ghost'}>
           <ArrowLeft className="size-4" />
           Précédent
         </Button>
@@ -103,7 +79,7 @@ export function ExamFooter({
         {isLast ? (
           <Button
             onClick={onRequestFinish}
-            disabled={!canAdvance}
+            disabled={!allAnswered || disabled}
             className="bg-(--color-primary) hover:bg-(--color-primary)/80"
           >
             <Flag className="size-4" />
@@ -112,7 +88,7 @@ export function ExamFooter({
         ) : (
           <Button
             onClick={onNext}
-            disabled={!canAdvance}
+            disabled={disabled}
             className="bg-(--color-primary) hover:bg-(--color-primary)/80"
           >
             Suivant
