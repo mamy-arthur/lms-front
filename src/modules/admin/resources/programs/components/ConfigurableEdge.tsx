@@ -59,11 +59,13 @@ function ConfigurableEdge({
               e.stopPropagation();
               onConfigureEdge(id);
             }}
-            disabled={isLocked}
-            aria-disabled={isLocked}
+            disabled={isLocked && !hasRules}
+            aria-disabled={isLocked && !hasRules}
             title={
               isLocked
-                ? 'Parcours verrouillé - configuration impossible'
+                ? hasRules
+                  ? "Consulter les règles d'accès (parcours verrouillé)"
+                  : 'Parcours verrouillé - configuration impossible'
                 : "Configurer les règles d'accès"
             }
           >

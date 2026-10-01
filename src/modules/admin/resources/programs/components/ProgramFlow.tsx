@@ -223,9 +223,12 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
   // ── Open the rule dialog when an edge settings button is clicked ──
   const onConfigureEdge = useCallback(
     (edgeId: string) => {
-      if (isLocked) return;
       const edge = edgesRef.current.find((e) => e.id === edgeId);
       if (!edge) return;
+
+      const existing = edge.data?.progressionRule;
+      // Locked path: nothing to consult when no rule was ever configured
+      if (isLocked && !existing) return;
 
       const sourceNode = nodesRef.current.find((n) => n.id === edge.source);
       if (!sourceNode) return;
@@ -242,7 +245,6 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
       const sourceNodeType: 'module' | 'evaluation' =
         stepType === 'module' ? 'module' : 'evaluation';
 
-      const existing = edge.data?.progressionRule;
       const initialFormData: ProgressionRuleFormData | undefined = existing
         ? {
             condition: existing.condition,
@@ -259,6 +261,7 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
         sourceNodeType,
         initialFormData,
         hasExistingRule: !!existing,
+        readOnly: isLocked,
       });
     },
     [isLocked],
@@ -267,7 +270,7 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
   // ── Save progression rule ──
   const handleProgressionRuleSave = useCallback(
     async (formData: ProgressionRuleFormData) => {
-      if (!progressionRuleDialog) return;
+      if (!progressionRuleDialog || progressionRuleDialog.readOnly) return;
       const { edgeId, sourceNodeId, targetNodeId, sourceNodeType } = progressionRuleDialog;
       const existing = edgesRef.current.find((e) => e.id === edgeId)?.data?.progressionRule;
 

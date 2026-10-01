@@ -1,4 +1,12 @@
-export type EnrollmentStatus = 'not_started' | 'in_progress' | 'completed' | 'expired' | 'failed';
+export const ENROLLMENT_STATUSES = [
+  'not_started',
+  'in_progress',
+  'completed',
+  'expired',
+  'failed',
+] as const;
+
+export type EnrollmentStatus = (typeof ENROLLMENT_STATUSES)[number];
 
 export interface ApiEnrollment {
   id: string;

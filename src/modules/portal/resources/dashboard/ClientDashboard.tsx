@@ -1,20 +1,23 @@
-import { useEffect, useState } from 'react';
+'use client';
+
+import { useRef, useState } from 'react';
+import { Button } from '@/components/ui/button';
 import { KpiCards } from './components/KpiCards';
-import { StudentDrawer } from './components/students-drawer';
 import { StudentsTable } from './components/students-table';
-import { Student, STUDENTS } from './lib/students-data';
+import { StudentDrawer } from './components/students-drawer';
 import { ProgressCard } from './components/chart/chart-radial-text';
-import { OnlineStudentsCard } from './components/ActiveStudents';
+import { useClientDashboardQuery, useClientDashboardScope } from './hooks/useClientDashboardQuery';
+import type { DashboardStudent } from './types';
 
 export default function ClientDashboard() {
-  const [loading, setLoading] = useState(true);
-  const [selected, setSelected] = useState<Student | null>(null);
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const scope = useClientDashboardScope();
+  return <ClientDashboardContent key={JSON.stringify(scope.key)} enabled={scope.enabled} />;
+}
 
-  useEffect(() => {
-    const t = setTimeout(() => setLoading(false), 700);
-    return () => clearTimeout(t);
-  }, []);
+function ClientDashboardContent({ enabled }: { enabled: boolean }) {
+  const { overview, students } = useClientDashboardQuery();
+  const [selectedStudent, setSelectedStudent] = useState<DashboardStudent | null>(null);
+  const drawerTrigger = useRef<HTMLElement | null>(null);
 
   return (
     <div className="bg-background flex flex-col">
@@ -29,26 +32,59 @@ export default function ClientDashboard() {
           </div>
         </header>
         <div className="flex flex-col space-y-3">
-          <KpiCards />
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="sm:col-span-2">
-              <StudentsTable
-                students={STUDENTS}
-                loading={loading}
-                onSelect={(s) => {
-                  setSelected(s);
-                  setDrawerOpen(true);
+          {(overview.isError || students.isError) && (
+            <div
+              role="alert"
+              className="flex items-center justify-between gap-3 rounded-md border p-3 text-sm"
+            >
+              <p>
+                {overview.isError && students.isError
+                  ? 'Impossible de charger le tableau de bord.'
+                  : `Impossible de charger ${overview.isError ? 'les indicateurs' : 'les étudiants'}.`}
+              </p>
+              <Button
+                variant="outline"
+                disabled={overview.isFetching || students.isFetching}
+                onClick={() => {
+                  if (overview.isError) void overview.refetch();
+                  if (students.isError) void students.refetch();
                 }}
-              />
+              >
+                Réessayer
+              </Button>
             </div>
-            <div className="flex flex-col self-start gap-2">
-              <ProgressCard />
-              <OnlineStudentsCard />
-            </div>
+          )}
+          <div className="grid min-w-0 grid-cols-2 gap-3 md:grid-cols-4 md:grid-rows-2">
+            <KpiCards data={overview.data} />
+            <ProgressCard
+              students={students.data}
+              overview={overview.data}
+              className="col-span-2 col-start-1 row-start-3 md:col-start-3 md:row-start-1 md:row-span-2"
+            />
           </div>
+          <StudentsTable
+            students={students.data ?? []}
+            loading={students.isPending}
+            error={students.isError}
+            onSelect={
+              enabled
+                ? (student, trigger) => {
+                    drawerTrigger.current = trigger;
+                    setSelectedStudent(student);
+                  }
+                : undefined
+            }
+          />
+          <StudentDrawer
+            student={enabled ? selectedStudent : null}
+            open={enabled && selectedStudent !== null}
+            onOpenChange={(open) => {
+              if (!open) setSelectedStudent(null);
+            }}
+            onRestoreFocus={() => drawerTrigger.current?.focus()}
+          />
         </div>
       </div>
-      <StudentDrawer student={selected} open={drawerOpen} onOpenChange={setDrawerOpen} />
     </div>
   );
 }

@@ -1,7 +1,14 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Label, PolarGrid, PolarRadiusAxis, RadialBar, RadialBarChart } from 'recharts';
+import {
+  Label,
+  PolarGrid,
+  PolarRadiusAxis,
+  RadialBar,
+  RadialBarChart,
+  usePlotArea,
+} from 'recharts';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartContainer, type ChartConfig } from '@/components/ui/chart';
@@ -12,7 +19,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { STUDENTS } from '../../lib/students-data';
+import { cn } from '@/lib/utils';
+import type { ClientDashboardOverview, DashboardStudent } from '../../types';
 
 const chartConfig = {
   progress: {
@@ -21,65 +29,109 @@ const chartConfig = {
   },
 } satisfies ChartConfig;
 
-export function ProgressCard() {
+function ProgressGrid() {
+  const plotArea = usePlotArea();
+  if (!plotArea) return null;
+
+  const radius = Math.min(plotArea.width, plotArea.height) / 2;
+  return (
+    <PolarGrid
+      gridType="circle"
+      radialLines={false}
+      stroke="none"
+      polarRadius={[radius, radius * 0.8]}
+      className="first:fill-muted last:fill-background"
+    />
+  );
+}
+
+export function ProgressCard({
+  className,
+  students,
+  overview,
+}: {
+  className?: string;
+  students: DashboardStudent[] | undefined;
+  overview?: ClientDashboardOverview;
+}) {
   const [courseFilter, setCourseFilter] = useState<string>('all');
 
-  const courses = useMemo(() => Array.from(new Set(STUDENTS.map((s) => s.course))).sort(), []);
+  const courses = useMemo(
+    () =>
+      [...new Map((students ?? []).map((s) => [s.courseId, s.course])).entries()].sort((a, b) =>
+        a[1].localeCompare(b[1]),
+      ),
+    [students],
+  );
 
-  const progress = useMemo(() => {
+  const completionRate = useMemo(() => {
+    // Tous parcours confondus, la synthèse porte déjà le ratio complet : inutile d'attendre
+    // le chargement de toutes les pages d'étudiants pour l'afficher.
+    if (courseFilter === 'all' && overview) {
+      const { completed, total } = overview.enrollments;
+      return total > 0 ? Math.round((100 * completed) / total) : 0;
+    }
     const subset =
-      courseFilter === 'all' ? STUDENTS : STUDENTS.filter((s) => s.course === courseFilter);
+      courseFilter === 'all'
+        ? (students ?? [])
+        : (students ?? []).filter((s) => s.courseId === courseFilter);
     if (subset.length === 0) return 0;
-    const avg = subset.reduce((sum, s) => sum + s.progress, 0) / subset.length;
-    return Math.round(avg);
-  }, [courseFilter]);
+    const completedCount = subset.filter((s) => s.status === 'completed').length;
+    return Math.round((completedCount / subset.length) * 100);
+  }, [courseFilter, students, overview]);
+
+  const dataAvailable = overview !== undefined || students !== undefined;
 
   const chartData = [
     {
       name: 'progress',
-      value: progress,
+      value: completionRate,
       fill: 'var(--color-primary)',
     },
   ];
 
   return (
-    <Card>
-      <CardHeader className="flex justify-between gap-2 items-center pb-0">
-        <div>
-          <CardTitle>Progression global</CardTitle>
-          <CardDescription>Progression moyenne sur l’ensemble des formations.</CardDescription>
+    <Card className={cn('h-full min-w-0', className)}>
+      <CardHeader className="flex flex-wrap items-start justify-between gap-2 pb-0">
+        <div className="min-w-0 flex-1 basis-48">
+          <CardTitle>Progression globale</CardTitle>
+          <CardDescription>
+            Part des inscriptions terminées, toutes formations confondues.
+          </CardDescription>
         </div>
         <Select value={courseFilter} onValueChange={setCourseFilter}>
-          <SelectTrigger className="mt-2 h-8 w-50" aria-label="Filtrer par parcours">
+          <SelectTrigger
+            className="mt-2 h-8 w-50 min-w-0 max-w-full"
+            aria-label="Filtrer par parcours"
+          >
             <SelectValue placeholder="Tous les parcours" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Tous les parcours</SelectItem>
-            {courses.map((c) => (
-              <SelectItem key={c} value={c}>
-                {c}
+            {courses.map(([id, name]) => (
+              <SelectItem key={id} value={id}>
+                {name}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
       </CardHeader>
       <CardContent className="pt-6">
-        <div className="flex flex-col items-center gap-4">
-          <ChartContainer config={chartConfig} className="mx-auto aspect-square h-56">
+        <div
+          className="flex flex-col items-center gap-4"
+          role="img"
+          aria-label={`Progression globale : ${dataAvailable ? `${completionRate}%` : 'indisponible'}`}
+        >
+          <ChartContainer config={chartConfig} className="mx-auto aspect-square w-full max-w-56">
             <RadialBarChart
               data={chartData}
               startAngle={90}
-              endAngle={90 - (360 * progress) / 100}
-              innerRadius={80}
-              outerRadius={100}
+              endAngle={90 - (360 * completionRate) / 100}
+              margin={{ top: 12, right: 12, bottom: 12, left: 12 }}
+              innerRadius="80%"
+              outerRadius="100%"
             >
-              <PolarGrid
-                gridType="circle"
-                radialLines={false}
-                stroke="none"
-                polarRadius={[100, 80]}
-                className="first:fill-muted last:fill-background"
-              />
+              <ProgressGrid />
 
               <RadialBar dataKey="value" cornerRadius={10} background />
 
@@ -99,7 +151,7 @@ export function ProgressCard() {
                             y={viewBox.cy - 6}
                             className="fill-foreground text-2xl font-bold"
                           >
-                            {progress}%
+                            {dataAvailable ? `${completionRate}%` : '—'}
                           </tspan>
                         </text>
                       );
