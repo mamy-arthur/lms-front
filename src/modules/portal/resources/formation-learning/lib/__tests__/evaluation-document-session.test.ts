@@ -46,51 +46,59 @@ describe('Isolation du document d’évaluation par identité runtime', () => {
     ['simulated role', () => useAuthStore.getState().setSimulatedRole(Role.TRAINEE)],
     [
       'server simulation role',
-      () => useSimulationStore.setState({
-        session: { ...simulationSession, simulated_role: Role.EDITOR },
-      }),
+      () =>
+        useSimulationStore.setState({
+          session: { ...simulationSession, simulated_role: Role.EDITOR },
+        }),
     ],
     [
       'server simulation tenant',
-      () => useSimulationStore.setState({
-        session: { ...simulationSession, tenant_id: 'tenant-b' },
-      }),
+      () =>
+        useSimulationStore.setState({
+          session: { ...simulationSession, tenant_id: 'tenant-b' },
+        }),
     ],
     ['epoch', () => useSimulationStore.setState({ epoch: 2 })],
     ['checking', () => useSimulationStore.setState({ phase: 'checking' })],
     ['transition', () => useSimulationStore.setState({ phase: 'transition' })],
     ['error', () => useSimulationStore.setState({ phase: 'error' })],
-  ] as const)('arrête tous les managers et vide les cartes immédiatement lors de %s', (_label, change) => {
-    const document = evaluationDocument();
-    const attempt = evaluationAttempt({ expires_at: '2026-10-01T12:01:00.000Z' });
-    const clock = anchorEvaluationClock(attempt, document);
-    const send = jest.fn();
-    const first = new EvaluationAutosave(attempt, document.id, send, () => true);
-    const second = new EvaluationAutosave(
-      { ...attempt, id: 'attempt-2' }, document.id, send, () => true,
-    );
-    document.saves.set(attempt.id, first);
-    document.saves.set('attempt-2', second);
-    document.frozen.add(attempt.id);
-    const stopFirst = jest.spyOn(first, 'stop');
-    const stopSecond = jest.spyOn(second, 'stop');
+  ] as const)(
+    'arrête tous les managers et vide les cartes immédiatement lors de %s',
+    (_label, change) => {
+      const document = evaluationDocument();
+      const attempt = evaluationAttempt({ expires_at: '2026-10-01T12:01:00.000Z' });
+      const clock = anchorEvaluationClock(attempt, document);
+      const send = jest.fn();
+      const first = new EvaluationAutosave(attempt, document.id, send, () => true);
+      const second = new EvaluationAutosave(
+        { ...attempt, id: 'attempt-2' },
+        document.id,
+        send,
+        () => true,
+      );
+      document.saves.set(attempt.id, first);
+      document.saves.set('attempt-2', second);
+      document.frozen.add(attempt.id);
+      const stopFirst = jest.spyOn(first, 'stop');
+      const stopSecond = jest.spyOn(second, 'stop');
 
-    change(); // No mounted React hook or later evaluationDocument() call is needed.
-    expect(stopFirst).toHaveBeenCalledTimes(1);
-    expect(stopSecond).toHaveBeenCalledTimes(1);
-    expect(document.saves.size).toBe(0);
-    expect(document.clocks.size).toBe(0);
-    expect(document.frozen.size).toBe(0);
-    expect(isEvaluationDocumentCurrent(document)).toBe(false);
-    const next = evaluationDocument();
-    expect(next.id).not.toBe(document.id);
-    expect(anchorEvaluationClock(attempt, next)).not.toBe(clock);
-    expect(() => anchorEvaluationClock(attempt, document)).toThrow('contexte');
-    expect(next.clocks.size).toBe(1);
-    first.change('question-1', new Set(['a']));
-    second.retry();
-    expect(send).not.toHaveBeenCalled();
-  });
+      change(); // No mounted React hook or later evaluationDocument() call is needed.
+      expect(stopFirst).toHaveBeenCalledTimes(1);
+      expect(stopSecond).toHaveBeenCalledTimes(1);
+      expect(document.saves.size).toBe(0);
+      expect(document.clocks.size).toBe(0);
+      expect(document.frozen.size).toBe(0);
+      expect(isEvaluationDocumentCurrent(document)).toBe(false);
+      const next = evaluationDocument();
+      expect(next.id).not.toBe(document.id);
+      expect(anchorEvaluationClock(attempt, next)).not.toBe(clock);
+      expect(() => anchorEvaluationClock(attempt, document)).toThrow('contexte');
+      expect(next.clocks.size).toBe(1);
+      first.change('question-1', new Set(['a']));
+      second.retry();
+      expect(send).not.toHaveBeenCalled();
+    },
+  );
 
   it('conserve le document et les horloges pour un rafraîchissement du même profil/contexte', () => {
     const document = evaluationDocument();
@@ -146,9 +154,7 @@ describe('Isolation du document d’évaluation par identité runtime', () => {
     const simulationSubscribe = jest.spyOn(useSimulationStore, 'subscribe');
     const document = evaluationDocument();
     const clock = anchorEvaluationClock(evaluationAttempt());
-    const manager = new EvaluationAutosave(
-      evaluationAttempt(), document.id, jest.fn(), () => true,
-    );
+    const manager = new EvaluationAutosave(evaluationAttempt(), document.id, jest.fn(), () => true);
     document.saves.set('attempt-1', manager);
     document.frozen.add('attempt-1');
     const listener = jest.fn();

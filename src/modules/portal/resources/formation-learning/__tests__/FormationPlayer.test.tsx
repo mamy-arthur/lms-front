@@ -447,7 +447,12 @@ describe('Parcours du stagiaire piloté par le snapshot d’exécution', () => {
         status: 'in_progress',
         validation_round_id: 'round-evaluation-1',
       });
-      const nextVisit = visit({ ...firstVisit, id: 'visit-2', visit_number: 2, status: 'available' });
+      const nextVisit = visit({
+        ...firstVisit,
+        id: 'visit-2',
+        visit_number: 2,
+        status: 'available',
+      });
       const makeSummary = (retry: boolean) => {
         const current = retry ? nextVisit : firstVisit;
         const value = buildExecutionSummary({

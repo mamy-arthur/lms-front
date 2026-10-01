@@ -509,11 +509,9 @@ describe('Exécution des évaluations', () => {
     api.start.mockResolvedValue({
       data: evaluationAttempt({ time_limit_minutes: 1, expires_at: '2026-10-01T12:00:01.000Z' }),
     });
-    api.submit
-      .mockRejectedValueOnce(new Error('offline'))
-      .mockResolvedValue({
-        data: evaluationAttempt({ status: 'completed', completion_reason: 'timeout', score: 0 }),
-      });
+    api.submit.mockRejectedValueOnce(new Error('offline')).mockResolvedValue({
+      data: evaluationAttempt({ status: 'completed', completion_reason: 'timeout', score: 0 }),
+    });
     setup();
     await start();
     expect(screen.getByRole('timer', { name: 'Temps restant' })).toHaveTextContent('00:01');

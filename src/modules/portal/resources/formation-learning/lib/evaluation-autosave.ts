@@ -97,7 +97,12 @@ export class EvaluationAutosave {
     // Defer the loop until pending is assigned, including immediately resolved mocks.
     draft.pending = Promise.resolve()
       .then(async () => {
-        while (!this.stopped && this.isCurrent() && this.canSave() && draft.saved < draft.revision) {
+        while (
+          !this.stopped &&
+          this.isCurrent() &&
+          this.canSave() &&
+          draft.saved < draft.revision
+        ) {
           const revision = draft.revision;
           const quiz = this.attempt.quizzes.find((item) => item.id === id)!;
           try {

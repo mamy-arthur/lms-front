@@ -553,7 +553,11 @@ describe('Cycle de vie des évaluations', () => {
       expect(api.start).toHaveBeenCalledTimes(1);
       expect(api.get).not.toHaveBeenCalled();
       expect(api.submit).not.toHaveBeenCalled();
-      expect(old.saves!.getSnapshot()).toMatchObject({ completed: null, savedIds: [], failed: false });
+      expect(old.saves!.getSnapshot()).toMatchObject({
+        completed: null,
+        savedIds: [],
+        failed: false,
+      });
       expect(onCompleted).not.toHaveBeenCalled();
       expect(onRuntimeError).not.toHaveBeenCalled();
     },

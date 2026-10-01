@@ -180,7 +180,11 @@ export function useEvaluationLifecycle({
   );
 
   const recover = useCallback(async () => {
-    if (!document || !isCurrent() || !['checking', 'recovery_error'].includes(current.current.phase))
+    if (
+      !document ||
+      !isCurrent() ||
+      !['checking', 'recovery_error'].includes(current.current.phase)
+    )
       return;
     const ticket = ++generation.current;
     update({ phase: 'checking', error: null, submitting: false });

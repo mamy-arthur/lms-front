@@ -111,9 +111,7 @@ export function subscribeEvaluationDocument(listener: () => void): () => void {
 
 /** Compare the captured document too: A -> B -> A must never revive A's work. */
 export function isEvaluationDocumentCurrent(document: DocumentSession): boolean {
-  return (
-    window.__learneoEvaluationDocument === document && document.identity === runtimeIdentity()
-  );
+  return window.__learneoEvaluationDocument === document && document.identity === runtimeIdentity();
 }
 
 export function anchorEvaluationClock(
