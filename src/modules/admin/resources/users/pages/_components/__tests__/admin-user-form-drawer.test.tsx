@@ -276,6 +276,36 @@ describe('AdminUserFormDrawer - rattachement client', () => {
     expect(uploadUserProfilePhoto).not.toHaveBeenCalled();
   });
 
+  it("n'envoie pas la photo quand le PATCH est refuse", async () => {
+    mockUpdateAsync.mockRejectedValue(Object.assign(new Error('Forbidden'), { status: 403 }));
+    const interaction = userEvent.setup();
+    renderWithQueryClient(<AdminUserFormDrawer open onClose={jest.fn()} user={EXISTING_USER} />);
+    await interaction.upload(
+      document.querySelector<HTMLInputElement>('input[type="file"]')!,
+      new File(['photo'], 'alice.png', { type: 'image/png' }),
+    );
+    await screen.findByText(/Photo sélectionnée/);
+    await interaction.click(screen.getByRole('button', { name: 'Enregistrer' }));
+
+    await waitFor(() => expect(mockUpdateAsync).toHaveBeenCalled());
+    expect(uploadUserProfilePhoto).not.toHaveBeenCalled();
+  });
+
+  it('laisse la mutation notifier seule un echec de mise a jour', async () => {
+    mockUpdateAsync.mockRejectedValue(Object.assign(new Error('Forbidden'), { status: 403 }));
+    const interaction = userEvent.setup();
+    renderWithQueryClient(<AdminUserFormDrawer open onClose={jest.fn()} user={EXISTING_USER} />);
+    await interaction.upload(
+      document.querySelector<HTMLInputElement>('input[type="file"]')!,
+      new File(['photo'], 'alice.png', { type: 'image/png' }),
+    );
+    await screen.findByText(/Photo sélectionnée/);
+    await interaction.click(screen.getByRole('button', { name: 'Enregistrer' }));
+
+    await waitFor(() => expect(mockUpdateAsync).toHaveBeenCalled());
+    expect(toast.error).not.toHaveBeenCalled();
+  });
+
   it('empeche une seconde soumission pendant l upload de la photo', async () => {
     let releaseUpload: () => void = () => {};
     jest.mocked(uploadUserProfilePhoto).mockImplementation(

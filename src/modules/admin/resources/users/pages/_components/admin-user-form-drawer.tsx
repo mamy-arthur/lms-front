@@ -30,8 +30,6 @@ import { useClientsQuery } from '@/modules/admin/resources/clients';
 import { tenantApi } from '@/modules/admin/resources/tenants/api';
 import { uploadUserProfilePhoto } from '@/modules/shared/lib/uploadUserProfilePhoto';
 import { Role } from '@/shared/constants/roles';
-import { getApiErrorStatus } from '@/shared/lib/errors';
-import { PEER_MANAGEMENT_REFUSED } from '@/shared/utils/api-error';
 import { passwordPolicySchema } from '@/shared/schemas/auth.schema';
 import { useAuthStore } from '@/shared/stores/auth.store';
 import { useCreateUser } from '../../hooks/useCreateUser';
@@ -362,12 +360,8 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
               preferred_language: (values.preferred_language as string | null) ?? null,
             } as UpdateUserPayload,
           });
-        } catch (error) {
-          toast.error(
-            getApiErrorStatus(error) === 403
-              ? PEER_MANAGEMENT_REFUSED
-              : "Échec de la mise à jour de l'utilisateur.",
-          );
+        } catch {
+          // updateMutation.onError notifie deja : un toast ici en ferait deux.
           return;
         }
         // L'endpoint profile-photo lie déjà la photo côté backend — best-effort
@@ -413,7 +407,7 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
             preferred_language: (values.preferred_language as string | null) ?? null,
           } as CreateUserPayload);
         } catch {
-          toast.error("Échec de la création de l'utilisateur.");
+          // createMutation.onError notifie deja.
           return;
         }
 

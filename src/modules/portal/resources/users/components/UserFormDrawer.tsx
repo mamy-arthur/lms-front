@@ -201,7 +201,7 @@ function UserFormDrawerBase({ open, onClose, onSuccess, user }: UserFormDrawerPr
             } as UpdateClientUserPayload,
           });
         } catch {
-          toast.error("Échec de la mise à jour de l'utilisateur.");
+          // updateMutation.onError notifie deja : un toast ici en ferait deux.
           return;
         }
         // L'endpoint profile-photo lie déjà la photo côté backend — best-effort
@@ -235,7 +235,7 @@ function UserFormDrawerBase({ open, onClose, onSuccess, user }: UserFormDrawerPr
             preferred_language: (values.preferred_language as string | null) ?? null,
           } as CreateClientUserPayload);
         } catch {
-          toast.error("Échec de la création de l'utilisateur.");
+          // createMutation.onError notifie deja.
           return;
         }
 
