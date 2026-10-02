@@ -472,7 +472,7 @@ describe('Pilotage par le moteur d’exécution', () => {
     await waitFor(() => expect(mockSummary.mock.calls.length).toBeGreaterThan(callsBefore));
   });
 
-  it('signale l’échec terminal et retire toute action', async () => {
+  it('retire toute action de progression après un échec terminal sans afficher l’ancien bandeau', async () => {
     useSummary(
       summary({
         status: 'failed',
@@ -482,9 +482,11 @@ describe('Pilotage par le moteur d’exécution', () => {
     );
     setup();
 
-    await screen.findByText('Parcours en échec');
+    await screen.findByRole('navigation', { name: 'Sommaire de la formation' });
+    expect(screen.queryByText('Parcours en échec')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Terminer/ })).not.toBeInTheDocument();
     expect(mockStart).not.toHaveBeenCalled();
+    expect(mockComplete).not.toHaveBeenCalled();
   });
 
   it.each([0, 1])(
@@ -533,8 +535,13 @@ describe('Pilotage par le moteur d’exécution', () => {
 
       await user.click(dialog.getByRole('button', { name: 'Fermer' }));
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-      expect(screen.getByText('Parcours en échec')).toBeInTheDocument();
+      expect(screen.queryByText('Parcours en échec')).not.toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /Évaluation Finale Évaluation finale/i }),
+      ).toBeDisabled();
+      expect(screen.queryByRole('button', { name: /Soumettre|Terminer/ })).not.toBeInTheDocument();
       expect(mockStart).not.toHaveBeenCalled();
+      expect(mockComplete).not.toHaveBeenCalled();
     },
   );
 
@@ -569,10 +576,14 @@ describe('Pilotage par le moteur d’exécution', () => {
     await screen.findByText('Texte de entry-1');
   });
 
-  it('affiche l’obligation de refaire un module déjà suivi', async () => {
+  it('exige de terminer à nouveau les contenus historiques sans afficher l’ancien bandeau', async () => {
     setup();
 
-    await screen.findByText('Nouveau passage requis');
+    expect(await screen.findByRole('button', { name: 'Terminer et continuer' })).toBeEnabled();
+    expect(screen.getByText('Texte de entry-1')).toBeInTheDocument();
+    expect(mockStart).toHaveBeenCalledWith(ENROLLMENT_ID, 'exec-module-1', 7);
+    expect(mockComplete).not.toHaveBeenCalled();
+    expect(screen.queryByText('Nouveau passage requis')).not.toBeInTheDocument();
     expect(screen.queryByText(/Progression du parcours en cours/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Couverture historique/)).not.toBeInTheDocument();
   });

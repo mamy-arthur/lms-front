@@ -263,6 +263,43 @@ export default function EvaluationRunner({
           countdown={runtime.deadline.formatted}
           savedQuestionIds={runtime.autosave.savedIds}
           onSubmit={() => void runtime.submitManual()}
+          runtimeStatus={
+            // Keep recovery controls inside the guarded exam, without a permanent banner.
+            (runtime.frozen || runtime.autosave.failed || runtime.error) && (
+              <div className="border-b bg-muted/30 px-6 py-3 text-sm">
+                {runtime.frozen ? (
+                  <>
+                    <p role="alert" className="font-semibold">
+                      Temps écoulé. Vos réponses sont verrouillées.
+                    </p>
+                    <p>Seules les réponses enregistrées avant la fin du temps seront évaluées.</p>
+                    {runtime.submitting ? (
+                      <p role="status">Finalisation de votre évaluation…</p>
+                    ) : (
+                      <Button className="mt-2" onClick={() => void runtime.finalizeTimeout()}>
+                        Réessayer la finalisation
+                      </Button>
+                    )}
+                  </>
+                ) : (
+                  runtime.autosave.failed && (
+                    <div role="alert">
+                      Certaines réponses ne sont pas enregistrées. Vérifiez votre connexion.
+                      <Button
+                        variant="outline"
+                        className="ml-3"
+                        disabled={runtime.submitting}
+                        onClick={() => runtime.saves?.retry()}
+                      >
+                        Réessayer la sauvegarde
+                      </Button>
+                    </div>
+                  )
+                )}
+                {runtime.error && <p role="alert">{runtime.error}</p>}
+              </div>
+            )
+          }
         />
       </div>
     );

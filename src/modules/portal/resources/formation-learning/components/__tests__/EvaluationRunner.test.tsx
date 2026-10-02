@@ -38,6 +38,8 @@ jest.mock('@/shared/simulation/useSimulationUser', () => ({
 jest.mock('sonner', () => ({ toast: { error: jest.fn() } }));
 const api = jest.mocked(evaluationAttemptsApi);
 type EvaluationAttemptSessionResponse = Awaited<ReturnType<typeof evaluationAttemptsApi.session>>;
+const timeoutNotice = 'Temps écoulé. Votre évaluation a été terminée automatiquement.';
+const retryButtonName = /^Réessayer(?: \(|$)/;
 const evaluation: FormationEvaluation = {
   id: 'evaluation-1',
   formationId: 'formation-1',
@@ -171,12 +173,20 @@ describe('Exécution des évaluations', () => {
     api.answer.mockRejectedValueOnce(new Error('offline'));
     setup(true);
     await start();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('checkbox', { name: /Option A/ }));
-    await screen.findByText(/Certaines réponses ne sont pas enregistrées/);
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Certaines réponses ne sont pas enregistrées.',
+    );
     expect(screen.queryByText('Réponse enregistrée')).not.toBeInTheDocument();
     expect(screen.getByRole('checkbox', { name: /Option A/ })).toBeChecked();
     fireEvent.click(screen.getByRole('button', { name: 'Réessayer la sauvegarde' }));
     await screen.findByText('Réponse enregistrée');
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Réessayer la sauvegarde' }),
+    ).not.toBeInTheDocument();
     expect(api.answer.mock.calls.map((call) => call[2].answer_revision)).toEqual([1, 1]);
     fireEvent.click(screen.getByRole('checkbox', { name: /Option A/ }));
     await waitFor(() => expect(api.answer).toHaveBeenCalledTimes(3));
@@ -300,14 +310,18 @@ describe('Exécution des évaluations', () => {
       data: evaluationAttempt({ status: 'completed', score: 0, completion_reason: 'page_reload' }),
     });
     const { rerenderRunner } = setup(true);
-    await screen.findByText(/terminée automatiquement après le rechargement/);
+    await waitFor(() =>
+      expect(screen.getByRole('status')).toHaveTextContent(
+        'Tentative interrompue. Votre évaluation a été terminée après le rechargement ou la réouverture de la page.',
+      ),
+    );
     expect(screen.queryByRole('main', { name: /Examen/ })).not.toBeInTheDocument();
     expect(api.start).not.toHaveBeenCalled();
     // Even if props still say actionable, a completed visit cannot be retried.
-    expect(screen.queryByRole('button', { name: 'Réessayer' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: retryButtonName })).not.toBeInTheDocument();
     api.session.mockResolvedValue({ data: null });
     rerenderRunner({ evaluation: retryEvaluation, executionContext: retryContext });
-    fireEvent.click(await screen.findByRole('button', { name: 'Réessayer' }));
+    fireEvent.click(await screen.findByRole('button', { name: retryButtonName }));
     await screen.findByRole('button', { name: "Commencer l'évaluation" });
     expect(api.start).not.toHaveBeenCalled();
   });
@@ -351,7 +365,7 @@ describe('Exécution des évaluations', () => {
     await act(async () => {
       jest.advanceTimersByTime(1000);
     });
-    await screen.findByText(/Temps écoulé : votre évaluation a été terminée automatiquement/);
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(timeoutNotice));
     expect(onComplete).toHaveBeenCalledWith(25, false, 'timeout');
     expect(queryClient.getQueryData(portalLearningPathKeys.summary('enrollment-1'))).toMatchObject({
       execution: { currentExecution: { id: 'visit-2' }, stateRevision: 4 },
@@ -361,15 +375,16 @@ describe('Exécution des évaluations', () => {
     api.session.mockReturnValueOnce(freshSession.promise);
     rerenderRunner({ evaluation: retryEvaluation, executionContext: retryContext });
     expect(screen.getByText('25%')).toBeInTheDocument();
-    expect(screen.getByText(/Temps écoulé : votre évaluation/)).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Réessayer' })).not.toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent(timeoutNotice);
+    expect(screen.queryByRole('button', { name: retryButtonName })).not.toBeInTheDocument();
     expect(screen.queryByRole('timer')).not.toBeInTheDocument();
     expect(evaluationDocument().saves.has('attempt-1')).toBe(false);
     expect(evaluationDocument().navigationLocks).toBe(0);
     await act(async () => {
       freshSession.resolve({ data: null });
     });
-    const retry = await screen.findByRole('button', { name: 'Réessayer' });
+    const retry = await screen.findByRole('button', { name: retryButtonName });
+    expect(retry).toHaveAccessibleName('Réessayer (3 restantes)');
     expect(api.session).toHaveBeenLastCalledWith('enrollment-1', 'evaluation-1', {
       node_execution_id: 'visit-2',
       page_session_id: evaluationDocument().id,
@@ -419,9 +434,9 @@ describe('Exécution des évaluations', () => {
     api.session.mockRejectedValueOnce(new Error('offline'));
     rerenderRunner({ evaluation: retryEvaluation, executionContext: retryContext });
     fireEvent.click(await screen.findByRole('button', { name: 'Réessayer la vérification' }));
-    await screen.findByRole('button', { name: 'Réessayer' });
+    await screen.findByRole('button', { name: retryButtonName });
     expect(screen.getByText('25%')).toBeInTheDocument();
-    expect(screen.getByText(/Temps écoulé : votre évaluation/)).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent(timeoutNotice);
     expect(api.start).not.toHaveBeenCalled();
     expect(api.submit).not.toHaveBeenCalled();
   });
@@ -446,7 +461,7 @@ describe('Exécution des évaluations', () => {
         evaluation: boundary === 'evaluation' ? { ...evaluation, id: 'evaluation-2' } : evaluation,
       });
       expect(screen.queryByText('25%')).not.toBeInTheDocument();
-      expect(screen.queryByText(/Temps écoulé : votre évaluation/)).not.toBeInTheDocument();
+      expect(screen.queryByText('Temps écoulé.')).not.toBeInTheDocument();
       await act(async () => {
         pending.resolve({ data: null });
       });
@@ -465,7 +480,7 @@ describe('Exécution des évaluations', () => {
     const { rerenderRunner, unmount } = setup();
     await screen.findByText('25%');
     rerenderRunner({ evaluation: retryEvaluation, executionContext: retryContext });
-    await screen.findByRole('button', { name: 'Réessayer' });
+    await screen.findByRole('button', { name: retryButtonName });
     unmount();
     renderWithQueryClient(
       <EvaluationRunner
@@ -504,29 +519,55 @@ describe('Exécution des évaluations', () => {
     expect(evaluationDocument().saves.has('attempt-1')).toBe(false);
   });
 
-  it('garde le compteur et les réponses figés après échec de finalisation puis affiche le résultat automatique', async () => {
-    jest.useFakeTimers();
-    api.start.mockResolvedValue({
-      data: evaluationAttempt({ time_limit_minutes: 1, expires_at: '2026-10-01T12:00:01.000Z' }),
-    });
-    api.submit.mockRejectedValueOnce(new Error('offline')).mockResolvedValue({
-      data: evaluationAttempt({ status: 'completed', completion_reason: 'timeout', score: 0 }),
-    });
-    setup();
-    await start();
-    expect(screen.getByRole('timer', { name: 'Temps restant' })).toHaveTextContent('00:01');
-    await act(async () => {
-      jest.advanceTimersByTime(1000);
-    });
-    expect(screen.getByRole('timer')).toHaveTextContent('00:00');
-    expect(screen.getByRole('checkbox', { name: /Option A/ })).toBeDisabled();
-    expect(screen.getByText('Temps écoulé. Vos réponses sont verrouillées.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Réessayer la finalisation' })).toBeEnabled();
-    expect(api.answer).not.toHaveBeenCalled();
-    await act(async () => {
-      window.dispatchEvent(new Event('online'));
-    });
-    await screen.findByText(/Temps écoulé : votre évaluation a été terminée automatiquement/);
-    expect(api.answer).not.toHaveBeenCalled();
-  });
+  it.each(['bouton', 'online'] as const)(
+    'garde le compteur et les réponses figés après échec de finalisation puis réessaie via %s',
+    async (retryVia) => {
+      jest.useFakeTimers();
+      const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+      const finalization = deferred<EvaluationAttemptResponse>();
+      api.start.mockResolvedValue({
+        data: evaluationAttempt({ time_limit_minutes: 1, expires_at: '2026-10-01T12:00:01.000Z' }),
+      });
+      api.submit
+        .mockRejectedValueOnce(new Error('offline'))
+        .mockReturnValueOnce(finalization.promise);
+      const { onComplete } = setup();
+      await start();
+      expect(screen.getByRole('timer', { name: 'Temps restant' })).toHaveTextContent('00:01');
+      await act(async () => {
+        jest.advanceTimersByTime(1000);
+      });
+      expect(screen.getByRole('timer')).toHaveTextContent('00:00');
+      expect(screen.getByRole('checkbox', { name: /Option A/ })).toBeDisabled();
+      expect(screen.getByText('Temps écoulé. Vos réponses sont verrouillées.')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Réessayer la finalisation' })).toBeEnabled();
+      expect(api.answer).not.toHaveBeenCalled();
+      expect(api.submit).toHaveBeenCalledTimes(1);
+      if (retryVia === 'bouton') {
+        await user.click(screen.getByRole('button', { name: 'Réessayer la finalisation' }));
+      } else {
+        await act(async () => {
+          window.dispatchEvent(new Event('online'));
+        });
+      }
+      expect(screen.getByRole('status')).toHaveTextContent('Finalisation de votre évaluation');
+      expect(
+        screen.queryByRole('button', { name: 'Réessayer la finalisation' }),
+      ).not.toBeInTheDocument();
+      expect(screen.getByRole('checkbox', { name: /Option A/ })).toBeDisabled();
+      expect(screen.getByRole('timer')).toHaveTextContent('00:00');
+      expect(onComplete).not.toHaveBeenCalled();
+      await act(async () => {
+        finalization.resolve({
+          data: evaluationAttempt({ status: 'completed', completion_reason: 'timeout', score: 0 }),
+        });
+      });
+      await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(timeoutNotice));
+      expect(api.submit).toHaveBeenCalledTimes(2);
+      expect(api.submit).toHaveBeenLastCalledWith('attempt-1', { reason: 'timeout' });
+      expect(onComplete).toHaveBeenCalledTimes(1);
+      expect(onComplete).toHaveBeenCalledWith(0, false, 'timeout');
+      expect(api.answer).not.toHaveBeenCalled();
+    },
+  );
 });
