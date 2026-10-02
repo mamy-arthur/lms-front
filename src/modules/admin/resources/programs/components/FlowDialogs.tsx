@@ -38,6 +38,8 @@ export type EditEvalDialogState = {
   evaluationId?: string;
   config: EvaluationConfig;
   hasFinalEval: boolean;
+  /** Consultation only — the learning path is locked */
+  readOnly?: boolean;
 };
 
 export type EditAttestationDialogState = {
@@ -205,6 +207,7 @@ export function FlowDialogs({
         allModuleIds={allModuleIds}
         moduleNameById={moduleNameById}
         onConfirm={onEditEvalSave}
+        readOnly={editEvalDialog?.readOnly ?? false}
       />
       <SelectAttestationDialog
         key={editAttestationDialog?.nodeId}
