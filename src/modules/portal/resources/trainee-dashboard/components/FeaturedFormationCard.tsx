@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { Play } from 'lucide-react';
 import type { TraineeFormation } from '@/modules/portal/resources/_shared/trainee/types';
+import { learningPathCover } from '@/shared/lib/learning-path-cover';
 
 interface FeaturedFormationCardProps {
   formation: TraineeFormation;
@@ -14,13 +15,11 @@ export function FeaturedFormationCard({ formation }: FeaturedFormationCardProps)
     <div className="overflow-hidden rounded-2xl bg-white border border-slate-100 shadow-sm">
       <div className="flex h-full">
         <div className="relative shrink-0 w-44 bg-gradient-to-br from-orange-500/60 to-orange-700/70">
-          {formation.coverImage ? (
-            <img
-              src={formation.coverImage}
-              alt={formation.title}
-              className="absolute inset-0 h-full w-full object-cover"
-            />
-          ) : null}
+          <img
+            src={learningPathCover(formation.coverImage)}
+            alt={formation.title}
+            className="absolute inset-0 h-full w-full object-cover"
+          />
           <div className="absolute inset-0 bg-gradient-to-br from-orange-500/60 to-orange-700/70" />
         </div>
 

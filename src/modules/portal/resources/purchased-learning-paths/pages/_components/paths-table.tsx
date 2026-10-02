@@ -10,6 +10,7 @@ import {
 } from '@/shared/components/ui/DataTable';
 import type { PurchasedLearningPathRow, PurchasedLearningPathStatKey } from '../../types';
 import { PurchasedLearningPathStatTrigger } from './stat-trigger';
+import { learningPathCover } from '@/shared/lib/learning-path-cover';
 
 interface PurchasedLearningPathsTableProps {
   purchasedLearningPaths: PurchasedLearningPathRow[];
@@ -50,16 +51,12 @@ export function PurchasedLearningPathsTable({
       sortable: true,
       render: (row) => (
         <div className="flex items-center gap-3">
-          {row.imageUrl ? (
-            // biome-ignore lint/performance/noImgElement: external backend URL, domain unknown at build time
-            <img
-              src={row.imageUrl}
-              alt={row.name}
-              className="size-11 shrink-0 rounded-md object-cover"
-            />
-          ) : (
-            <div className="size-10 shrink-0 rounded-md bg-muted" />
-          )}
+          {/* biome-ignore lint/performance/noImgElement: external backend URL, domain unknown at build time */}
+          <img
+            src={learningPathCover(row.imageUrl)}
+            alt={row.name}
+            className="size-11 shrink-0 rounded-md object-cover"
+          />
           <span className="font-medium text-foreground">{row.name}</span>
         </div>
       ),

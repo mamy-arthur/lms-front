@@ -48,6 +48,10 @@ Le backend peut finaliser à échéance sur ce GET, une réponse, une soumission
 
 Le serveur rejette un `timeout` anticipé ou une tentative illimitée en `409`. À la frontière `now >= expires_at`, `timeout` l'emporte sur toute autre raison. Il n'y a **pas de pause**, même si la page est masquée ou suspendue. Modifier `Date` ou l'heure système locale ne modifie pas l'échéance serveur ; cet affichage client n'est pas une protection anti-triche autonome.
 
+`/submit` n'accepte que `manual` et `timeout` : envoyer `page_reload` est refusé en **`422`**. Cette raison reste lisible dans `completion_reason`, mais seul le serveur la décide, au POST de session ou à un démarrage depuis une autre page. Le type `SubmittableCompletionReason` porte cette distinction.
+
+Un GET sur une tentative échue dont l'inscription a été révoquée ou a expiré répond **`200` avec `status: in_progress`**, sans `execution` : la finalisation est interdite, la consultation reste possible. Le polling ne doit pas traiter ce cas comme une erreur, mais ne verra jamais ce passage se terminer.
+
 ## Autosauvegarde, effacement et soumission manuelle
 
 [../src/modules/portal/resources/formation-learning/lib/evaluation-autosave.ts](../src/modules/portal/resources/formation-learning/lib/evaluation-autosave.ts) crée une file série indépendante par question. Les modifications sont envoyées sans attendre la navigation ou la soumission ; une file en cours peut regrouper des modifications intermédiaires vers le dernier brouillon.

@@ -23,6 +23,13 @@ export interface ApiAttemptQuiz {
 
 export type EvaluationCompletionReason = 'manual' | 'timeout' | 'page_reload';
 
+/**
+ * Raisons que le client peut demander sur POST /submit. `page_reload` en est
+ * exclu : seul le serveur le constate, via POST .../attempts/session. L'envoyer
+ * est refusé en 422. Il reste une valeur lisible dans `completion_reason`.
+ */
+export type SubmittableCompletionReason = Extract<EvaluationCompletionReason, 'manual' | 'timeout'>;
+
 export interface ApiEvaluationAttempt {
   id: string;
   evaluation_id: string;

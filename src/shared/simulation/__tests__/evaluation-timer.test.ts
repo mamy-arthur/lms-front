@@ -4,7 +4,7 @@ import { Role } from '@/shared/constants/roles';
 import type { EvaluationAttemptResponse } from '@/shared/api/portal.api';
 import type {
   ApiEvaluationAttempt,
-  EvaluationCompletionReason,
+  SubmittableCompletionReason,
 } from '@/shared/types/evaluation-attempt.types';
 import type {
   ApiLearnerEvaluation,
@@ -69,7 +69,7 @@ function answer(attempt: ApiEvaluationAttempt, value: Record<string, unknown>, r
   );
 }
 
-function submit(attempt: ApiEvaluationAttempt, reason?: EvaluationCompletionReason) {
+function submit(attempt: ApiEvaluationAttempt, reason?: SubmittableCompletionReason) {
   return request<EvaluationAttemptResponse>(
     `evaluation-attempts/${attempt.id}/submit`,
     'POST',
@@ -324,11 +324,17 @@ describe('contrat des sessions et délais des évaluations simulées', () => {
         reason: 'forged',
       }),
     ).rejects.toMatchObject({ status: 422 });
+    // page_reload n'est pas une raison soumissible : seul le serveur la décide.
+    await expect(
+      request(`evaluation-attempts/${attempt.id}/submit`, 'POST', {
+        reason: 'page_reload',
+      }),
+    ).rejects.toMatchObject({ status: 422 });
     expect((await poll(attempt)).data.status).toBe('in_progress');
     expect((await summary()).execution).toEqual(before);
   });
 
-  it.each<EvaluationCompletionReason>(['manual', 'timeout', 'page_reload'])(
+  it.each<SubmittableCompletionReason>(['manual', 'timeout'])(
     'donne priorité à timeout à la limite exacte même pour %s',
     async (reason) => {
       const attempt = await start();
@@ -341,7 +347,7 @@ describe('contrat des sessions et délais des évaluations simulées', () => {
         completed_at: DEADLINE,
       });
       expect(completed.execution).toEqual((await summary()).execution);
-      expect(await submit(attempt, 'page_reload')).toEqual(completed);
+      expect(await submit(attempt, 'timeout')).toEqual(completed);
     },
   );
 
@@ -551,7 +557,8 @@ describe('contrat des sessions et délais des évaluations simulées', () => {
 
   it('autorise une finalisation page_reload sans réponse même sans limite de temps', async () => {
     const attempt = await start(null);
-    const completed = await submit(attempt, 'page_reload');
+    // page_reload vient de la résolution de session, pas d'un /submit du client.
+    const completed = await session(attempt, OTHER_PAGE);
     expect(completed.data).toMatchObject({
       status: 'completed',
       score: 0,

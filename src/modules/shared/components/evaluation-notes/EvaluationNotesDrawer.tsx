@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { GraduationCap, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import {
   Sheet,
   SheetContent,
@@ -13,6 +13,7 @@ import { EvaluationNotesTable } from './EvaluationNotesTable';
 import { buildDrawerColumns, buildRows } from './list-helpers';
 import { type FormationDetail, type FormationSummary } from '@/modules/shared/lib/evaluation-notes';
 import { useFormationTableController } from '@/modules/shared/hooks/useFormationTableController';
+import { learningPathCover } from '@/shared/lib/learning-path-cover';
 
 export interface EvaluationNotesDrawerProps {
   formation: FormationSummary | null;
@@ -58,19 +59,13 @@ export function EvaluationNotesDrawer({
       >
         <SheetHeader className="shrink-0 border-b px-6 py-4">
           <div className="flex items-center gap-3 pr-8">
-            {formation?.coverImage ? (
-              <div className="size-10 shrink-0 overflow-hidden rounded-lg bg-muted">
-                <img
-                  src={formation.coverImage}
-                  alt={formation.name}
-                  className="h-full w-full object-cover"
-                />
-              </div>
-            ) : (
-              <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                <GraduationCap className="size-5" />
-              </div>
-            )}
+            <div className="size-10 shrink-0 overflow-hidden rounded-lg bg-muted">
+              <img
+                src={learningPathCover(formation?.coverImage)}
+                alt={formation?.name ?? ''}
+                className="h-full w-full object-cover"
+              />
+            </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
                 <SheetTitle className="truncate text-sm font-semibold">

@@ -2,7 +2,7 @@ import { apiGet, apiPost, httpClient } from '@/shared/lib/apiClient';
 import type { ApiMeEnrollmentsResponse } from '@/shared/types/enrollment.types';
 import type {
   ApiEvaluationAttempt,
-  EvaluationCompletionReason,
+  SubmittableCompletionReason,
 } from '@/shared/types/evaluation-attempt.types';
 import type {
   ApiLearnerEvaluation,
@@ -134,7 +134,7 @@ export const evaluationAttemptsApi = {
       payload,
     ),
 
-  submit: (attemptId: string, body?: { reason: EvaluationCompletionReason }) =>
+  submit: (attemptId: string, body?: { reason: SubmittableCompletionReason }) =>
     apiPost<EvaluationAttemptResponse>(`evaluation-attempts/${attemptId}/submit`, body),
 };
 

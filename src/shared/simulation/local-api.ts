@@ -3101,7 +3101,9 @@ async function dispatchSimulationRequest(
     const attempt = data.attempts.find((row) => row.id === attemptId);
     if (!attempt) fail(404, 'Simulation : tentative introuvable.');
     const reason = payload.reason ?? 'manual';
-    if (submit && !['manual', 'timeout', 'page_reload'].includes(text(reason)))
+    // page_reload exclu comme côté backend : seul le serveur le décide, via la
+    // résolution de session. L'accepter ici laissait sauter le contrôle manual.
+    if (submit && !['manual', 'timeout'].includes(text(reason)))
       invalid('Motif de finalisation inconnu.');
     const now = new Date();
     // Completed/due answers replay the whole attempt, never save a late draft.

@@ -1,10 +1,9 @@
 'use client';
 
-import { ImageIcon } from 'lucide-react';
-
 import { Separator } from '@/components/ui/separator';
 import { formatCartMoney, getCartItemCoverImage } from '@/modules/portal/resources/cart/cart-utils';
 import type { ApiCartItem } from '@/shared/types/cart.types';
+import { learningPathCover } from '@/shared/lib/learning-path-cover';
 
 interface CheckoutOrderSummaryProps {
   cartItems: ApiCartItem[];
@@ -34,13 +33,11 @@ export function CheckoutOrderSummary({
             return (
               <div key={item.id} className="flex items-start gap-3 border-none border-b">
                 <div className="h-12 w-12 shrink-0 overflow-hidden rounded-sm bg-muted">
-                  {coverImage ? (
-                    <img src={coverImage} alt={item.name} className="h-full w-full object-cover" />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center text-muted-foreground/40">
-                      <ImageIcon className="size-4" strokeWidth={1.5} />
-                    </div>
-                  )}
+                  <img
+                    src={learningPathCover(coverImage)}
+                    alt={item.name}
+                    className="h-full w-full object-cover"
+                  />
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="line-clamp-2 text-xs  font-medium text-foreground">{item.name}</p>
