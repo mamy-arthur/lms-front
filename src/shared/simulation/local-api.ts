@@ -16,10 +16,26 @@ import type {
   TwoFactorSettings,
   TwoFactorSettingsFields,
 } from '@/modules/admin/resources/two-factor/types';
+import type {
+  ApiDashboardEnrollment,
+  ApiDashboardFormation,
+  ApiDashboardOverview,
+} from '@/shared/types/dashboard.types';
+import type {
+  AttemptNodeStatus,
+  EnrollmentAttemptCourse,
+  EnrollmentAttemptNode,
+  EnrollmentAttemptSummary,
+} from '@/shared/types/enrollment-history.types';
+import type {
+  ApiClientDashboardStudent,
+  ClientDashboardOverview,
+} from '@/modules/portal/resources/dashboard/types';
 import {
   createSimulationFixtures,
   newSimulationEntity,
   simulationId,
+  simulationClientSlug,
   SIMULATION_DATE,
   SIMULATION_IDS,
   SIMULATION_IMAGE,
@@ -74,6 +90,7 @@ const RESOURCE_ROUTES: Record<string, RouteSpec> = {
 
 /** Machine-readable coverage manifest. Paths are relative to /api/v1. */
 export const SIMULATION_ROUTES = [
+  { methods: ['GET'], path: 'platform/clients' },
   ...Object.entries(RESOURCE_ROUTES).flatMap(([path, spec]) => [
     ...(!spec.detailOnly ? [{ methods: ['GET', 'POST'], path }] : []),
     { methods: spec.methods ?? ['GET', 'PATCH', 'PUT', 'DELETE'], path: `${path}/:id` },
@@ -157,6 +174,13 @@ export const SIMULATION_ROUTES = [
     methods: ['GET'],
     path: 'enrollments/:id/courses/:courseId/entries/:entryId/scorm/tracking/sequence',
   },
+  { methods: ['GET'], path: 'dashboard/client/overview' },
+  { methods: ['GET'], path: 'dashboard/client/students' },
+  { methods: ['GET'], path: 'platform/dashboard/overview' },
+  { methods: ['GET'], path: 'platform/dashboard/formations' },
+  { methods: ['GET'], path: 'platform/dashboard/formations/:id/enrollments' },
+  { methods: ['GET'], path: '{platform/,}enrollments/:id/history' },
+  { methods: ['GET'], path: '{platform/,}enrollments/:id/history/attempts/:attemptId' },
 ] as const;
 
 export const SIMULATION_LIMITATIONS = [
@@ -477,6 +501,40 @@ function updateEntity(
   }
   if (resource === 'users') {
     if (!Object.values(Role).includes(result.role as Role)) invalid('Rôle inconnu.');
+    if (result.role === Role.EDITOR || result.role === Role.SUPER_ADMIN) {
+      result.client_id = null;
+    } else if (data.role === Role.CLIENT_MANAGER || data.role === Role.TRAINEE) {
+      if (payload.client_id != null && payload.client_id !== SIMULATION_IDS.client) {
+        invalid('Le client doit correspondre au compte simulé.');
+      }
+      result.client_id = SIMULATION_IDS.client;
+    } else if (payload.client_id != null) {
+      const client = data.clients.find(
+        (candidate) =>
+          candidate.id === payload.client_id && candidate.tenant_id === result.tenant_id,
+      );
+      if (!client) invalid('Client introuvable dans le tenant simulé.');
+      result.client_id = client.id;
+    } else if (result.role === Role.CLIENT_MANAGER && payload.client_name != null) {
+      const name = text(safeValue(payload.client_name)).trim();
+      if (!name || name.length > 255) invalid('Nom du client invalide.');
+      const slug = simulationClientSlug(name);
+      let client = data.clients.find(
+        (candidate) => candidate.slug === slug && candidate.tenant_id === result.tenant_id,
+      );
+      if (!client) {
+        client = {
+          id: nextId(data),
+          tenant_id: text(result.tenant_id),
+          name,
+          slug,
+          is_active: true,
+          created_at: SIMULATION_DATE,
+        };
+        data.clients.push(client);
+      }
+      result.client_id = client.id;
+    }
     result.full_name = `${text(result.first_name)} ${text(result.last_name)}`.trim();
     if ('profile_photo_media_id' in patch)
       result.profile_photo = patch.profile_photo_media_id
@@ -715,6 +773,7 @@ function listResponse(rows: readonly JsonObject[], params: URLSearchParams): Sim
     competency_ids: 'competency_id',
     competency_id: 'competency_id',
     tenant_id: 'tenant_id',
+    client_id: 'client_id',
   };
   for (const [param, field] of Object.entries(filters)) {
     const value = params.get(param);
@@ -1343,6 +1402,340 @@ function refreshEnrollment(data: SimulationData, id: string): void {
   row.status = counts.total > 0 && counts.completed === counts.total ? 'completed' : 'in_progress';
   row.completed_at = row.status === 'completed' ? SIMULATION_DATE : null;
   row.updated_at = SIMULATION_DATE;
+}
+
+/** Never trusts an unknown status string: unmatched values are silently dropped, not thrown. */
+function statusCounts(
+  rows: readonly { status: string }[],
+): Record<'completed' | 'in_progress' | 'not_started' | 'failed' | 'expired', number> {
+  const counts = { completed: 0, in_progress: 0, not_started: 0, failed: 0, expired: 0 };
+  for (const row of rows) if (row.status in counts) counts[row.status as keyof typeof counts]++;
+  return counts;
+}
+
+function trackedSeconds(data: SimulationData, keyPrefix: string): number {
+  let total = 0;
+  for (const [key, session] of data.timeSessions)
+    if (key.startsWith(keyPrefix)) total += number(session.time_spent);
+  return total;
+}
+
+function courseStatus(
+  counts: ApiProgressCounts,
+): 'completed' | 'in_progress' | 'not_started' | 'no_content' {
+  if (counts.total === 0) return 'no_content';
+  if (counts.completed === counts.total) return 'completed';
+  return counts.completed > 0 ? 'in_progress' : 'not_started';
+}
+
+function moduleDisplayStatus(module: ApiPortalSummaryModule): AttemptNodeStatus {
+  if (module.progress.total > 0 && module.progress.completed === module.progress.total)
+    return 'completed';
+  return module.readable ? (module.progress.completed > 0 ? 'in_progress' : 'available') : 'locked';
+}
+
+function evaluationDisplayStatus(evaluation: ApiPortalEvalSummary): AttemptNodeStatus {
+  if (evaluation.completed) return evaluation.current_result === 'passed' ? 'completed' : 'failed';
+  return evaluation.readable ? 'available' : 'locked';
+}
+
+/**
+ * A single synthetic segment per enrollment: this engine never models retries,
+ * carried-over attempts or interruptions, unlike the real attempt history.
+ */
+function attemptNodes(data: SimulationData, enrollmentId: string): EnrollmentAttemptNode[] {
+  const overview = summary(data, enrollmentId);
+  const modules: EnrollmentAttemptNode[] = overview.modules.map((module, index) => ({
+    type: 'module',
+    key: `module:${module.id}`,
+    title: module.name,
+    position: index + 1,
+    display_status: moduleDisplayStatus(module),
+    blocked_by: null,
+    carried_over_from: null,
+    // Time is only tracked per competency here, so a module's courses share its total.
+    tracked_time_seconds: trackedSeconds(data, `${enrollmentId}:${module.id}:`),
+    courses: module.courses.map((course, courseIndex): EnrollmentAttemptCourse => ({
+      id: course.id,
+      title: course.name ?? '',
+      position: courseIndex + 1,
+      status: courseStatus(course.progress),
+      progress: { total: course.progress.total, completed: course.progress.completed },
+      tracked_time_seconds: trackedSeconds(data, `${enrollmentId}:${module.id}:`),
+    })),
+    result: null,
+    score: null,
+    round_number: null,
+    attempts_used: null,
+    max_attempts: null,
+    started_at: module.current_execution?.started_at ?? null,
+    completed_at: module.current_execution?.completed_at ?? null,
+    elapsed_seconds: null,
+  }));
+  const evaluations: EnrollmentAttemptNode[] = overview.final_evaluations.map(
+    (evaluation, index) => ({
+      type: 'evaluation',
+      key: `evaluation:${evaluation.id}`,
+      title: evaluation.title,
+      position: modules.length + index + 1,
+      display_status: evaluationDisplayStatus(evaluation),
+      blocked_by: null,
+      carried_over_from: null,
+      // Only tracked module time counts here, matching the intended default (no evaluation open time).
+      tracked_time_seconds: 0,
+      courses: [],
+      result: evaluation.completed
+        ? evaluation.current_result === 'passed'
+          ? 'passed'
+          : 'failed'
+        : null,
+      score: evaluation.score,
+      round_number: evaluation.completed ? 1 : null,
+      attempts_used: data.attempts.filter(
+        (attempt) =>
+          attempt.enrollment_id === enrollmentId && attempt.evaluation_id === evaluation.id,
+      ).length,
+      max_attempts: evaluation.max_attempts,
+      started_at: evaluation.current_execution?.started_at ?? null,
+      completed_at: evaluation.current_execution?.completed_at ?? null,
+      elapsed_seconds: null,
+    }),
+  );
+  return [...modules, ...evaluations];
+}
+
+/** This engine never fails or expires an enrollment, so only these two statuses are ever emitted. */
+function attemptSummaries(data: SimulationData, enrollmentId: string): EnrollmentAttemptSummary[] {
+  const row = enrollment(data, enrollmentId);
+  if (!row.started_at) return [];
+  return [
+    {
+      // Hyphen-only: the real hook's isValidId (^[a-zA-Z0-9_-]+$) would silently skip a colon-joined id.
+      id: `${enrollmentId}-attempt-1`,
+      attempt_number: 1,
+      status: row.status === 'completed' ? 'completed' : 'in_progress',
+      available_at: row.enrolled_at,
+      started_at: row.started_at,
+      ended_at: row.completed_at,
+      interruption_reason: null,
+      time_spent_seconds: trackedSeconds(data, `${enrollmentId}:`),
+    },
+  ];
+}
+
+function clientOverview(data: SimulationData): ClientDashboardOverview {
+  const rows = data.enrollments.filter((row) => row.assigned_by === SIMULATION_IDS.manager);
+  const counts = statusCounts(rows);
+  return {
+    learning_paths: new Set(rows.map((row) => row.learning_path_id)).size,
+    enrollments: { ...counts, total: rows.length },
+  };
+}
+
+function clientStudent(
+  data: SimulationData,
+  row: SimulationData['enrollments'][number],
+): ApiClientDashboardStudent {
+  const learner = data.resources.users.find((user) => user.id === row.learner_id);
+  const path = data.resources['learning-paths'].find((item) => item.id === row.learning_path_id);
+  return {
+    id: row.id,
+    learner: {
+      id: row.learner_id,
+      first_name: shortText(learner?.first_name, 255),
+      last_name: shortText(learner?.last_name, 255),
+      email: shortText(learner?.email, 255),
+    },
+    learning_path: { id: row.learning_path_id, name: text(path?.name) },
+    status: row.status,
+    progress_percent: summary(data, row.id).progress.percent,
+    enrolled_at: row.enrolled_at,
+    started_at: row.started_at,
+    completed_at: row.completed_at,
+    ended_at: row.completed_at ?? row.failed_at,
+    expires_at: null,
+  };
+}
+
+function clientStudentsPage(data: SimulationData, params: URLSearchParams): SimulationResponse {
+  const rows = data.enrollments.filter((row) => row.assigned_by === SIMULATION_IDS.manager);
+  const perPage = Math.max(1, Math.min(100, Number(params.get('per_page')) || 20));
+  const page = Math.max(1, Number(params.get('page')) || 1);
+  return response({
+    data: rows.slice((page - 1) * perPage, page * perPage).map((row) => clientStudent(data, row)),
+    meta: { total: rows.length, page, per_page: perPage },
+  });
+}
+
+function editorOverview(data: SimulationData): ApiDashboardOverview {
+  const paths = data.resources['learning-paths'];
+  const now = Date.parse(SIMULATION_DATE);
+  const published = paths.filter(
+    (path) => typeof path.published_at === 'string' && Date.parse(path.published_at) <= now,
+  ).length;
+  return {
+    catalog: { total: paths.length, published, unpublished: paths.length - published },
+    students: {
+      unique_students: new Set(data.enrollments.map((row) => row.learner_id)).size,
+      total_enrollments: data.enrollments.length,
+      status_counts: statusCounts(data.enrollments),
+    },
+  };
+}
+
+function formationRow(data: SimulationData, path: SimulationEntity): ApiDashboardFormation {
+  const rows = data.enrollments.filter((row) => row.learning_path_id === path.id);
+  const counts = statusCounts(rows);
+  return {
+    id: path.id,
+    name: text(path.name),
+    is_published:
+      typeof path.published_at === 'string' &&
+      Date.parse(path.published_at) <= Date.parse(SIMULATION_DATE),
+    total_enrollments: rows.length,
+    completion_rate: rows.length ? Math.round((100 * counts.completed) / rows.length) : 0,
+    status_counts: counts,
+  };
+}
+
+function formationsPage(data: SimulationData, params: URLSearchParams): SimulationResponse {
+  const rows = data.resources['learning-paths'].map((path) => formationRow(data, path));
+  const q = params.get('q')?.toLocaleLowerCase();
+  const filtered = q ? rows.filter((row) => row.name.toLocaleLowerCase().includes(q)) : rows;
+  const sortBy = params.get('sort_by');
+  const sorted = [...filtered].sort((a, b) =>
+    sortBy === 'completion'
+      ? a.completion_rate - b.completion_rate
+      : sortBy === 'failed'
+        ? (b.status_counts.failed ?? 0) - (a.status_counts.failed ?? 0)
+        : b.total_enrollments - a.total_enrollments,
+  );
+  const perPage = Math.max(1, Number(params.get('per_page')) || 20);
+  const page = Math.max(1, Number(params.get('page')) || 1);
+  return response({
+    data: sorted.slice((page - 1) * perPage, page * perPage),
+    meta: { total: sorted.length, page, per_page: perPage },
+  });
+}
+
+function dashboardEnrollmentRow(
+  data: SimulationData,
+  row: SimulationData['enrollments'][number],
+): ApiDashboardEnrollment {
+  const learner = data.resources.users.find((user) => user.id === row.learner_id);
+  return {
+    id: row.id,
+    learner: {
+      id: row.learner_id,
+      first_name: shortText(learner?.first_name, 255),
+      last_name: shortText(learner?.last_name, 255),
+      email: shortText(learner?.email, 255),
+    },
+    status: row.status,
+    enrolled_at: row.enrolled_at,
+    started_at: row.started_at,
+    ended_at: row.completed_at ?? row.failed_at,
+    expires_at: null,
+    attempts_count: data.attempts.filter((attempt) => attempt.enrollment_id === row.id).length,
+    time_spent_seconds: trackedSeconds(data, `${row.id}:`),
+  };
+}
+
+function formationEnrollmentsPage(
+  data: SimulationData,
+  formationId: string,
+  params: URLSearchParams,
+): SimulationResponse {
+  const path = find(data, 'learning-paths', formationId);
+  const base = data.enrollments.filter((row) => row.learning_path_id === path.id);
+  const summaryCounts = statusCounts(base);
+  const status = params.get('status');
+  const q = params.get('q')?.toLocaleLowerCase();
+  const rows = base
+    .filter((row) => !status || row.status === status)
+    .filter((row) => {
+      if (!q) return true;
+      const learner = data.resources.users.find((user) => user.id === row.learner_id);
+      return [learner?.first_name, learner?.last_name, learner?.email].some((value) =>
+        text(value).toLocaleLowerCase().includes(q),
+      );
+    });
+  const perPage = Math.max(1, Number(params.get('per_page')) || 20);
+  const page = Math.max(1, Number(params.get('page')) || 1);
+  return response({
+    data: rows
+      .slice((page - 1) * perPage, page * perPage)
+      .map((row) => dashboardEnrollmentRow(data, row)),
+    meta: {
+      total: rows.length,
+      page,
+      per_page: perPage,
+      summary: { total: base.length, status_counts: summaryCounts },
+      formation: { duration_minutes: typeof path.duration === 'number' ? path.duration : null },
+    },
+  });
+}
+
+function handleDashboard(
+  data: SimulationData,
+  path: string,
+  method: Method,
+  params: URLSearchParams,
+): SimulationResponse | undefined {
+  if (path === 'dashboard/client/overview') {
+    if (method !== 'GET') return unsupported(method, path);
+    return response({ data: clientOverview(data) });
+  }
+  if (path === 'dashboard/client/students') {
+    if (method !== 'GET') return unsupported(method, path);
+    return clientStudentsPage(data, params);
+  }
+  if (path === 'platform/dashboard/overview') {
+    if (method !== 'GET') return unsupported(method, path);
+    return response({ data: editorOverview(data) });
+  }
+  if (path === 'platform/dashboard/formations') {
+    if (method !== 'GET') return unsupported(method, path);
+    return formationsPage(data, params);
+  }
+  const enrollmentsMatch = /^platform\/dashboard\/formations\/([^/]+)\/enrollments$/.exec(path);
+  if (enrollmentsMatch) {
+    if (method !== 'GET') return unsupported(method, path);
+    return formationEnrollmentsPage(data, enrollmentsMatch[1], params);
+  }
+  return undefined;
+}
+
+function handleEnrollmentHistory(
+  data: SimulationData,
+  path: string,
+  method: Method,
+  params: URLSearchParams,
+): SimulationResponse | undefined {
+  const match = /^(?:platform\/)?enrollments\/([^/]+)\/history(?:\/attempts\/([^/]+))?$/.exec(path);
+  if (!match) return undefined;
+  if (method !== 'GET') return unsupported(method, path);
+  const row = enrollment(data, match[1]);
+  const attempts = attemptSummaries(data, row.id);
+  if (match[2]) {
+    const attempt = attempts.find((item) => item.id === match[2]);
+    if (!attempt) fail(404, 'Simulation : tentative introuvable.', 'SIMULATION_NOT_FOUND');
+    return response({ data: { attempt, nodes: attemptNodes(data, row.id) } });
+  }
+  const perPage = Math.max(1, Number(params.get('per_page')) || 20);
+  const page = Math.max(1, Number(params.get('page')) || 1);
+  return response({
+    data: {
+      enrollment: {
+        id: row.id,
+        learner_id: row.learner_id,
+        learning_path_id: row.learning_path_id,
+        status: row.status,
+      },
+      attempts: attempts.slice((page - 1) * perPage, page * perPage),
+    },
+    meta: { total: attempts.length, page, per_page: perPage },
+  });
 }
 
 function validateEntry(
@@ -2255,6 +2648,27 @@ async function dispatchSimulationRequest(
   if (!['GET', 'POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) return unsupported(method, path);
   const params = parsed.searchParams;
 
+  if (path === 'platform/clients' && method === 'GET') {
+    const tenantId =
+      data.role === Role.SUPER_ADMIN
+        ? (params.get('tenant_id') ?? SIMULATION_IDS.tenant)
+        : SIMULATION_IDS.tenant;
+    const clients = data.clients.filter(
+      (client) =>
+        client.tenant_id === tenantId &&
+        ([Role.SUPER_ADMIN, Role.EDITOR].includes(data.role) ||
+          client.id === SIMULATION_IDS.client),
+    );
+    const name = params.get('name');
+    if (name !== null && (!name.trim() || name.length > 255)) invalid('Nom du client invalide.');
+    return response({
+      data: clients,
+      ...(name !== null
+        ? { meta: { name_slug: simulationClientSlug(text(safeValue(name))) } }
+        : {}),
+    });
+  }
+
   const previewLaunch =
     /^enrollments\/([^/]+)\/courses\/([^/]+)\/entries\/([^/]+)\/scorm\/launch$/.exec(path);
   if (training && previewLaunch && method === 'GET') {
@@ -2306,6 +2720,10 @@ async function dispatchSimulationRequest(
   if (notes) return notes;
   const scorm = handleScorm(data, path, method, payload, params);
   if (scorm) return scorm;
+  const dashboard = handleDashboard(data, path, method, params);
+  if (dashboard) return dashboard;
+  const enrollmentHistory = handleEnrollmentHistory(data, path, method, params);
+  if (enrollmentHistory) return enrollmentHistory;
 
   if (/^carts(?:\/|$)/.test(path)) return handleCart(data, path, method, payload);
   if (/^orders(?:\/|$)/.test(path)) return handleOrders(data, path, method, payload, params);

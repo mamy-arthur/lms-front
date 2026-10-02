@@ -19,6 +19,8 @@ export type ProgressionRuleDialogState = {
   sourceNodeType: 'module' | 'evaluation';
   initialFormData?: ProgressionRuleFormData;
   hasExistingRule: boolean;
+  /** Consultation only — the learning path is locked */
+  readOnly?: boolean;
 };
 
 export type EditEmailDialogState = {
@@ -36,6 +38,8 @@ export type EditEvalDialogState = {
   evaluationId?: string;
   config: EvaluationConfig;
   hasFinalEval: boolean;
+  /** Consultation only — the learning path is locked */
+  readOnly?: boolean;
 };
 
 export type EditAttestationDialogState = {
@@ -167,6 +171,7 @@ export function FlowDialogs({
         initialFormData={progressionRuleDialog?.initialFormData}
         nodeOptions={retakeNodeOptions}
         onSave={onProgressionRuleSave}
+        readOnly={progressionRuleDialog?.readOnly ?? false}
       />
 
       {/* ── Edit-node dialogs ── */}
@@ -202,6 +207,7 @@ export function FlowDialogs({
         allModuleIds={allModuleIds}
         moduleNameById={moduleNameById}
         onConfirm={onEditEvalSave}
+        readOnly={editEvalDialog?.readOnly ?? false}
       />
       <SelectAttestationDialog
         key={editAttestationDialog?.nodeId}

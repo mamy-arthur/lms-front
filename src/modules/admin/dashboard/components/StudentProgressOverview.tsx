@@ -1,13 +1,15 @@
 import { GraduationCap, Users } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { demoProgress } from '../data/studentProgressDemo';
+import { dashboardEnrollmentStatuses } from '@/modules/shared/lib/dashboardEnrollmentStatuses';
+import type { DashboardOverview } from '../types';
 import { AverageProgressIndicator } from './AverageProgressIndicator';
 
-export function StudentProgressOverview() {
-  const totalEnrollments = demoProgress.enrollments.reduce(
-    (total, status) => total + status.count,
-    0,
-  );
+export function StudentProgressOverview({ students }: { students: DashboardOverview['students'] }) {
+  const { totalEnrollments } = students;
+  const enrollments = dashboardEnrollmentStatuses.map((status) => ({
+    ...status,
+    count: students.statusCounts[status.key],
+  }));
 
   return (
     <Card aria-labelledby="student-progress-title" className="rounded-sm">
@@ -27,10 +29,13 @@ export function StudentProgressOverview() {
       <CardContent className="space-y-5">
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="space-y-4 rounded-sm bg-(--color-primary) p-5 text-primary-foreground">
-            <p className="text-sm font-medium">Progression moyenne</p>
-            <AverageProgressIndicator value={demoProgress.averageProgress} />
+            <p className="text-sm font-medium">Taux de complétion</p>
+            <AverageProgressIndicator
+              value={students.completionRate}
+              ariaLabel="Taux de complétion global"
+            />
             <p className="text-xs text-primary-foreground/90">
-              Moyenne de l’avancement de chaque étudiant sur ses formations.
+              Part des inscriptions terminées avec succès, réinscriptions incluses.
             </p>
           </div>
 
@@ -39,11 +44,11 @@ export function StudentProgressOverview() {
               <h3 className="text-sm font-semibold">État des inscriptions</h3>
               <span className="inline-flex items-center gap-2 text-xs text-muted-foreground">
                 <Users className="size-4" aria-hidden="true" />
-                {demoProgress.students} étudiants · {totalEnrollments} inscriptions
+                {students.uniqueStudents} étudiants · {totalEnrollments} inscriptions
               </span>
             </div>
             <div className="flex h-1 gap-1 overflow-hidden rounded-full" aria-hidden="true">
-              {demoProgress.enrollments.map((status) => (
+              {enrollments.map((status) => (
                 <div
                   key={status.label}
                   className={status.color}
@@ -54,7 +59,7 @@ export function StudentProgressOverview() {
               ))}
             </div>
             <dl className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              {demoProgress.enrollments.map((status) => (
+              {enrollments.map((status) => (
                 <div
                   key={status.label}
                   className="relative isolate space-y-2 overflow-hidden rounded-sm border border-gray-100 p-4"
@@ -78,8 +83,8 @@ export function StudentProgressOverview() {
               ))}
             </dl>
             <p className="text-xs text-muted-foreground">
-              Un étudiant peut être inscrit à plusieurs formations. Les statuts comptent les
-              inscriptions, pas les étudiants.
+              Un étudiant peut avoir plusieurs inscriptions, y compris à une même formation. Les
+              statuts comptent toutes les inscriptions, pas les étudiants uniques.
             </p>
           </div>
         </div>

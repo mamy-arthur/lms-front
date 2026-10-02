@@ -1,6 +1,12 @@
 import { PlatformLoginForm } from '@/modules/auth/components/PlatformLoginForm';
 
-export default function PlatformLoginPage() {
+interface Props {
+  searchParams: Promise<{ reset?: string }>;
+}
+
+export default async function PlatformLoginPage({ searchParams }: Props) {
+  const { reset } = await searchParams;
+
   return (
     <section className="flex min-h-screen items-center justify-center">
       <div className="w-full max-w-md shadow-sm rounded-sm p-8 mb-8">
@@ -13,7 +19,7 @@ export default function PlatformLoginPage() {
             Connectez-vous à votre espace d'Administration.
           </p>
         </div>
-        <PlatformLoginForm />
+        <PlatformLoginForm resetSuccess={reset === '1'} />
       </div>
     </section>
   );

@@ -93,7 +93,11 @@ export const httpClient = async (
   return { status: res.status, headers: res.headers, body, json };
 };
 
-export async function apiGet<T>(path: string, params?: Record<string, unknown>): Promise<T> {
+export async function apiGet<T>(
+  path: string,
+  params?: Record<string, unknown>,
+  options: Pick<HttpOptions, 'signal'> = {},
+): Promise<T> {
   let url = `/api/v1/${path.replace(/^\/+/, '')}`;
   if (params) {
     const qs = Object.entries(params)
@@ -102,7 +106,7 @@ export async function apiGet<T>(path: string, params?: Record<string, unknown>):
       .join('&');
     if (qs) url += `?${qs}`;
   }
-  const { json } = await httpClient(url);
+  const { json } = await httpClient(url, options);
   return json as T;
 }
 

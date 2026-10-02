@@ -6,14 +6,18 @@
  *   URGENT_DAYS   : nombre de jours avant échéance pour le badge orange
  */
 
+import type { EnrollmentStatus } from '@/shared/types/enrollment.types';
+
 const WARNING_DAYS = 7; // jaune  : entre URGENT_DAYS+1 et WARNING_DAYS jours
 const URGENT_DAYS = 3; //  orange : entre 1 et URGENT_DAYS jours restants
 
 interface DeadlineBadgeProps {
   /** Date d'échéance au format ISO YYYY-MM-DD. Si absent, rien n'est rendu. */
   deadline?: string;
-  /** Progression de l'étudiant (0-100). À 100 %, aucun badge n'est affiché. */
+  /** Progression de l'étudiant, utilisée seulement si le statut réel n'est pas fourni. */
   progress: number;
+  /** Le statut est affiché séparément : aucune alerte d'échéance pour une inscription terminée. */
+  status?: EnrollmentStatus;
 }
 
 function diffDays(from: Date, to: Date): number {
@@ -24,14 +28,14 @@ function diffDays(from: Date, to: Date): number {
   return Math.round((toMidnight.getTime() - fromMidnight.getTime()) / msPerDay);
 }
 
-export function DeadlineBadge({ deadline, progress }: DeadlineBadgeProps) {
-  if (!deadline) return null;
+export function DeadlineBadge({ deadline, progress, status }: DeadlineBadgeProps) {
+  if (!deadline || status === 'completed') return null;
 
   const today = new Date();
   const dueDate = new Date(deadline + 'T00:00:00');
   const days = diffDays(today, dueDate);
 
-  if (progress >= 100) {
+  if (status === undefined && progress >= 100) {
     return (
       <span className="inline-flex items-center rounded-full bg-green-50 px-2 py-0.5 text-[11px] font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
         Terminé

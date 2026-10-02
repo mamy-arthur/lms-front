@@ -70,6 +70,8 @@ type Props = {
   allModuleIds: string[];
   moduleNameById: Record<string, string>;
   onConfirm: (config: EvaluationConfig) => void;
+  /** Consultation only — used when the learning path is locked */
+  readOnly?: boolean;
 };
 
 export function AddEvaluationDialog({
@@ -85,6 +87,7 @@ export function AddEvaluationDialog({
   allModuleIds,
   moduleNameById,
   onConfirm,
+  readOnly = false,
 }: Props) {
   const [config, setConfig] = useState<EvaluationConfig>(initialConfig ?? DEFAULT_CONFIG);
   const [bankSearch, setBankSearch] = useState('');
@@ -166,7 +169,7 @@ export function AddEvaluationDialog({
 
   // When pool data updates, auto-deselect any bank that no longer has available questions
   useEffect(() => {
-    if (!poolChecked) return;
+    if (!poolChecked || readOnly) return;
     const availableIds = new Set(
       Object.entries(poolData.by_bank)
         .filter(([, counts]) => counts.available > 0)
@@ -189,12 +192,16 @@ export function AddEvaluationDialog({
     const bySearch = questionBanks.filter((b) =>
       b.name.toLowerCase().includes(bankSearch.toLowerCase()),
     );
+    // Consultation : seules les banques rattachées à l'évaluation sont pertinentes
+    if (readOnly) {
+      return bySearch.filter((b) => config.questionBankIds.includes(b.id));
+    }
     // Once pool data arrives, only surface banks with at least one available question
     if (poolChecked) {
       return bySearch.filter((b) => (bankCounts[b.id]?.available ?? 0) > 0);
     }
     return bySearch;
-  }, [questionBanks, bankSearch, poolChecked, bankCounts]);
+  }, [questionBanks, bankSearch, poolChecked, bankCounts, readOnly, config.questionBankIds]);
 
   const selectedAvailable = config.questionBankIds.reduce(
     (sum, id) => sum + (bankCounts[id]?.available ?? 0),
@@ -202,7 +209,13 @@ export function AddEvaluationDialog({
   );
   // Le pool doit couvrir le nombre de questions configuré, pas seulement être non-nul
   const poolInsufficient =
-    config.questionBankIds.length > 0 && poolChecked && selectedAvailable < config.questionCount;
+    !readOnly &&
+    config.questionBankIds.length > 0 &&
+    poolChecked &&
+    selectedAvailable < config.questionCount;
+
+  // Le type d'évaluation est figé dès qu'elle existe : le modifier changerait sa portée
+  const stepTypeLocked = readOnly || initialConfig !== undefined;
 
   const canSubmit =
     config.title.trim() !== '' &&
@@ -220,7 +233,9 @@ export function AddEvaluationDialog({
               : 'Configurer l’évaluation de tous les modules du nœud'}
           </DialogTitle>
           <DialogDescription>
-            Définissez les paramètres de l'évaluation à ajouter au parcours
+            {readOnly
+              ? 'Parcours verrouillé : l’évaluation est consultable mais ne peut plus être modifiée.'
+              : "Définissez les paramètres de l'évaluation à ajouter au parcours"}
           </DialogDescription>
         </DialogHeader>
         <Separator />
@@ -234,6 +249,7 @@ export function AddEvaluationDialog({
               id="eval-title"
               placeholder="Ex. : Évaluation intermédiaire — Module 1"
               value={config.title}
+              disabled={readOnly}
               onChange={(e) => set('title', e.target.value)}
             />
           </div>
@@ -244,23 +260,26 @@ export function AddEvaluationDialog({
             <div className="flex gap-2">
               <button
                 type="button"
-                disabled={hasPartialForLastModule}
+                disabled={stepTypeLocked || hasPartialForLastModule}
                 onClick={() =>
-                  !hasPartialForLastModule && set('stepType', 'evaluation-intermediate')
+                  !stepTypeLocked &&
+                  !hasPartialForLastModule &&
+                  set('stepType', 'evaluation-intermediate')
                 }
                 className={cn(
                   'flex flex-1 items-center gap-2.5 rounded-lg border p-3 text-left transition-colors',
                   config.stepType === 'evaluation-intermediate' && !hasPartialForLastModule
                     ? 'border-orange-400 bg-orange-50 text-orange-700'
                     : 'border-border bg-card hover:bg-muted/50',
-                  hasPartialForLastModule && 'cursor-not-allowed opacity-50',
+                  (stepTypeLocked || hasPartialForLastModule) && 'cursor-not-allowed',
+                  hasPartialForLastModule && !stepTypeLocked && 'opacity-50',
                 )}
               >
                 <ClipboardCheck className="size-4 shrink-0" />
                 <div>
                   <p className="text-xs font-semibold">Intermédiaire</p>
                   <p className="mt-0.5 text-[10px] text-muted-foreground">
-                    {hasPartialForLastModule
+                    {hasPartialForLastModule && !stepTypeLocked
                       ? 'Seule une évaluation finale est disponible'
                       : 'Évaluation en cours de parcours'}
                   </p>
@@ -269,25 +288,35 @@ export function AddEvaluationDialog({
 
               <button
                 type="button"
-                disabled={hasFinalEval}
-                onClick={() => !hasFinalEval && set('stepType', 'evaluation-final')}
+                disabled={stepTypeLocked || hasFinalEval}
+                onClick={() =>
+                  !stepTypeLocked && !hasFinalEval && set('stepType', 'evaluation-final')
+                }
                 className={cn(
                   'flex flex-1 items-center gap-2.5 rounded-lg border p-3 text-left transition-colors',
                   config.stepType === 'evaluation-final'
                     ? 'border-red-400 bg-red-50 text-red-700'
                     : 'border-border bg-card hover:bg-muted/50',
-                  hasFinalEval && 'cursor-not-allowed opacity-50',
+                  (stepTypeLocked || hasFinalEval) && 'cursor-not-allowed',
+                  hasFinalEval && !stepTypeLocked && 'opacity-50',
                 )}
               >
                 <Award className="size-4 shrink-0" />
                 <div>
                   <p className="text-xs font-semibold">Finale</p>
                   <p className="mt-0.5 text-[10px] text-muted-foreground">
-                    {hasFinalEval ? 'Déjà ajoutée au parcours' : 'Évaluation de fin de parcours'}
+                    {hasFinalEval && !stepTypeLocked
+                      ? 'Déjà ajoutée au parcours'
+                      : 'Évaluation de fin de parcours'}
                   </p>
                 </div>
               </button>
             </div>
+            {stepTypeLocked && !readOnly && (
+              <p className="text-[11px] text-muted-foreground">
+                Le type d&apos;une évaluation existante ne peut pas être modifié.
+              </p>
+            )}
           </div>
 
           {/* ── Duration ── */}
@@ -337,6 +366,7 @@ export function AddEvaluationDialog({
                 id="q-count"
                 type="number"
                 min={1}
+                disabled={readOnly}
                 value={config.questionCount}
                 onChange={(e) => set('questionCount', Number(e.target.value))}
               />
@@ -347,6 +377,7 @@ export function AddEvaluationDialog({
                 id="a-count"
                 type="number"
                 min={1}
+                disabled={readOnly}
                 value={config.attemptCount}
                 onChange={(e) => set('attemptCount', Number(e.target.value))}
               />
@@ -371,6 +402,7 @@ export function AddEvaluationDialog({
               <Input
                 placeholder="Rechercher une banque…"
                 value={bankSearch}
+                disabled={readOnly}
                 onChange={(e) => setBankSearch(e.target.value)}
                 className="pl-9"
               />
@@ -380,21 +412,23 @@ export function AddEvaluationDialog({
                 <div className="flex items-center justify-center py-4">
                   <Loader2 className="size-4 animate-spin text-muted-foreground" />
                 </div>
-              ) : isErrorPool ? (
+              ) : isErrorPool && !readOnly ? (
                 <p className="py-4 text-center text-xs text-destructive">
                   Impossible de vérifier les questions disponibles. Réessayez.
                 </p>
-              ) : isLoadingPool && effectiveModuleIds.length > 0 ? (
+              ) : !readOnly && isLoadingPool && effectiveModuleIds.length > 0 ? (
                 <div className="flex items-center justify-center py-4">
                   <Loader2 className="size-4 animate-spin text-muted-foreground" />
                 </div>
               ) : filteredBanks.length === 0 ? (
                 <p className="py-4 text-center text-xs text-muted-foreground">
-                  {questionBanks.length === 0
-                    ? 'Aucune banque de questions disponible.'
-                    : poolChecked
-                      ? 'Aucune banque ne contient de questions pour les modules concernés.'
-                      : 'Aucune banque ne correspond à votre recherche.'}
+                  {readOnly
+                    ? 'Aucune banque de questions associée à cette évaluation.'
+                    : questionBanks.length === 0
+                      ? 'Aucune banque de questions disponible.'
+                      : poolChecked
+                        ? 'Aucune banque ne contient de questions pour les modules concernés.'
+                        : 'Aucune banque ne correspond à votre recherche.'}
                 </p>
               ) : (
                 filteredBanks.map((bank) => {
@@ -403,8 +437,8 @@ export function AddEvaluationDialog({
                   return (
                     <button
                       key={bank.id}
-
                       type="button"
+                      disabled={readOnly}
                       onClick={() => {
                         setConfig((c) => {
                           if (c.questionBankIds.includes(bank.id)) {
@@ -427,6 +461,7 @@ export function AddEvaluationDialog({
                         isSelected
                           ? 'border-primary/60 bg-primary/5 ring-1 ring-primary/30'
                           : 'border-border bg-card hover:border-(--color-primary)',
+                        readOnly && 'cursor-default hover:border-border',
                       )}
                     >
                       <div className="min-w-0 flex-1">
@@ -479,19 +514,21 @@ export function AddEvaluationDialog({
 
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
-            Annuler
+            {readOnly ? 'Fermer' : 'Annuler'}
           </Button>
-          <Button
-            disabled={!canSubmit}
-            onClick={() => {
-              onConfirm(config);
-              onOpenChange(false);
-            }}
-            className="bg-(--color-primary) hover:bg-(--color-primary)/80"
-          >
-            <Plus />
-            {initialConfig ? "Modifier l'évaluation" : "Ajouter l'évaluation"}
-          </Button>
+          {!readOnly && (
+            <Button
+              disabled={!canSubmit}
+              onClick={() => {
+                onConfirm(config);
+                onOpenChange(false);
+              }}
+              className="bg-(--color-primary) hover:bg-(--color-primary)/80"
+            >
+              <Plus />
+              {initialConfig ? "Modifier l'évaluation" : "Ajouter l'évaluation"}
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

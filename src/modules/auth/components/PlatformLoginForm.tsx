@@ -2,19 +2,25 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ArrowRight, Eye, EyeOff, Loader2 } from 'lucide-react';
+import Link from 'next/link';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { SessionConflictModal } from '@/modules/auth/components/SessionConflictModal';
+import { PasswordResetSuccessNotice } from '@/modules/auth/components/PasswordResetSuccessNotice';
 import { TwoFactorChallengeStep } from '@/modules/auth/components/TwoFactorChallengeStep';
 import { useLoginFlow } from '@/modules/auth/hooks/useLoginFlow';
 import { authApi } from '@/shared/api/auth.api';
 import { ROUTES } from '@/shared/constants/routes';
 import { type LoginSchema, loginSchema } from '@/shared/schemas/auth.schema';
 
-export function PlatformLoginForm() {
+interface PlatformLoginFormProps {
+  resetSuccess?: boolean;
+}
+
+export function PlatformLoginForm({ resetSuccess = false }: PlatformLoginFormProps) {
   const [showPassword, setShowPassword] = useState(false);
 
   const {
@@ -55,6 +61,8 @@ export function PlatformLoginForm() {
   return (
     <>
       <form onSubmit={form.handleSubmit(submit)} className="mt-8 space-y-5">
+        {resetSuccess && <PasswordResetSuccessNotice />}
+
         <div className="space-y-2">
           <Label htmlFor="platform-email">Email</Label>
 
@@ -62,7 +70,16 @@ export function PlatformLoginForm() {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="platform-password">Mot de passe</Label>
+          <div className="flex justify-between">
+            <Label htmlFor="platform-password">Mot de passe</Label>
+
+            <Link
+              href={ROUTES.platform.forgotPassword}
+              className="text-xs text-primary hover:underline"
+            >
+              Mot de passe oublié ?
+            </Link>
+          </div>
 
           <div className="relative">
             <Input
@@ -75,10 +92,11 @@ export function PlatformLoginForm() {
 
             <button
               type="button"
+              aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
               onClick={() => setShowPassword((v) => !v)}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
             >
-              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
           </div>
 
@@ -99,25 +117,23 @@ export function PlatformLoginForm() {
           </div>
         )}
 
-        <div className="flex w-full">
-          <Button
-            type="submit"
-            disabled={form.formState.isSubmitting}
-            className="h-10 w-full bg-(--color-primary) px-8 hover:bg-(--color-primary)/80"
-          >
-            {form.formState.isSubmitting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Connexion...
-              </>
-            ) : (
-              <>
-                Se connecter
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </>
-            )}
-          </Button>
-        </div>
+        <Button
+          type="submit"
+          disabled={form.formState.isSubmitting}
+          className="h-12 w-full bg-(--color-primary) hover:bg-(--color-primary)/80"
+        >
+          {form.formState.isSubmitting ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Connexion...
+            </>
+          ) : (
+            <>
+              Se connecter
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </>
+          )}
+        </Button>
       </form>
 
       {sessionConflict && (

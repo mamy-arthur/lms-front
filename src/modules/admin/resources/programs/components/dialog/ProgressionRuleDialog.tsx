@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/select';
 import { Plus } from 'lucide-react';
 import type { ProgressionCondition } from '@/shared/types/progression-rule.types';
+import { getRetakeTargetErrors } from '../ProgramFlow.rules';
 
 // ─── Public types ─────────────────────────────────────────────────────────────
 
@@ -58,9 +59,11 @@ type Props = {
   /** Whether a rule already exists for this edge (shows the "no rule" deactivate option) */
   hasExistingRule: boolean;
   initialFormData?: ProgressionRuleFormData;
-  /** Candidate nodes for failure-path / exhausted-path target selection */
+  /** Allowed targets through the source inclusive; all saved targets in read-only mode. */
   nodeOptions: NodeOption[];
   onSave: (data: ProgressionRuleFormData) => void;
+  /** Consultation only — used when the learning path is locked */
+  readOnly?: boolean;
 };
 
 export function ProgressionRuleDialog({
@@ -71,6 +74,7 @@ export function ProgressionRuleDialog({
   initialFormData,
   nodeOptions,
   onSave,
+  readOnly = false,
 }: Props) {
   const [form, setForm] = useState<ProgressionRuleFormData>(() => ({
     condition: defaultCondition(sourceNodeType),
@@ -118,6 +122,9 @@ export function ProgressionRuleDialog({
 
   const requiresFailureTarget = form.condition?.type === 'evaluation_passed';
   const hasMaxAttempts = form.maxAttempts !== null;
+  const targetOptions = nodeOptions.filter((node) => node.stepType !== 'email');
+  const targetErrors = getRetakeTargetErrors(form, targetOptions);
+  const hasTargetError = targetErrors.failure !== null || targetErrors.exhausted !== null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -125,7 +132,9 @@ export function ProgressionRuleDialog({
         <DialogHeader>
           <DialogTitle>Règle de progression</DialogTitle>
           <DialogDescription>
-            Définissez la condition permettant de passer à l&apos;étape suivante.
+            {readOnly
+              ? 'Parcours verrouillé : les règles sont consultables mais ne peuvent plus être modifiées.'
+              : "Définissez la condition permettant de passer à l'étape suivante."}
           </DialogDescription>
         </DialogHeader>
 
@@ -145,6 +154,7 @@ export function ProgressionRuleDialog({
                     <Switch
                       id="cond-module-any"
                       className="data-checked:bg-(--color-primary)"
+                      disabled={readOnly}
                       checked={
                         form.condition?.type === 'module_completed' &&
                         form.condition.rule_type === 'any'
@@ -162,6 +172,7 @@ export function ProgressionRuleDialog({
                     <Switch
                       id="cond-module-all"
                       className="data-checked:bg-(--color-primary)"
+                      disabled={readOnly}
                       checked={
                         form.condition?.type === 'module_completed' &&
                         form.condition.rule_type === 'all'
@@ -185,6 +196,7 @@ export function ProgressionRuleDialog({
                       <Switch
                         id="cond-eval-passed"
                         className="data-checked:bg-(--color-primary)"
+                        disabled={readOnly}
                         checked={form.condition?.type === 'evaluation_passed'}
                         onCheckedChange={(checked) => {
                           if (checked) setPassedCondition();
@@ -201,6 +213,7 @@ export function ProgressionRuleDialog({
                           type="number"
                           min={0}
                           max={100}
+                          disabled={readOnly}
                           value={form.condition.min_score_percentage}
                           onChange={(e) =>
                             setField('condition', {
@@ -224,6 +237,7 @@ export function ProgressionRuleDialog({
                     <Switch
                       id="cond-eval-completed"
                       className="data-checked:bg-(--color-primary)"
+                      disabled={readOnly}
                       checked={form.condition?.type === 'evaluation_completed'}
                       onCheckedChange={(checked) => {
                         if (checked) {
@@ -241,7 +255,7 @@ export function ProgressionRuleDialog({
                 </>
               )}
 
-              {hasExistingRule && (
+              {hasExistingRule && !readOnly && (
                 <div className="flex items-center justify-between gap-3 pt-1">
                   <Label htmlFor="cond-none" className="font-normal text-muted-foreground">
                     Aucune règle (désactiver)
@@ -273,34 +287,45 @@ export function ProgressionRuleDialog({
               <div>
                 <p className="font-semibold text-foreground">Chemin en cas d&apos;échec</p>
                 <p className="mt-0.5 text-xs text-muted-foreground">
-                  Rediriger le stagiaire vers un autre nœud si le score minimum n&apos;est pas
-                  atteint
+                  Si le score minimum n&apos;est pas atteint, revenir à une étape précédente ou
+                  retenter l&apos;évaluation courante. Aucune étape ultérieure ne peut être choisie.
                 </p>
               </div>
 
               <div className="mt-4 space-y-4">
                 {/* Failure target */}
                 <div className="flex flex-col space-y-1.5">
-                  <Label className="text-xs text-muted-foreground">
+                  <Label htmlFor="failure-target" className="text-xs text-muted-foreground">
                     Rediriger vers <span aria-hidden="true">*</span>
                   </Label>
                   <Select
-                    value={form.failureTargetNodeId ?? ''}
+                    value={targetErrors.failure ? '' : (form.failureTargetNodeId ?? '')}
                     onValueChange={(v) => setField('failureTargetNodeId', v)}
+                    disabled={readOnly}
                   >
-                    <SelectTrigger className="w-full">
+                    <SelectTrigger
+                      id="failure-target"
+                      className="w-full"
+                      aria-invalid={!readOnly && targetErrors.failure !== null}
+                      aria-describedby={
+                        !readOnly && targetErrors.failure ? 'failure-target-error' : undefined
+                      }
+                    >
                       <SelectValue placeholder="Choisir un nœud" className="w-full" />
                     </SelectTrigger>
                     <SelectContent>
-                      {nodeOptions
-                        .filter((n) => n.stepType !== 'email')
-                        .map((n) => (
-                          <SelectItem key={n.id} value={n.id}>
-                            {n.label}
-                          </SelectItem>
-                        ))}
+                      {targetOptions.map((n) => (
+                        <SelectItem key={n.id} value={n.id}>
+                          {n.label}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
+                  {!readOnly && targetErrors.failure && (
+                    <p id="failure-target-error" role="alert" className="text-sm text-destructive">
+                      {targetErrors.failure}
+                    </p>
+                  )}
                 </div>
 
                 {/* Max attempts */}
@@ -313,13 +338,19 @@ export function ProgressionRuleDialog({
                       type="number"
                       min={1}
                       placeholder="Illimité"
+                      disabled={readOnly}
                       value={form.maxAttempts ?? ''}
-                      onChange={(e) =>
-                        setField(
-                          'maxAttempts',
-                          e.target.value ? Math.max(1, Number(e.target.value)) : null,
-                        )
-                      }
+                      onChange={(e) => {
+                        const maxAttempts = e.target.value
+                          ? Math.max(1, Number(e.target.value))
+                          : null;
+                        setForm((current) => ({
+                          ...current,
+                          maxAttempts,
+                          exhaustedTargetNodeId:
+                            maxAttempts === null ? null : current.exhaustedTargetNodeId,
+                        }));
+                      }}
                       className="w-32"
                     />
                     <span className="text-xs text-muted-foreground">vide = illimité</span>
@@ -329,30 +360,45 @@ export function ProgressionRuleDialog({
                 {/* Exhausted target — only shown when maxAttempts is set */}
                 {hasMaxAttempts && (
                   <div className="flex flex-col space-y-1.5">
-                    <Label className="text-xs text-muted-foreground">
+                    <Label htmlFor="exhausted-target" className="text-xs text-muted-foreground">
                       Après épuisement des tentatives, rediriger vers
                     </Label>
                     <Select
-                      value={form.exhaustedTargetNodeId ?? '_formation_failed_'}
+                      value={
+                        targetErrors.exhausted
+                          ? ''
+                          : (form.exhaustedTargetNodeId ?? '_formation_failed_')
+                      }
                       onValueChange={(v) =>
                         setField('exhaustedTargetNodeId', v === '_formation_failed_' ? null : v)
                       }
+                      disabled={readOnly}
                     >
-                      <SelectTrigger className="w-full">
-                        <SelectValue />
+                      <SelectTrigger
+                        id="exhausted-target"
+                        className="w-full"
+                        aria-invalid={!readOnly && targetErrors.exhausted !== null}
+                        aria-describedby={
+                          !readOnly && targetErrors.exhausted ? 'exhausted-target-error' : undefined
+                        }
+                      >
+                        <SelectValue placeholder="Choisir une cible" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="_formation_failed_">Échec de la formation</SelectItem>
-                        {nodeOptions
-                          .filter((n) => n.stepType !== 'email')
-                          .map((n) => (
-                            <SelectItem key={n.id} value={n.id}>
-                              {n.label}
-                            </SelectItem>
-                          ))}
+                        {targetOptions.map((n) => (
+                          <SelectItem key={n.id} value={n.id}>
+                            {n.label}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
+                )}
+                {!readOnly && targetErrors.exhausted && (
+                  <p id="exhausted-target-error" role="alert" className="text-sm text-destructive">
+                    {targetErrors.exhausted}
+                  </p>
                 )}
               </div>
             </section>
@@ -361,19 +407,22 @@ export function ProgressionRuleDialog({
 
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
-            Annuler
+            {readOnly ? 'Fermer' : 'Annuler'}
           </Button>
-          <Button
-            onClick={() => {
-              onSave(form);
-              onOpenChange(false);
-            }}
-            disabled={requiresFailureTarget && !form.failureTargetNodeId}
-            className="bg-(--color-primary) hover:bg-(--color-primary)/50"
-          >
-            <Plus />
-            Appliquer
-          </Button>
+          {!readOnly && (
+            <Button
+              onClick={() => {
+                if (hasTargetError) return;
+                onSave(form);
+                onOpenChange(false);
+              }}
+              disabled={hasTargetError}
+              className="bg-(--color-primary) hover:bg-(--color-primary)/50"
+            >
+              <Plus />
+              Appliquer
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
