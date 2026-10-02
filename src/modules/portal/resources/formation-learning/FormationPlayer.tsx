@@ -20,7 +20,7 @@ import { portalLearningPathKeys } from '@/shared/queries/keys';
 import FormationSidebar from './components/FormationSidebar';
 import FormationContentView from './components/FormationContentView';
 import FormationMobileSidebar from './components/FormationMobileSidebar';
-// import ExecutionStatusBanner from './components/ExecutionStatusBanner';
+import ExecutionStatusBanner from './components/ExecutionStatusBanner';
 import EvaluationFailureDialog from './components/EvaluationFailureDialog';
 import { isEvaluationNavigationLocked } from './lib/evaluation-document-session';
 import type { EvaluationCompletionReason } from '@/shared/types/evaluation-attempt.types';
@@ -322,10 +322,10 @@ export default function FormationPlayer({ enrollmentId }: Props) {
             qui place la zone scrollable, de sorte que sa barre d'action reste
             visible sous le contenu au lieu d'être poussée hors du cadre. */}
         <main className="flex h-[85vh] flex-col overflow-hidden">
-          {/* <ExecutionStatusBanner
+          <ExecutionStatusBanner
             execution={formation.execution}
             requiresRepeat={activeNodeExecution?.requiredToRepeat ?? false}
-          /> */}
+          />
           <FormationContentView
             key={evaluationResultVersion}
             formation={formation}

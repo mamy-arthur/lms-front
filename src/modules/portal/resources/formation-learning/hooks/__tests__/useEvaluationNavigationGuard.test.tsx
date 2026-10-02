@@ -1,5 +1,5 @@
 import { StrictMode, useRef, useState } from 'react';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ExamFinishDialog } from '@/modules/quizzes/components/exam/ExamFinishDialog';
 import { useEvaluationNavigationGuard } from '../useEvaluationNavigationGuard';
@@ -55,13 +55,51 @@ function PortalGuard({ locked }: { locked: boolean }) {
   );
 }
 
+/** Deterministic async traversals; pushState/replaceState still update jsdom's URL/state. */
+function installHistory() {
+  const replace = window.history.replaceState.bind(window.history);
+  const entries = [{ state: window.history.state, url: window.location.href }];
+  const traversals: Array<() => void> = [];
+  let index = 0;
+  jest.spyOn(window.history, 'replaceState').mockImplementation((state, unused, url) => {
+    replace(state, unused, url);
+    entries[index] = { state, url: window.location.href };
+  });
+  jest.spyOn(window.history, 'pushState').mockImplementation((state, unused, url) => {
+    replace(state, unused, url);
+    entries.splice(index + 1, entries.length, { state, url: window.location.href });
+    index += 1;
+  });
+  jest.spyOn(window.history, 'go').mockImplementation((delta = 0) => {
+    traversals.push(() => {
+      const next = index + delta;
+      if (next < 0 || next >= entries.length || next === index) return;
+      index = next;
+      const entry = entries[index];
+      replace(entry.state, '', entry.url);
+      window.dispatchEvent(new PopStateEvent('popstate', { state: entry.state }));
+    });
+  });
+  jest.spyOn(window.history, 'back').mockImplementation(() => window.history.go(-1));
+  jest.spyOn(window.history, 'forward').mockImplementation(() => window.history.go(1));
+  return () => {
+    act(() => traversals.splice(0).forEach((traverse) => traverse()));
+  };
+}
+
 describe('Verrouillage de navigation pendant les évaluations', () => {
+  let flushHistory: () => void;
   beforeEach(() => {
     delete window.__learneoEvaluationDocument;
     window.history.replaceState({}, '', '/evaluation');
     jest.clearAllMocks();
+    flushHistory = installHistory();
   });
-  afterEach(() => {
+  afterEach(async () => {
+    cleanup();
+    await act(async () => {});
+    flushHistory();
+    window.__learneoEvaluationHistoryFence?.dispose();
     jest.restoreAllMocks();
   });
 
@@ -106,7 +144,7 @@ describe('Verrouillage de navigation pendant les évaluations', () => {
     window.removeEventListener('popstate', routerPop);
   });
 
-  it('ne duplique pas l’historique et ne navigue pas pendant le nettoyage StrictMode', () => {
+  it('ne duplique pas l’historique au remontage StrictMode et retire la barrière au démontage définitif', async () => {
     const push = jest.spyOn(window.history, 'pushState');
     const back = jest.spyOn(window.history, 'back');
     const { unmount } = render(
@@ -116,12 +154,19 @@ describe('Verrouillage de navigation pendant les évaluations', () => {
     );
     expect(push).toHaveBeenCalledTimes(1);
     expect(isEvaluationNavigationLocked()).toBe(true);
+    await act(async () => {});
+    expect(back).not.toHaveBeenCalled();
     unmount();
     expect(back).not.toHaveBeenCalled();
     expect(isEvaluationNavigationLocked()).toBe(false);
+    await act(async () => {});
+    expect(back).toHaveBeenCalledTimes(1);
+    flushHistory();
+    expect(window.history.state).toEqual({});
+    expect(window.__learneoEvaluationHistoryFence?.retired).toBe(true);
   });
 
-  it('rééquilibre uniquement les locks du document possédé et conserve beforeunload après changement d’identité', () => {
+  it('rééquilibre uniquement les locks du document possédé et conserve beforeunload après changement d’identité', async () => {
     const { unmount } = render(
       <StrictMode>
         <Guard />
@@ -134,6 +179,9 @@ describe('Verrouillage de navigation pendant les évaluations', () => {
     expect(nextDocument).not.toBe(oldDocument);
     expect(oldDocument.navigationLocks).toBe(0);
     expect(nextDocument.navigationLocks).toBe(1);
+    await act(async () => {});
+    expect(window.history.pushState).toHaveBeenCalledTimes(1);
+    expect(window.history.back).not.toHaveBeenCalled();
     const locked = new Event('beforeunload', { cancelable: true });
     window.dispatchEvent(locked);
     expect(locked.defaultPrevented).toBe(true);
@@ -143,6 +191,136 @@ describe('Verrouillage de navigation pendant les évaluations', () => {
     const unlocked = new Event('beforeunload', { cancelable: true });
     window.dispatchEvent(unlocked);
     expect(unlocked.defaultPrevented).toBe(false);
+  });
+
+  it('revient à la vraie page précédente dès le premier Retour après déverrouillage en conservant l’état du routeur', async () => {
+    const previousState = { __NA: true, __PRIVATE_NEXTJS_INTERNALS_TREE: ['previous'] };
+    const evaluationState = { __NA: true, __PRIVATE_NEXTJS_INTERNALS_TREE: ['evaluation'] };
+    const resultState = { __NA: true, __PRIVATE_NEXTJS_INTERNALS_TREE: ['result'], custom: 42 };
+    window.history.replaceState(previousState, '', '/previous');
+    window.history.pushState(evaluationState, '', '/evaluation');
+    const { rerender } = render(<Guard />);
+    const router = jest.fn();
+    window.addEventListener('popstate', router);
+    // Next.js can refresh the current entry while the fence owns it.
+    window.history.replaceState({ ...window.history.state, ...resultState }, '', '/evaluation');
+    rerender(<Guard locked={false} />);
+    await act(async () => {});
+    flushHistory();
+    expect(window.location.pathname).toBe('/evaluation');
+    expect(window.history.state).toEqual(resultState);
+    expect(router).not.toHaveBeenCalled();
+
+    window.history.back();
+    flushHistory();
+    expect(window.location.pathname).toBe('/previous');
+    expect(window.history.state).toEqual(previousState);
+    expect(router).toHaveBeenCalledTimes(1);
+    window.history.forward();
+    flushHistory();
+    expect(window.location.pathname).toBe('/evaluation');
+    expect(window.history.state).toEqual(resultState);
+    // Forward must not reactivate the duplicate entry left in the forward stack.
+    const previousEvents = router.mock.calls.length;
+    window.history.forward();
+    flushHistory();
+    flushHistory();
+    expect(window.history.state).toEqual(resultState);
+    expect(router).toHaveBeenCalledTimes(previousEvents);
+    window.history.back();
+    flushHistory();
+    expect(window.location.pathname).toBe('/previous');
+    window.removeEventListener('popstate', router);
+  });
+
+  it('attend la libération du dernier verrou avant de consommer l’entrée partagée', async () => {
+    const { rerender } = render(
+      <>
+        <Guard />
+        <Guard />
+      </>,
+    );
+    expect(window.history.pushState).toHaveBeenCalledTimes(1);
+    expect(evaluationDocument().navigationLocks).toBe(2);
+    rerender(
+      <>
+        <Guard locked={false} />
+        <Guard />
+      </>,
+    );
+    await act(async () => {});
+    expect(window.history.back).not.toHaveBeenCalled();
+    expect(evaluationDocument().navigationLocks).toBe(1);
+    rerender(
+      <>
+        <Guard locked={false} />
+        <Guard locked={false} />
+      </>,
+    );
+    await act(async () => {});
+    expect(window.history.back).toHaveBeenCalledTimes(1);
+    flushHistory();
+    expect(window.history.state).toEqual({});
+  });
+
+  it('réutilise la barrière lors d’un démontage et remontage immédiat', async () => {
+    const { unmount } = render(<Guard />);
+    unmount();
+    render(<Guard />);
+    await act(async () => {});
+    expect(window.history.pushState).toHaveBeenCalledTimes(1);
+    expect(window.history.back).not.toHaveBeenCalled();
+    expect(isEvaluationNavigationLocked()).toBe(true);
+  });
+
+  it('rétablit la barrière si un verrou est repris pendant le retour asynchrone', async () => {
+    const { rerender } = render(<Guard />);
+    rerender(<Guard locked={false} />);
+    await act(async () => {});
+    expect(window.history.back).toHaveBeenCalledTimes(1);
+    rerender(<Guard />);
+    const router = jest.fn();
+    window.addEventListener('popstate', router);
+    flushHistory();
+    expect(window.location.pathname).toBe('/evaluation');
+    expect(window.history.state.learneoEvaluationFence).toEqual(expect.any(String));
+    expect(isEvaluationNavigationLocked()).toBe(true);
+    expect(router).not.toHaveBeenCalled();
+    rerender(<Guard locked={false} />);
+    await act(async () => {});
+    flushHistory();
+    expect(window.history.back).toHaveBeenCalledTimes(2);
+    expect(window.history.state).toEqual({});
+    window.removeEventListener('popstate', router);
+  });
+
+  it('ne ramène pas sur l’évaluation lorsqu’une autre route a déjà été ouverte', async () => {
+    const { unmount } = render(<Guard />);
+    const nextState = { __NA: true, __PRIVATE_NEXTJS_INTERNALS_TREE: ['next'] };
+    window.history.pushState(nextState, '', '/next');
+    unmount();
+    await act(async () => {});
+    expect(window.history.back).not.toHaveBeenCalled();
+    expect(window.location.pathname).toBe('/next');
+    expect(window.history.state).toEqual(nextState);
+    expect(window.__learneoEvaluationHistoryFence).toBeUndefined();
+  });
+
+  it('conserve une base sûre après un retour de plusieurs entrées pendant le verrouillage', async () => {
+    window.history.replaceState({}, '', '/previous');
+    window.history.pushState({}, '', '/evaluation');
+    const { rerender } = render(<Guard />);
+    window.history.go(-2);
+    flushHistory();
+    expect(window.location.pathname).toBe('/evaluation');
+    rerender(<Guard locked={false} />);
+    await act(async () => {});
+    flushHistory();
+    expect(window.location.pathname).toBe('/evaluation');
+    expect(window.history.state).toEqual({});
+    window.history.back();
+    flushHistory();
+    expect(window.location.pathname).toBe('/previous');
   });
 
   it('ne rend pas inerte un portail déjà ouvert lors du verrouillage et n’exempte pas les dialogues extérieurs', async () => {

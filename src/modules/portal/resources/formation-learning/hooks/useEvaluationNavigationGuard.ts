@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, type RefObject } from 'react';
+import { acquireEvaluationHistoryFence } from '../lib/evaluation-navigation-fence';
 import { useEvaluationDocument } from './useEvaluationDocument';
 
 /** App Router has no beforePopState. Capture links before Next's handlers and
@@ -16,9 +17,7 @@ export function useEvaluationNavigationGuard(
     if (!locked || !root.current || !documentSession) return;
     documentSession.navigationLocks += 1;
     const container = root.current;
-    const url = window.location.href;
-    const state = { ...window.history.state, learneoEvaluationFence: true };
-    if (!window.history.state?.learneoEvaluationFence) window.history.pushState(state, '', url);
+    const releaseHistoryFence = acquireEvaluationHistoryFence();
 
     const block = (event: Event) => {
       const target = event.target;
@@ -27,10 +26,6 @@ export function useEvaluationNavigationGuard(
         event.preventDefault();
         event.stopImmediatePropagation();
       }
-    };
-    const back = (event: PopStateEvent) => {
-      event.stopImmediatePropagation();
-      window.history.pushState(state, '', url);
     };
     const unload = (event: BeforeUnloadEvent) => {
       event.preventDefault();
@@ -53,7 +48,6 @@ export function useEvaluationNavigationGuard(
     }
     document.addEventListener('click', block, true);
     document.addEventListener('auxclick', block, true);
-    window.addEventListener('popstate', back, true);
     window.addEventListener('beforeunload', unload);
     return () => {
       documentSession.navigationLocks -= 1;
@@ -62,9 +56,8 @@ export function useEvaluationNavigationGuard(
       });
       document.removeEventListener('click', block, true);
       document.removeEventListener('auxclick', block, true);
-      window.removeEventListener('popstate', back, true);
       window.removeEventListener('beforeunload', unload);
-      // Do not call history.back() here: StrictMode/HMR cleanup is not navigation.
+      releaseHistoryFence();
     };
   }, [locked, root, documentSession]);
 }
