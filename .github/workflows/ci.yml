@@ -101,6 +101,9 @@ jobs:
     needs: [lint, format, type-check, test, build]
     if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
     runs-on: ubuntu-latest
+    concurrency:
+      group: build-and-push-${{ matrix.environment }}-${{ github.ref }}
+      cancel-in-progress: true
     strategy:
       # Une configuration de production incomplète ne bloque pas le staging.
       fail-fast: false
