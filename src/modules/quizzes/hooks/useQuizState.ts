@@ -1,12 +1,23 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import type { Question } from '../types';
 import type { MatchingAnswer, MultipleChoiceAnswer, TraineeAnswer } from '../types';
+import { isQuestionAnswered } from '../utils/answer-completeness';
 
-export function useQuizState(questions: Question[]) {
+export function useQuizState(
+  questions: Question[],
+  options: {
+    initialAnswers?: Record<string, TraineeAnswer>;
+    onAnswerChange?: (id: string, answer: TraineeAnswer) => void;
+    canEdit?: () => boolean;
+  } = {},
+) {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, TraineeAnswer>>({});
+  const [answers, setAnswers] = useState<Record<string, TraineeAnswer>>(
+    options.initialAnswers ?? {},
+  );
+  const answersRef = useRef(answers);
   const [submitted, setSubmitted] = useState(false);
   const [startedAt] = useState<Date>(() => new Date());
   const [completedAt, setCompletedAt] = useState<Date | null>(null);
@@ -15,37 +26,47 @@ export function useQuizState(questions: Question[]) {
   const totalQuestions = questions.length;
   const isFirst = currentIndex === 0;
   const isLast = currentIndex === totalQuestions - 1;
-  const answeredCount = Object.keys(answers).filter((id) => {
-    const a = answers[id];
-    if (a === null || a === undefined) return false;
-    if (a instanceof Set) return a.size > 0;
-    if (typeof a === 'object') return Object.keys(a).length > 0;
-    return true;
-  }).length;
+  const answeredCount = questions.filter((question) =>
+    isQuestionAnswered(question, answers[question.id]),
+  ).length;
 
-  const setAnswer = useCallback((questionId: string, answer: TraineeAnswer) => {
-    setAnswers((prev) => ({ ...prev, [questionId]: answer }));
-  }, []);
+  const setAnswer = useCallback(
+    (questionId: string, answer: TraineeAnswer) => {
+      if (options.canEdit && !options.canEdit()) return;
+      answersRef.current = { ...answersRef.current, [questionId]: answer };
+      setAnswers(answersRef.current);
+      // Never perform network side effects inside a React state updater: it may
+      // be replayed by StrictMode / the compiler.
+      options.onAnswerChange?.(questionId, answer);
+    },
+    [options.canEdit, options.onAnswerChange],
+  );
 
-  const toggleMultipleChoice = useCallback((questionId: string, optionId: string) => {
-    setAnswers((prev) => {
-      const current = (prev[questionId] as MultipleChoiceAnswer | undefined) ?? new Set<string>();
+  const toggleMultipleChoice = useCallback(
+    (questionId: string, optionId: string) => {
+      const current =
+        (answersRef.current[questionId] as MultipleChoiceAnswer | undefined) ?? new Set<string>();
       const next = new Set(current);
       if (next.has(optionId)) {
         next.delete(optionId);
       } else {
         next.add(optionId);
       }
-      return { ...prev, [questionId]: next };
-    });
-  }, []);
+      setAnswer(questionId, next);
+    },
+    [setAnswer],
+  );
 
-  const setMatchingPair = useCallback((questionId: string, leftId: string, rightId: string) => {
-    setAnswers((prev) => {
-      const current = (prev[questionId] as MatchingAnswer | undefined) ?? {};
-      return { ...prev, [questionId]: { ...current, [leftId]: rightId } };
-    });
-  }, []);
+  const setMatchingPair = useCallback(
+    (questionId: string, leftId: string, rightId: string) => {
+      const current = (answersRef.current[questionId] as MatchingAnswer | undefined) ?? {};
+      const next = { ...current };
+      if (rightId === '') delete next[leftId];
+      else next[leftId] = rightId;
+      setAnswer(questionId, next);
+    },
+    [setAnswer],
+  );
 
   const goNext = useCallback(() => {
     setCurrentIndex((i) => Math.min(i + 1, totalQuestions - 1));
@@ -69,6 +90,7 @@ export function useQuizState(questions: Question[]) {
 
   const reset = useCallback(() => {
     setCurrentIndex(0);
+    answersRef.current = {};
     setAnswers({});
     setSubmitted(false);
     setCompletedAt(null);

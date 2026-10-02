@@ -10,6 +10,8 @@ export interface ApiEvaluation {
   question_bank_ids: string[];
   question_count: number;
   max_attempts: number | null;
+  /** null (or absent on older responses) = unlimited. */
+  time_limit_minutes?: number | null;
   position: number;
   location_x: number | null;
   location_y: number | null;
@@ -27,6 +29,8 @@ export interface CreateEvaluationPayload {
   question_bank_ids: string[];
   question_count: number;
   max_attempts?: number | null;
+  /** Integer minutes, 1..2147483647. Explicit null clears an existing limit. */
+  time_limit_minutes?: number | null;
   location_x?: number | null;
   location_y?: number | null;
   is_published?: boolean;

@@ -3,14 +3,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { CartQuantityControls } from '@/modules/shared/components/store/CartQuantityControls';
-import {
-  BookOpen,
-  Users,
-  CalendarDays,
-  ClipboardList,
-  ImageIcon,
-  ShoppingCart,
-} from 'lucide-react';
+import { BookOpen, Users, CalendarDays, ClipboardList, ShoppingCart } from 'lucide-react';
+import { learningPathCover } from '@/shared/lib/learning-path-cover';
 
 export interface FormationCardProps {
   id?: string;
@@ -106,13 +100,11 @@ export function FormationCard({
       }}
     >
       <div className="relative aspect-video w-full overflow-hidden bg-muted">
-        {coverImage ? (
-          <img src={coverImage} alt={title} className="h-full w-full object-cover" />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center text-muted-foreground/40">
-            <ImageIcon className="size-12" strokeWidth={1} />
-          </div>
-        )}
+        <img
+          src={learningPathCover(coverImage)}
+          alt={title}
+          className="h-full w-full object-cover"
+        />
 
         <div className="absolute bottom-2 left-2">
           {category && (

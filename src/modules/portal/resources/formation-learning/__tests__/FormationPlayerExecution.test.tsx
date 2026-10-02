@@ -22,7 +22,13 @@ jest.mock('@/shared/api/portal.api', () => ({
   portalLearningPathsApi: { summary: jest.fn(), learnerEvaluations: jest.fn() },
   portalContentEntriesApi: { get: jest.fn(), markComplete: jest.fn() },
   portalContentTimeApi: { record: jest.fn().mockResolvedValue(undefined) },
-  evaluationAttemptsApi: { start: jest.fn(), answer: jest.fn(), submit: jest.fn() },
+  evaluationAttemptsApi: {
+    session: jest.fn(),
+    get: jest.fn(),
+    start: jest.fn(),
+    answer: jest.fn(),
+    submit: jest.fn(),
+  },
 }));
 jest.mock('@/shared/api/progression.api', () => ({
   progressionApi: {
@@ -466,20 +472,32 @@ describe('Pilotage par le moteur d’exécution', () => {
     await waitFor(() => expect(mockSummary.mock.calls.length).toBeGreaterThan(callsBefore));
   });
 
-  it('signale l’échec terminal et retire toute action', async () => {
-    useSummary(
-      summary({
-        status: 'failed',
-        currentExecution: null,
-        modules: [{ ...LOOPED_MODULE, actionable: false }],
-      }),
-    );
-    setup();
+  it.each([
+    ['failed', 'Parcours en échec', 'Vous avez épuisé les tentatives autorisées'],
+    ['completed', 'Parcours terminé', 'Votre historique reste consultable'],
+    ['expired', 'Inscription expirée', 'La période d’accès est terminée'],
+  ] as const)(
+    'explique l’état terminal %s et retire toute action de progression',
+    async (status, title, reason) => {
+      useSummary(
+        summary({
+          status,
+          currentExecution: null,
+          modules: [{ ...LOOPED_MODULE, actionable: false }],
+        }),
+      );
+      setup();
 
-    await screen.findByText('Parcours en échec');
-    expect(screen.queryByRole('button', { name: /Terminer/ })).not.toBeInTheDocument();
-    expect(mockStart).not.toHaveBeenCalled();
-  });
+      const alert = await screen.findByRole('alert');
+      expect(alert).toHaveTextContent(title);
+      expect(alert).toHaveTextContent(reason);
+      expect(screen.queryByText('Nouveau passage requis')).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Terminer/ })).not.toBeInTheDocument();
+      expect(mockStart).not.toHaveBeenCalled();
+      expect(mockComplete).not.toHaveBeenCalled();
+      expect(mockRecordTime).not.toHaveBeenCalled();
+    },
+  );
 
   it.each([0, 1])(
     'annonce l’échec de la formation après actualisation, même avec %i tentative restante',
@@ -527,8 +545,13 @@ describe('Pilotage par le moteur d’exécution', () => {
 
       await user.click(dialog.getByRole('button', { name: 'Fermer' }));
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-      expect(screen.getByText('Parcours en échec')).toBeInTheDocument();
+      expect(screen.getByRole('alert')).toHaveTextContent('Parcours en échec');
+      expect(
+        screen.getByRole('button', { name: /Évaluation Finale Évaluation finale/i }),
+      ).toBeDisabled();
+      expect(screen.queryByRole('button', { name: /Soumettre|Terminer/ })).not.toBeInTheDocument();
       expect(mockStart).not.toHaveBeenCalled();
+      expect(mockComplete).not.toHaveBeenCalled();
     },
   );
 
@@ -563,10 +586,15 @@ describe('Pilotage par le moteur d’exécution', () => {
     await screen.findByText('Texte de entry-1');
   });
 
-  it('affiche l’obligation de refaire un module déjà suivi', async () => {
+  it('explique l’obligation de terminer à nouveau les contenus historiques', async () => {
     setup();
 
-    await screen.findByText('Nouveau passage requis');
+    expect(await screen.findByRole('button', { name: 'Terminer et continuer' })).toBeEnabled();
+    expect(screen.getByText('Texte de entry-1')).toBeInTheDocument();
+    expect(mockStart).toHaveBeenCalledWith(ENROLLMENT_ID, 'exec-module-1', 7);
+    expect(mockComplete).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert')).toHaveTextContent('Nouveau passage requis');
+    expect(screen.getByRole('alert')).toHaveTextContent('il doit être refait pour continuer');
     expect(screen.queryByText(/Progression du parcours en cours/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Couverture historique/)).not.toBeInTheDocument();
   });

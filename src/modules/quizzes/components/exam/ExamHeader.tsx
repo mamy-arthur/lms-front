@@ -12,6 +12,7 @@ interface ExamHeaderProps {
   totalQuestions: number;
   answeredCount: number;
   elapsedFormatted: string;
+  countdown?: string;
   /** Candidate display name — used for avatar initial */
   candidateName?: string;
   /** Short session identifier shown below the title */
@@ -25,6 +26,7 @@ export function ExamHeader({
   totalQuestions,
   answeredCount,
   elapsedFormatted,
+  countdown,
   sessionId,
   className,
 }: ExamHeaderProps) {
@@ -68,9 +70,15 @@ export function ExamHeader({
 
           {/* Timer */}
           <div className="flex flex-col items-center gap-0.5 px-5">
-            <span className="text-[11px] leading-none text-muted-foreground">Temps écoulé</span>
-            <span className="font-mono text-[14px] font-medium leading-none tabular-nums text-foreground">
-              {elapsedFormatted}
+            <span className="text-[11px] leading-none text-muted-foreground">
+              {countdown === undefined ? 'Temps écoulé' : 'Temps restant'}
+            </span>
+            <span
+              role="timer"
+              aria-label={countdown === undefined ? 'Temps écoulé' : 'Temps restant'}
+              className="font-mono text-[14px] font-medium leading-none tabular-nums text-foreground"
+            >
+              {countdown ?? elapsedFormatted}
             </span>
           </div>
 

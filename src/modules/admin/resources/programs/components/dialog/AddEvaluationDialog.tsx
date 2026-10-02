@@ -18,6 +18,11 @@ import { Label } from '@/components/ui/label';
 import { cn } from '@/shared/lib/cn';
 import { Separator } from '@/components/ui/separator';
 import { useQuizzesQuery } from '@/modules/admin/resources/quizzes/hooks/useQuizzesQuery';
+import { Switch } from '@/components/ui/switch';
+import {
+  isValidEvaluationTimeLimit,
+  MAX_EVALUATION_TIME_LIMIT_MINUTES,
+} from '../../lib/evaluation-time-limit';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -26,9 +31,7 @@ export type EvalStepType = 'evaluation-intermediate' | 'evaluation-final';
 export type EvaluationConfig = {
   stepType: EvalStepType;
   title: string;
-  durationEnabled: boolean;
-  durationHours: number;
-  durationMinutes: number;
+  timeLimitMinutes: number | null;
   questionCount: number;
   attemptCount: number;
   questionBankIds: string[];
@@ -44,9 +47,7 @@ type QuestionBank = {
 const DEFAULT_CONFIG: EvaluationConfig = {
   stepType: 'evaluation-intermediate',
   title: '',
-  durationEnabled: false,
-  durationHours: 0,
-  durationMinutes: 30,
+  timeLimitMinutes: null,
   questionCount: 20,
   attemptCount: 1,
   questionBankIds: [],
@@ -220,6 +221,7 @@ export function AddEvaluationDialog({
   const canSubmit =
     config.title.trim() !== '' &&
     config.questionBankIds.length > 0 &&
+    isValidEvaluationTimeLimit(config.timeLimitMinutes) &&
     !(hasPartialForLastModule && config.stepType === 'evaluation-intermediate') &&
     !poolInsufficient;
 
@@ -320,43 +322,47 @@ export function AddEvaluationDialog({
           </div>
 
           {/* ── Duration ── */}
-          {/*<div className="space-y-2">
+          <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label htmlFor="sw-duration">Activer la durée</Label>
+              <Label htmlFor="sw-duration">Limiter le temps de l’évaluation</Label>
               <Switch
                 id="sw-duration"
-                checked={config.durationEnabled}
-                onCheckedChange={(v) => set('durationEnabled', v)}
+                checked={config.timeLimitMinutes !== null}
+                onCheckedChange={(enabled) => set('timeLimitMinutes', enabled ? 30 : null)}
                 className="data-[state=checked]:bg-(--color-primary)"
               />
             </div>
-             {config.durationEnabled && (
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-1.5">
-                  <Input
-                    type="number"
-                    min={0}
-                    max={23}
-                    value={config.durationHours}
-                    onChange={(e) => set('durationHours', Number(e.target.value))}
-                    className="w-16 text-center"
-                  />
-                  <span className="text-xs text-muted-foreground">heures</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <Input
-                    type="number"
-                    min={0}
-                    max={59}
-                    value={config.durationMinutes}
-                    onChange={(e) => set('durationMinutes', Number(e.target.value))}
-                    className="w-16 text-center"
-                  />
-                  <span className="text-xs text-muted-foreground">minutes</span>
-                </div>
+            {config.timeLimitMinutes !== null ? (
+              <div className="space-y-2">
+                <Label htmlFor="eval-time-limit">Durée maximale (minutes)</Label>
+                <Input
+                  id="eval-time-limit"
+                  type="number"
+                  min={1}
+                  max={MAX_EVALUATION_TIME_LIMIT_MINUTES}
+                  step={1}
+                  value={Number.isFinite(config.timeLimitMinutes) ? config.timeLimitMinutes : ''}
+                  onChange={(e) => set('timeLimitMinutes', e.target.valueAsNumber)}
+                  aria-invalid={!isValidEvaluationTimeLimit(config.timeLimitMinutes)}
+                  aria-describedby="eval-time-limit-help"
+                  className="w-40"
+                />
+                <p
+                  id="eval-time-limit-help"
+                  className={cn(
+                    'text-xs',
+                    isValidEvaluationTimeLimit(config.timeLimitMinutes)
+                      ? 'text-muted-foreground'
+                      : 'text-destructive',
+                  )}
+                >
+                  Saisissez un nombre entier de minutes entre 1 et 2147483647 (ex. : 90).
+                </p>
               </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">Sans limite de temps.</p>
             )}
-          </div> */}
+          </div>
 
           {/* ── Params ── */}
           <div className="grid grid-cols-2 gap-3">

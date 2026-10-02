@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Loader2, AlertCircle, Menu } from 'lucide-react';
 import { toast } from 'sonner';
@@ -22,6 +22,8 @@ import FormationContentView from './components/FormationContentView';
 import FormationMobileSidebar from './components/FormationMobileSidebar';
 import ExecutionStatusBanner from './components/ExecutionStatusBanner';
 import EvaluationFailureDialog from './components/EvaluationFailureDialog';
+import { isEvaluationNavigationLocked } from './lib/evaluation-document-session';
+import type { EvaluationCompletionReason } from '@/shared/types/evaluation-attempt.types';
 
 interface Props {
   /** Enrollment UUID — le parcours affiché est toujours celui de son snapshot. */
@@ -37,8 +39,11 @@ export default function FormationPlayer({ enrollmentId }: Props) {
   const [activeId, setActiveId] = useState<string>('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [evaluationResultVersion, setEvaluationResultVersion] = useState(0);
   /** Échec en attente d'acquittement ; la redirection suit la confirmation. */
   const [failure, setFailure] = useState<{
+    evaluationId: string;
+    nodeExecutionId: string | null;
     score: number;
     passingScore: number;
     remainingAttempts: number | null;
@@ -48,6 +53,12 @@ export default function FormationPlayer({ enrollmentId }: Props) {
   const effectiveActiveId = activeId || (formation ? getDefaultActiveId(formation) : '');
 
   const resolved = formation ? resolveActive(formation, effectiveActiveId) : null;
+  const displayedEvaluationId = resolved?.kind === 'evaluation' ? resolved.node.id : null;
+  useEffect(() => {
+    // A background summary refresh must not replace an active/default-selected
+    // evaluation before its own poll can display the authoritative result.
+    if (!activeId && displayedEvaluationId) setActiveId(displayedEvaluationId);
+  }, [activeId, displayedEvaluationId]);
 
   const activeCourseId = resolved?.kind === 'content' ? resolved.content.courseId : null;
   const activeEntryId = resolved?.kind === 'content' ? (resolved.content.entryId ?? null) : null;
@@ -199,12 +210,13 @@ export default function FormationPlayer({ enrollmentId }: Props) {
   }
 
   function handleSelect(id: string) {
-    if (isCompleting) return;
+    if (isCompleting || isEvaluationNavigationLocked()) return;
     handleNavigate(id);
     setSidebarOpen(false);
   }
 
   function handleNavigate(id: string | null) {
+    if (isEvaluationNavigationLocked()) return;
     // A completion callback holds the previous render's formation. Consult the
     // refreshed cache so it can only navigate to a genuinely unlocked successor.
     const currentFormation = queryClient.getQueryData<Formation>(
@@ -213,7 +225,11 @@ export default function FormationPlayer({ enrollmentId }: Props) {
     if (id && currentFormation && resolveActive(currentFormation, id)) setActiveId(id);
   }
 
-  async function handleEvaluationComplete(score: number, passed: boolean) {
+  async function handleEvaluationComplete(
+    score: number,
+    passed: boolean,
+    reason?: EvaluationCompletionReason | null,
+  ) {
     if (resolved?.kind !== 'evaluation') return;
     const evaluation = resolved.node;
     // Garder le score et le seuil de l'évaluation soumise, même si le moteur
@@ -229,7 +245,7 @@ export default function FormationPlayer({ enrollmentId }: Props) {
     // On attend l'état actualisé : la cible du rebouclage est décidée par le
     // moteur, et la lire avant le rafraîchissement désignerait l'ancienne étape.
     await queryClient.invalidateQueries({ queryKey: portalLearningPathKeys.summary(enrollmentId) });
-    if (!passed) {
+    if (!passed && reason !== 'timeout' && reason !== 'page_reload') {
       const refreshed = queryClient.getQueryData<Formation>(
         portalLearningPathKeys.summary(enrollmentId),
       );
@@ -237,12 +253,29 @@ export default function FormationPlayer({ enrollmentId }: Props) {
       const failedEvaluation = refreshed?.nodes.find((node) => node.id === evaluation.id);
       setFailure({
         ...outcome,
+        evaluationId: evaluation.id,
+        nodeExecutionId:
+          executionContext?.node_execution_id ?? evaluation.execution.readExecutionId,
         remainingAttempts: failedEvaluation?.execution.round?.remaining_attempts ?? null,
       });
     }
   }
 
   function handleFailureAcknowledged() {
+    const refreshed = queryClient.getQueryData<Formation>(
+      portalLearningPathKeys.summary(enrollmentId),
+    );
+    const target = refreshed?.nodes.find((node) => node.execution.actionable);
+    if (
+      failure?.nodeExecutionId &&
+      target?.id === failure.evaluationId &&
+      target.execution.currentExecutionId &&
+      target.execution.currentExecutionId !== failure.nodeExecutionId
+    ) {
+      // This explicit acknowledgement is the legacy retry action. Remount only
+      // for a fresh server visit: resolve its splash, never replay the old start.
+      setEvaluationResultVersion((version) => version + 1);
+    }
     setFailure(null);
     // Vider la sélection manuelle rebascule sur le nœud que le moteur vient de
     // rendre actionable, sans reconstruire la règle de branchement ici.
@@ -257,7 +290,7 @@ export default function FormationPlayer({ enrollmentId }: Props) {
     );
   }
 
-  if (summaryQuery.isError) {
+  if (summaryQuery.isError && !formation) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-2 text-slate-500">
         <AlertCircle className="h-6 w-6 text-red-400" />
@@ -294,6 +327,7 @@ export default function FormationPlayer({ enrollmentId }: Props) {
             requiresRepeat={activeNodeExecution?.requiredToRepeat ?? false}
           />
           <FormationContentView
+            key={evaluationResultVersion}
             formation={formation}
             resolved={resolved}
             onNavigate={handleNavigate}

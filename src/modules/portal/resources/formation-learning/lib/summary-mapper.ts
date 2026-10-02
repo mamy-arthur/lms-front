@@ -139,6 +139,7 @@ function mapExecutionEvaluation(
     // Seuil figé par la règle snapshotée, et non une constante du frontend.
     passingScore: evaluation.condition?.min_score_percentage ?? DEFAULT_PASSING_SCORE,
     maxAttempts: evaluation.max_attempts ?? undefined,
+    timeLimitMinutes: evaluation.time_limit_minutes ?? null,
     execution: state,
   };
 }

@@ -1,19 +1,22 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { ClipboardCheck, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Quiz } from '@/modules/quizzes';
-import { evaluationAttemptsApi } from '@/shared/api/portal.api';
-import { getApiErrorMessage } from '@/shared/lib/errors';
-import type { ApiEvaluationAttempt } from '@/shared/types/evaluation-attempt.types';
-import type { TraineeAnswer } from '@/modules/quizzes/types';
 import type { Question } from '@/modules/shared/lib/question-types';
+import { Button } from '@/components/ui/button';
+import type { EvaluationCompletionReason } from '@/shared/types/evaluation-attempt.types';
 import EvaluationSplash from './EvaluationSplash';
 import EvaluationResult from './EvaluationResult';
-import type { FormationEvaluation } from '../lib/types';
-import { normalizeAttemptQuiz, toApiPayload } from '../lib/evaluation-attempt-utils';
+import type { Formation, FormationEvaluation } from '../lib/types';
+import { portalLearningPathKeys } from '@/shared/queries/keys';
+import { normalizeAttemptQuiz } from '../lib/evaluation-attempt-utils';
+import { evaluationDocument, evaluationExpired } from '../lib/evaluation-document-session';
+import { useEvaluationLifecycle } from '../hooks/useEvaluationLifecycle';
+import { useEvaluationDocument } from '../hooks/useEvaluationDocument';
+import { useEvaluationNavigationGuard } from '../hooks/useEvaluationNavigationGuard';
 import { EXECUTION_CONFLICT_MESSAGE } from '../lib/constants';
 import { adoptExecutionSnapshot } from '../lib/execution-cache';
 import {
@@ -31,7 +34,7 @@ interface Props {
   enrollmentId: string;
   /** Visite et révision à transmettre au démarrage ; `null` sans visite ouverte. */
   executionContext: ExecutionMutationContext | null;
-  onComplete: (score: number, passed: boolean) => void;
+  onComplete: (score: number, passed: boolean, reason?: EvaluationCompletionReason | null) => void;
 }
 
 export default function EvaluationRunner({
@@ -77,114 +80,142 @@ export default function EvaluationRunner({
   // that has no data yet also counts as "unknown" — the quota must never be
   // presented as available while it is still being resolved.
   const isCheckingAttempts = isEvalInfoPending && !isEvalInfoError;
+  // These optional fields also support pre-deadline cached summaries. The
+  // server attempt, not this display-only configuration, owns the running clock.
+  const configuredLimit = evaluation.timeLimitMinutes;
+  const catalogueLimit = evalInfo?.time_limit_minutes;
 
-  const [attempt, setAttempt] = useState<ApiEvaluationAttempt | null>(null);
-  const [phase, setPhase] = useState<'splash' | 'quiz' | 'result'>('splash');
-  const [isStarting, setIsStarting] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [finalScore, setFinalScore] = useState<number | null>(null);
+  const root = useRef<HTMLDivElement>(null);
+  const document = useEvaluationDocument();
+  const resultScope = JSON.stringify([document?.id, enrollmentId, evaluation.id]);
+  // Presentation only: never retain an attempt, answers or clock across visits.
+  // The lifecycle must still resolve the new visit, without starting it.
+  const [storedResult, setResult] = useState<{
+    scope: string;
+    nodeExecutionId: string | null;
+    score: number;
+    passingScore: number;
+    reason: EvaluationCompletionReason | null;
+  } | null>(null);
+  const result = storedResult?.scope === resultScope ? storedResult : null;
+  useLayoutEffect(() => {
+    setResult((previous) => (previous?.scope === resultScope ? previous : null));
+  }, [resultScope]);
+
+  const handleExecutionError = (error: unknown) => {
+    if (recoverFromConflict(error)) toast.error(EXECUTION_CONFLICT_MESSAGE);
+    if ((error as { status?: number } | null)?.status === 409)
+      invalidateLearnerEvaluation(enrollmentId);
+  };
+  const runtime = useEvaluationLifecycle({
+    enrollmentId,
+    evaluationId: evaluation.id,
+    nodeExecutionId: executionContext?.node_execution_id ?? evaluation.execution.readExecutionId,
+    onCompleted: (response) => {
+      // Pin/show results before cache updates can move the current execution.
+      const score = response.data.score ?? 0;
+      setResult({
+        scope: resultScope,
+        nodeExecutionId:
+          response.data.node_execution_id ??
+          executionContext?.node_execution_id ??
+          evaluation.execution.readExecutionId,
+        score,
+        passingScore: evaluation.passingScore,
+        reason: response.data.completion_reason ?? null,
+      });
+      onComplete(score, score >= evaluation.passingScore, response.data.completion_reason);
+      const cached = queryClient.getQueryData<Formation>(
+        portalLearningPathKeys.summary(enrollmentId),
+      );
+      if (
+        response.execution &&
+        response.execution.state_revision >= (cached?.execution.stateRevision ?? 0)
+      ) {
+        adoptExecutionSnapshot(queryClient, enrollmentId, response.execution);
+      }
+      invalidateLearnerEvaluation(enrollmentId);
+    },
+    onStartError: handleExecutionError,
+    onRuntimeError: handleExecutionError,
+  });
+  // Resolving an unopened retry must not trap the learner on a confirmed result
+  // (or block the player's manual failure dialog). Active attempts stay guarded.
+  useEvaluationNavigationGuard(runtime.navigationLocked && (!result || !!runtime.attempt), root);
+  const { attempt } = runtime;
 
   const apiQuestions = useMemo<Question[]>(
     () => (attempt ? attempt.quizzes.map(normalizeAttemptQuiz) : []),
     [attempt],
   );
 
-  async function handleRealStart() {
-    // Defensive: the splash hides the CTA while the quota is unknown, but a stale
-    // render or a keyboard activation must not slip a start request through.
-    if (isCheckingAttempts || isLockedByExecution || !executionContext) return;
-    // Garde contre le double clic : une seconde requête concurrente serait
-    // refusée et ferait clignoter le splash entre deux états contradictoires.
-    if (isStarting) return;
-
-    setIsStarting(true);
-    try {
-      const res = await evaluationAttemptsApi.start(enrollmentId, evaluation.id, executionContext);
-      setAttempt(res.data);
-      setPhase('quiz');
-    } catch (err) {
-      // Un contexte refusé n'est pas un plafond atteint : le parcours a basculé
-      // ailleurs. L'état est rechargé et l'apprenant redemande l'action.
-      if (recoverFromConflict(err)) {
-        toast.error(EXECUTION_CONFLICT_MESSAGE);
-        return;
-      }
-      // 409 = RetakeLimitReachedException. Telling the learner to "réessayer"
-      // here is wrong: no retry can ever succeed. Refresh the quota instead so
-      // the splash flips to its "tentatives épuisées" state.
-      if ((err as { status?: number }).status === 409) {
-        invalidateLearnerEvaluation(enrollmentId);
-        toast.error("Vous n'avez plus de tentative disponible pour cette évaluation.");
-      } else {
-        toast.error(
-          getApiErrorMessage(err, "Impossible de démarrer l'évaluation. Veuillez réessayer."),
-        );
-      }
-    } finally {
-      setIsStarting(false);
-    }
+  function handleRealStart() {
+    if (
+      isCheckingAttempts ||
+      isEvalInfoError ||
+      isLockedByExecution ||
+      !executionContext ||
+      quota.attemptsRemaining === 0
+    )
+      return;
+    void runtime.start(executionContext);
   }
 
-  async function handleRealSubmit(_: unknown, answers: Record<string, TraineeAnswer>) {
-    if (!attempt) return;
-    setIsSubmitting(true);
-    try {
-      await Promise.all(
-        Object.entries(answers).map(([attemptQuizId, answer]) => {
-          const quiz = attempt.quizzes.find((q) => q.id === attemptQuizId);
-          if (!quiz || answer === null || answer === undefined) return Promise.resolve();
-          return evaluationAttemptsApi.answer(
-            attempt.id,
-            attemptQuizId,
-            toApiPayload(quiz, answer),
-          );
-        }),
-      );
-      // Finalize
-      const res = await evaluationAttemptsApi.submit(attempt.id);
-      // La soumission a pu déclencher une transition : adopter sa révision évite
-      // qu'une écriture lancée avant le rechargement ne soit refusée.
-      adoptExecutionSnapshot(queryClient, enrollmentId, res.execution);
-      const score = res.data.score ?? 0;
-      setFinalScore(score);
-      setPhase('result');
-      onComplete(score, score >= evaluation.passingScore);
-      invalidateLearnerEvaluation(enrollmentId);
-    } catch (err) {
-      if (recoverFromConflict(err)) {
-        toast.error(EXECUTION_CONFLICT_MESSAGE);
-        return;
-      }
-      toast.error('Erreur lors de la soumission. Veuillez réessayer.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
-  if (phase === 'result') {
+  if (result) {
+    // Same-page /start on the completed visit replays its old result. A retry
+    // requires a DIFFERENT server visit whose session was resolved as empty.
+    const canRetry =
+      !isLockedByExecution &&
+      !!executionContext &&
+      result.nodeExecutionId !== null &&
+      executionContext.node_execution_id !== result.nodeExecutionId &&
+      runtime.phase === 'ready' &&
+      !attempt;
     return (
-      <EvaluationResult
-        score={finalScore ?? 0}
-        passingScore={evaluation.passingScore}
-        maxAttempts={quota.maxAttempts}
-        attemptsUsed={quota.attemptsUsed}
-        attemptsRemaining={quota.attemptsRemaining}
-        onRetry={
-          evaluation.execution.actionable
-            ? () => {
-                setAttempt(null);
-                setFinalScore(null);
-                setPhase('splash');
-              }
-            : undefined
-        }
-      />
+      <div ref={root}>
+        <EvaluationResult
+          score={result.score}
+          completionReason={result.reason}
+          passingScore={result.passingScore}
+          maxAttempts={quota.maxAttempts}
+          attemptsUsed={quota.attemptsUsed}
+          attemptsRemaining={quota.attemptsRemaining}
+          onRetry={canRetry ? () => setResult(null) : undefined}
+        />
+        {runtime.phase === 'recovery_error' && (
+          <div className="pb-6 text-center">
+            <p role="alert">{runtime.error}</p>
+            <Button onClick={() => void runtime.recover()}>Réessayer la vérification</Button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (runtime.phase === 'checking' || runtime.phase === 'recovery_error') {
+    return (
+      <div
+        ref={root}
+        className="mx-auto flex max-w-2xl flex-col items-center gap-4 p-10 text-center"
+      >
+        {runtime.phase === 'checking' ? (
+          <>
+            <Loader2 className="size-6 animate-spin" />
+            <p role="status">Vérification de votre session d'évaluation…</p>
+          </>
+        ) : (
+          <>
+            <p role="alert">{runtime.error}</p>
+            <Button onClick={() => void runtime.recover()}>Réessayer la vérification</Button>
+          </>
+        )}
+      </div>
     );
   }
 
   // Un passage acquis se consulte sans réafficher les consignes de démarrage.
   // L'historique seul ne suffit pas : un nœud à refaire reste en retry/locked.
-  if (evaluation.status === 'completed') {
+  if (evaluation.status === 'completed' && !attempt) {
     const score = evaluation.execution.currentScore;
 
     return (
@@ -210,43 +241,89 @@ export default function EvaluationRunner({
     );
   }
 
-  if (phase === 'quiz' && attempt) {
-    if (isSubmitting) {
-      return (
-        <div className="flex flex-col items-center gap-3 py-16">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">Envoi de vos réponses…</p>
-        </div>
-      );
-    }
+  if (attempt) {
     return (
-      <Quiz
-        key={attempt.id}
-        questions={apiQuestions}
-        title={evaluation.title}
-        description={evalDescription}
-        sessionId={attempt.id}
-        onSubmit={handleRealSubmit}
-      />
+      <div ref={root}>
+        <Quiz
+          key={attempt.id}
+          questions={apiQuestions}
+          title={evaluation.title}
+          description={evalDescription}
+          sessionId={attempt.id}
+          serverManaged
+          initialAnswers={runtime.saves?.getAnswers()}
+          onAnswerChange={runtime.saves?.change}
+          canEdit={() =>
+            !runtime.frozen &&
+            !runtime.submitting &&
+            !evaluationExpired(attempt.id) &&
+            !evaluationDocument().frozen.has(attempt.id)
+          }
+          disabled={runtime.frozen || runtime.submitting}
+          countdown={runtime.deadline.formatted}
+          savedQuestionIds={runtime.autosave.savedIds}
+          onSubmit={() => void runtime.submitManual()}
+          runtimeStatus={
+            // Keep recovery controls inside the guarded exam, without a permanent banner.
+            (runtime.frozen || runtime.autosave.failed || runtime.error) && (
+              <div className="border-b bg-muted/30 px-6 py-3 text-sm">
+                {runtime.frozen ? (
+                  <>
+                    <p role="alert" className="font-semibold">
+                      Temps écoulé. Vos réponses sont verrouillées.
+                    </p>
+                    <p>Seules les réponses enregistrées avant la fin du temps seront évaluées.</p>
+                    {runtime.submitting ? (
+                      <p role="status">Finalisation de votre évaluation…</p>
+                    ) : (
+                      <Button className="mt-2" onClick={() => void runtime.finalizeTimeout()}>
+                        Réessayer la finalisation
+                      </Button>
+                    )}
+                  </>
+                ) : (
+                  runtime.autosave.failed && (
+                    <div role="alert">
+                      Certaines réponses ne sont pas enregistrées. Vérifiez votre connexion.
+                      <Button
+                        variant="outline"
+                        className="ml-3"
+                        disabled={runtime.submitting}
+                        onClick={() => runtime.saves?.retry()}
+                      >
+                        Réessayer la sauvegarde
+                      </Button>
+                    </div>
+                  )
+                )}
+                {runtime.error && <p role="alert">{runtime.error}</p>}
+              </div>
+            )
+          }
+        />
+      </div>
     );
   }
 
   // splash
   return (
-    <EvaluationSplash
-      title={evaluation.title}
-      evaluationType={evaluation.evaluationType}
-      onStart={handleRealStart}
-      isLoading={isStarting}
-      isCheckingAttempts={isCheckingAttempts}
-      hasAttemptsError={isEvalInfoError}
-      onRetryAttempts={() => void refetchEvalInfo()}
-      maxAttempts={quota.maxAttempts}
-      attemptsUsed={quota.attemptsUsed}
-      attemptsRemaining={quota.attemptsRemaining}
-      isLocked={isLockedByExecution}
-      lockedReason={lockedReason(evaluation)}
-    />
+    <div ref={root}>
+      <EvaluationSplash
+        title={evaluation.title}
+        evaluationType={evaluation.evaluationType}
+        onStart={handleRealStart}
+        isLoading={runtime.phase === 'starting'}
+        timeLimitMinutes={configuredLimit !== undefined ? configuredLimit : catalogueLimit}
+        isCheckingAttempts={isCheckingAttempts}
+        hasAttemptsError={isEvalInfoError}
+        onRetryAttempts={() => void refetchEvalInfo()}
+        maxAttempts={quota.maxAttempts}
+        attemptsUsed={quota.attemptsUsed}
+        attemptsRemaining={quota.attemptsRemaining}
+        isLocked={isLockedByExecution}
+        lockedReason={lockedReason(evaluation)}
+      />
+    </div>
   );
 }
 

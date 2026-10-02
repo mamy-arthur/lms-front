@@ -1,6 +1,6 @@
 'use client';
 
-import { GraduationCap, LayoutGrid, List } from 'lucide-react';
+import { LayoutGrid, List } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useDebounce } from '@/shared/hooks/useDebounce';
 import { Button } from '@/components/ui/button';
@@ -21,6 +21,7 @@ import type { DataTableColumn } from '@/shared/components/ui/DataTable';
 import { type FormationSummary } from '@/modules/shared/lib/evaluation-notes';
 import { useEvaluationNotesQuery } from '../hooks/useEvaluationNotesQuery';
 import { useFormationEvaluationNotesQuery } from '../hooks/useFormationEvaluationNotesQuery';
+import { learningPathCover } from '@/shared/lib/learning-path-cover';
 
 export function EvaluationNotesList() {
   const [search, setSearch] = useState('');
@@ -60,13 +61,11 @@ export function EvaluationNotesList() {
         render: (row) => (
           <div className="flex items-center gap-3">
             <div className="size-9 shrink-0 overflow-hidden rounded-sm bg-muted">
-              {row.coverImage ? (
-                <img src={row.coverImage} alt={row.name} className="h-full w-full object-cover" />
-              ) : (
-                <div className="flex size-full items-center justify-center text-muted-foreground/40">
-                  <GraduationCap className="size-4" />
-                </div>
-              )}
+              <img
+                src={learningPathCover(row.coverImage)}
+                alt={row.name}
+                className="h-full w-full object-cover"
+              />
             </div>
             <span className="font-medium">{row.name}</span>
           </div>

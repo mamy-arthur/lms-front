@@ -91,6 +91,7 @@ import {
   type DurationUnit,
 } from '../../lib/duration';
 import type { LearningPathCategory } from '../../types';
+import { evaluationTimeLimitFromApi } from '../../lib/evaluation-time-limit';
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
 
@@ -346,9 +347,7 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
             evaluationId: ev.id,
             evaluationConfig: {
               title: ev.title,
-              durationEnabled: false,
-              durationHours: 0,
-              durationMinutes: 30,
+              ...evaluationTimeLimitFromApi(evDetail),
               questionCount: evDetail?.question_count ?? 20,
               attemptCount: evDetail?.max_attempts ?? 1,
               questionBankIds: evDetail?.question_bank_ids ?? [],
@@ -378,9 +377,7 @@ export function LearningPathFormDrawer({ open, onOpenChange, learningPathId, cat
           evaluationId: ev.id,
           evaluationConfig: {
             title: ev.title,
-            durationEnabled: false,
-            durationHours: 0,
-            durationMinutes: 30,
+            ...evaluationTimeLimitFromApi(evDetail),
             questionCount: evDetail?.question_count ?? 20,
             attemptCount: evDetail?.max_attempts ?? 1,
             questionBankIds: evDetail?.question_bank_ids ?? [],

@@ -10,7 +10,10 @@ const PUBLIC_PATHS = [
   '/tenant-not-found',
   '/tenant-inactive',
 ];
-const STATIC_PATHS = ['/_next', '/favicon.ico', '/public', '/logo.png'];
+// Fichiers servis depuis public/ : les exclure de la redirection vers /login.
+// Sans `/assets`, une image de public/assets répondait la page de login dès que
+// le cookie manquait ou expirait, ce qui s'affiche comme une image cassée.
+const STATIC_PATHS = ['/_next', '/favicon.ico', '/public', '/logo.png', '/assets', '/simulation'];
 
 // e.g. "learneo.local" in dev, "learneo.dev-test2.nacre-solutions.com" in staging
 const BASE_DOMAIN = (process.env.NEXT_PUBLIC_BASE_DOMAIN ?? 'localhost').split(':')[0];

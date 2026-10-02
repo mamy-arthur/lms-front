@@ -5,6 +5,7 @@ import { CheckCircle2, Clock, BookOpen, Award, Play } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import type { TraineeFormation } from '@/modules/portal/resources/_shared/trainee/types';
+import { learningPathCover } from '@/shared/lib/learning-path-cover';
 
 interface ContinueLearningListProps {
   formations: TraineeFormation[];
@@ -62,7 +63,7 @@ function FormationRow({ formation, onSelect }: FormationRowProps) {
       <div className="flex items-center gap-3 min-w-0">
         <div className="h-12 w-20 shrink-0 overflow-hidden rounded-lg bg-slate-100">
           <img
-            src={formation.coverImage}
+            src={learningPathCover(formation.coverImage)}
             alt={formation.title}
             className="h-full w-full object-cover"
           />

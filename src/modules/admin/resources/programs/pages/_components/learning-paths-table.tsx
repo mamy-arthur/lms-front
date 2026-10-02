@@ -22,6 +22,7 @@ import { ModuleSearch } from '@modules/shared/components/modules';
 import { formatDate } from '@/shared/lib/date';
 import { formatDuration } from '../../lib/duration';
 import type { LearningPath, LearningPathCategory } from '../../types';
+import { learningPathCover } from '@/shared/lib/learning-path-cover';
 
 function PriceBadge({ path }: { path: LearningPath }) {
   if (path.price === null || path.price === undefined) {
@@ -133,15 +134,11 @@ function LearningPathsTableBase({
         sortable: true,
         render: (row) => (
           <div className="flex items-center gap-3">
-            {row.image ? (
-              <img
-                src={row.image.url}
-                alt={row.name}
-                className="size-8 shrink-0 rounded object-cover"
-              />
-            ) : (
-              <div className="size-8 shrink-0 rounded bg-muted" />
-            )}
+            <img
+              src={learningPathCover(row.image?.url)}
+              alt={row.name}
+              className="size-8 shrink-0 rounded object-cover"
+            />
             <span className="text-xs font-medium">{row.name}</span>
           </div>
         ),
