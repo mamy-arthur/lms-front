@@ -5,6 +5,7 @@ const PUBLIC_PATHS = [
   '/admin/login',
   '/forgot-password',
   '/reset-password',
+  '/activate-account',
   '/admin/forgot-password',
   '/admin/reset-password',
   '/tenant-not-found',

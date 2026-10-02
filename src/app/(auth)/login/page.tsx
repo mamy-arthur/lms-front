@@ -2,11 +2,11 @@ import { LoginForm } from '@/modules/auth/components/LoginForm';
 import { LoginBrandingPanel } from '@/app/(auth)/_components/LoginBrandingPanel';
 
 interface Props {
-  searchParams: Promise<{ reset?: string }>;
+  searchParams: Promise<{ reset?: string; activated?: string }>;
 }
 
 export default async function LoginPage({ searchParams }: Props) {
-  const { reset } = await searchParams;
+  const { reset, activated } = await searchParams;
 
   return (
     <main className="min-h-screen bg-background w-full">
@@ -14,7 +14,7 @@ export default async function LoginPage({ searchParams }: Props) {
         {/* LEFT SIDE */}
         <LoginBrandingPanel />
         {/* RIGHT SIDE */}
-        <LoginForm resetSuccess={reset === '1'} />
+        <LoginForm resetSuccess={reset === '1'} activationSuccess={activated === '1'} />
       </div>
     </main>
   );

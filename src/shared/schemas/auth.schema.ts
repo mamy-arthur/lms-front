@@ -42,6 +42,14 @@ export const resetPasswordSchema = z
 
 export type ResetPasswordSchema = z.infer<typeof resetPasswordSchema>;
 
+/**
+ * Activation de compte : même saisie que la réinitialisation, mais consommée par
+ * `POST auth/activate-account`, qui définit le mot de passe *et* active le compte.
+ */
+export const activateAccountSchema = resetPasswordSchema;
+
+export type ActivateAccountSchema = ResetPasswordSchema;
+
 export const createUserSchema = z.object({
   first_name: z.string().min(1, 'Prénom requis').max(120),
   last_name: z.string().min(1, 'Nom requis').max(120),

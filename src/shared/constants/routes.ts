@@ -3,6 +3,7 @@ export const ROUTES = {
     login: '/login',
     forgotPassword: '/forgot-password',
     resetPassword: '/reset-password',
+    activateAccount: '/activate-account',
   },
   platform: {
     login: '/admin/login',
