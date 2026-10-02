@@ -199,24 +199,24 @@ export const CreateEditorUserStep = forwardRef<CreateEditorUserStepHandle, Props
             </div>
           </FieldGroup>
 
+          <UserProfileFields form={form} />
+
           <FieldRoot
             control={form.control}
             name="is_active"
             render={({ field }) => (
               <FieldGroup>
                 <div className="flex items-center justify-between">
-                  <FieldLabel className="text-xs">Compte actif</FieldLabel>
+                  <FieldLabel className="text-xs">Autoriser l’accès au compte</FieldLabel>
                   <Switch
                     checked={field.value}
                     onCheckedChange={field.onChange}
-                    aria-label="Compte actif"
+                    aria-label="Autoriser l’accès au compte"
                   />
                 </div>
               </FieldGroup>
             )}
           />
-
-          <UserProfileFields form={form} />
 
           <FieldRoot
             control={form.control}

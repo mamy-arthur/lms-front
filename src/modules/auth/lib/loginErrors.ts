@@ -1,4 +1,9 @@
-import { getApiErrorMessage, getApiErrorStatus, getRetryAfterSeconds } from '@/shared/lib/errors';
+import {
+  formatRetryDelay,
+  getApiErrorMessage,
+  getApiErrorStatus,
+  getRetryAfterSeconds,
+} from '@/shared/lib/errors';
 
 const INVALID_CREDENTIALS = 'Email ou mot de passe incorrect.';
 
@@ -38,12 +43,4 @@ export function getLoginErrorMessage(err: unknown): string {
   }
 
   return getApiErrorMessage(err, INVALID_CREDENTIALS);
-}
-
-function formatRetryDelay(seconds: number): string {
-  if (seconds < 60) return `${Math.max(seconds, 1)} seconde${seconds > 1 ? 's' : ''}`;
-
-  const minutes = Math.ceil(seconds / 60);
-
-  return `${minutes} minute${minutes > 1 ? 's' : ''}`;
 }

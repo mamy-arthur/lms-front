@@ -10,7 +10,6 @@ export interface Tenant {
   status: TenantStatus;
   created_at: string; // ISO date string
   initials: string;
-  client_id: string;
   slug: string;
   domains: { id: string; subdomain: string; is_primary: boolean }[];
   is_active: boolean;
@@ -19,8 +18,6 @@ export interface Tenant {
 export interface CreateTenantPayload {
   editor_name: string;
   editor_slug?: string;
-  client_name: string;
-  client_slug?: string;
   tenant_name: string;
   tenant_slug?: string;
   domain?: string;
@@ -43,7 +40,6 @@ interface TenantDomain {
 
 export interface BackendTenant {
   id: string;
-  client_id: string;
   editor_id: string | null;
   name: string;
   slug: string;

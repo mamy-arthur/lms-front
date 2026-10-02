@@ -162,8 +162,20 @@ describe('LoginForm', () => {
 
     expect(screen.getByText('Bon retour 👋')).toBeInTheDocument();
     expect(screen.getByLabelText(/adresse email/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/mot de passe/i)).toBeInTheDocument();
+    expect(screen.getByLabelText('Mot de passe')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /connexion|se connecter/i })).toBeInTheDocument();
+  });
+
+  it("n'affiche pas de confirmation de réinitialisation par défaut", () => {
+    render(<LoginForm />);
+
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+
+  it('affiche la confirmation de réinitialisation quand resetSuccess est vrai', () => {
+    render(<LoginForm resetSuccess />);
+
+    expect(screen.getByRole('status')).toHaveTextContent(/mot de passe a été réinitialisé/i);
   });
   // ── Connexion réussie ──────────────────────────────────────────────────────
   it('appelle resolveLogin avec les credentials saisis', async () => {
@@ -586,8 +598,8 @@ describe('LoginForm', () => {
 
     const passwordInput = screen.getByPlaceholderText('••••••••') as HTMLInputElement;
     const toggleButton = screen.getByRole('button', {
-      name: '',
-    }); // Le bouton sans texte
+      name: /afficher le mot de passe/i,
+    });
 
     // Au départ, le champ est en mode password
     expect(passwordInput.type).toBe('password');

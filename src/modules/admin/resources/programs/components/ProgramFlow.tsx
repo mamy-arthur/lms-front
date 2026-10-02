@@ -51,6 +51,7 @@ import {
   initialEmailNode,
 } from './ProgramFlow.constants';
 import { STEP_CONFIG } from './ProgramFlow.config';
+import { getRetakeNodeOptions, getRetakeTargetErrors } from './ProgramFlow.rules';
 import { FlowActionsContext } from './ProgramFlow.context';
 import { nodeTypes } from './ProgramStepNode';
 import { edgeTypes } from './ConfigurableEdge';
@@ -208,17 +209,16 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
     [nodes],
   );
 
-  // ── Retake target options (all non-attestation nodes) ──
+  // ── Retake targets in path order, up to and including the rule source ──
   const retakeNodeOptions: NodeOption[] = useMemo(
     () =>
-      nodes
-        .filter((n) => n.data.stepType !== 'attestation')
-        .map((n) => ({
-          id: n.id,
-          label: n.data.label,
-          stepType: n.data.stepType as NodeOption['stepType'],
-        })),
-    [nodes],
+      getRetakeNodeOptions(
+        nodes,
+        nodeOrder,
+        progressionRuleDialog?.sourceNodeId ?? null,
+        progressionRuleDialog?.readOnly,
+      ),
+    [nodes, nodeOrder, progressionRuleDialog?.sourceNodeId, progressionRuleDialog?.readOnly],
   );
 
   // ── Open the rule dialog when an edge settings button is clicked ──
@@ -304,6 +304,17 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
           );
         });
         setProgressionRuleDialog(null);
+        return;
+      }
+
+      // Recheck against the current order before sending any mutation.
+      const targetErrors = getRetakeTargetErrors(
+        formData,
+        getRetakeNodeOptions(nodesRef.current, nodeOrderRef.current, sourceNodeId),
+      );
+      const targetError = targetErrors.failure ?? targetErrors.exhausted;
+      if (targetError) {
+        toast.error(targetError);
         return;
       }
 
@@ -557,44 +568,48 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
   );
 
   // ── Open the right edit dialog when a node is clicked ──
-  const onEditNode = useCallback((nodeId: string) => {
-    const node = nodesRef.current.find((n) => n.id === nodeId);
-    if (!node) return;
+  const onEditNode = useCallback(
+    (nodeId: string) => {
+      const node = nodesRef.current.find((n) => n.id === nodeId);
+      if (!node) return;
 
-    switch (node.data.stepType) {
-      case 'email':
-        setEditEmailDialog({
-          nodeId,
-          emailTemplateId: node.data.emailTemplateId,
-        });
-        break;
-      case 'module':
-        setEditModuleDialog({ nodeId, moduleId: node.data.moduleId });
-        break;
-      case 'evaluation-intermediate':
-      case 'evaluation-final':
-        setEditEvalDialog({
-          nodeId,
-          evaluationId: node.data.evaluationId,
-          config: {
-            stepType: node.data.stepType,
-            title: node.data.evaluationConfig?.title ?? '',
-            timeLimitMinutes: node.data.evaluationConfig?.timeLimitMinutes ?? null,
-            questionCount: node.data.evaluationConfig?.questionCount ?? 20,
-            attemptCount: node.data.evaluationConfig?.attemptCount ?? 1,
-            questionBankIds: node.data.evaluationConfig?.questionBankIds ?? [],
-            questionBankNames: node.data.evaluationConfig?.questionBankNames ?? [],
-          },
-          hasFinalEval: nodesRef.current.some(
-            (n) => n.data.stepType === 'evaluation-final' && n.id !== nodeId,
-          ),
-        });
-        break;
-      case 'attestation':
-        setEditAttestationDialog({ nodeId, attestationId: node.data.attestationId });
-        break;
-    }
-  }, []);
+      switch (node.data.stepType) {
+        case 'email':
+          setEditEmailDialog({
+            nodeId,
+            emailTemplateId: node.data.emailTemplateId,
+          });
+          break;
+        case 'module':
+          setEditModuleDialog({ nodeId, moduleId: node.data.moduleId });
+          break;
+        case 'evaluation-intermediate':
+        case 'evaluation-final':
+          setEditEvalDialog({
+            nodeId,
+            evaluationId: node.data.evaluationId,
+            config: {
+              stepType: node.data.stepType,
+              title: node.data.evaluationConfig?.title ?? '',
+              timeLimitMinutes: node.data.evaluationConfig?.timeLimitMinutes ?? null,
+              questionCount: node.data.evaluationConfig?.questionCount ?? 20,
+              attemptCount: node.data.evaluationConfig?.attemptCount ?? 1,
+              questionBankIds: node.data.evaluationConfig?.questionBankIds ?? [],
+              questionBankNames: node.data.evaluationConfig?.questionBankNames ?? [],
+            },
+            hasFinalEval: nodesRef.current.some(
+              (n) => n.data.stepType === 'evaluation-final' && n.id !== nodeId,
+            ),
+            readOnly: isLocked,
+          });
+          break;
+        case 'attestation':
+          setEditAttestationDialog({ nodeId, attestationId: node.data.attestationId });
+          break;
+      }
+    },
+    [isLocked],
+  );
 
   // ── Append a new step to the end of the chain ──
   const addStep = useCallback(
@@ -744,7 +759,7 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
 
   const handleEditEvalSave = useCallback(
     async (cfg: EvaluationConfig) => {
-      if (!editEvalDialog) return;
+      if (!editEvalDialog || editEvalDialog.readOnly) return;
       const { stepType, ...rest } = cfg;
 
       const node = nodesRef.current.find((n) => n.id === editEvalDialog.nodeId);
@@ -1131,6 +1146,8 @@ const ProgramFlow = forwardRef<ProgramFlowHandle, ProgramFlowProps>(function Pro
             edgeTypes={edgeTypes}
             nodesDraggable={!isLocked}
             nodesConnectable={!isLocked}
+            // Le focus clavier est porté par les contrôles internes du nœud, pas par son conteneur
+            nodesFocusable={false}
             fitView
             fitViewOptions={{ padding: 0.8, maxZoom: 0.9 }}
             proOptions={{ hideAttribution: true }}

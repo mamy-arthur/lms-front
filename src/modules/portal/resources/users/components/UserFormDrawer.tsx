@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useCallback, useEffect, useMemo, useRef } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { TENANT_USERS_QUERY_KEY } from '../hooks/useClientUsersQuery';
@@ -97,6 +97,9 @@ function UserFormDrawerBase({ open, onClose, onSuccess, user }: UserFormDrawerPr
   const { tenant } = useTenant();
   const tenantId = tenant?.id ?? null;
   const pendingPhotoRef = useRef<File | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  // Ref et non state : deux clics dans le meme tick liraient la meme valeur.
+  const submittingRef = useRef(false);
   const queryClient = useQueryClient();
 
   const schema = isEdit ? updateSchema : createSchema;
@@ -178,8 +181,8 @@ function UserFormDrawerBase({ open, onClose, onSuccess, user }: UserFormDrawerPr
     }
   }, [open, defaultValues, formState.form]);
 
-  // Submit avec upload photo si fichier sélectionné
-  const onSubmitWithPhoto = useCallback(
+  // Corps de la soumission, englobe par le verrou pose dans onSubmitWithPhoto.
+  const runSubmit = useCallback(
     async (values: Record<string, unknown>) => {
       if (isEdit && user && pendingPhotoRef.current) {
         // PATCH d'abord — l'upload photo n'a lieu qu'après la sauvegarde réussie
@@ -201,7 +204,7 @@ function UserFormDrawerBase({ open, onClose, onSuccess, user }: UserFormDrawerPr
             } as UpdateClientUserPayload,
           });
         } catch {
-          toast.error("Échec de la mise à jour de l'utilisateur.");
+          // updateMutation.onError notifie deja : un toast ici en ferait deux.
           return;
         }
         // L'endpoint profile-photo lie déjà la photo côté backend — best-effort
@@ -216,9 +219,10 @@ function UserFormDrawerBase({ open, onClose, onSuccess, user }: UserFormDrawerPr
         onClose();
       } else if (!isEdit && pendingPhotoRef.current) {
         // Création : créer d'abord l'utilisateur, puis uploader la photo
-        let newUserId: string;
+        const pendingPhoto = pendingPhotoRef.current;
+        let created: Awaited<ReturnType<typeof createMutation.mutateAsync>>;
         try {
-          const res = await createMutation.mutateAsync({
+          created = await createMutation.mutateAsync({
             first_name: values.first_name as string,
             last_name: values.last_name as string,
             email: values.email as string,
@@ -233,17 +237,26 @@ function UserFormDrawerBase({ open, onClose, onSuccess, user }: UserFormDrawerPr
             timezone: (values.timezone as string | null) ?? null,
             preferred_language: (values.preferred_language as string | null) ?? null,
           } as CreateClientUserPayload);
-          newUserId = (res as { data: { id: string } }).data.id;
         } catch {
-          toast.error("Échec de la création de l'utilisateur.");
+          // createMutation.onError notifie deja.
           return;
         }
-        // Upload séparé — l'utilisateur est déjà créé, l'échec photo ne bloque pas
-        try {
-          await uploadUserProfilePhoto(newUserId, pendingPhotoRef.current, 'users');
-        } catch {
-          toast.error("Utilisateur créé, mais l'upload photo a échoué.");
+
+        // Hors du try : l'utilisateur existe, une réponse inattendue ne doit pas
+        // se lire comme un échec de création.
+        const newUserId = created?.data?.id;
+
+        if (newUserId) {
+          // Upload séparé — l'utilisateur est déjà créé, l'échec photo ne bloque pas
+          try {
+            await uploadUserProfilePhoto(newUserId, pendingPhoto, 'users');
+          } catch {
+            toast.error("Utilisateur créé, mais l'upload photo a échoué.");
+          }
+        } else {
+          toast.warning("Utilisateur créé, mais la photo n'a pas pu lui être associée.");
         }
+
         await queryClient.invalidateQueries({ queryKey: TENANT_USERS_QUERY_KEY });
         pendingPhotoRef.current = null;
         handleSuccess();
@@ -252,7 +265,32 @@ function UserFormDrawerBase({ open, onClose, onSuccess, user }: UserFormDrawerPr
         formState.onSubmit(values);
       }
     },
-    [isEdit, user, createMutation, updateMutation, formState, onSuccess, onClose, tenantId],
+    [isEdit, user, createMutation, updateMutation, formState, handleSuccess, onClose, tenantId],
+  );
+
+  // Un seul verrou pour toute la soumission : la mutation se resout bien avant
+  // l'upload puis le rafraichissement des listes.
+  const onSubmitWithPhoto = useCallback(
+    async (values: Record<string, unknown>) => {
+      if (submittingRef.current) {
+        return;
+      }
+      submittingRef.current = true;
+      setIsSubmitting(true);
+
+      try {
+        await runSubmit(values);
+      } finally {
+        submittingRef.current = false;
+        setIsSubmitting(false);
+      }
+    },
+    [runSubmit],
+  );
+
+  const submitMutation = useMemo(
+    () => ({ ...formState.mutation, isPending: formState.mutation.isPending || isSubmitting }),
+    [formState.mutation, isSubmitting],
   );
 
   const activeField = (
@@ -261,12 +299,13 @@ function UserFormDrawerBase({ open, onClose, onSuccess, user }: UserFormDrawerPr
       name="is_active"
       render={({ field }) => (
         <FieldGroup>
-          <div className="flex items-center justify-between">
-            <FieldLabel className="text-xs">Compte actif</FieldLabel>
+          <div className="flex items-center justify-between border p-3 bg-gray-50/40 rounded-sm">
+            <FieldLabel className="text-xs">Autoriser l’accès au compte</FieldLabel>
             <Switch
               checked={field.value}
               onCheckedChange={field.onChange}
-              aria-label="Compte actif"
+              aria-label="Autoriser l’accès au compte"
+              className="data-checked:bg-(--color-primary)"
             />
           </div>
         </FieldGroup>
@@ -288,7 +327,7 @@ function UserFormDrawerBase({ open, onClose, onSuccess, user }: UserFormDrawerPr
         </SheetHeader>
         <UserForm
           form={formState.form}
-          mutation={formState.mutation}
+          mutation={submitMutation}
           isEdit={formState.isEdit}
           handleClose={formState.handleClose}
           onSubmit={onSubmitWithPhoto}
@@ -306,8 +345,8 @@ function UserFormDrawerBase({ open, onClose, onSuccess, user }: UserFormDrawerPr
           }
           extraFields={
             <>
-              {activeField}
               <UserProfileFields form={formState.form} />
+              {activeField}
             </>
           }
         />
