@@ -1,19 +1,17 @@
 import { apiGet } from '@/shared/lib/apiClient';
-import type { User } from '@/modules/admin/resources/users/types';
+import type { User } from '@/shared/types/user.types';
 import type {
-  TraineeDetailArea,
   TraineeEnrollmentsParams,
   TraineeEnrollmentsResponse,
 } from '@/shared/types/trainee-detail.types';
-
-const userPath = (area: TraineeDetailArea, id: string) =>
-  `${area === 'admin' ? 'platform/' : ''}users/${encodeURIComponent(id)}`;
+import type { UserDetailArea } from '@/shared/types/user-detail.types';
+import { userDetailPath as userPath } from '@/shared/utils/user-detail-path';
 
 export const traineeDetailApi = {
-  profile: (area: TraineeDetailArea, id: string, signal?: AbortSignal) =>
+  profile: (area: UserDetailArea, id: string, signal?: AbortSignal) =>
     apiGet<{ data: User }>(userPath(area, id), undefined, { signal }),
   enrollments: (
-    area: TraineeDetailArea,
+    area: UserDetailArea,
     id: string,
     params: TraineeEnrollmentsParams,
     signal?: AbortSignal,

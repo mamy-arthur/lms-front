@@ -1,7 +1,5 @@
 import type { ApiMeEnrollment, EnrollmentStatus } from './enrollment.types';
 
-export type TraineeDetailArea = 'admin' | 'portal';
-
 export type TraineeEnrollment = Omit<ApiMeEnrollment, 'learning_path'> & {
   learning_path: ApiMeEnrollment['learning_path'] | null;
   expires_at: string | null;

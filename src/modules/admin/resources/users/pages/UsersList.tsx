@@ -16,6 +16,8 @@ import type { User, UserSearchParams } from '../types';
 import { useUsersListController } from '@/modules/shared/hooks/useUsersListController';
 import { useTraineeDetailDrawer } from '@/modules/shared/hooks/useTraineeDetailDrawer';
 import { TraineeDetailDrawer } from '@/modules/shared/components/trainees/TraineeDetailDrawer';
+import { useUserDetailDrawer } from '@/modules/shared/hooks/useUserDetailDrawer';
+import { ClientManagerDetailDrawer } from '@/modules/shared/components/client-managers/ClientManagerDetailDrawer';
 import { useClientsQuery } from '@/modules/admin/resources/clients';
 import { tenantApi } from '@/modules/admin/resources/tenants/api';
 import { Role } from '@/shared/constants/roles';
@@ -41,6 +43,7 @@ const STATUS_OPTIONS = [
 
 export function UsersList() {
   const traineeDrawer = useTraineeDetailDrawer(ROUTES.admin.users);
+  const managerDrawer = useUserDetailDrawer(ROUTES.admin.users, 'manager');
   const { tenant: activeTenant } = useTenant();
   const callerRole = useAuthStore((s) => s.role);
   // The backend also enforces the caller's tenant/client scope.
@@ -79,12 +82,19 @@ export function UsersList() {
   const clientFilter = params.client_id ?? null;
   const tenantFilter = params.tenant_id ?? null;
 
+  useEffect(() => {
+    if (traineeDrawer.id || managerDrawer.id) handleCloseDrawer();
+  }, [traineeDrawer.id, managerDrawer.id, handleCloseDrawer]);
+
+  const editUser = (user: User) => {
+    traineeDrawer.close();
+    handleEdit(user);
+  };
+
   const handleOpenUser = (user: User) => {
-    if (user.role !== Role.TRAINEE) {
-      handleEdit(user);
-      return;
-    }
-    traineeDrawer.open(user.id);
+    if (user.role === Role.TRAINEE) traineeDrawer.open(user.id);
+    else if (user.role === Role.CLIENT_MANAGER) managerDrawer.open(user.id);
+    else editUser(user);
   };
 
   const { data: tenantsData } = useQuery({
@@ -370,7 +380,7 @@ export function UsersList() {
           onPageSizeChange={handlePageSizeChange}
           onRowClick={handleOpenUser}
           onView={handleOpenUser}
-          onEdit={handleEdit}
+          onEdit={editUser}
           onToggleActive={(user) =>
             toggleActive.mutate({ id: user.id, is_active: !user.is_active })
           }
@@ -380,6 +390,7 @@ export function UsersList() {
       </div>
 
       <TraineeDetailDrawer
+        key={`trainee:${managerDrawer.id ?? ''}`}
         id={traineeDrawer.id}
         area="admin"
         editForm={AdminUserFormDrawer}
@@ -387,8 +398,17 @@ export function UsersList() {
         onCloseAutoFocus={traineeDrawer.restoreFocus}
       />
 
+      <ClientManagerDetailDrawer
+        key={`manager:${traineeDrawer.id ?? ''}`}
+        id={managerDrawer.id}
+        area="admin"
+        editForm={AdminUserFormDrawer}
+        onClose={managerDrawer.close}
+        onCloseAutoFocus={managerDrawer.restoreFocus}
+      />
+
       <AdminUserFormDrawer
-        open={isDrawerOpen}
+        open={isDrawerOpen && !traineeDrawer.id && !managerDrawer.id}
         onClose={handleCloseDrawer}
         onSuccess={handleSuccess}
         user={editingUser}

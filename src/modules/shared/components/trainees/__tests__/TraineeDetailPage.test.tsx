@@ -351,9 +351,11 @@ describe('Validation et indépendance des ressources', () => {
       mount();
       expect(await screen.findByRole('heading', { name: target.full_name })).toBeVisible();
       expect(await screen.findByRole('alert')).toHaveTextContent(
-        status === 404
-          ? 'Les inscriptions de ce stagiaire ne sont plus accessibles.'
-          : 'Impossible de charger les inscriptions.',
+        {
+          403: 'Vous n’avez pas accès à ces inscriptions.',
+          404: 'Les inscriptions de ce stagiaire ne sont plus accessibles.',
+          500: 'Impossible de charger les inscriptions.',
+        }[status] as string,
       );
       expect(screen.getByRole('button', { name: 'Modifier le stagiaire' })).toBeEnabled();
       expect(screen.queryByText('Aucune inscription.')).not.toBeInTheDocument();

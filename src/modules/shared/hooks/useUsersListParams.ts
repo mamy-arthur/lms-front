@@ -125,6 +125,8 @@ export function useUsersListParams<TParams>({
         setLocalParams(action);
         return;
       }
+      // A late update after navigating away must not rewrite another page's URL.
+      if (window.location.pathname !== urlPath) return;
       // Read the current URL for every update, including consecutive functional updates.
       const currentSearch = getSnapshot();
       const previous = parse(currentSearch);
@@ -132,7 +134,7 @@ export function useUsersListParams<TParams>({
       if (next === previous) return;
       const href = `${urlPath}${serialize(currentSearch, next, defaults)}${window.location.hash}`;
       // Next integrates native History calls without adding a history entry per filter change.
-      window.history.replaceState(null, '', href);
+      window.history.replaceState(window.history.state, '', href);
       window.dispatchEvent(new Event(USERS_LIST_URL_CHANGE));
     },
     [urlPath, getSnapshot, parse, defaults],

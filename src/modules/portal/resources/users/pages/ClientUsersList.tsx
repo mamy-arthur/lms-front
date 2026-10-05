@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { ChevronDown, Plus, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -13,6 +14,8 @@ import { ClientUsersTable } from './_components/client-users-table';
 import { useUsersListController } from '@/modules/shared/hooks/useUsersListController';
 import { useTraineeDetailDrawer } from '@/modules/shared/hooks/useTraineeDetailDrawer';
 import { TraineeDetailDrawer } from '@/modules/shared/components/trainees/TraineeDetailDrawer';
+import { useUserDetailDrawer } from '@/modules/shared/hooks/useUserDetailDrawer';
+import { ClientManagerDetailDrawer } from '@/modules/shared/components/client-managers/ClientManagerDetailDrawer';
 import { useToggleClientUserActive } from '../hooks/useToggleClientUserActive';
 import { useDeleteClientUser } from '../hooks/useDeleteClientUser';
 import { useDeleteConfirm } from '@/modules/shared/hooks/useDeleteConfirm';
@@ -31,6 +34,7 @@ const STATUS_OPTIONS = [
 
 export function ClientUserList() {
   const traineeDrawer = useTraineeDetailDrawer(ROUTES.portal.users);
+  const managerDrawer = useUserDetailDrawer(ROUTES.portal.users, 'manager');
   const {
     isDrawerOpen,
     editingUser,
@@ -58,12 +62,19 @@ export function ClientUserList() {
     urlPath: ROUTES.portal.users,
   });
 
+  useEffect(() => {
+    if (traineeDrawer.id || managerDrawer.id) handleCloseDrawer();
+  }, [traineeDrawer.id, managerDrawer.id, handleCloseDrawer]);
+
+  const editUser = (user: ClientUser) => {
+    traineeDrawer.close();
+    handleEdit(user);
+  };
+
   const handleOpenUser = (user: ClientUser) => {
-    if (user.role !== Role.TRAINEE) {
-      handleEdit(user);
-      return;
-    }
-    traineeDrawer.open(user.id);
+    if (user.role === Role.TRAINEE) traineeDrawer.open(user.id);
+    else if (user.role === Role.CLIENT_MANAGER) managerDrawer.open(user.id);
+    else editUser(user);
   };
 
   const { data: queryResult, isLoading } = useClientUsersQuery(params);
@@ -222,7 +233,7 @@ export function ClientUserList() {
           onPageSizeChange={handlePageSizeChange}
           onRowClick={handleOpenUser}
           onView={handleOpenUser}
-          onEdit={handleEdit}
+          onEdit={editUser}
           onToggleActive={(user) =>
             toggleActive.mutate({ id: user.id, is_active: !user.is_active })
           }
@@ -231,6 +242,7 @@ export function ClientUserList() {
       </div>
 
       <TraineeDetailDrawer
+        key={`trainee:${managerDrawer.id ?? ''}`}
         id={traineeDrawer.id}
         area="portal"
         editForm={UserFormDrawer}
@@ -238,8 +250,17 @@ export function ClientUserList() {
         onCloseAutoFocus={traineeDrawer.restoreFocus}
       />
 
+      <ClientManagerDetailDrawer
+        key={`manager:${traineeDrawer.id ?? ''}`}
+        id={managerDrawer.id}
+        area="portal"
+        editForm={UserFormDrawer}
+        onClose={managerDrawer.close}
+        onCloseAutoFocus={managerDrawer.restoreFocus}
+      />
+
       <UserFormDrawer
-        open={isDrawerOpen}
+        open={isDrawerOpen && !traineeDrawer.id && !managerDrawer.id}
         onClose={handleCloseDrawer}
         onSuccess={handleSuccess}
         user={editingUser}

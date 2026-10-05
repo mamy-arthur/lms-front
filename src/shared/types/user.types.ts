@@ -1,3 +1,5 @@
+import type { Role } from '@/shared/constants/roles';
+
 export interface ApiUserProfilePhoto {
   id: string;
   url: string;
@@ -24,4 +26,26 @@ export interface UsersListParams {
 export interface ApiUsersListResponse {
   data: ApiAssignableTraineeUser[];
   total: number;
+}
+
+export interface User {
+  id: string;
+  tenant_id: string | null;
+  editor_id: string | null;
+  client_id: string | null;
+  first_name: string;
+  last_name: string;
+  full_name: string;
+  email: string;
+  role: Role;
+  is_active: boolean;
+  profile_photo: { id: string; url: string; mime_type: string } | null;
+  address: string | null;
+  zip_code: string | null;
+  city: string | null;
+  country: string | null;
+  timezone: string | null;
+  preferred_language: string | null;
+  created_at: string;
+  updated_at: string | null;
 }

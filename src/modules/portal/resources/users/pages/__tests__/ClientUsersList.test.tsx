@@ -14,6 +14,15 @@ jest.mock('@/modules/shared/components/trainees/TraineeDetailDrawer', () => ({
     ) : null,
 }));
 
+jest.mock('@/modules/shared/components/client-managers/ClientManagerDetailDrawer', () => ({
+  ClientManagerDetailDrawer: ({ id, area, onClose }: ComponentProps<typeof TraineeDetailDrawer>) =>
+    id ? (
+      <div role="dialog" aria-label="Détail du responsable">
+        Responsable {id} ({area})<button onClick={onClose}>Fermer le détail du responsable</button>
+      </div>
+    ) : null,
+}));
+
 import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ComponentProps } from 'react';
@@ -68,16 +77,14 @@ describe('ClientUserList — détail du stagiaire et état de la liste', () => {
       });
       window.history.replaceState(null, '', `/users?${initialParams}`);
       const initialUrl = window.location.href;
+      window.history.pushState(null, '', initialUrl);
       const list = jest.mocked(clientUsersApi.list);
       list.mockImplementation(async (params) => ({
         data: [params?.q === 'Bob' ? bob : trainee],
         total: 200,
       }));
       renderWithQueryClient(<ClientUserList />);
-      await interaction.click(await screen.findByRole('button', { name: 'Ouvrir Alice Dupont' }));
-      await interaction.click(
-        screen.getByRole('button', { name: 'Fermer le détail du stagiaire' }),
-      );
+      await screen.findByRole('button', { name: 'Ouvrir Alice Dupont' });
 
       const search = screen.getByRole('textbox', { name: 'Rechercher' });
       await interaction.clear(search);
@@ -164,26 +171,43 @@ describe('ClientUserList — détail du stagiaire et état de la liste', () => {
     },
   );
 
-  it('ouvre le responsable dans le tiroir existant', async () => {
+  it.each(['ligne', 'Voir'])('ouvre le détail du responsable depuis %s', async (action) => {
+    window.history.replaceState(null, '', '/users?q=Bob&page=3#resultats');
+    const initialUrl = window.location.href;
     const interaction = userEvent.setup();
     renderWithQueryClient(<ClientUserList />);
-    await interaction.click(await screen.findByText('bob@example.test'));
-    expect(screen.getByRole('dialog')).toHaveTextContent('Modifier Bob Martin');
+    await screen.findByText('bob@example.test');
+    if (action === 'ligne') await interaction.click(screen.getByText('bob@example.test'));
+    else {
+      await interaction.click(screen.getByRole('button', { name: 'Actions pour Bob Martin' }));
+      await interaction.click(screen.getByRole('menuitem', { name: 'Voir le détail' }));
+    }
+    expect(screen.getAllByRole('dialog')).toHaveLength(1);
+    expect(screen.getByRole('dialog')).toHaveTextContent('Responsable manager-1 (portal)');
+    expect(window.location.search).toBe('?q=Bob&page=3&manager=manager-1');
+    expect(window.location.hash).toBe('#resultats');
     expect(mockPush).not.toHaveBeenCalled();
     expect(new URLSearchParams(window.location.search).has('trainee')).toBe(false);
+    await interaction.click(
+      screen.getByRole('button', { name: 'Fermer le détail du responsable' }),
+    );
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(window.location.href).toBe(initialUrl);
   });
 
-  it('Modifier ne déclenche pas la navigation du stagiaire', async () => {
-    const interaction = userEvent.setup();
-    renderWithQueryClient(<ClientUserList />);
-    await interaction.click(
-      await screen.findByRole('button', { name: 'Actions pour Alice Dupont' }),
-    );
-    await interaction.click(screen.getByRole('menuitem', { name: 'Modifier' }));
-    expect(screen.getByRole('dialog')).toHaveTextContent('Modifier Alice Dupont');
-    expect(mockPush).not.toHaveBeenCalled();
-    expect(new URLSearchParams(window.location.search).has('trainee')).toBe(false);
-  });
+  it.each(['Alice Dupont', 'Bob Martin'])(
+    'Modifier ne déclenche pas le détail de %s',
+    async (name) => {
+      const interaction = userEvent.setup();
+      renderWithQueryClient(<ClientUserList />);
+      await interaction.click(await screen.findByRole('button', { name: `Actions pour ${name}` }));
+      await interaction.click(screen.getByRole('menuitem', { name: 'Modifier' }));
+      expect(screen.getByRole('dialog')).toHaveTextContent(`Modifier ${name}`);
+      expect(mockPush).not.toHaveBeenCalled();
+      expect(new URLSearchParams(window.location.search).has('trainee')).toBe(false);
+      expect(new URLSearchParams(window.location.search).has('manager')).toBe(false);
+    },
+  );
 
   it('conserve les paramètres à la fermeture du détail et les restaure au remontage', async () => {
     const interaction = userEvent.setup();

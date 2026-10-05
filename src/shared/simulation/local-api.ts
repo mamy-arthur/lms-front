@@ -128,6 +128,7 @@ export const SIMULATION_ROUTES = [
   { methods: ['POST'], path: '{certificates,template-mails}/media' },
   { methods: ['POST'], path: '{platform/,}users/:id/profile-photo' },
   { methods: ['GET'], path: '{platform/,}users/:id/enrollments' },
+  { methods: ['GET'], path: '{platform/,}users/:id/purchased-learning-paths' },
   { methods: ['POST'], path: 'groups/:id/members' },
   { methods: ['DELETE'], path: 'groups/:id/members/:traineeId' },
   { methods: ['GET'], path: 'purchased-learning-paths' },
@@ -1589,6 +1590,48 @@ function traineeEnrollmentsPage(
           learning_path: enrollmentLearningPath(data, row.learning_path_id),
         };
       }),
+    params,
+  );
+}
+
+/** GET {platform/,}users/:id/purchased-learning-paths : formations achetées par un responsable. */
+function managerPurchasesPage(
+  data: SimulationData,
+  userId: string,
+  params: URLSearchParams,
+): SimulationResponse {
+  const manager = find(data, 'users', userId);
+  if (manager.role !== Role.CLIENT_MANAGER)
+    fail(404, 'Simulation : responsable introuvable.', 'SIMULATION_NOT_FOUND');
+  const purchases = manager.id === SIMULATION_IDS.manager ? data.purchases : [];
+  return listResponse(
+    purchases.map((purchase) => {
+      const learningPath = purchasedLearningPath(data, purchase);
+      const owned = !purchase.product;
+      return {
+        id: purchase.id,
+        name: learningPath.name,
+        created_at: purchase.created_at,
+        learning_path: {
+          id: learningPath.id,
+          name: learningPath.name,
+          description: owned ? learningPath.description : null,
+          image: learningPath.image,
+          category_id: learningPath.category_id,
+          category_name: learningPath.category_name,
+        },
+        modules_count: owned
+          ? training
+            ? number(find(data, 'learning-paths', purchase.learning_path_id).competencies_count)
+            : objects(learningPath.competencies).length
+          : 0,
+        evaluations_count: owned
+          ? data.resources.evaluations.filter(
+              (row) => row.learning_path_id === purchase.learning_path_id,
+            ).length
+          : 0,
+      };
+    }),
     params,
   );
 }
@@ -3086,6 +3129,8 @@ async function dispatchSimulationRequest(
   }
   match = /^(?:platform\/)?users\/([^/]+)\/enrollments$/.exec(path);
   if (match && method === 'GET') return traineeEnrollmentsPage(data, match[1], params);
+  match = /^(?:platform\/)?users\/([^/]+)\/purchased-learning-paths$/.exec(path);
+  if (match && method === 'GET') return managerPurchasesPage(data, match[1], params);
   match = /^enrollments\/([^/]+)\/(summary|evaluations)$/.exec(path);
   if (match && method === 'GET') {
     const registration = enrollment(data, match[1]);

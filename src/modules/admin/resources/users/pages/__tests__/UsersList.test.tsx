@@ -36,6 +36,15 @@ jest.mock('@/modules/shared/components/trainees/TraineeDetailDrawer', () => ({
     ) : null,
 }));
 
+jest.mock('@/modules/shared/components/client-managers/ClientManagerDetailDrawer', () => ({
+  ClientManagerDetailDrawer: ({ id, area, onClose }: ComponentProps<typeof TraineeDetailDrawer>) =>
+    id ? (
+      <div role="dialog" aria-label="Détail du responsable">
+        Responsable {id} ({area})<button onClick={onClose}>Fermer le détail du responsable</button>
+      </div>
+    ) : null,
+}));
+
 jest.mock('../_components/admin-users-table', () => ({
   AdminUsersTable: ({
     page,
@@ -142,16 +151,14 @@ describe('UsersList - filtres tenant et client', () => {
       });
       window.history.replaceState(null, '', `/admin/users?${initialParams}`);
       const initialUrl = window.location.href;
+      window.history.pushState(null, '', initialUrl);
       const list = jest.mocked(adminUsersApi.list);
       list.mockImplementation(async (params) => ({
         data: [params?.q === 'Bob' ? bob : alice],
         total: 200,
       }));
       renderWithQueryClient(<UsersList />);
-      await interaction.click(await screen.findByRole('button', { name: 'Ouvrir Alice Dupont' }));
-      await interaction.click(
-        screen.getByRole('button', { name: 'Fermer le détail du stagiaire' }),
-      );
+      await screen.findByRole('button', { name: 'Ouvrir Alice Dupont' });
 
       const search = screen.getByRole('textbox', { name: 'Rechercher' });
       await interaction.clear(search);
@@ -243,36 +250,63 @@ describe('UsersList - filtres tenant et client', () => {
     },
   );
 
-  it.each([Role.EDITOR, Role.CLIENT_MANAGER, Role.SUPER_ADMIN])(
-    'conserve l’édition au clic pour %s',
-    async (role) => {
-      jest.mocked(adminUsersApi.list).mockResolvedValue({
-        data: [normalizeUser({ id: 'user-1', full_name: 'Autre utilisateur', role })],
-        total: 1,
-      });
-      const interaction = userEvent.setup();
-      renderWithQueryClient(<UsersList />);
-      await interaction.click(
-        await screen.findByRole('button', { name: 'Ouvrir Autre utilisateur' }),
-      );
-      expect(screen.getByRole('dialog')).toHaveTextContent('Modifier Autre utilisateur');
-      expect(mockPush).not.toHaveBeenCalled();
-      expect(new URLSearchParams(window.location.search).has('trainee')).toBe(false);
-    },
-  );
-
-  it('Modifier conserve le tiroir même pour un stagiaire', async () => {
+  it.each([Role.EDITOR, Role.SUPER_ADMIN])('conserve l’édition au clic pour %s', async (role) => {
     jest.mocked(adminUsersApi.list).mockResolvedValue({
-      data: [normalizeUser({ id: 'trainee-1', full_name: 'Alice Dupont', role: Role.TRAINEE })],
+      data: [normalizeUser({ id: 'user-1', full_name: 'Autre utilisateur', role })],
       total: 1,
     });
     const interaction = userEvent.setup();
     renderWithQueryClient(<UsersList />);
-    await interaction.click(await screen.findByRole('button', { name: 'Modifier Alice Dupont' }));
-    expect(screen.getByRole('dialog')).toHaveTextContent('Modifier Alice Dupont');
+    await interaction.click(
+      await screen.findByRole('button', { name: 'Ouvrir Autre utilisateur' }),
+    );
+    expect(screen.getByRole('dialog')).toHaveTextContent('Modifier Autre utilisateur');
     expect(mockPush).not.toHaveBeenCalled();
     expect(new URLSearchParams(window.location.search).has('trainee')).toBe(false);
   });
+
+  it.each(['Ouvrir', 'Voir'])(
+    'ouvre le responsable depuis %s en conservant filtres et ancre',
+    async (action) => {
+      window.history.replaceState(null, '', '/admin/users?q=Bob&page=3#resultats');
+      const initialUrl = window.location.href;
+      jest.mocked(adminUsersApi.list).mockResolvedValue({
+        data: [
+          normalizeUser({ id: 'manager-1', full_name: 'Bob Martin', role: Role.CLIENT_MANAGER }),
+        ],
+        total: 200,
+      });
+      renderWithQueryClient(<UsersList />);
+      await userEvent.click(await screen.findByRole('button', { name: `${action} Bob Martin` }));
+      expect(screen.getAllByRole('dialog')).toHaveLength(1);
+      expect(screen.getByRole('dialog')).toHaveTextContent('Responsable manager-1 (admin)');
+      expect(window.location.search).toBe('?q=Bob&page=3&manager=manager-1');
+      expect(window.location.hash).toBe('#resultats');
+      await userEvent.click(
+        screen.getByRole('button', { name: 'Fermer le détail du responsable' }),
+      );
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(window.location.href).toBe(initialUrl);
+      expect(mockPush).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([Role.TRAINEE, Role.CLIENT_MANAGER])(
+    'Modifier conserve le tiroir pour %s',
+    async (role) => {
+      jest.mocked(adminUsersApi.list).mockResolvedValue({
+        data: [normalizeUser({ id: 'trainee-1', full_name: 'Alice Dupont', role })],
+        total: 1,
+      });
+      const interaction = userEvent.setup();
+      renderWithQueryClient(<UsersList />);
+      await interaction.click(await screen.findByRole('button', { name: 'Modifier Alice Dupont' }));
+      expect(screen.getByRole('dialog')).toHaveTextContent('Modifier Alice Dupont');
+      expect(mockPush).not.toHaveBeenCalled();
+      expect(new URLSearchParams(window.location.search).has('trainee')).toBe(false);
+      expect(new URLSearchParams(window.location.search).has('manager')).toBe(false);
+    },
+  );
 
   it('restaure les filtres tenant/client et la pagination au retour', async () => {
     window.history.replaceState(
