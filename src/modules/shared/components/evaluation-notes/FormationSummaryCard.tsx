@@ -1,7 +1,8 @@
 'use client';
 
-import { ChevronRight, GraduationCap } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import type { FormationSummary } from '@/modules/shared/lib/evaluation-notes';
+import { learningPathCover } from '@/shared/lib/learning-path-cover';
 
 /**
  * Minimum number of trainees required to display a semantic success color.
@@ -28,17 +29,11 @@ export function FormationSummaryCard({ formation, onClick }: FormationSummaryCar
       <div className="flex items-start gap-3 p-4">
         {/* Cover thumbnail */}
         <div className="size-10 shrink-0 overflow-hidden rounded-sm bg-muted">
-          {formation.coverImage ? (
-            <img
-              src={formation.coverImage}
-              alt={formation.name}
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            <div className="flex size-full items-center justify-center text-muted-foreground/40">
-              <GraduationCap className="size-5" />
-            </div>
-          )}
+          <img
+            src={learningPathCover(formation.coverImage)}
+            alt={formation.name}
+            className="h-full w-full object-cover"
+          />
         </div>
 
         {/* Title + category */}

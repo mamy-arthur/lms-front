@@ -1,6 +1,9 @@
 import { Role } from '@/shared/constants/roles';
 import { createTrainingSource, type TrainingReader } from '@/shared/simulation/training-source';
-import type { ApiAttemptQuiz } from '@/shared/types/evaluation-attempt.types';
+import type {
+  ApiAttemptQuiz,
+  EvaluationCompletionReason,
+} from '@/shared/types/evaluation-attempt.types';
 import type {
   ApiPortalEvalSummary,
   ApiPortalExecutionProjection,
@@ -55,6 +58,7 @@ export interface SimulationResponse {
 }
 
 type JsonObject = Record<string, unknown>;
+type SimulationAttempt = SimulationData['attempts'][number];
 type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 type RouteSpec = {
   resource: ResourceName;
@@ -141,6 +145,8 @@ export const SIMULATION_ROUTES = [
     path: 'enrollments/:id/courses/:courseId/entries/:entryId/time-sessions/:sessionId',
   },
   { methods: ['POST'], path: 'enrollments/:id/evaluations/:evaluationId/attempts' },
+  { methods: ['POST'], path: 'enrollments/:id/evaluations/:evaluationId/attempts/session' },
+  { methods: ['GET'], path: 'evaluation-attempts/:id' },
   { methods: ['POST'], path: 'evaluation-attempts/:id/quizzes/:attemptQuizId/answer' },
   { methods: ['POST'], path: 'evaluation-attempts/:id/submit' },
   { methods: ['GET'], path: 'carts' },
@@ -189,7 +195,7 @@ export const SIMULATION_LIMITATIONS = [
   'Wallet, invoices and the dashboard messaging dialog currently use direct frontend mocks/callbacks, not messaging API calls; those UI behaviors are outside this engine.',
   'Fictional SCORM stays inert. Authorized Client/Editor trainee training previews launch the actual package through dedicated signed GETs, with a disposable no-I/O SCORM adapter and no tracking, time or completion writes. Package scripts follow the existing SCORM trust/CSP model; third-party telemetry is not prevented.',
   'Uploads return an inert inline placeholder, not the uploaded file. Template preview never executes HTML or sends email.',
-  'Progression recomputes course-level all/any, evaluation completion/score and failure/exhaustion branches from current local completions/latest attempts. No time-based expiry or certificate issuance. Quiz scoring is exact-match, not weighted. Reports are fictional summaries only.',
+  'Progression recomputes course-level all/any, evaluation completion/score and failure/exhaustion branches from current local completions/latest attempts. Evaluation deadlines use the local clock and finalize on attempt requests only, not a background scheduler. Visits remain synthetic, without full backend rounds/replay or certificate issuance. Quiz scoring is exact-match, not weighted. Reports are fictional summaries only.',
   'No payments, mail delivery, DNS changes, browser persistence or network fallback exist. Authorized training definitions/media are read-only exceptions for Client/Editor trainee previews; enrollments and results stay local.',
 ] as const;
 
@@ -432,6 +438,7 @@ const FIELDS: Record<ResourceName, readonly string[]> = {
     'type',
     'question_bank_ids',
     'question_count',
+    'time_limit_minutes',
     'max_attempts',
     'location_x',
     'location_y',
@@ -564,6 +571,14 @@ function updateEntity(
     if (!['FINAL', 'PARTIAL'].includes(text(result.type))) invalid('Type d’évaluation inconnu.');
     if (!Number.isInteger(result.question_count) || number(result.question_count) < 1)
       invalid('question_count doit être positif.');
+    if (
+      result.time_limit_minutes != null &&
+      (!Number.isInteger(result.time_limit_minutes) ||
+        number(result.time_limit_minutes) < 1 ||
+        number(result.time_limit_minutes) > 2147483647)
+    )
+      invalid('time_limit_minutes doit être un entier positif ou null.');
+    result.time_limit_minutes ??= null;
     if (
       result.max_attempts !== null &&
       (!Number.isInteger(result.max_attempts) || number(result.max_attempts) < 1)
@@ -1132,6 +1147,7 @@ function summary(data: SimulationData, enrollmentId: string): ApiPortalLearningP
       ...projection,
       id: evaluation.id,
       title: text(evaluation.title),
+      time_limit_minutes: evaluationTimeLimit(evaluation),
       evaluation_type: evaluation.type === 'PARTIAL' ? 'PARTIAL' : 'FINAL',
       accessible: true,
       completed: !!last,
@@ -2076,30 +2092,200 @@ function attemptLimit(data: SimulationData, evaluation: SimulationEntity): numbe
   return limits.length ? Math.min(...limits) : null;
 }
 
-function startAttempt(
+function evaluationTimeLimit(evaluation: SimulationEntity): number | null {
+  const minutes = number(evaluation.time_limit_minutes);
+  return Number.isInteger(minutes) && minutes >= 1 && minutes <= 2147483647 ? minutes : null;
+}
+
+function attemptConflict(message: string): never {
+  throw Object.assign(
+    new Error(message),
+    response({ message, error_code: 'execution_conflict', simulation: true }, 409),
+  );
+}
+
+function requireAttemptUuid(value: unknown, field: string): string {
+  if (
+    typeof value !== 'string' ||
+    !/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i.test(value)
+  )
+    invalid(`${field} doit être un UUID.`);
+  return value;
+}
+
+function attemptDue(attempt: SimulationAttempt, now: Date): boolean {
+  return (
+    attempt.status === 'in_progress' &&
+    attempt.expires_at != null &&
+    now.getTime() >= Date.parse(attempt.expires_at)
+  );
+}
+
+function attemptResponse(
+  data: SimulationData,
+  attempt: SimulationAttempt,
+  now: Date,
+  status = 200,
+): SimulationResponse {
+  return response(
+    {
+      data: { ...attempt, server_now: now.toISOString() },
+      ...(attempt.status === 'completed'
+        ? { execution: summary(data, attempt.enrollment_id).execution }
+        : {}),
+    },
+    status,
+  );
+}
+
+/** One finalization path for submit, poll, session resolution and late answers. */
+function finalizeAttempt(
+  data: SimulationData,
+  attempt: SimulationAttempt,
+  requestedReason: EvaluationCompletionReason,
+  now: Date,
+): void {
+  if (attempt.status === 'completed') return;
+  const reason = attemptDue(attempt, now) ? 'timeout' : requestedReason;
+  if (reason === 'timeout' && !attemptDue(attempt, now))
+    attemptConflict('Simulation : l’échéance de cette évaluation n’est pas atteinte.');
+  if (
+    reason === 'manual' &&
+    attempt.quizzes.some(
+      (quiz) =>
+        quiz.submitted_answer == null ||
+        (quiz.type === 'matching' &&
+          objects(object(quiz.submitted_answer).pairs).length !== quiz.left_values?.length),
+    )
+  )
+    fail(409, 'Simulation : répondez à toutes les questions avant de soumettre.');
+
+  attempt.score = Math.round(
+    (attempt.quizzes.filter((quiz) => isCorrect(data, quiz)).length * 100) /
+      Math.max(1, attempt.quizzes.length),
+  );
+  attempt.status = 'completed';
+  attempt.completion_reason = reason;
+  attempt.completed_at = reason === 'timeout' ? attempt.expires_at! : now.toISOString();
+  refreshEnrollment(data, attempt.enrollment_id);
+  changedData.add(data);
+}
+
+function resolveAttemptSession(
+  data: SimulationData,
+  attempt: SimulationAttempt,
+  pageSessionId: string | null,
+  now: Date,
+): void {
+  if (attempt.status === 'completed') return;
+  if (attemptDue(attempt, now)) {
+    finalizeAttempt(data, attempt, 'timeout', now);
+  } else if (attempt.page_session_id != null) {
+    if (pageSessionId === null)
+      attemptConflict('Simulation : la session de page est requise pour cette évaluation.');
+    if (pageSessionId !== attempt.page_session_id)
+      finalizeAttempt(data, attempt, 'page_reload', now);
+  }
+}
+
+function evaluationVisit(
   data: SimulationData,
   enrollmentId: string,
   evaluationId: string,
-): SimulationResponse {
+  executionId?: string,
+) {
   const registration = enrollment(data, enrollmentId);
   const evaluation = find(data, 'evaluations', evaluationId);
   if (evaluation.learning_path_id !== registration.learning_path_id || !evaluation.is_published)
     fail(404, 'Simulation : évaluation indisponible.');
   const tree = summary(data, enrollmentId);
-  if (
-    !progressionAccess(data, enrollmentId, registration.learning_path_id, tree.modules).has(
-      `evaluation:${evaluationId}`,
-    )
-  ) {
-    fail(403, 'Simulation : terminez les prérequis de cette évaluation.');
-  }
+  const node = tree.execution.nodes[`evaluation:${evaluationId}`];
+  const localExecutionId = simulationExecutionId(data, enrollmentId, 'evaluation', evaluationId);
+  if (executionId !== undefined && executionId !== localExecutionId)
+    attemptConflict('Simulation : cette visite ne correspond pas à l’évaluation.');
   const previous = data.attempts.filter(
-    (attempt) => attempt.enrollment_id === enrollmentId && attempt.evaluation_id === evaluationId,
+    (attempt) =>
+      attempt.enrollment_id === enrollmentId &&
+      attempt.evaluation_id === evaluationId &&
+      (attempt.node_execution_id == null || attempt.node_execution_id === localExecutionId),
   );
+  return { evaluation, tree, node, previous, executionId: localExecutionId };
+}
+
+/** A POST lookup is not a start: neither the attempt budget nor progression changes. */
+function attemptSession(
+  data: SimulationData,
+  enrollmentId: string,
+  evaluationId: string,
+  payload: JsonObject,
+): SimulationResponse {
+  const executionId = requireAttemptUuid(payload.node_execution_id, 'node_execution_id');
+  const pageSessionId = requireAttemptUuid(payload.page_session_id, 'page_session_id');
+  const visit = evaluationVisit(data, enrollmentId, evaluationId, executionId);
+  const attempt = visit.previous.at(-1);
+  if (!visit.node?.readable && attempt?.status !== 'completed')
+    attemptConflict('Simulation : cette visite n’est pas accessible.');
+  if (!attempt) return response({ data: null });
+  const now = new Date();
+  resolveAttemptSession(data, attempt, pageSessionId, now);
+  return attemptResponse(data, attempt, now);
+}
+
+function startAttempt(
+  data: SimulationData,
+  enrollmentId: string,
+  evaluationId: string,
+  payload: JsonObject,
+): SimulationResponse {
+  const pageSessionId =
+    payload.page_session_id == null
+      ? null
+      : requireAttemptUuid(payload.page_session_id, 'page_session_id');
+  // Old fixture callers omit the entire context. A protected call must supply it.
+  const hasContext =
+    pageSessionId !== null ||
+    'node_execution_id' in payload ||
+    'expected_state_revision' in payload;
+  const requestedExecutionId = hasContext
+    ? requireAttemptUuid(payload.node_execution_id, 'node_execution_id')
+    : undefined;
+  if (
+    hasContext &&
+    (!Number.isInteger(payload.expected_state_revision) ||
+      number(payload.expected_state_revision, -1) < 0)
+  )
+    invalid('expected_state_revision doit être un entier positif ou nul.');
+  const { evaluation, tree, node, previous, executionId } = evaluationVisit(
+    data,
+    enrollmentId,
+    evaluationId,
+    requestedExecutionId,
+  );
+  const latest = previous.at(-1);
+  const now = new Date();
+  // Match StartEvaluationAttemptUseCase: replay protected attempts BEFORE revision/current guards.
+  if (
+    latest?.page_session_id != null &&
+    (latest.status === 'in_progress' || latest.page_session_id === pageSessionId)
+  ) {
+    resolveAttemptSession(data, latest, pageSessionId, now);
+    return attemptResponse(data, latest, now);
+  }
+  if (latest?.page_session_id != null && pageSessionId === null)
+    attemptConflict('Simulation : la session de page est requise pour cette évaluation.');
+  if (!node?.readable) fail(403, 'Simulation : terminez les prérequis de cette évaluation.');
+  if (hasContext && (!node.actionable || tree.state_revision !== payload.expected_state_revision))
+    attemptConflict('Simulation : la visite ou la révision de cette évaluation a changé.');
   const ongoing = previous.find((attempt) => attempt.status === 'in_progress');
-  if (ongoing) return response({ data: ongoing });
+  if (ongoing) {
+    resolveAttemptSession(data, ongoing, pageSessionId, now);
+    return attemptResponse(data, ongoing, now);
+  }
   const limit = attemptLimit(data, evaluation);
-  if (limit !== null && previous.length >= limit) invalid('Nombre maximal de tentatives atteint.');
+  if (limit !== null && previous.length >= limit) {
+    if (hasContext) fail(409, 'Simulation : nombre maximal de tentatives atteint.');
+    invalid('Nombre maximal de tentatives atteint.');
+  }
   const questionPool = pool(data, evaluation);
   if (questionPool.length < number(evaluation.question_count))
     invalid('La banque de questions locale est insuffisante.');
@@ -2127,23 +2313,106 @@ function startAttempt(
           }
         : {}),
       submitted_answer: null,
+      answer_revision: 0,
     }));
-  const attempt = {
+  const timeLimitMinutes = evaluationTimeLimit(evaluation);
+  const attempt: SimulationAttempt = {
     id: nextId(data),
     enrollment_id: enrollmentId,
     evaluation_id: evaluationId,
+    node_execution_id: executionId,
+    // The existing local progression engine has synthetic visits, not backend validation rounds.
+    validation_round_id: null,
     status: 'in_progress' as const,
     score: null,
-    started_at: SIMULATION_DATE,
+    started_at: now.toISOString(),
     completed_at: null,
+    time_limit_minutes: timeLimitMinutes,
+    expires_at:
+      timeLimitMinutes === null
+        ? null
+        : new Date(now.getTime() + timeLimitMinutes * 60_000).toISOString(),
+    completion_reason: null,
+    page_session_id: pageSessionId,
     quizzes,
   };
   data.attempts.push(attempt);
   refreshEnrollment(data, enrollmentId);
-  return response({ data: attempt }, 201);
+  changedData.add(data);
+  return attemptResponse(data, attempt, now, 201);
+}
+
+function saveAttemptAnswer(
+  data: SimulationData,
+  attempt: SimulationAttempt,
+  attemptQuizId: string,
+  payload: JsonObject,
+): void {
+  if ('page_session_id' in payload) requireAttemptUuid(payload.page_session_id, 'page_session_id');
+  if (attempt.page_session_id != null) {
+    if (payload.page_session_id == null || payload.answer_revision == null)
+      invalid('La session de page et la révision de réponse sont requises.');
+    if (payload.page_session_id !== attempt.page_session_id)
+      attemptConflict('Simulation : cette évaluation appartient à une autre session de page.');
+  }
+  if (
+    'answer_revision' in payload &&
+    (!Number.isInteger(payload.answer_revision) ||
+      number(payload.answer_revision) < 1 ||
+      number(payload.answer_revision) > 2147483647)
+  )
+    invalid('answer_revision doit être un entier positif.');
+  if ('clear' in payload && typeof payload.clear !== 'boolean')
+    invalid('clear doit être un booléen.');
+  const quiz = attempt.quizzes.find((row) => row.id === attemptQuizId);
+  if (!quiz) fail(404, 'Simulation : question absente de la tentative.');
+  const revision = number(payload.answer_revision, (quiz.answer_revision ?? 0) + 1);
+  if (revision <= (quiz.answer_revision ?? 0)) return;
+
+  let answer: JsonObject | null = null;
+  if (payload.clear !== true) {
+    if (quiz.type === 'true_false') {
+      if (typeof payload.answer !== 'boolean') invalid('Une réponse booléenne est requise.');
+      answer = { answer: payload.answer };
+    } else if (quiz.type === 'matching') {
+      const pairs = objects(payload.pairs);
+      if (
+        !Array.isArray(payload.pairs) ||
+        (attempt.page_session_id == null && pairs.length !== quiz.left_values?.length) ||
+        pairs.some(
+          (pair) =>
+            typeof pair.left !== 'string' ||
+            typeof pair.right !== 'string' ||
+            !quiz.left_values?.includes(pair.left) ||
+            !quiz.right_values?.includes(pair.right),
+        ) ||
+        new Set(pairs.map((pair) => pair.left)).size !== pairs.length ||
+        new Set(pairs.map((pair) => pair.right)).size !== pairs.length
+      )
+        invalid('Paires invalides.');
+      answer = { pairs: pairs.map((pair) => ({ left: pair.left, right: pair.right })) };
+    } else {
+      const selected = strings(payload.selected_option_ids);
+      if (
+        !Array.isArray(payload.selected_option_ids) ||
+        selected.length !== payload.selected_option_ids.length ||
+        selected.length === 0 ||
+        (quiz.type === 'single_choice' && selected.length !== 1) ||
+        new Set(selected).size !== selected.length ||
+        selected.some((id) => !quiz.options?.some((option) => option.id === id))
+      )
+        invalid('Options invalides.');
+      answer = { selected_option_ids: selected };
+    }
+  }
+  // Only normalized answer fields are retained; metadata/unknown fields are never quiz answers.
+  quiz.submitted_answer = safeValue(answer);
+  quiz.answer_revision = revision;
+  changedData.add(data);
 }
 
 function isCorrect(data: SimulationData, quiz: ApiAttemptQuiz): boolean {
+  if (quiz.submitted_answer == null) return false;
   const question = find(data, 'quizzes', quiz.quiz_id);
   const answer = object(quiz.submitted_answer);
   if (question.type === 'true_false') return answer.answer === question.correct_answer;
@@ -2598,7 +2867,19 @@ export async function handleSimulationRequest(
 ): Promise<SimulationResponse> {
   const data = state;
   const result = await dispatchSimulationRequest(url, options);
-  if (data && state === data && (options.method ?? 'GET').toUpperCase() !== 'GET') {
+  // Attempt handlers mark only actual mutations (including expiry during GET).
+  // Session lookups and completed/stale replays must remain read-only.
+  const path = new URL(url, 'https://simulation.example.test/').pathname;
+  const attemptRoute =
+    /\/(?:evaluation-attempts\/|enrollments\/[^/]+\/evaluations\/[^/]+\/attempts(?:\/|$))/.test(
+      path,
+    );
+  if (
+    data &&
+    state === data &&
+    !attemptRoute &&
+    (options.method ?? 'GET').toUpperCase() !== 'GET'
+  ) {
     changedData.add(data);
   }
   return result;
@@ -2787,6 +3068,7 @@ async function dispatchSimulationRequest(
             title: row.title,
             type: row.type,
             question_count: row.question_count,
+            time_limit_minutes: evaluationTimeLimit(row),
             allow_review: true,
             max_attempts: limit,
             attempts_used: attempts.length,
@@ -2857,46 +3139,38 @@ async function dispatchSimulationRequest(
     refreshEnrollment(data, match[1]);
     return response({ data: summary(data, match[1]).execution });
   }
-  match = /^enrollments\/([^/]+)\/evaluations\/([^/]+)\/attempts$/.exec(path);
-  if (match && method === 'POST') return startAttempt(data, match[1], match[2]);
+  match = /^enrollments\/([^/]+)\/evaluations\/([^/]+)\/attempts(?:\/(session))?$/.exec(path);
+  if (match && method === 'POST')
+    return match[3]
+      ? attemptSession(data, match[1], match[2], payload)
+      : startAttempt(data, match[1], match[2], payload);
+  match = /^evaluation-attempts\/([^/]+)$/.exec(path);
+  if (match && method === 'GET') {
+    const attemptId = match[1];
+    const attempt = data.attempts.find((row) => row.id === attemptId);
+    if (!attempt) fail(404, 'Simulation : tentative introuvable.');
+    const now = new Date();
+    if (attemptDue(attempt, now)) finalizeAttempt(data, attempt, 'timeout', now);
+    return attemptResponse(data, attempt, now);
+  }
   match = /^evaluation-attempts\/([^/]+)\/(?:quizzes\/([^/]+)\/answer|(submit))$/.exec(path);
   if (match && method === 'POST') {
     const [, attemptId, attemptQuizId, submit] = match;
     const attempt = data.attempts.find((row) => row.id === attemptId);
     if (!attempt) fail(404, 'Simulation : tentative introuvable.');
-    if (attempt.status === 'completed') {
-      if (submit)
-        return response({
-          data: attempt,
-          execution: summary(data, attempt.enrollment_id).execution,
-        });
-      invalid('Cette tentative est déjà terminée.');
+    const reason = payload.reason ?? 'manual';
+    // page_reload exclu comme côté backend : seul le serveur le décide, via la
+    // résolution de session. L'accepter ici laissait sauter le contrôle manual.
+    if (submit && !['manual', 'timeout'].includes(text(reason)))
+      invalid('Motif de finalisation inconnu.');
+    const now = new Date();
+    // Completed/due answers replay the whole attempt, never save a late draft.
+    if (attemptDue(attempt, now)) finalizeAttempt(data, attempt, 'timeout', now);
+    if (attempt.status !== 'completed') {
+      if (attemptQuizId) saveAttemptAnswer(data, attempt, attemptQuizId, payload);
+      else finalizeAttempt(data, attempt, reason as EvaluationCompletionReason, now);
     }
-    if (attemptQuizId) {
-      const quiz = attempt.quizzes.find((row) => row.id === attemptQuizId);
-      if (!quiz) fail(404, 'Simulation : question absente de la tentative.');
-      if (quiz.type === 'true_false' && typeof payload.answer !== 'boolean')
-        invalid('Une réponse booléenne est requise.');
-      if (
-        (quiz.type === 'single_choice' || quiz.type === 'multiple_choice') &&
-        (!Array.isArray(payload.selected_option_ids) ||
-          strings(payload.selected_option_ids).some(
-            (id) => !quiz.options?.some((option) => option.id === id),
-          ))
-      )
-        invalid('Options invalides.');
-      if (quiz.type === 'matching' && !Array.isArray(payload.pairs)) invalid('Paires invalides.');
-      quiz.submitted_answer = safeValue(payload);
-      return response({ data: quiz });
-    }
-    attempt.score = Math.round(
-      (attempt.quizzes.filter((quiz) => isCorrect(data, quiz)).length * 100) /
-        Math.max(1, attempt.quizzes.length),
-    );
-    attempt.status = 'completed';
-    attempt.completed_at = SIMULATION_DATE;
-    refreshEnrollment(data, attempt.enrollment_id);
-    return response({ data: attempt, execution: summary(data, attempt.enrollment_id).execution });
+    return attemptResponse(data, attempt, now);
   }
 
   match = /^platform\/courses\/([^/]+)\/sections(?:\/([^/]+))?(?:\/(visibility))?$/.exec(path);

@@ -10,6 +10,7 @@ interface ExamAnswerPanelProps {
   onToggleMultiple: (optionId: string) => void;
   onMatchPair: (leftId: string, rightId: string) => void;
   saved?: boolean;
+  disabled?: boolean;
   className?: string;
 }
 
@@ -20,6 +21,8 @@ export function ExamAnswerPanel({
   onToggleMultiple,
   onMatchPair,
   className,
+  saved = false,
+  disabled = false,
 }: ExamAnswerPanelProps) {
   return (
     <section aria-label="Vos réponses" className={className}>
@@ -32,7 +35,9 @@ export function ExamAnswerPanel({
             onAnswer={onAnswer}
             onToggleMultiple={onToggleMultiple}
             onMatchPair={onMatchPair}
+            disabled={disabled}
           />
+          {saved && <p className="mt-3 text-xs text-muted-foreground">Réponse enregistrée</p>}
         </div>
       </div>
     </section>

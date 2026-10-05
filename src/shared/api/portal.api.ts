@@ -1,6 +1,9 @@
 import { apiGet, apiPost, httpClient } from '@/shared/lib/apiClient';
 import type { ApiMeEnrollmentsResponse } from '@/shared/types/enrollment.types';
-import type { ApiEvaluationAttempt } from '@/shared/types/evaluation-attempt.types';
+import type {
+  ApiEvaluationAttempt,
+  SubmittableCompletionReason,
+} from '@/shared/types/evaluation-attempt.types';
 import type {
   ApiLearnerEvaluation,
   ApiPortalContentEntry,
@@ -92,9 +95,33 @@ export const portalContentTimeApi = {
   },
 };
 
+export interface EvaluationAttemptResponse {
+  data: ApiEvaluationAttempt;
+  execution?: ApiExecutionSnapshot;
+}
+
 export const evaluationAttemptsApi = {
-  start: (enrollmentId: string, evaluationId: string, context: ExecutionMutationContext) =>
-    apiPost<{ data: ApiEvaluationAttempt }, ExecutionMutationContext>(
+  session: (
+    enrollmentId: string,
+    evaluationId: string,
+    context: {
+      node_execution_id: string;
+      page_session_id: string;
+    },
+  ) =>
+    apiPost<{ data: ApiEvaluationAttempt | null; execution?: ApiExecutionSnapshot }>(
+      `enrollments/${enrollmentId}/evaluations/${evaluationId}/attempts/session`,
+      context,
+    ),
+
+  get: (attemptId: string) => apiGet<EvaluationAttemptResponse>(`evaluation-attempts/${attemptId}`),
+
+  start: (
+    enrollmentId: string,
+    evaluationId: string,
+    context: ExecutionMutationContext & { page_session_id: string },
+  ) =>
+    apiPost<EvaluationAttemptResponse>(
       `enrollments/${enrollmentId}/evaluations/${evaluationId}/attempts`,
       context,
     ),
@@ -102,12 +129,13 @@ export const evaluationAttemptsApi = {
   // Answer et submit dérivent leur contexte de la tentative persistée côté
   // serveur : le client ne doit jamais leur imposer une visite.
   answer: (attemptId: string, attemptQuizId: string, payload: Record<string, unknown>) =>
-    apiPost<unknown>(`evaluation-attempts/${attemptId}/quizzes/${attemptQuizId}/answer`, payload),
-
-  submit: (attemptId: string) =>
-    apiPost<{ data: ApiEvaluationAttempt; execution: ApiExecutionSnapshot }>(
-      `evaluation-attempts/${attemptId}/submit`,
+    apiPost<EvaluationAttemptResponse>(
+      `evaluation-attempts/${attemptId}/quizzes/${attemptQuizId}/answer`,
+      payload,
     ),
+
+  submit: (attemptId: string, body?: { reason: SubmittableCompletionReason }) =>
+    apiPost<EvaluationAttemptResponse>(`evaluation-attempts/${attemptId}/submit`, body),
 };
 
 export const meApi = {

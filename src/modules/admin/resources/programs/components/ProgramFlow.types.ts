@@ -74,9 +74,7 @@ export type EvaluationStepPayload = {
   questionBankNames: string[];
   questionCount: number;
   attemptCount: number;
-  durationEnabled: boolean;
-  durationHours: number;
-  durationMinutes: number;
+  timeLimitMinutes: number | null;
 };
 
 export type AttestationStepPayload = {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import type { Question, QuizAttempt, TraineeAnswer } from '../types';
 import { ExamOverlay } from './exam/ExamOverlay';
@@ -19,6 +19,15 @@ interface QuizProps {
   onReset?: () => void;
   /** Optional external handler called on exam submission before showing the summary */
   onSubmit?: (attempt: QuizAttempt, answers: Record<string, TraineeAnswer>) => void;
+  /** Server-owned evaluations must never show locally computed results. */
+  serverManaged?: boolean;
+  initialAnswers?: Record<string, TraineeAnswer>;
+  onAnswerChange?: (id: string, answer: TraineeAnswer) => void;
+  canEdit?: () => boolean;
+  disabled?: boolean;
+  countdown?: string;
+  runtimeStatus?: ReactNode;
+  savedQuestionIds?: string[];
 }
 
 type Phase = 'exam' | 'summary';
@@ -31,6 +40,14 @@ export function Quiz({
   sessionId,
   onReset,
   onSubmit,
+  serverManaged,
+  initialAnswers,
+  onAnswerChange,
+  canEdit,
+  disabled,
+  countdown,
+  runtimeStatus,
+  savedQuestionIds,
 }: QuizProps) {
   const [phase, setPhase] = useState<Phase>('exam');
   const [attempt, setAttempt] = useState<QuizAttempt | null>(null);
@@ -68,7 +85,19 @@ export function Quiz({
       title={title}
       candidateName={candidateName}
       sessionId={sessionId}
+      serverManaged={serverManaged}
+      initialAnswers={initialAnswers}
+      onAnswerChange={onAnswerChange}
+      canEdit={canEdit}
+      disabled={disabled}
+      countdown={countdown}
+      runtimeStatus={runtimeStatus}
+      savedQuestionIds={savedQuestionIds}
       onSubmit={(completedAttempt, answers) => {
+        if (serverManaged) {
+          onSubmit?.(completedAttempt, answers);
+          return;
+        }
         setAttempt(completedAttempt);
         setFinalAnswers(answers);
         setPhase('summary');

@@ -56,6 +56,29 @@ function mapEvaluation(spec = summary()): FormationEvaluation {
 }
 
 describe('Projection du snapshot d’exécution', () => {
+  it.each([90, null, undefined])('projette la limite figée %s sans durée estimée', (minutes) => {
+    const source = summary();
+    source.final_evaluations[0].time_limit_minutes = minutes;
+    const evaluation = mapEvaluation(source);
+    expect(evaluation.timeLimitMinutes).toBe(minutes ?? null);
+    expect(evaluation.durationMin).toBeUndefined();
+  });
+
+  it('projette aussi la limite des évaluations intermédiaires', () => {
+    const source = summary();
+    source.modules[0].evaluation = {
+      ...source.final_evaluations[0],
+      id: 'partial-evaluation',
+      evaluation_type: 'PARTIAL',
+      time_limit_minutes: 120,
+    };
+    const evaluation = mapSummaryToFormation(source).nodes.find(
+      (node) => node.id === 'partial-evaluation',
+    ) as FormationEvaluation;
+    expect(evaluation.evaluationType).toBe('intermediate');
+    expect(evaluation.timeLimitMinutes).toBe(120);
+  });
+
   it('sépare le chemin actif de la couverture historique', () => {
     const formation = mapSummaryToFormation(summary());
 

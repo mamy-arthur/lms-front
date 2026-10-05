@@ -6,7 +6,7 @@ jest.mock('@/shared/lib/apiClient', () => ({
 }));
 
 import { apiGet, apiPost } from '@/shared/lib/apiClient';
-import { portalContentEntriesApi } from '../portal.api';
+import { evaluationAttemptsApi, portalContentEntriesApi } from '../portal.api';
 
 const ENROLLMENT_ID = '00000000-0000-4000-8000-000000000001';
 const COMPETENCY_A = '00000000-0000-4000-8000-000000000002';
@@ -61,5 +61,46 @@ describe('Complétion des contenus par module', () => {
         CONTEXT,
       ),
     ).rejects.toBe(error);
+  });
+});
+
+describe('Contrat d’exécution des tentatives d’évaluation', () => {
+  beforeEach(() => jest.resetAllMocks());
+
+  it('vérifie la session de visite séparément du démarrage explicite', async () => {
+    const page_session_id = '00000000-0000-4000-8000-000000000007';
+    await evaluationAttemptsApi.session(ENROLLMENT_ID, 'evaluation', {
+      node_execution_id: CONTEXT.node_execution_id,
+      page_session_id,
+    });
+    expect(apiPost).toHaveBeenLastCalledWith(
+      `enrollments/${ENROLLMENT_ID}/evaluations/evaluation/attempts/session`,
+      {
+        node_execution_id: CONTEXT.node_execution_id,
+        page_session_id,
+      },
+    );
+    await evaluationAttemptsApi.start(ENROLLMENT_ID, 'evaluation', { ...CONTEXT, page_session_id });
+    expect(apiPost).toHaveBeenLastCalledWith(
+      `enrollments/${ENROLLMENT_ID}/evaluations/evaluation/attempts`,
+      { ...CONTEXT, page_session_id },
+    );
+  });
+
+  it('lit la tentative et envoie les révisions, effacements et motifs explicites', async () => {
+    await evaluationAttemptsApi.get('attempt');
+    expect(apiGet).toHaveBeenCalledWith('evaluation-attempts/attempt');
+    const draft = { clear: true, answer_revision: 4, page_session_id: 'page' };
+    await evaluationAttemptsApi.answer('attempt', 'question', draft);
+    expect(apiPost).toHaveBeenLastCalledWith(
+      'evaluation-attempts/attempt/quizzes/question/answer',
+      draft,
+    );
+    await evaluationAttemptsApi.submit('attempt', { reason: 'timeout' });
+    expect(apiPost).toHaveBeenLastCalledWith('evaluation-attempts/attempt/submit', {
+      reason: 'timeout',
+    });
+    await evaluationAttemptsApi.submit('attempt');
+    expect(apiPost).toHaveBeenLastCalledWith('evaluation-attempts/attempt/submit', undefined);
   });
 });

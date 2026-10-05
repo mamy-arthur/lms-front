@@ -27,6 +27,8 @@ export type ApiPortalExecutionProjection = Omit<
 export type ApiPortalEvalSummary = {
   id: string;
   title: string;
+  /** Frozen integer minutes; null or absent on legacy snapshots = unlimited. */
+  time_limit_minutes?: number | null;
   accessible: boolean;
   completed: boolean;
   score: number | null;
@@ -110,6 +112,7 @@ export interface ApiLearnerEvaluation {
   title: string;
   type: string;
   question_count: number;
+  time_limit_minutes?: number | null;
   allow_review: boolean;
   max_attempts: number | null;
   attempts_used: number;

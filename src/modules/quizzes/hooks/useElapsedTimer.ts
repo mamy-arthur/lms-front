@@ -5,13 +5,13 @@ import { useEffect, useRef, useState } from 'react';
 /** Returns elapsed seconds since the hook was first mounted. Increments every second. */
 export function useElapsedTimer(running = true) {
   const [elapsed, setElapsed] = useState(0);
-  const startRef = useRef<number>(Date.now());
+  const startRef = useRef<number>(performance.now());
 
   useEffect(() => {
     if (!running) return;
-    startRef.current = Date.now() - elapsed * 1000;
+    startRef.current = performance.now() - elapsed * 1000;
     const id = setInterval(() => {
-      setElapsed(Math.floor((Date.now() - startRef.current) / 1000));
+      setElapsed(Math.floor((performance.now() - startRef.current) / 1000));
     }, 1000);
     return () => clearInterval(id);
   }, [running]);

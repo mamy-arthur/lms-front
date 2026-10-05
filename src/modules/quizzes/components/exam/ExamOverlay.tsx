@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import { useQuizState } from '../../hooks/useQuizState';
 import { useElapsedTimer } from '../../hooks/useElapsedTimer';
@@ -12,6 +12,7 @@ import { ExamQuestionPanel } from './ExamQuestionPanel';
 import { ExamAnswerPanel } from './ExamAnswerPanel';
 import { ExamFooter } from './ExamFooter';
 import { ExamFinishDialog } from './ExamFinishDialog';
+import { isQuestionAnswered } from '../../utils/answer-completeness';
 
 interface ExamOverlayProps {
   questions: Question[];
@@ -23,6 +24,14 @@ interface ExamOverlayProps {
   /** Short session identifier shown in the header */
   sessionId?: string;
   className?: string;
+  serverManaged?: boolean;
+  initialAnswers?: Record<string, TraineeAnswer>;
+  onAnswerChange?: (id: string, answer: TraineeAnswer) => void;
+  canEdit?: () => boolean;
+  disabled?: boolean;
+  countdown?: string;
+  runtimeStatus?: ReactNode;
+  savedQuestionIds?: string[];
 }
 
 export function ExamOverlay({
@@ -32,9 +41,17 @@ export function ExamOverlay({
   candidateName,
   sessionId,
   className,
+  serverManaged = false,
+  initialAnswers,
+  onAnswerChange,
+  canEdit,
+  disabled = false,
+  countdown,
+  runtimeStatus,
+  savedQuestionIds,
 }: ExamOverlayProps) {
   const [showFinishDialog, setShowFinishDialog] = useState(false);
-  const [savedQuestionId, setSavedQuestionId] = useState<string | null>(null);
+  const [portalContainer, setPortalContainer] = useState<HTMLDivElement | null>(null);
 
   const {
     currentIndex,
@@ -52,10 +69,10 @@ export function ExamOverlay({
     goNext,
     goPrev,
     submit,
-  } = useQuizState(questions);
+  } = useQuizState(questions, { initialAnswers, onAnswerChange, canEdit });
 
-  const { formatted: elapsedFormatted } = useElapsedTimer(true);
-  useBeforeUnload(true);
+  const { formatted: elapsedFormatted } = useElapsedTimer(!disabled);
+  useBeforeUnload(!serverManaged);
 
   // Block Escape key
   useEffect(() => {
@@ -66,19 +83,15 @@ export function ExamOverlay({
     return () => window.removeEventListener('keydown', handler, true);
   }, []);
 
-  // Autosave feedback
-  const handleAnswer = useCallback(
-    (questionId: string, answer: TraineeAnswer) => {
-      setAnswer(questionId, answer);
-      setSavedQuestionId(questionId);
-      const timer = setTimeout(() => setSavedQuestionId(null), 1500);
-      return () => clearTimeout(timer);
-    },
-    [setAnswer],
-  );
-
   const handleConfirmFinish = useCallback(() => {
-    submit();
+    if (
+      disabled ||
+      (canEdit && !canEdit()) ||
+      !questions.every((question) => isQuestionAnswered(question, answers[question.id]))
+    )
+      return;
+    setShowFinishDialog(false);
+    if (!serverManaged) submit();
     const now = completedAt ?? new Date();
     const { pointsObtained, maxPoints, grade } = computeScore(questions, answers);
     const attempt: QuizAttempt = {
@@ -90,7 +103,17 @@ export function ExamOverlay({
       grade,
     };
     onSubmit(attempt, answers);
-  }, [submit, completedAt, questions, answers, startedAt, onSubmit]);
+  }, [
+    disabled,
+    canEdit,
+    serverManaged,
+    submit,
+    completedAt,
+    questions,
+    answers,
+    startedAt,
+    onSubmit,
+  ]);
 
   if (!currentQuestion) return null;
 
@@ -115,35 +138,39 @@ export function ExamOverlay({
           totalQuestions={totalQuestions}
           answeredCount={answeredCount}
           elapsedFormatted={elapsedFormatted}
+          countdown={countdown}
           candidateName={candidateName}
           sessionId={sessionId}
         />
+        {runtimeStatus}
 
         {/* ── Content ───────────────────────────────────────────────────── */}
-        <div className="flex flex-1 overflow-y-auto px-4 py-10">
+        <div
+          inert={disabled}
+          aria-disabled={disabled}
+          className="flex flex-1 overflow-y-auto px-4 py-10"
+        >
           <div className="mx-auto flex w-full max-w-130 flex-col gap-8">
             <ExamQuestionPanel question={currentQuestion} />
             <ExamAnswerPanel
+              disabled={disabled}
               question={currentQuestion}
               answer={currentAnswer}
-              onAnswer={(ans) => handleAnswer(currentQuestion.id, ans)}
+              onAnswer={(ans) => setAnswer(currentQuestion.id, ans)}
               onToggleMultiple={(optId) => {
                 toggleMultipleChoice(currentQuestion.id, optId);
-                setSavedQuestionId(currentQuestion.id);
-                setTimeout(() => setSavedQuestionId(null), 1500);
               }}
               onMatchPair={(l, r) => {
                 setMatchingPair(currentQuestion.id, l, r);
-                setSavedQuestionId(currentQuestion.id);
-                setTimeout(() => setSavedQuestionId(null), 1500);
               }}
-              saved={savedQuestionId === currentQuestion.id}
+              saved={savedQuestionIds?.includes(currentQuestion.id) ?? false}
             />
           </div>
         </div>
 
         {/* ── Footer ─────────────────────────────────────────────────────── */}
         <ExamFooter
+          disabled={disabled}
           isFirst={isFirst}
           isLast={isLast}
           onPrev={goPrev}
@@ -155,9 +182,12 @@ export function ExamOverlay({
         />
       </div>
 
-      {/* Finish confirmation dialog */}
+      {/* Keep the portal inside the exam/evaluation root, including when the
+          navigation guard marks surrounding application siblings inert. */}
+      <div ref={setPortalContainer} data-exam-portal="" />
       <ExamFinishDialog
-        open={showFinishDialog}
+        open={showFinishDialog && !disabled}
+        container={portalContainer}
         questions={questions}
         answers={answers}
         onCancel={() => setShowFinishDialog(false)}

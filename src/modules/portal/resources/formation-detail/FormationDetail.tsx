@@ -1,16 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import {
-  Award,
-  ClipboardCheck,
-  Clock,
-  GraduationCap,
-  History,
-  ImageIcon,
-  Layers,
-  Play,
-} from 'lucide-react';
+import { Award, ClipboardCheck, Clock, GraduationCap, History, Layers, Play } from 'lucide-react';
 import type { FormationDetailData } from './lib/types';
 import { ProgressVariant } from '@/shared/components/ui/progress/Progress';
 import { Badge } from '@/components/ui/badge';
@@ -21,6 +12,7 @@ import { useFormationSummaryQuery } from '../formation-learning/hooks/useFormati
 import type { FormationEvaluation, FormationModule } from '../formation-learning/lib/types';
 import { formatDuration } from '@/shared/lib/duration';
 import CurriculumModule from './components/CurriculumModule';
+import { learningPathCover } from '@/shared/lib/learning-path-cover';
 
 interface FormationDetailProps {
   formation: FormationDetailData;
@@ -121,17 +113,11 @@ export default function FormationDetail({ formation }: FormationDetailProps) {
                 sombre derrière, une ombre flotterait dans le vide. */}
             <div className="overflow-hidden rounded-lg border border-slate-200">
               <div className="relative aspect-video">
-                {formation.coverImage ? (
-                  <img
-                    src={formation.coverImage}
-                    alt={formation.title}
-                    className="absolute inset-0 size-full object-cover"
-                  />
-                ) : (
-                  <div className="absolute inset-0 flex items-center justify-center text-slate-300">
-                    <ImageIcon className="size-14" strokeWidth={1} />
-                  </div>
-                )}
+                <img
+                  src={learningPathCover(formation.coverImage)}
+                  alt={formation.title}
+                  className="absolute inset-0 size-full object-cover"
+                />
               </div>
             </div>
           </div>

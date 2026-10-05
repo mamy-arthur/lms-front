@@ -18,6 +18,7 @@ import {
 import { Role } from '@/shared/constants/roles';
 import { portalLearningPathKeys, portalMyEnrollmentsKeys } from '@/shared/queries/keys';
 import { useAuthStore } from '@/shared/stores/auth.store';
+import { useTenantStore } from '@/shared/stores/tenant.store';
 import { useSimulationStore } from '@/shared/simulation/simulation.store';
 import type {
   ApiPortalContentEntry,
@@ -25,6 +26,9 @@ import type {
 } from '@/shared/types/portal.types';
 import type { Formation } from '../lib/types';
 import FormationPlayer from '../FormationPlayer';
+import { resetEvaluationIdentity } from '../lib/__fixtures__/evaluation-identity';
+import { evaluationAttempt } from '../lib/__fixtures__/evaluation-attempt';
+import { evaluationDocument } from '../lib/evaluation-document-session';
 import {
   ENROLLMENT_ID,
   buildExecutionSummary,
@@ -36,7 +40,13 @@ jest.mock('@/shared/api/portal.api', () => ({
   portalLearningPathsApi: { summary: jest.fn(), learnerEvaluations: jest.fn() },
   portalContentEntriesApi: { get: jest.fn(), markComplete: jest.fn() },
   portalContentTimeApi: { record: jest.fn() },
-  evaluationAttemptsApi: { start: jest.fn(), answer: jest.fn(), submit: jest.fn() },
+  evaluationAttemptsApi: {
+    session: jest.fn(),
+    get: jest.fn(),
+    start: jest.fn(),
+    answer: jest.fn(),
+    submit: jest.fn(),
+  },
 }));
 jest.mock('@/shared/api/progression.api', () => ({
   progressionApi: {
@@ -119,9 +129,16 @@ function setup() {
 }
 
 describe('Parcours du stagiaire piloté par le snapshot d’exécution', () => {
+  const initialAuth = useAuthStore.getState();
+  const initialTenant = useTenantStore.getState();
+  const initialSimulation = useSimulationStore.getState();
+
   beforeEach(() => {
     jest.resetAllMocks();
+    jest.mocked(evaluationAttemptsApi.session).mockResolvedValue({ data: null });
     window.localStorage.clear();
+    resetEvaluationIdentity();
+    delete window.__learneoEvaluationDocument;
     mockRecordTime.mockResolvedValue(undefined);
     useSummary(sharedCourseModules());
     mockSummary.mockImplementation(async () => ({ data: summary }));
@@ -142,7 +159,14 @@ describe('Parcours du stagiaire piloté par le snapshot d’exécution', () => {
     });
   });
 
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => {
+    cleanup();
+    useAuthStore.setState(initialAuth);
+    useTenantStore.setState(initialTenant);
+    useSimulationStore.setState(initialSimulation);
+    delete window.__learneoEvaluationDocument;
+    jest.restoreAllMocks();
+  });
 
   it('attend l’acquittement du temps avant d’envoyer la complétion manuelle', async () => {
     const clock = jest.spyOn(performance, 'now').mockReturnValue(0);
@@ -386,7 +410,9 @@ describe('Parcours du stagiaire piloté par le snapshot d’exécution', () => {
         await user.click(screen.getByRole('button', { name: 'Contenu partagé 1' }));
         await screen.findByText('Texte de shared-entry-1');
         await user.click(screen.getByRole('button', { name: /Bilan des acquis/ }));
-        expect(content.getByRole('heading', { name: 'Évaluation terminée' })).toBeInTheDocument();
+        expect(
+          await content.findByRole('heading', { name: 'Évaluation terminée' }),
+        ).toBeInTheDocument();
         expect(evaluationAttemptsApi.start).not.toHaveBeenCalled();
         expect(evaluationAttemptsApi.submit).not.toHaveBeenCalled();
         expect(progressionApi.startNodeExecution).not.toHaveBeenCalled();
@@ -409,6 +435,107 @@ describe('Parcours du stagiaire piloté par le snapshot d’exécution', () => {
       screen.queryByText(/Vérification de vos tentatives|Informations importantes/),
     ).not.toBeInTheDocument();
   });
+
+  it.each(['manual', null] as const)(
+    'acquitte un échec %s sur la même évaluation vers le splash de la nouvelle visite sans lancer de tentative',
+    async (reason) => {
+      const api = jest.mocked(evaluationAttemptsApi);
+      const firstVisit = visit({
+        id: 'visit-1',
+        node_type: 'evaluation',
+        node_id: 'evaluation-1',
+        status: 'in_progress',
+        validation_round_id: 'round-evaluation-1',
+      });
+      const nextVisit = visit({
+        ...firstVisit,
+        id: 'visit-2',
+        visit_number: 2,
+        status: 'available',
+      });
+      const makeSummary = (retry: boolean) => {
+        const current = retry ? nextVisit : firstVisit;
+        const value = buildExecutionSummary({
+          modules: [],
+          stateRevision: retry ? 4 : 1,
+          currentExecution: current,
+          finalEvaluations: [
+            {
+              id: 'evaluation-1',
+              title: 'Bilan',
+              actionable: true,
+              requiredToRepeat: retry,
+              historicalCompleted: retry,
+              attemptsUsed: retry ? 1 : 0,
+              remainingAttempts: retry ? 2 : 3,
+            },
+          ],
+        });
+        value.final_evaluations[0].current_execution = current;
+        return value;
+      };
+      summary = makeSummary(false);
+      api.start.mockImplementation(async (_enrollment, _evaluation, context) => ({
+        data: evaluationAttempt({
+          id: context.node_execution_id === 'visit-1' ? 'attempt-1' : 'attempt-2',
+          node_execution_id: context.node_execution_id,
+          page_session_id: context.page_session_id,
+          validation_round_id: 'round-evaluation-1',
+        }),
+      }));
+      api.answer.mockResolvedValue({ data: evaluationAttempt() });
+      api.get.mockResolvedValue({ data: evaluationAttempt() });
+      api.submit.mockImplementation(async () => {
+        summary = makeSummary(true);
+        return {
+          data: evaluationAttempt({ status: 'completed', score: 25, completion_reason: reason }),
+          execution: summary.execution,
+        };
+      });
+      // The player's existing node-start flow does not create an evaluation attempt.
+      jest.mocked(progressionApi.startNodeExecution).mockImplementation(async () => {
+        const started = { ...nextVisit, status: 'in_progress' as const };
+        summary = makeSummary(true);
+        summary.final_evaluations[0].current_execution = started;
+        summary.execution = { ...summary.execution, current_execution: started, state_revision: 5 };
+        return { data: summary.execution };
+      });
+      const { user, client } = setup();
+      await user.click(await screen.findByRole('button', { name: "Commencer l'évaluation" }));
+      await user.click(await screen.findByRole('checkbox', { name: /Option A/ }));
+      await screen.findByText('Réponse enregistrée');
+      await user.click(screen.getByRole('button', { name: 'Terminer le quiz' }));
+      await user.click(screen.getByRole('button', { name: 'Soumettre le quiz' }));
+      const dialog = await screen.findByRole('dialog', { name: 'Évaluation non validée' });
+      await waitFor(() =>
+        expect(api.session).toHaveBeenLastCalledWith(ENROLLMENT_ID, 'evaluation-1', {
+          node_execution_id: 'visit-2',
+          page_session_id: evaluationDocument().id,
+        }),
+      );
+      await waitFor(() =>
+        expect(client.getQueryData(portalLearningPathKeys.summary(ENROLLMENT_ID))).toMatchObject({
+          execution: { stateRevision: 5 },
+        }),
+      );
+      expect(screen.getByText("Résultat de l'évaluation")).toBeInTheDocument();
+      expect(api.start).toHaveBeenCalledTimes(1);
+      await user.click(within(dialog).getByRole('button', { name: 'Repasser l’évaluation' }));
+      const startButton = await screen.findByRole('button', { name: "Commencer l'évaluation" });
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(screen.queryByText("Résultat de l'évaluation")).not.toBeInTheDocument();
+      expect(api.start).toHaveBeenCalledTimes(1);
+      await user.click(startButton);
+      await screen.findByRole('main', { name: 'Examen : Bilan' });
+      expect(api.start).toHaveBeenLastCalledWith(ENROLLMENT_ID, 'evaluation-1', {
+        node_execution_id: 'visit-2',
+        expected_state_revision: 5,
+        page_session_id: evaluationDocument().id,
+      });
+      expect(screen.getByRole('checkbox', { name: /Option A/ })).not.toBeChecked();
+      expect(api.submit).toHaveBeenCalledTimes(1);
+    },
+  );
 
   it('conserve l’écran de démarrage pour une évaluation déjà passée mais à refaire', async () => {
     summary = buildExecutionSummary({

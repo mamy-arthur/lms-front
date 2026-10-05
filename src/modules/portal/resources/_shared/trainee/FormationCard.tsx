@@ -1,10 +1,10 @@
 'use client';
 
-import { ImageIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { TraineeFormation } from './types';
+import { learningPathCover } from '@/shared/lib/learning-path-cover';
 
 interface FormationCardProps {
   formation: TraineeFormation;
@@ -37,17 +37,11 @@ export function FormationCard({ formation }: FormationCardProps) {
       }}
     >
       <div className="relative aspect-video w-full overflow-hidden bg-muted">
-        {formation.coverImage ? (
-          <img
-            src={formation.coverImage}
-            alt={formation.title}
-            className="h-full w-full object-cover"
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center text-muted-foreground/40">
-            <ImageIcon className="size-12" strokeWidth={1} />
-          </div>
-        )}
+        <img
+          src={learningPathCover(formation.coverImage)}
+          alt={formation.title}
+          className="h-full w-full object-cover"
+        />
         {formation.category && (
           <div className="absolute bottom-2 left-2 flex items-center gap-1.5">
             <Badge variant="secondary" className="rounded-sm bg-background/90 text-xs">
