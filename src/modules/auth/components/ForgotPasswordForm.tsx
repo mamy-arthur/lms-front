@@ -13,6 +13,7 @@ import { ROUTES } from '@/shared/constants/routes';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import styles from './client-login.module.css';
 
 export function ForgotPasswordForm() {
   const [submitted, setSubmitted] = useState(false);
@@ -37,68 +38,76 @@ export function ForgotPasswordForm() {
     }
   };
 
-  if (submitted) {
-    return (
-      <div className="space-y-5">
-        <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-xs text-green-700">
-          Un lien de réinitialisation a été envoyé à <strong>{getValues('email')}</strong>. Pensez à
-          vérifier vos spams.
-        </div>
-
-        <p className="text-center text-xs text-muted-foreground">
-          <Link href={ROUTES.auth.login} className="font-semibold text-primary hover:underline">
-            Retour à la connexion
-          </Link>
-        </p>
-      </div>
-    );
-  }
-
   return (
-    <form onSubmit={handleSubmit(onSubmit)} noValidate className="mt-8 space-y-5">
-      <div className="space-y-2">
-        <Label htmlFor="email">Adresse email</Label>
-
-        <Input
-          id="email"
-          type="email"
-          autoComplete="email"
-          placeholder="vous@exemple.com"
-          {...register('email')}
-        />
-
-        {errors.email && <p className="text-sm text-red-500">{errors.email.message}</p>}
-      </div>
-
-      {serverError && (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-600">
-          {serverError}
+    <>
+      {submitted ? (
+        <div className={styles.fields}>
+          <div
+            role="status"
+            className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-xs text-green-700"
+          >
+            Un lien de réinitialisation a été envoyé à <strong>{getValues('email')}</strong>. Pensez
+            à vérifier vos spams.
+          </div>
         </div>
+      ) : (
+        <form onSubmit={handleSubmit(onSubmit)} noValidate className={styles.fields}>
+          <div className="space-y-2">
+            <Label htmlFor="email" className={styles.fieldLabel}>
+              Adresse email
+            </Label>
+
+            <Input
+              id="email"
+              type="email"
+              autoComplete="email"
+              inputMode="email"
+              autoCapitalize="none"
+              spellCheck={false}
+              placeholder="vous@exemple.com"
+              className={styles.fieldInput}
+              aria-invalid={Boolean(errors.email)}
+              aria-describedby={errors.email ? 'email-error' : undefined}
+              {...register('email')}
+            />
+
+            {errors.email && (
+              <p id="email-error" role="alert" className="text-xs text-red-600">
+                {errors.email.message}
+              </p>
+            )}
+          </div>
+
+          {serverError && (
+            <div
+              role="alert"
+              className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-600"
+            >
+              {serverError}
+            </div>
+          )}
+
+          <Button type="submit" disabled={isSubmitting} className={styles.submit}>
+            {isSubmitting ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                Envoi...
+              </>
+            ) : (
+              <>
+                Envoyer le lien
+                <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              </>
+            )}
+          </Button>
+        </form>
       )}
 
-      <Button
-        type="submit"
-        disabled={isSubmitting}
-        className="h-12 w-full bg-(--color-primary) hover:bg-(--color-primary)/80"
-      >
-        {isSubmitting ? (
-          <>
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Envoi...
-          </>
-        ) : (
-          <>
-            Envoyer le lien
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </>
-        )}
-      </Button>
-
-      <p className="text-center text-xs text-muted-foreground">
-        <Link href={ROUTES.auth.login} className="font-semibold text-primary hover:underline">
+      <p className={styles.accessRequest}>
+        <Link href={ROUTES.auth.login} className={styles.textLink}>
           Retour à la connexion
         </Link>
       </p>
-    </form>
+    </>
   );
 }

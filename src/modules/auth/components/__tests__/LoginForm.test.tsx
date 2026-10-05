@@ -160,10 +160,37 @@ describe('LoginForm', () => {
   it('affiche le formulaire de connexion au chargement', () => {
     render(<LoginForm />);
 
-    expect(screen.getByText('Bon retour 👋')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Bon retour parmi nous.');
     expect(screen.getByLabelText(/adresse email/i)).toBeInTheDocument();
     expect(screen.getByLabelText('Mot de passe')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /connexion|se connecter/i })).toBeInTheDocument();
+  });
+
+  it('conserve les liens de récupération et de demande d’accès', () => {
+    render(<LoginForm />);
+
+    expect(screen.getByRole('link', { name: 'Mot de passe oublié ?' })).toHaveAttribute(
+      'href',
+      '/forgot-password',
+    );
+    expect(screen.queryByText('LearnHub LMS')).not.toBeInTheDocument();
+  });
+
+  it('renseigne les attributs de saisie mobile et de gestionnaire de mots de passe', () => {
+    render(<LoginForm />);
+
+    const email = screen.getByLabelText('Adresse email');
+    expect(email).toHaveAttribute('type', 'email');
+    expect(email).toHaveAttribute('inputmode', 'email');
+    expect(email).toHaveAttribute('autocomplete', 'username');
+    expect(screen.getByLabelText('Mot de passe')).toHaveAttribute(
+      'autocomplete',
+      'current-password',
+    );
+    expect(screen.getByRole('button', { name: 'Afficher le mot de passe' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
   });
 
   it("n'affiche pas de confirmation de réinitialisation par défaut", () => {
@@ -538,7 +565,7 @@ describe('LoginForm', () => {
     await fillAndSubmit(user, VALID_CREDENTIALS.email, VALID_CREDENTIALS.password);
 
     await waitFor(() => {
-      expect(screen.getByText('Email ou mot de passe incorrect.')).toBeInTheDocument();
+      expect(screen.getByRole('alert')).toHaveTextContent('Email ou mot de passe incorrect.');
     });
   });
 
@@ -609,6 +636,7 @@ describe('LoginForm', () => {
 
     // Maintenant c'est du texte
     expect(passwordInput.type).toBe('text');
+    expect(toggleButton).toHaveAttribute('aria-pressed', 'true');
 
     // Cliquer encore pour revenir en mode password
     await user.click(toggleButton);

@@ -1,7 +1,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowRight, Eye, EyeOff, GraduationCap, Loader2 } from 'lucide-react';
+import { ArrowRight, Eye, EyeOff, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -16,6 +16,7 @@ import { useLoginFlow } from '@/modules/auth/hooks/useLoginFlow';
 import { resolveLogin } from '@/modules/auth/utils/loginUtils';
 import { authApi } from '@/shared/api/auth.api';
 import { type LoginSchema, loginSchema } from '@/shared/schemas/auth.schema';
+import styles from './client-login.module.css';
 
 interface LoginFormProps {
   resetSuccess?: boolean;
@@ -53,130 +54,141 @@ export function LoginForm({ resetSuccess = false }: LoginFormProps) {
 
   return (
     <>
-      <section className="flex items-center justify-center px-6 py-10 sm:px-10">
-        <div className="w-full max-w-md">
-          {/* MOBILE LOGO */}
-          <div className="mb-10 flex items-center gap-3 lg:hidden">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-(--color-primary) text-white">
-              <GraduationCap className="h-6 w-6" />
-            </div>
+      <section className={styles.form} aria-labelledby="login-title">
+        <div>
+          <h1 id="login-title" className={styles.formTitle}>
+            Bon retour <br />
+            parmi nous.
+          </h1>
 
-            <div>
-              <h2 className="font-bold">LearnHub LMS</h2>
-              <p className="text-xs text-muted-foreground">Learning Platform</p>
-            </div>
-          </div>
-
-          <div>
-            <h1 className="text-3xl font-bold">Bon retour 👋</h1>
-
-            <p className="mt-2 text-muted-foreground text-sm">
-              Connectez-vous à votre espace d'apprentissage.
-            </p>
-          </div>
-
-          {challenge ? (
-            <TwoFactorChallengeStep
-              challenge={challenge}
-              onVerify={verifyTwoFactor}
-              onResend={resendTwoFactor}
-              onAbandon={abandonTwoFactor}
-            />
-          ) : (
-            <form onSubmit={handleSubmit(submit)} className="mt-8 space-y-5">
-              {resetSuccess && <PasswordResetSuccessNotice />}
-
-              {/* EMAIL */}
-              <div className="space-y-2">
-                <Label htmlFor="email">Adresse email</Label>
-
-                <Input id="email" placeholder="vous@exemple.com" {...register('email')} />
-              </div>
-
-              {/* PASSWORD */}
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <Label htmlFor="password">Mot de passe</Label>
-
-                  <Link href="/forgot-password" className="text-xs text-primary hover:underline">
-                    Mot de passe oublié ?
-                  </Link>
-                </div>
-
-                <div className="relative">
-                  <Input
-                    id="password"
-                    type={showPassword ? 'text' : 'password'}
-                    placeholder="••••••••"
-                    {...register('password')}
-                  />
-
-                  <button
-                    type="button"
-                    aria-label={
-                      showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'
-                    }
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-                  >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
-                </div>
-
-                {errors.password && (
-                  <p className="text-sm text-red-500">{errors.password.message}</p>
-                )}
-              </div>
-
-              {/* REMEMBER */}
-              <div className="flex items-center gap-3">
-                <Checkbox id="remember" />
-
-                <Label htmlFor="remember" className="cursor-pointer font-normal">
-                  Rester connecté
-                </Label>
-              </div>
-
-              {revocationMessage && (
-                <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-700">
-                  {revocationMessage}
-                </div>
-              )}
-
-              {serverError && (
-                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-600">
-                  {serverError}
-                </div>
-              )}
-
-              {/* SUBMIT */}
-              <Button
-                type="submit"
-                disabled={isSubmitting}
-                className="h-12 w-full bg-(--color-primary) hover:bg-(--color-primary)/80"
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Connexion...
-                  </>
-                ) : (
-                  <>
-                    Se connecter
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </>
-                )}
-              </Button>
-            </form>
-          )}
-
-          <p className="mt-8 text-center text-xs text-muted-foreground">
-            Pas encore de compte ?{' '}
-            <Link href="/register" className="font-semibold text-primary hover:underline">
-              Demander un accès
-            </Link>
+          <p className={styles.formSubtitle}>
+            Retrouvez vos formations et faites le prochain pas dans votre apprentissage.
           </p>
         </div>
+
+        {challenge ? (
+          <TwoFactorChallengeStep
+            challenge={challenge}
+            onVerify={verifyTwoFactor}
+            onResend={resendTwoFactor}
+            onAbandon={abandonTwoFactor}
+          />
+        ) : (
+          <form onSubmit={handleSubmit(submit)} className={styles.fields} noValidate>
+            {resetSuccess && <PasswordResetSuccessNotice />}
+
+            {/* EMAIL */}
+            <div className="space-y-2">
+              <Label htmlFor="email" className={styles.fieldLabel}>
+                Adresse email
+              </Label>
+
+              <Input
+                id="email"
+                type="email"
+                autoComplete="username"
+                inputMode="email"
+                autoCapitalize="none"
+                spellCheck={false}
+                placeholder="vous@exemple.com"
+                className={styles.fieldInput}
+                aria-invalid={Boolean(errors.email)}
+                aria-describedby={errors.email ? 'email-error' : undefined}
+                {...register('email')}
+              />
+              {errors.email && (
+                <p id="email-error" role="alert" className="text-xs text-red-600">
+                  {errors.email.message}
+                </p>
+              )}
+            </div>
+
+            {/* PASSWORD */}
+            <div className="space-y-2">
+              <Label htmlFor="password" className={styles.fieldLabel}>
+                Mot de passe
+              </Label>
+
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  placeholder="••••••••"
+                  className={`${styles.fieldInput} ${styles.passwordInput}`}
+                  aria-invalid={Boolean(errors.password)}
+                  aria-describedby={errors.password ? 'password-error' : undefined}
+                  {...register('password')}
+                />
+
+                <button
+                  type="button"
+                  aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+                  aria-pressed={showPassword}
+                  aria-controls="password"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className={styles.passwordToggle}
+                >
+                  {showPassword ? (
+                    <EyeOff size={17} aria-hidden="true" />
+                  ) : (
+                    <Eye size={17} aria-hidden="true" />
+                  )}
+                </button>
+              </div>
+
+              {errors.password && (
+                <p id="password-error" role="alert" className="text-xs text-red-600">
+                  {errors.password.message}
+                </p>
+              )}
+            </div>
+
+            {/* REMEMBER */}
+            <div className={styles.options}>
+              <div className={styles.remember}>
+                <Checkbox id="remember" />
+                <Label htmlFor="remember">Rester connecté</Label>
+              </div>
+              <Link href="/forgot-password" className={styles.textLink}>
+                Mot de passe oublié ?
+              </Link>
+            </div>
+
+            {revocationMessage && (
+              <div
+                role="status"
+                className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-700"
+              >
+                {revocationMessage}
+              </div>
+            )}
+
+            {serverError && (
+              <div
+                role="alert"
+                className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-600"
+              >
+                {serverError}
+              </div>
+            )}
+
+            {/* SUBMIT */}
+            <Button type="submit" disabled={isSubmitting} className={styles.submit}>
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                  Connexion...
+                </>
+              ) : (
+                <>
+                  Se connecter
+                  <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                </>
+              )}
+            </Button>
+          </form>
+        )}
       </section>
 
       {sessionConflict && (
