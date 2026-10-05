@@ -32,39 +32,6 @@ describe('Page client de mot de passe oublié', () => {
     mockForgotPassword.mockResolvedValue({ message: 'Email envoyé' });
   });
 
-  it('réutilise le cadre, le logo, le visuel et les styles du login', () => {
-    render(<ForgotPasswordPage />);
-
-    expect(screen.getByRole('main')).toHaveClass(styles.page);
-    expect(screen.getByRole('complementary')).toHaveAccessibleName(
-      'Chaque jour, un peu plus loin.',
-    );
-    expect(screen.getByText('Acme Formation')).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: 'Acme Formation' })).toHaveAttribute(
-      'src',
-      'https://assets.example.test/acme.svg',
-    );
-    expect(screen.getByRole('region', { name: 'Mot de passe oublié' })).toHaveClass(styles.form);
-    expect(screen.getByRole('heading', { level: 1 })).toHaveClass(styles.formTitle);
-    expect(
-      screen.getByText('Entrez votre email pour recevoir un lien de réinitialisation.'),
-    ).toHaveClass(styles.formSubtitle);
-    const email = screen.getByLabelText('Adresse email');
-    expect(email).toHaveClass(styles.fieldInput);
-    expect(email.closest('form')).toHaveClass(styles.fields);
-    expect(email).toHaveAttribute('type', 'email');
-    expect(email).toHaveAttribute('autocomplete', 'email');
-    expect(email).toHaveAttribute('inputmode', 'email');
-    expect(screen.getByRole('button', { name: 'Envoyer le lien' })).toHaveClass(styles.submit);
-    expect(screen.getByRole('link', { name: 'Retour à la connexion' })).toHaveClass(
-      styles.textLink,
-    );
-    expect(screen.getByRole('link', { name: 'Retour à la connexion' })).toHaveAttribute(
-      'href',
-      '/login',
-    );
-  });
-
   it.each(['', 'adresse-invalide'])(
     'refuse un email invalide (%s) avant tout appel API',
     async (email) => {

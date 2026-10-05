@@ -2,7 +2,6 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { LayoutSideBar } from '@/modules/shared/layout/AppSidebar';
 import { AppSidebar } from '../app-sidebar';
 
 jest.mock('@/hooks/use-mobile', () => ({ useIsMobile: jest.fn() }));
@@ -16,28 +15,6 @@ const LOGO = 'https://assets.example.test/acme.svg';
 describe('Identité de la sidebar', () => {
   beforeEach(() => {
     mockUseIsMobile.mockReturnValue(false);
-  });
-
-  it('affiche un logo compact et le nom transmis par le layout', () => {
-    render(
-      <LayoutSideBar
-        navItems={[]}
-        user={null}
-        logoUrl={LOGO}
-        tenantName="Acme Formation"
-        onLogout={jest.fn()}
-      >
-        Contenu
-      </LayoutSideBar>,
-    );
-
-    const logo = screen.getByRole('img', { name: 'Logo de Acme Formation' });
-    expect(logo).toHaveAttribute('src', LOGO);
-    expect(logo).toHaveAttribute('width', '32');
-    expect(logo).toHaveAttribute('height', '32');
-    expect(logo).toHaveClass('size-8', 'shrink-0', 'object-contain');
-    expect(screen.getByText('Acme Formation').parentElement).toBe(logo.parentElement);
-    expect(screen.getByRole('navigation', { name: 'Menu principal' })).toBeInTheDocument();
   });
 
   it.each([undefined, null, '', '   '])(

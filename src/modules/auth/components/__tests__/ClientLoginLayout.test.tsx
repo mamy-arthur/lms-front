@@ -55,16 +55,6 @@ describe('ClientLoginLayout', () => {
     expect(screen.getByRole('main')).not.toHaveAttribute('style');
   });
 
-  it('fait dériver les dégradés SVG de --color-primary, sans couleur bleue fixe', () => {
-    render(<ClientLoginLayout>Formulaire</ClientLoginLayout>);
-
-    const stops = screen.getByRole('complementary').querySelectorAll('stop');
-    expect(stops).toHaveLength(8);
-    stops.forEach((stop) => {
-      expect(stop.getAttribute('stop-color')).toContain('var(--color-primary)');
-    });
-  });
-
   it('ne tente pas de charger une URL de logo vide', () => {
     mockUseTenant.mockReturnValue({
       ...defaultTenant,

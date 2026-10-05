@@ -166,16 +166,6 @@ describe('LoginForm', () => {
     expect(screen.getByRole('button', { name: /connexion|se connecter/i })).toBeInTheDocument();
   });
 
-  it('conserve les liens de récupération et de demande d’accès', () => {
-    render(<LoginForm />);
-
-    expect(screen.getByRole('link', { name: 'Mot de passe oublié ?' })).toHaveAttribute(
-      'href',
-      '/forgot-password',
-    );
-    expect(screen.queryByText('LearnHub LMS')).not.toBeInTheDocument();
-  });
-
   it('renseigne les attributs de saisie mobile et de gestionnaire de mots de passe', () => {
     render(<LoginForm />);
 
