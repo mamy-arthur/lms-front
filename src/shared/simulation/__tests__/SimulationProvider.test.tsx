@@ -175,7 +175,7 @@ describe('SimulationProvider', () => {
 
   it.each(['idle', 'checking', 'transition', 'error'] as const)(
     'does not mount business children or start their requests during %s',
-    (phase) => {
+    async (phase) => {
       const error = phase === 'error' ? 'Impossible de vérifier le mode simulation.' : null;
       useSimulationStore.setState({ phase, error });
       const request = jest.fn();
@@ -184,6 +184,13 @@ describe('SimulationProvider', () => {
           <BusinessPage request={request} />
         </SimulationProvider>,
       );
+
+      // The mocked synchronization resolves on a later microtask: settle it here
+      // so its state update lands inside act() and the assertions below describe
+      // the phase once it has stopped moving.
+      await act(async () => {
+        await mockSynchronize.mock.results[0].value;
+      });
 
       expect(mockSynchronize).toHaveBeenCalledTimes(1);
       expect(screen.queryByRole('heading', { name: 'Contenu métier' })).not.toBeInTheDocument();
