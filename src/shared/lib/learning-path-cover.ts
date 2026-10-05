@@ -6,7 +6,7 @@
  * carré gris, icône grisée, ou rien du tout, ce qui donnait une image cassée.
  * Un seul asset, résolu ici, rend les listes homogènes.
  *
- * L'illustration est volontairement cadrée large, glyphe centré : la même URL
+ * L'illustration abstraite est cadrée large, avec une composition centrée : la même URL
  * sert de couverture 16:9 et de vignette carrée, où `object-cover` ne garde que
  * le centre.
  */

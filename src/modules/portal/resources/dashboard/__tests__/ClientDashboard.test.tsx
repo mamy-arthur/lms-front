@@ -394,7 +394,17 @@ it.each([
   const decoration = card?.querySelector('span[aria-hidden="true"]');
   expect(card).toHaveClass('relative', 'isolate', 'overflow-hidden');
   expect(decoration).toHaveClass('pointer-events-none', 'absolute', 'size-28', '-rotate-12');
-  expect(decoration).toHaveClass(highlighted ? 'text-(--color-primary)/20' : 'text-slate-300/40');
+  expect(decoration).toHaveClass(highlighted ? 'text-white' : 'text-slate-300/40');
+  if (highlighted) {
+    expect(card).toHaveClass('border-none', 'bg-(--color-primary)');
+    const content = within(card as HTMLElement);
+    expect(content.getByText('Terminées')).toHaveClass('text-white');
+    expect(content.getByText(description)).toHaveClass('text-white');
+    expect(content.getByText('65')).toHaveClass('text-white');
+  } else {
+    expect(card).toHaveClass('bg-card');
+    expect(card).not.toHaveClass('bg-(--color-primary)');
+  }
   expect(decoration?.children).toHaveLength(3);
   expect(card?.querySelector('svg')).not.toBeInTheDocument();
   expect(card?.querySelector('[data-slot="card-content"]')).toHaveClass('relative', 'z-10');

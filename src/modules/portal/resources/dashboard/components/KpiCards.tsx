@@ -42,16 +42,14 @@ export function KpiCards({ data }: { data: ClientDashboardOverview | undefined }
             className={cn(
               kpi.position,
               'relative isolate min-w-0 overflow-hidden bg-card transition-all duration-200',
-              highlighted && 'border-none bg-(--color-primary)/10',
+              highlighted && 'border-none bg-(--color-primary)',
             )}
           >
             <span
               aria-hidden="true"
               className={cn(
                 'pointer-events-none absolute -right-2 -bottom-5 size-28 -rotate-12',
-                highlighted
-                  ? 'text-(--color-primary)/20'
-                  : 'text-slate-300/40 dark:text-slate-600/30',
+                highlighted ? 'text-white' : 'text-slate-300/40 dark:text-slate-600/30',
               )}
             >
               <span className="absolute inset-0 translate-x-5 translate-y-3 rounded-2xl bg-current opacity-40" />
@@ -64,30 +62,20 @@ export function KpiCards({ data }: { data: ClientDashboardOverview | undefined }
                   <p
                     className={cn(
                       'text-xs font-bold uppercase tracking-wide',
-                      highlighted && 'text-(--color-primary)',
+                      highlighted && 'text-white',
                     )}
                   >
                     {kpi.label}
                   </p>
 
                   {kpi.description && (
-                    <p
-                      className={cn(
-                        'mt-1 text-xs text-gray-500',
-                        highlighted && 'text-muted-foreground',
-                      )}
-                    >
+                    <p className={cn('mt-1 text-xs text-gray-500', highlighted && 'text-white')}>
                       {kpi.description}
                     </p>
                   )}
                 </div>
               </div>
-              <p
-                className={cn(
-                  'text-3xl tracking-tight text-black',
-                  highlighted && 'text-(--color-primary)',
-                )}
-              >
+              <p className={cn('text-3xl tracking-tight text-black', highlighted && 'text-white')}>
                 {data
                   ? kpi.key === 'learning_paths'
                     ? data.learning_paths
