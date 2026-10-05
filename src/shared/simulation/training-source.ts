@@ -79,7 +79,7 @@ export function createTrainingSource(
     },
     async prepare(path: string, signal?: AbortSignal | null): Promise<void> {
       if (
-        !/^(?:me\/enrollments$|my-learning-paths$|enrollments(?:\/|$)|platform\/learning-path-categories(?:\/|$))/.test(
+        !/^(?:me\/enrollments$|my-learning-paths$|enrollments(?:\/|$)|(?:platform\/)?users\/[^/]+\/enrollments$|platform\/learning-path-categories(?:\/|$))/.test(
           path,
         )
       )

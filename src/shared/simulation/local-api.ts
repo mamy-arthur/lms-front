@@ -127,6 +127,7 @@ export const SIMULATION_ROUTES = [
   },
   { methods: ['POST'], path: '{certificates,template-mails}/media' },
   { methods: ['POST'], path: '{platform/,}users/:id/profile-photo' },
+  { methods: ['GET'], path: '{platform/,}users/:id/enrollments' },
   { methods: ['POST'], path: 'groups/:id/members' },
   { methods: ['DELETE'], path: 'groups/:id/members/:traineeId' },
   { methods: ['GET'], path: 'purchased-learning-paths' },
@@ -1537,6 +1538,59 @@ function attemptSummaries(data: SimulationData, enrollmentId: string): Enrollmen
       time_spent_seconds: trackedSeconds(data, `${enrollmentId}:`),
     },
   ];
+}
+
+/** Formation embarquée dans les réponses d'inscription (me/enrollments, users/:id/enrollments). */
+function enrollmentLearningPath(data: SimulationData, learningPathId: string) {
+  const learningPath = decorate(
+    data,
+    'learning-paths',
+    find(data, 'learning-paths', learningPathId),
+  );
+  return {
+    id: learningPath.id,
+    name: learningPath.name,
+    description: learningPath.description,
+    image: learningPath.image,
+    duration: learningPath.duration,
+    category_id: learningPath.category_id,
+    category_learning_path: learningPath.category_id
+      ? { id: learningPath.category_id, name: learningPath.category_name }
+      : null,
+    totalModules: training
+      ? number(find(data, 'learning-paths', learningPathId).competencies_count)
+      : objects(learningPath.competencies).length,
+  };
+}
+
+/** GET {platform/,}users/:id/enrollments : suivi des formations d'un stagiaire. */
+function traineeEnrollmentsPage(
+  data: SimulationData,
+  userId: string,
+  params: URLSearchParams,
+): SimulationResponse {
+  const learner = find(data, 'users', userId);
+  return listResponse(
+    data.enrollments
+      .filter((row) => row.learner_id === learner.id)
+      .map((row) => {
+        const detail = summary(data, row.id);
+        const done = detail.modules.filter(
+          (module) =>
+            module.progress.total > 0 && module.progress.completed === module.progress.total,
+        );
+        return {
+          ...row,
+          progress_percent: detail.progress.percent,
+          expires_at: null,
+          completed_modules: done.length,
+          total_modules: detail.modules.length,
+          time_spent_seconds: trackedSeconds(data, `${row.id}:`),
+          learning_path: enrollmentLearningPath(data, row.learning_path_id),
+        };
+      }),
+    params,
+  );
 }
 
 function clientOverview(data: SimulationData): ClientDashboardOverview {
@@ -3022,34 +3076,16 @@ async function dispatchSimulationRequest(
     return listResponse(
       data.enrollments
         .filter((row) => row.learner_id === SIMULATION_IDS.learner)
-        .map((row) => {
-          const learningPath = decorate(
-            data,
-            'learning-paths',
-            find(data, 'learning-paths', row.learning_path_id),
-          );
-          return {
-            ...row,
-            progress_percent: summary(data, row.id).progress.percent,
-            learning_path: {
-              id: learningPath.id,
-              name: learningPath.name,
-              description: learningPath.description,
-              image: learningPath.image,
-              duration: learningPath.duration,
-              category_id: learningPath.category_id,
-              category_learning_path: learningPath.category_id
-                ? { id: learningPath.category_id, name: learningPath.category_name }
-                : null,
-              totalModules: training
-                ? number(find(data, 'learning-paths', row.learning_path_id).competencies_count)
-                : objects(learningPath.competencies).length,
-            },
-          };
-        }),
+        .map((row) => ({
+          ...row,
+          progress_percent: summary(data, row.id).progress.percent,
+          learning_path: enrollmentLearningPath(data, row.learning_path_id),
+        })),
       params,
     );
   }
+  match = /^(?:platform\/)?users\/([^/]+)\/enrollments$/.exec(path);
+  if (match && method === 'GET') return traineeEnrollmentsPage(data, match[1], params);
   match = /^enrollments\/([^/]+)\/(summary|evaluations)$/.exec(path);
   if (match && method === 'GET') {
     const registration = enrollment(data, match[1]);

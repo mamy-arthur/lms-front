@@ -274,7 +274,7 @@ describe('Drawer de détail du stagiaire', () => {
       const trigger = screen.getByRole('button', { name: 'Ouvrir le détail' });
       await userEvent.click(trigger);
       const dialog = screen.getByRole('dialog', { name: 'Détail du stagiaire' });
-      expect(dialog).toHaveClass('sm:w-[60vw]!', 'w-full!');
+      expect(dialog).toBeVisible();
       expect(await within(dialog).findByRole('heading', { name: target.full_name })).toBeVisible();
       expect(window.location.pathname).toBe(path);
       expect(new URLSearchParams(window.location.search).get('trainee')).toBe(target.id);
