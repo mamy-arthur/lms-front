@@ -73,6 +73,9 @@ export interface ResetPasswordPayload {
   password_confirmation: string;
 }
 
+/** Même forme que la réinitialisation, mais le jeton provient du mail de bienvenue. */
+export type ActivateAccountPayload = ResetPasswordPayload;
+
 export interface ExistingSessionInfo {
   deviceName: string | null;
   browser: string | null;
@@ -206,6 +209,10 @@ export const authApi = {
 
   resetPassword: (payload: ResetPasswordPayload): Promise<MessageApiResponse> =>
     apiPost<MessageApiResponse>('auth/reset-password', payload),
+
+  /** Consomme le jeton d'activation : définit le mot de passe et active le compte. */
+  activateAccount: (payload: ActivateAccountPayload): Promise<MessageApiResponse> =>
+    apiPost<MessageApiResponse>('auth/activate-account', payload),
 
   replaceSession: (replacementToken: string): Promise<{ user: AuthUser; sessionId: string }> =>
     performReplacement('auth/session/replace', replacementToken),

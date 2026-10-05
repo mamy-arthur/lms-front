@@ -194,6 +194,14 @@ describe('LoginForm', () => {
 
     expect(screen.getByRole('status')).toHaveTextContent(/mot de passe a été réinitialisé/i);
   });
+
+  it('affiche la confirmation d’activation quand activationSuccess est vrai', () => {
+    render(<LoginForm activationSuccess />);
+
+    expect(screen.getByRole('status')).toHaveTextContent(/votre compte est activé/i);
+    expect(screen.getByRole('button', { name: /se connecter/i })).toBeInTheDocument();
+  });
+
   // ── Connexion réussie ──────────────────────────────────────────────────────
   it('appelle resolveLogin avec les credentials saisis', async () => {
     const user = userEvent.setup();

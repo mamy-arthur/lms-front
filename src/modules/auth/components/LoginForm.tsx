@@ -10,6 +10,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { SessionConflictModal } from '@/modules/auth/components/SessionConflictModal';
+import { AccountActivatedNotice } from '@/modules/auth/components/AccountActivatedNotice';
 import { PasswordResetSuccessNotice } from '@/modules/auth/components/PasswordResetSuccessNotice';
 import { TwoFactorChallengeStep } from '@/modules/auth/components/TwoFactorChallengeStep';
 import { useLoginFlow } from '@/modules/auth/hooks/useLoginFlow';
@@ -20,9 +21,10 @@ import styles from './client-login.module.css';
 
 interface LoginFormProps {
   resetSuccess?: boolean;
+  activationSuccess?: boolean;
 }
 
-export function LoginForm({ resetSuccess = false }: LoginFormProps) {
+export function LoginForm({ resetSuccess = false, activationSuccess = false }: LoginFormProps) {
   const [showPassword, setShowPassword] = useState(false);
 
   const {
@@ -76,6 +78,8 @@ export function LoginForm({ resetSuccess = false }: LoginFormProps) {
         ) : (
           <form onSubmit={handleSubmit(submit)} className={styles.fields} noValidate>
             {resetSuccess && <PasswordResetSuccessNotice />}
+
+            {activationSuccess && <AccountActivatedNotice />}
 
             {/* EMAIL */}
             <div className="space-y-2">

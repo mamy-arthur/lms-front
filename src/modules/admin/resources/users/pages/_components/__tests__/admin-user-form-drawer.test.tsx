@@ -53,7 +53,7 @@ jest.mock('@modules/shared/components/users/user-profile-fields', () => ({
   UserProfileFields: () => null,
 }));
 
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { toast } from 'sonner';
 import { tenantApi } from '@/modules/admin/resources/tenants/api';
@@ -327,7 +327,11 @@ describe('AdminUserFormDrawer - rattachement client', () => {
     await waitFor(() => expect(uploadUserProfilePhoto).toHaveBeenCalled());
     expect(screen.getByRole('button', { name: /Enregistrement/ })).toBeDisabled();
 
-    releaseUpload();
+    // La soumission reprend et deverrouille le bouton : la laisser retomber ici
+    // plutot qu'apres la fin du test.
+    await act(async () => {
+      releaseUpload();
+    });
   });
 
   it('reste verrouille tant que le rafraichissement des listes n a pas abouti', async () => {
@@ -365,7 +369,10 @@ describe('AdminUserFormDrawer - rattachement client', () => {
     fireEvent.click(submit);
     expect(mockCreateAsync).toHaveBeenCalledTimes(1);
 
-    releaseRefresh();
+    // Idem : le rafraichissement libere deverrouille le bouton.
+    await act(async () => {
+      releaseRefresh();
+    });
   });
 
   it('ne cree qu une fois meme si l upload echoue', async () => {

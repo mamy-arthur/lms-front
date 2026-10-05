@@ -14,7 +14,12 @@
 jest.mock('@/shared/lib/apiClient', () => ({ apiPost: jest.fn() }));
 
 import { apiPost } from '@/shared/lib/apiClient';
-import { authApi, type ResetPasswordPayload, type LoginResult } from '../auth.api';
+import {
+  authApi,
+  type ActivateAccountPayload,
+  type ResetPasswordPayload,
+  type LoginResult,
+} from '../auth.api';
 import { Role } from '@/shared/constants/roles';
 import type { AuthUser } from '@/shared/types/auth.types';
 
@@ -346,6 +351,24 @@ describe('authApi', () => {
       mockApiPost.mockResolvedValue({ message: 'Réinitialisé' });
       await authApi.platformResetPassword(payload);
       expect(mockApiPost).toHaveBeenCalledWith('platform/auth/reset-password', payload);
+    });
+  });
+
+  // ── activateAccount ────────────────────────────────────────────────────────
+
+  describe('activateAccount(payload)', () => {
+    const payload: ActivateAccountPayload = {
+      email: 'alice@example.com',
+      token: 'activation-token-abc',
+      password: 'newPass99!',
+      password_confirmation: 'newPass99!',
+    };
+
+    // Endpoint distinct de reset-password : il active aussi le compte.
+    it('appelle POST auth/activate-account avec le payload complet', async () => {
+      mockApiPost.mockResolvedValue({ message: 'Compte activé' });
+      await authApi.activateAccount(payload);
+      expect(mockApiPost).toHaveBeenCalledWith('auth/activate-account', payload);
     });
   });
 
