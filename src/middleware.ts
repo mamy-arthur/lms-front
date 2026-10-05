@@ -42,7 +42,7 @@ export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const host = req.headers.get('host') ?? '';
 
-  if (STATIC_PATHS.some((p) => pathname.startsWith(p))) {
+  if (pathname === '/logo-default.svg' || STATIC_PATHS.some((p) => pathname.startsWith(p))) {
     return NextResponse.next();
   }
 

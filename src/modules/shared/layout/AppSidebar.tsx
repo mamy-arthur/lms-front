@@ -30,8 +30,8 @@ interface AppSidebarProps {
 export function LayoutSideBar({
   navItems,
   // user,
-  // logoUrl,
-  // tenantName,
+  logoUrl,
+  tenantName,
   onLogout,
   children,
 }: AppSidebarProps) {
@@ -59,7 +59,7 @@ export function LayoutSideBar({
 
   return (
     <SidebarProvider>
-      <AppSidebar navItems={navItems} />
+      <AppSidebar navItems={navItems} logoUrl={logoUrl} tenantName={tenantName} />
       <SidebarInset>
         <AppHeader onLogout={onLogout} />
         <div className="flex flex-1 flex-col gap-4 p-4 pt-5">{children}</div>
