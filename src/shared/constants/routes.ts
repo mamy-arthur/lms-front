@@ -1,3 +1,5 @@
+const PORTAL_USERS = '/users';
+
 export const ROUTES = {
   auth: {
     login: '/login',
@@ -20,7 +22,6 @@ export const ROUTES = {
     quizzes: '/admin/quizzes',
     category: '/admin/category',
     trainees: '/admin/trainees',
-    traineeDetail: (id: string) => `/admin/trainees/${encodeURIComponent(id)}`,
     tenants: '/admin/tenants',
     reports: '/admin/reports',
     programs: '/admin/programs',
@@ -49,8 +50,9 @@ export const ROUTES = {
     formationQuiz: (slug: string) => `/my-learning-paths/${slug}/quiz`,
     profile: '/profile',
     //certificates: "/certificates",
-    users: '/users',
-    traineeDetail: (id: string) => `/users/${encodeURIComponent(id)}`,
+    users: PORTAL_USERS,
+    // Le détail stagiaire est un drawer au-dessus de la liste, piloté par ce paramètre.
+    traineeDetail: (id: string) => `${PORTAL_USERS}?trainee=${encodeURIComponent(id)}`,
     // modules: "/modules",
     // quizzes: "/quizzes",
     //modules: "/modules",

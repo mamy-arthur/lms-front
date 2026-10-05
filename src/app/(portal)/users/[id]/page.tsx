@@ -1,14 +1,7 @@
 import { redirect } from 'next/navigation';
-import { traineeDrawerPath } from '@/modules/shared/lib/traineeDetailNavigation';
+import { ROUTES } from '@/shared/constants/routes';
 
-export default async function Page({
-  params,
-  searchParams,
-}: {
-  params: Promise<{ id: string }>;
-  searchParams: Promise<{ returnTo?: string | string[] }>;
-}) {
+export default async function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { returnTo } = await searchParams;
-  redirect(traineeDrawerPath('portal', id, typeof returnTo === 'string' ? returnTo : undefined));
+  redirect(ROUTES.portal.traineeDetail(id));
 }

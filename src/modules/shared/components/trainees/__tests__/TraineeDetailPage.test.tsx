@@ -3,12 +3,10 @@ import { act, cleanup, render, screen, waitFor, within } from '@testing-library/
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { redirect } from 'next/navigation';
-import AdminPage from '@/app/(admin)/admin/(protected)/trainees/[id]/page';
 import PortalPage from '@/app/(portal)/users/[id]/page';
 import { normalizeUser, type User } from '@/modules/admin/resources/users/types';
 import { traineeDetailApi } from '@/shared/api/trainee-detail.api';
 import { Role } from '@/shared/constants/roles';
-import { ROUTES } from '@/shared/constants/routes';
 import { useAuthStore } from '@/shared/stores/auth.store';
 import { useTenantStore } from '@/shared/stores/tenant.store';
 import type {
@@ -221,44 +219,10 @@ describe('Chargement direct et navigation', () => {
     },
   );
 
-  it.each(areas)('préserve les filtres de retour autorisés dans la route %s', async (area) => {
-    const Page = area === 'admin' ? AdminPage : PortalPage;
-    const returnTo = `${area === 'admin' ? '/admin/users' : '/users'}?q=Alice&page=3&roles=TRAINEE`;
-    await Page({
-      params: Promise.resolve({ id: target.id }),
-      searchParams: Promise.resolve({ returnTo }),
-    });
-    expect(redirect).toHaveBeenCalledWith(`${returnTo}&trainee=${target.id}`);
+  it('redirige le lien profond vers le drawer de la liste, cible encodée', async () => {
+    await PortalPage({ params: Promise.resolve({ id: 'élève/a ?#%' }) });
+    expect(redirect).toHaveBeenCalledWith('/users?trainee=%C3%A9l%C3%A8ve%2Fa%20%3F%23%25');
     expect(api.profile).not.toHaveBeenCalled();
-  });
-
-  it.each(areas)('rejette les retours externes ou ambigus dans la route %s', async (area) => {
-    const Page = area === 'admin' ? AdminPage : PortalPage;
-    const fallback = area === 'admin' ? '/admin/users' : '/users';
-    for (const returnTo of [
-      undefined,
-      'https://evil.example/users',
-      '//evil.example/users',
-      'javascript:alert(1)',
-      '/users/../outside',
-      '/admin/users/../outside',
-      ['/users?q=a', '/users?q=b'],
-    ]) {
-      await Page({
-        params: Promise.resolve({ id: target.id }),
-        searchParams: Promise.resolve({ returnTo }),
-      });
-      expect(redirect).toHaveBeenLastCalledWith(`${fallback}?trainee=${target.id}`);
-    }
-  });
-
-  it('encode la cible dans les deux liens de détail', () => {
-    expect(ROUTES.admin.traineeDetail('élève/a ?#%')).toBe(
-      '/admin/trainees/%C3%A9l%C3%A8ve%2Fa%20%3F%23%25',
-    );
-    expect(ROUTES.portal.traineeDetail('élève/a ?#%')).toBe(
-      '/users/%C3%A9l%C3%A8ve%2Fa%20%3F%23%25',
-    );
   });
 });
 

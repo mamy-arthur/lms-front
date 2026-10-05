@@ -209,8 +209,6 @@ describe('useUsersListController — état dans l’URL', () => {
       first.result.current.handlePageChange(3);
     });
     const expected = first.result.current.params;
-    const returnTo = first.result.current.returnTo;
-    expect(window.location.pathname + window.location.search).toBe(returnTo);
     first.unmount();
 
     const restored = renderHook(() => useUsersListController(options));
@@ -273,8 +271,6 @@ describe('useUsersListController — état dans l’URL', () => {
     const { result } = renderHook(() => useUsersListController({ urlPath: '/users' }));
     expect(result.current.params).not.toHaveProperty('tenant_id');
     expect(result.current.params).not.toHaveProperty('client_id');
-    expect(result.current.returnTo).not.toContain('tenant_id');
-    expect(result.current.returnTo).not.toContain('client_id');
     expect(result.current.draftSearch).toBe('Alice');
   });
 

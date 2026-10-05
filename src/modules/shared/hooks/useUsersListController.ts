@@ -18,7 +18,7 @@ export function useUsersListController<TUser, TParams = Record<string, unknown>>
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<TUser | undefined>(undefined);
 
-  const { params, setParams, returnTo } = useUsersListParams<TParams>(opts ?? {});
+  const { params, setParams } = useUsersListParams<TParams>(opts ?? {});
   const [searchDraft, setSearchDraft] = useState<{ applied: unknown; value: string } | null>(null);
   // Discard obsolete drafts so history cannot reactivate them when an old query returns.
   if (searchDraft && searchDraft.applied !== params.q) {
@@ -212,7 +212,6 @@ export function useUsersListController<TUser, TParams = Record<string, unknown>>
     setDraftTenant,
     params,
     setParams,
-    returnTo,
     sort,
     handleSearch,
     handleSearchOnly,

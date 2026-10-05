@@ -138,9 +138,5 @@ export function useUsersListParams<TParams>({
     [urlPath, getSnapshot, parse, defaults],
   );
 
-  return {
-    params,
-    setParams,
-    returnTo: urlPath ? `${urlPath}${serialize(search, params, defaults)}` : undefined,
-  };
+  return { params, setParams };
 }
