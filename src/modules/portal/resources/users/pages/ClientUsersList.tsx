@@ -11,9 +11,13 @@ import { useClientUsersQuery } from '../hooks/useClientUsersQuery';
 import type { ClientUser, ClientUserSearchParams } from '../types';
 import { ClientUsersTable } from './_components/client-users-table';
 import { useUsersListController } from '@/modules/shared/hooks/useUsersListController';
+import { useTraineeDetailDrawer } from '@/modules/shared/hooks/useTraineeDetailDrawer';
+import { TraineeDetailDrawer } from '@/modules/shared/components/trainees/TraineeDetailDrawer';
 import { useToggleClientUserActive } from '../hooks/useToggleClientUserActive';
 import { useDeleteClientUser } from '../hooks/useDeleteClientUser';
 import { useDeleteConfirm } from '@/modules/shared/hooks/useDeleteConfirm';
+import { Role } from '@/shared/constants/roles';
+import { ROUTES } from '@/shared/constants/routes';
 
 const ROLE_OPTIONS = [
   { value: 'CLIENT_MANAGER', label: 'Responsable' },
@@ -26,6 +30,7 @@ const STATUS_OPTIONS = [
 ] as const;
 
 export function ClientUserList() {
+  const traineeDrawer = useTraineeDetailDrawer(ROUTES.portal.users);
   const {
     isDrawerOpen,
     editingUser,
@@ -48,9 +53,20 @@ export function ClientUserList() {
     page,
     pageSize,
     hasQuery,
-  } = useUsersListController<ClientUser, ClientUserSearchParams>({ defaultPageSize: 25 });
+  } = useUsersListController<ClientUser, ClientUserSearchParams>({
+    defaultPageSize: 25,
+    urlPath: ROUTES.portal.users,
+  });
 
-  const { data: queryResult } = useClientUsersQuery(params);
+  const handleOpenUser = (user: ClientUser) => {
+    if (user.role !== Role.TRAINEE) {
+      handleEdit(user);
+      return;
+    }
+    traineeDrawer.open(user.id);
+  };
+
+  const { data: queryResult, isLoading } = useClientUsersQuery(params);
   const toggleActive = useToggleClientUserActive();
   const deleteClientUser = useDeleteClientUser();
   const { openConfirm: confirmDelete, dialog: deleteDialog } = useDeleteConfirm((id) =>
@@ -195,6 +211,7 @@ export function ClientUserList() {
 
         <ClientUsersTable
           users={queryResult?.data ?? []}
+          isLoading={isLoading}
           hasQuery={hasQuery}
           page={page}
           pageSize={pageSize}
@@ -203,6 +220,8 @@ export function ClientUserList() {
           onSort={handleSort}
           onPageChange={handlePageChange}
           onPageSizeChange={handlePageSizeChange}
+          onRowClick={handleOpenUser}
+          onView={handleOpenUser}
           onEdit={handleEdit}
           onToggleActive={(user) =>
             toggleActive.mutate({ id: user.id, is_active: !user.is_active })
@@ -210,6 +229,14 @@ export function ClientUserList() {
           onDelete={(user) => confirmDelete(user)}
         />
       </div>
+
+      <TraineeDetailDrawer
+        id={traineeDrawer.id}
+        area="portal"
+        editForm={UserFormDrawer}
+        onClose={traineeDrawer.close}
+        onCloseAutoFocus={traineeDrawer.restoreFocus}
+      />
 
       <UserFormDrawer
         open={isDrawerOpen}

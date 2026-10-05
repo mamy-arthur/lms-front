@@ -19,6 +19,7 @@ interface AdminUsersTableProps {
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
   onView?: (user: User) => void;
+  onRowClick?: (user: User) => void;
   onEdit: (user: User) => void;
   onToggleActive: (user: User) => void;
   onDelete: (user: User) => void;
@@ -37,6 +38,7 @@ export function AdminUsersTable({
   onPageChange,
   onPageSizeChange,
   onView,
+  onRowClick,
   onEdit,
   onToggleActive,
   onDelete,
@@ -55,6 +57,7 @@ export function AdminUsersTable({
       onPageChange={onPageChange}
       onPageSizeChange={onPageSizeChange}
       onView={onView}
+      onRowClick={onRowClick}
       onEdit={onEdit}
       onToggleActive={onToggleActive}
       onDelete={onDelete}

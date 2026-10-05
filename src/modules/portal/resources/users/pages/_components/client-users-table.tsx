@@ -19,6 +19,7 @@ interface ClientUsersTableProps {
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
   onView?: (user: ClientUser) => void;
+  onRowClick?: (user: ClientUser) => void;
   onEdit: (user: ClientUser) => void;
   onToggleActive: (user: ClientUser) => void;
   onDelete: (user: ClientUser) => void;
@@ -36,6 +37,7 @@ export function ClientUsersTable({
   onPageChange,
   onPageSizeChange,
   onView,
+  onRowClick,
   onEdit,
   onToggleActive,
   onDelete,
@@ -53,6 +55,7 @@ export function ClientUsersTable({
       onPageChange={onPageChange}
       onPageSizeChange={onPageSizeChange}
       onView={onView}
+      onRowClick={onRowClick}
       onEdit={onEdit}
       onToggleActive={onToggleActive}
       onDelete={onDelete}

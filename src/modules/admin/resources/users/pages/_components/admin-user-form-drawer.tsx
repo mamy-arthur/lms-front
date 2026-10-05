@@ -167,11 +167,18 @@ const ROLE_DEFAULTS: z.infer<typeof createSchemaShape> = {
 export interface AdminUserFormDrawerProps {
   open: boolean;
   onClose: () => void;
+  onCloseAutoFocus?: (event: Event) => void;
   onSuccess?: () => void;
   user?: User;
 }
 
-function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFormDrawerProps) {
+function AdminUserFormDrawerBase({
+  open,
+  onClose,
+  onCloseAutoFocus,
+  onSuccess,
+  user,
+}: AdminUserFormDrawerProps) {
   const isEdit = !!user;
   const role = useAuthStore((s) => s.role);
   const isSuperAdmin = role === Role.SUPER_ADMIN;
@@ -649,6 +656,7 @@ function AdminUserFormDrawerBase({ open, onClose, onSuccess, user }: AdminUserFo
       <SheetContent
         className="flex w-full flex-col gap-0 p-0 overflow-hidden sm:max-w-150! lg:max-w-200!"
         showCloseButton={true}
+        onCloseAutoFocus={onCloseAutoFocus}
       >
         <SheetHeader className="border-b px-4 py-4">
           <SheetTitle>{isEdit ? "Modifier l'utilisateur" : 'Créer un utilisateur'}</SheetTitle>
