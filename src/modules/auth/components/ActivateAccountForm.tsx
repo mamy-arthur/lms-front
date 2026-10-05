@@ -13,6 +13,7 @@ import { ROUTES } from '@/shared/constants/routes';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import styles from './client-login.module.css';
 
 interface ActivateAccountFormProps {
   email: string;
@@ -60,7 +61,7 @@ export function ActivateAccountForm({ email, token }: ActivateAccountFormProps) 
 
   if (linkExpired) {
     return (
-      <div className="space-y-5">
+      <div className={styles.fields}>
         <div
           role="alert"
           className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-600"
@@ -69,8 +70,8 @@ export function ActivateAccountForm({ email, token }: ActivateAccountFormProps) 
           votre administrateur pour recevoir un nouveau mail d&apos;activation.
         </div>
 
-        <p className="text-center text-xs text-muted-foreground">
-          <Link href={ROUTES.auth.login} className="font-semibold text-primary hover:underline">
+        <p className={styles.accessRequest}>
+          <Link href={ROUTES.auth.login} className={styles.textLink}>
             Retour à la connexion
           </Link>
         </p>
@@ -79,17 +80,28 @@ export function ActivateAccountForm({ email, token }: ActivateAccountFormProps) 
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} noValidate className="mt-8 space-y-5">
+    <form onSubmit={handleSubmit(onSubmit)} noValidate className={styles.fields}>
       <input type="hidden" {...register('token')} />
 
       <div className="space-y-2">
-        <Label htmlFor="email">Adresse email</Label>
+        <Label htmlFor="email" className={styles.fieldLabel}>
+          Adresse email
+        </Label>
 
-        <Input id="email" type="email" readOnly aria-readonly {...register('email')} />
+        <Input
+          id="email"
+          type="email"
+          readOnly
+          aria-readonly
+          className={styles.fieldInput}
+          {...register('email')}
+        />
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="password">Mot de passe</Label>
+        <Label htmlFor="password" className={styles.fieldLabel}>
+          Mot de passe
+        </Label>
 
         <div className="relative">
           <Input
@@ -97,6 +109,8 @@ export function ActivateAccountForm({ email, token }: ActivateAccountFormProps) 
             type={showPassword ? 'text' : 'password'}
             autoComplete="new-password"
             placeholder="••••••••"
+            className={`${styles.fieldInput} ${styles.passwordInput}`}
+            aria-invalid={Boolean(errors.password)}
             aria-describedby={errors.password ? 'password-error' : undefined}
             {...register('password')}
           />
@@ -104,22 +118,30 @@ export function ActivateAccountForm({ email, token }: ActivateAccountFormProps) 
           <button
             type="button"
             aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
-            onClick={() => setShowPassword((v) => !v)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+            aria-pressed={showPassword}
+            aria-controls="password"
+            onClick={() => setShowPassword((visible) => !visible)}
+            className={styles.passwordToggle}
           >
-            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            {showPassword ? (
+              <EyeOff size={17} aria-hidden="true" />
+            ) : (
+              <Eye size={17} aria-hidden="true" />
+            )}
           </button>
         </div>
 
         {errors.password && (
-          <p id="password-error" className="text-sm text-red-500">
+          <p id="password-error" role="alert" className="text-xs text-red-600">
             {errors.password.message}
           </p>
         )}
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="password_confirmation">Confirmer le mot de passe</Label>
+        <Label htmlFor="password_confirmation" className={styles.fieldLabel}>
+          Confirmer le mot de passe
+        </Label>
 
         <div className="relative">
           <Input
@@ -127,6 +149,8 @@ export function ActivateAccountForm({ email, token }: ActivateAccountFormProps) 
             type={showConfirmation ? 'text' : 'password'}
             autoComplete="new-password"
             placeholder="••••••••"
+            className={`${styles.fieldInput} ${styles.passwordInput}`}
+            aria-invalid={Boolean(errors.password_confirmation)}
             aria-describedby={
               errors.password_confirmation ? 'password-confirmation-error' : undefined
             }
@@ -136,15 +160,21 @@ export function ActivateAccountForm({ email, token }: ActivateAccountFormProps) 
           <button
             type="button"
             aria-label={showConfirmation ? 'Masquer la confirmation' : 'Afficher la confirmation'}
-            onClick={() => setShowConfirmation((v) => !v)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+            aria-pressed={showConfirmation}
+            aria-controls="password_confirmation"
+            onClick={() => setShowConfirmation((visible) => !visible)}
+            className={styles.passwordToggle}
           >
-            {showConfirmation ? <EyeOff size={18} /> : <Eye size={18} />}
+            {showConfirmation ? (
+              <EyeOff size={17} aria-hidden="true" />
+            ) : (
+              <Eye size={17} aria-hidden="true" />
+            )}
           </button>
         </div>
 
         {errors.password_confirmation && (
-          <p id="password-confirmation-error" className="text-sm text-red-500">
+          <p id="password-confirmation-error" role="alert" className="text-xs text-red-600">
             {errors.password_confirmation.message}
           </p>
         )}
@@ -159,20 +189,16 @@ export function ActivateAccountForm({ email, token }: ActivateAccountFormProps) 
         </div>
       )}
 
-      <Button
-        type="submit"
-        disabled={isSubmitting}
-        className="h-12 w-full bg-(--color-primary) hover:bg-(--color-primary)/80"
-      >
+      <Button type="submit" disabled={isSubmitting} className={styles.submit}>
         {isSubmitting ? (
           <>
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
             Activation...
           </>
         ) : (
           <>
             Activer mon compte
-            <ArrowRight className="ml-2 h-4 w-4" />
+            <ArrowRight className="h-4 w-4" aria-hidden="true" />
           </>
         )}
       </Button>

@@ -1,6 +1,7 @@
 import Link from 'next/link';
-import { LoginBrandingPanel } from '@/app/(auth)/_components/LoginBrandingPanel';
+import { ClientLoginLayout } from '@/modules/auth/components/ClientLoginLayout';
 import { ResetPasswordForm } from '@/modules/auth/components/ResetPasswordForm';
+import styles from '@/modules/auth/components/client-login.module.css';
 import { ROUTES } from '@/shared/constants/routes';
 import { PASSWORD_POLICY_HINT } from '@/shared/schemas/auth.schema';
 
@@ -12,45 +13,36 @@ export default async function ResetPasswordPage({ searchParams }: Props) {
   const { token, email } = await searchParams;
 
   return (
-    <main className="min-h-screen bg-background w-full">
-      <div className="grid min-h-screen lg:grid-cols-2">
-        <LoginBrandingPanel />
-
-        <section className="flex items-center justify-center px-6 py-10 sm:px-10">
-          <div className="w-full max-w-md">
-            {!token || !email ? (
-              <div className="space-y-5">
-                <div>
-                  <h1 className="text-3xl font-bold">Lien invalide</h1>
-
-                  <p className="mt-2 text-muted-foreground text-sm">
-                    Ce lien de réinitialisation est invalide ou a expiré.
-                  </p>
-                </div>
-
-                <p className="text-center text-xs text-muted-foreground">
-                  <Link
-                    href={ROUTES.auth.forgotPassword}
-                    className="font-semibold text-primary hover:underline"
-                  >
-                    Faire une nouvelle demande
-                  </Link>
-                </p>
-              </div>
-            ) : (
-              <>
-                <div>
-                  <h1 className="text-3xl font-bold">Nouveau mot de passe</h1>
-
-                  <p className="mt-2 text-muted-foreground text-sm">{PASSWORD_POLICY_HINT}</p>
-                </div>
-
-                <ResetPasswordForm email={email} token={token} />
-              </>
-            )}
-          </div>
-        </section>
-      </div>
-    </main>
+    <ClientLoginLayout>
+      <section className={styles.form} aria-labelledby="reset-password-title">
+        {!token || !email ? (
+          <>
+            <div>
+              <h1 id="reset-password-title" className={styles.formTitle}>
+                Lien invalide
+              </h1>
+              <p className={styles.formSubtitle}>
+                Ce lien de réinitialisation est invalide ou a expiré.
+              </p>
+            </div>
+            <p className={styles.accessRequest}>
+              <Link href={ROUTES.auth.forgotPassword} className={styles.textLink}>
+                Faire une nouvelle demande
+              </Link>
+            </p>
+          </>
+        ) : (
+          <>
+            <div>
+              <h1 id="reset-password-title" className={styles.formTitle}>
+                Nouveau mot de passe
+              </h1>
+              <p className={styles.formSubtitle}>{PASSWORD_POLICY_HINT}</p>
+            </div>
+            <ResetPasswordForm email={email} token={token} />
+          </>
+        )}
+      </section>
+    </ClientLoginLayout>
   );
 }
