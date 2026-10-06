@@ -2,7 +2,6 @@
 import * as React from 'react';
 import Image from 'next/image';
 import { NavMain } from './nav-main';
-import { DevBanner } from './dev-banner';
 import {
   Sidebar,
   SidebarContent,
@@ -68,9 +67,7 @@ export function AppSidebar({ navItems, logoUrl, tenantName, ...props }: AppSideb
       <SidebarContent>
         <NavMain items={navItems ?? []} />
       </SidebarContent>
-      <SidebarFooter>
-        <DevBanner />
-      </SidebarFooter>
+      <SidebarFooter>{/* <DevBanner /> */}</SidebarFooter>
       <SidebarRail />
     </Sidebar>
   );
