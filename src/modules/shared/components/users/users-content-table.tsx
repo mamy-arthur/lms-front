@@ -51,6 +51,7 @@ export interface UsersContentTableProps<T extends UsersContentRow = UsersContent
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
   onView?: (user: T) => void;
+  onRowClick?: (user: T) => void;
   onEdit?: (user: T) => void;
   onToggleActive?: (user: T) => void;
   onDelete?: (user: T) => void;
@@ -72,6 +73,7 @@ export function UsersContentTable<T extends UsersContentRow = UsersContentRow>({
   onPageChange,
   onPageSizeChange,
   onView,
+  onRowClick,
   onEdit,
   onToggleActive,
   onDelete,
@@ -80,19 +82,38 @@ export function UsersContentTable<T extends UsersContentRow = UsersContentRow>({
   isActiveSortable = true,
   rowTestId,
 }: UsersContentTableProps<T>) {
+  const handleRowClick = onRowClick ?? onEdit ?? onView;
   const columns: UsersTableColumn<T>[] = [
     {
       key: 'name',
       label: 'Utilisateur',
       sortable: true,
-      render: (user) => (
-        <UserAvatar
-          name={`${user.first_name} ${user.last_name}`.trim()}
-          first_name={user.first_name}
-          last_name={user.last_name}
-          photoUrl={user.profile_photo?.url ?? null}
-        />
-      ),
+      render: (user) => {
+        const avatar = (
+          <UserAvatar
+            name={`${user.first_name} ${user.last_name}`.trim()}
+            first_name={user.first_name}
+            last_name={user.last_name}
+            photoUrl={user.profile_photo?.url ?? null}
+          />
+        );
+        return handleRowClick ? (
+          <button
+            type="button"
+            data-user-detail-trigger={user.id}
+            className="rounded-sm text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label={`Ouvrir ${user.full_name || `${user.first_name} ${user.last_name}`.trim()}`}
+            onClick={(event) => {
+              event.stopPropagation();
+              handleRowClick(user);
+            }}
+          >
+            {avatar}
+          </button>
+        ) : (
+          avatar
+        );
+      },
       skeleton: (
         <div className="flex items-center gap-3">
           <div className="size-9 rounded-full bg-muted animate-pulse shrink-0" />
@@ -175,7 +196,7 @@ export function UsersContentTable<T extends UsersContentRow = UsersContentRow>({
       onSort={onSort}
       onPageChange={onPageChange}
       onPageSizeChange={onPageSizeChange}
-      onRowClick={onEdit ?? onView}
+      onRowClick={handleRowClick}
       rowTestId={rowTestId}
     />
   );

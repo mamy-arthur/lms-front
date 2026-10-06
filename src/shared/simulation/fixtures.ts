@@ -1,5 +1,5 @@
 import { Role } from '@/shared/constants/roles';
-import type { User } from '@/modules/admin/resources/users/types';
+import type { User } from '@/shared/types/user.types';
 import type { Client } from '@/modules/admin/resources/clients';
 import type { CompetencyApiResponse } from '@/modules/admin/resources/modules/types';
 import type { ApiEvaluation } from '@/shared/api/evaluations.api';

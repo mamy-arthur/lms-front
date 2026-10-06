@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { ChevronDown, Plus, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -11,9 +12,16 @@ import { useClientUsersQuery } from '../hooks/useClientUsersQuery';
 import type { ClientUser, ClientUserSearchParams } from '../types';
 import { ClientUsersTable } from './_components/client-users-table';
 import { useUsersListController } from '@/modules/shared/hooks/useUsersListController';
+import { useTraineeDetailDrawer } from '@/modules/shared/hooks/useTraineeDetailDrawer';
+import { TraineeDetailDrawer } from '@/modules/shared/components/trainees/TraineeDetailDrawer';
+import { useUserDetailDrawer } from '@/modules/shared/hooks/useUserDetailDrawer';
+import { ClientManagerDetailDrawer } from '@/modules/shared/components/client-managers/ClientManagerDetailDrawer';
 import { useToggleClientUserActive } from '../hooks/useToggleClientUserActive';
 import { useDeleteClientUser } from '../hooks/useDeleteClientUser';
 import { useDeleteConfirm } from '@/modules/shared/hooks/useDeleteConfirm';
+import { Role } from '@/shared/constants/roles';
+import { ROUTES } from '@/shared/constants/routes';
+import type { User as SharedUser } from '@/shared/types/user.types';
 
 const ROLE_OPTIONS = [
   { value: 'CLIENT_MANAGER', label: 'Responsable' },
@@ -26,6 +34,8 @@ const STATUS_OPTIONS = [
 ] as const;
 
 export function ClientUserList() {
+  const traineeDrawer = useTraineeDetailDrawer(ROUTES.portal.users);
+  const managerDrawer = useUserDetailDrawer(ROUTES.portal.users, 'manager');
   const {
     isDrawerOpen,
     editingUser,
@@ -48,9 +58,34 @@ export function ClientUserList() {
     page,
     pageSize,
     hasQuery,
-  } = useUsersListController<ClientUser, ClientUserSearchParams>({ defaultPageSize: 25 });
+  } = useUsersListController<ClientUser, ClientUserSearchParams>({
+    defaultPageSize: 25,
+    urlPath: ROUTES.portal.users,
+  });
 
-  const { data: queryResult } = useClientUsersQuery(params);
+  useEffect(() => {
+    if (traineeDrawer.id || managerDrawer.id) handleCloseDrawer();
+  }, [traineeDrawer.id, managerDrawer.id, handleCloseDrawer]);
+
+  const editUser = (user: ClientUser) => {
+    traineeDrawer.close();
+    managerDrawer.close();
+    handleEdit(user);
+  };
+
+  const handleOpenUser = (user: ClientUser) => {
+    if (user.role === Role.TRAINEE) traineeDrawer.open(user.id);
+    else if (user.role === Role.CLIENT_MANAGER) managerDrawer.open(user.id);
+    else editUser(user);
+  };
+
+  // A deep link cannot know the target role: switch to the drawer that matches the loaded profile.
+  const handleRoleMismatch = (user: SharedUser) => {
+    if (user.role === Role.TRAINEE) traineeDrawer.open(user.id);
+    else if (user.role === Role.CLIENT_MANAGER) managerDrawer.open(user.id);
+  };
+
+  const { data: queryResult, isLoading } = useClientUsersQuery(params);
   const toggleActive = useToggleClientUserActive();
   const deleteClientUser = useDeleteClientUser();
   const { openConfirm: confirmDelete, dialog: deleteDialog } = useDeleteConfirm((id) =>
@@ -195,6 +230,7 @@ export function ClientUserList() {
 
         <ClientUsersTable
           users={queryResult?.data ?? []}
+          isLoading={isLoading}
           hasQuery={hasQuery}
           page={page}
           pageSize={pageSize}
@@ -203,7 +239,9 @@ export function ClientUserList() {
           onSort={handleSort}
           onPageChange={handlePageChange}
           onPageSizeChange={handlePageSizeChange}
-          onEdit={handleEdit}
+          onRowClick={handleOpenUser}
+          onView={handleOpenUser}
+          onEdit={editUser}
           onToggleActive={(user) =>
             toggleActive.mutate({ id: user.id, is_active: !user.is_active })
           }
@@ -211,8 +249,28 @@ export function ClientUserList() {
         />
       </div>
 
+      <TraineeDetailDrawer
+        key={`trainee:${managerDrawer.id ?? ''}`}
+        id={traineeDrawer.id}
+        area="portal"
+        editForm={UserFormDrawer}
+        onClose={traineeDrawer.close}
+        onCloseAutoFocus={traineeDrawer.restoreFocus}
+        onRoleMismatch={handleRoleMismatch}
+      />
+
+      <ClientManagerDetailDrawer
+        key={`manager:${traineeDrawer.id ?? ''}`}
+        id={managerDrawer.id}
+        area="portal"
+        editForm={UserFormDrawer}
+        onClose={managerDrawer.close}
+        onCloseAutoFocus={managerDrawer.restoreFocus}
+        onRoleMismatch={handleRoleMismatch}
+      />
+
       <UserFormDrawer
-        open={isDrawerOpen}
+        open={isDrawerOpen && !traineeDrawer.id && !managerDrawer.id}
         onClose={handleCloseDrawer}
         onSuccess={handleSuccess}
         user={editingUser}

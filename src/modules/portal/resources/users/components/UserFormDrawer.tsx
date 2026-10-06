@@ -85,11 +85,18 @@ const CREATE_DEFAULTS: z.infer<typeof createSchema> = {
 export interface UserFormDrawerProps {
   open: boolean;
   onClose: () => void;
+  onCloseAutoFocus?: (event: Event) => void;
   onSuccess?: () => void;
   user?: ClientUser;
 }
 
-function UserFormDrawerBase({ open, onClose, onSuccess, user }: UserFormDrawerProps) {
+function UserFormDrawerBase({
+  open,
+  onClose,
+  onCloseAutoFocus,
+  onSuccess,
+  user,
+}: UserFormDrawerProps) {
   const isEdit = !!user;
 
   const createMutation = useCreateClientUser();
@@ -318,6 +325,7 @@ function UserFormDrawerBase({ open, onClose, onSuccess, user }: UserFormDrawerPr
       <SheetContent
         className="flex w-full flex-col gap-0 p-0 overflow-hidden sm:max-w-150! lg:max-w-200!"
         showCloseButton={true}
+        onCloseAutoFocus={onCloseAutoFocus}
         onInteractOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
       >

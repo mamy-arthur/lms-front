@@ -14,9 +14,15 @@ import { AdminUsersTable } from './_components/admin-users-table';
 import { useUsersQuery } from '../hooks/useUsersQuery';
 import type { User, UserSearchParams } from '../types';
 import { useUsersListController } from '@/modules/shared/hooks/useUsersListController';
+import { useTraineeDetailDrawer } from '@/modules/shared/hooks/useTraineeDetailDrawer';
+import { TraineeDetailDrawer } from '@/modules/shared/components/trainees/TraineeDetailDrawer';
+import { useUserDetailDrawer } from '@/modules/shared/hooks/useUserDetailDrawer';
+import { ClientManagerDetailDrawer } from '@/modules/shared/components/client-managers/ClientManagerDetailDrawer';
 import { useClientsQuery } from '@/modules/admin/resources/clients';
 import { tenantApi } from '@/modules/admin/resources/tenants/api';
 import { Role } from '@/shared/constants/roles';
+import { ROUTES } from '@/shared/constants/routes';
+import type { User as SharedUser } from '@/shared/types/user.types';
 import { useToggleUserActive } from '../hooks/useToggleUserActive';
 import { useDeleteUser } from '../hooks/useDeleteUser';
 import { useResetUserTwoFactor } from '../hooks/useResetUserTwoFactor';
@@ -37,6 +43,13 @@ const STATUS_OPTIONS = [
 ] as const;
 
 export function UsersList() {
+  const traineeDrawer = useTraineeDetailDrawer(ROUTES.admin.users);
+  const managerDrawer = useUserDetailDrawer(ROUTES.admin.users, 'manager');
+  const { tenant: activeTenant } = useTenant();
+  const callerRole = useAuthStore((s) => s.role);
+  // The backend also enforces the caller's tenant/client scope.
+  const canFilterByClient = callerRole !== Role.CLIENT_MANAGER;
+  const canSelectTenant = callerRole === Role.SUPER_ADMIN && !activeTenant;
   const {
     isDrawerOpen,
     editingUser,
@@ -45,6 +58,7 @@ export function UsersList() {
     selectedRoles,
     draftStatus,
     params,
+    setParams,
     sort,
     handleSearch,
     handleSort,
@@ -59,20 +73,38 @@ export function UsersList() {
     page,
     pageSize,
     hasQuery,
-  } = useUsersListController<User, UserSearchParams>({ defaultPageSize: 25 });
+  } = useUsersListController<User, UserSearchParams>({
+    defaultPageSize: 25,
+    urlPath: ROUTES.admin.users,
+    includeTenantFilter: canSelectTenant,
+    includeClientFilter: canFilterByClient,
+  });
 
-  const { tenant: activeTenant } = useTenant();
-  const [clientFilter, setClientFilter] = useState<string | null>(null);
-  const [tenantFilter, setTenantFilter] = useState<string | null>(null);
+  const clientFilter = params.client_id ?? null;
+  const tenantFilter = params.tenant_id ?? null;
 
-  // Un CLIENT_MANAGER n'a qu'un client : le backend le force deja, afficher le
-  // filtre n'aurait aucun sens pour lui.
-  const callerRole = useAuthStore((s) => s.role);
-  const canFilterByClient = callerRole !== Role.CLIENT_MANAGER;
+  useEffect(() => {
+    if (traineeDrawer.id || managerDrawer.id) handleCloseDrawer();
+  }, [traineeDrawer.id, managerDrawer.id, handleCloseDrawer]);
 
-  // Sur le domaine central aucun tenant n'est resolu : seul un compte global
-  // peut en designer un, les autres restent cloisonnes par le backend.
-  const canSelectTenant = callerRole === Role.SUPER_ADMIN && !activeTenant;
+  const editUser = (user: User) => {
+    traineeDrawer.close();
+    managerDrawer.close();
+    handleEdit(user);
+  };
+
+  const handleOpenUser = (user: User) => {
+    if (user.role === Role.TRAINEE) traineeDrawer.open(user.id);
+    else if (user.role === Role.CLIENT_MANAGER) managerDrawer.open(user.id);
+    else editUser(user);
+  };
+
+  // A deep link cannot know the target role: switch to the drawer that matches the loaded profile.
+  const handleRoleMismatch = (user: SharedUser) => {
+    if (user.role === Role.TRAINEE) traineeDrawer.open(user.id);
+    else if (user.role === Role.CLIENT_MANAGER) managerDrawer.open(user.id);
+  };
+
   const { data: tenantsData } = useQuery({
     queryKey: ['tenants-select'],
     queryFn: () => tenantApi.getAll(),
@@ -88,14 +120,11 @@ export function UsersList() {
 
   // Changer de tenant invalide le client retenu, qui appartient au precedent.
   const handleTenantFilter = (id: string | null) => {
-    setTenantFilter(id);
-    setClientFilter(null);
-    handlePageChange(0);
+    setParams((prev) => ({ ...prev, tenant_id: id ?? undefined, client_id: undefined, page: 0 }));
   };
 
   const handleClientFilter = (id: string | null) => {
-    setClientFilter(id);
-    handlePageChange(0);
+    setParams((prev) => ({ ...prev, client_id: id ?? undefined, page: 0 }));
   };
 
   // Un client disparu de la liste (suppression, invalidation du cache) laisserait
@@ -103,10 +132,9 @@ export function UsersList() {
   useEffect(() => {
     if (!clientFilter || !clientsLoaded) return;
     if (!clients?.some((c) => c.id === clientFilter)) {
-      setClientFilter(null);
-      handlePageChange(0);
+      setParams((prev) => ({ ...prev, client_id: undefined, page: 0 }));
     }
-  }, [clientFilter, clientsLoaded, clients, handlePageChange]);
+  }, [clientFilter, clientsLoaded, clients, setParams]);
 
   const scopedParams = useMemo(
     () => ({
@@ -358,7 +386,9 @@ export function UsersList() {
           onSort={handleSort}
           onPageChange={handlePageChange}
           onPageSizeChange={handlePageSizeChange}
-          onEdit={handleEdit}
+          onRowClick={handleOpenUser}
+          onView={handleOpenUser}
+          onEdit={editUser}
           onToggleActive={(user) =>
             toggleActive.mutate({ id: user.id, is_active: !user.is_active })
           }
@@ -367,8 +397,28 @@ export function UsersList() {
         />
       </div>
 
+      <TraineeDetailDrawer
+        key={`trainee:${managerDrawer.id ?? ''}`}
+        id={traineeDrawer.id}
+        area="admin"
+        editForm={AdminUserFormDrawer}
+        onClose={traineeDrawer.close}
+        onCloseAutoFocus={traineeDrawer.restoreFocus}
+        onRoleMismatch={handleRoleMismatch}
+      />
+
+      <ClientManagerDetailDrawer
+        key={`manager:${traineeDrawer.id ?? ''}`}
+        id={managerDrawer.id}
+        area="admin"
+        editForm={AdminUserFormDrawer}
+        onClose={managerDrawer.close}
+        onCloseAutoFocus={managerDrawer.restoreFocus}
+        onRoleMismatch={handleRoleMismatch}
+      />
+
       <AdminUserFormDrawer
-        open={isDrawerOpen}
+        open={isDrawerOpen && !traineeDrawer.id && !managerDrawer.id}
         onClose={handleCloseDrawer}
         onSuccess={handleSuccess}
         user={editingUser}

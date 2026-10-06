@@ -127,6 +127,8 @@ export const SIMULATION_ROUTES = [
   },
   { methods: ['POST'], path: '{certificates,template-mails}/media' },
   { methods: ['POST'], path: '{platform/,}users/:id/profile-photo' },
+  { methods: ['GET'], path: '{platform/,}users/:id/enrollments' },
+  { methods: ['GET'], path: '{platform/,}users/:id/purchased-learning-paths' },
   { methods: ['POST'], path: 'groups/:id/members' },
   { methods: ['DELETE'], path: 'groups/:id/members/:traineeId' },
   { methods: ['GET'], path: 'purchased-learning-paths' },
@@ -1537,6 +1539,103 @@ function attemptSummaries(data: SimulationData, enrollmentId: string): Enrollmen
       time_spent_seconds: trackedSeconds(data, `${enrollmentId}:`),
     },
   ];
+}
+
+/** Formation embarquée dans les réponses d'inscription (me/enrollments, users/:id/enrollments). */
+function enrollmentLearningPath(data: SimulationData, learningPathId: string) {
+  const learningPath = decorate(
+    data,
+    'learning-paths',
+    find(data, 'learning-paths', learningPathId),
+  );
+  return {
+    id: learningPath.id,
+    name: learningPath.name,
+    description: learningPath.description,
+    image: learningPath.image,
+    duration: learningPath.duration,
+    category_id: learningPath.category_id,
+    category_learning_path: learningPath.category_id
+      ? { id: learningPath.category_id, name: learningPath.category_name }
+      : null,
+    totalModules: training
+      ? number(find(data, 'learning-paths', learningPathId).competencies_count)
+      : objects(learningPath.competencies).length,
+  };
+}
+
+/** GET {platform/,}users/:id/enrollments : suivi des formations d'un stagiaire. */
+function traineeEnrollmentsPage(
+  data: SimulationData,
+  userId: string,
+  params: URLSearchParams,
+): SimulationResponse {
+  const learner = find(data, 'users', userId);
+  if (learner.role !== Role.TRAINEE)
+    fail(404, 'Simulation : stagiaire introuvable.', 'SIMULATION_NOT_FOUND');
+  return listResponse(
+    data.enrollments
+      .filter((row) => row.learner_id === learner.id)
+      .map((row) => {
+        const detail = summary(data, row.id);
+        const done = detail.modules.filter(
+          (module) =>
+            module.progress.total > 0 && module.progress.completed === module.progress.total,
+        );
+        return {
+          ...row,
+          progress_percent: detail.progress.percent,
+          expires_at: null,
+          completed_modules: done.length,
+          total_modules: detail.modules.length,
+          time_spent_seconds: trackedSeconds(data, `${row.id}:`),
+          learning_path: enrollmentLearningPath(data, row.learning_path_id),
+        };
+      }),
+    params,
+  );
+}
+
+/** GET {platform/,}users/:id/purchased-learning-paths : formations achetées par un responsable. */
+function managerPurchasesPage(
+  data: SimulationData,
+  userId: string,
+  params: URLSearchParams,
+): SimulationResponse {
+  const manager = find(data, 'users', userId);
+  if (manager.role !== Role.CLIENT_MANAGER)
+    fail(404, 'Simulation : responsable introuvable.', 'SIMULATION_NOT_FOUND');
+  const purchases = manager.id === SIMULATION_IDS.manager ? data.purchases : [];
+  return listResponse(
+    purchases.map((purchase) => {
+      const learningPath = purchasedLearningPath(data, purchase);
+      const owned = !purchase.product;
+      return {
+        id: purchase.id,
+        name: learningPath.name,
+        created_at: purchase.created_at,
+        learning_path: {
+          id: learningPath.id,
+          name: learningPath.name,
+          description: owned ? learningPath.description : null,
+          image: learningPath.image,
+          category_id: learningPath.category_id,
+          category_name: learningPath.category_name,
+        },
+        modules_count: owned
+          ? training
+            ? number(find(data, 'learning-paths', purchase.learning_path_id).competencies_count)
+            : objects(learningPath.competencies).length
+          : 0,
+        evaluations_count: owned
+          ? data.resources.evaluations.filter(
+              (row) => row.learning_path_id === purchase.learning_path_id,
+            ).length
+          : 0,
+      };
+    }),
+    params,
+  );
 }
 
 function clientOverview(data: SimulationData): ClientDashboardOverview {
@@ -3022,34 +3121,18 @@ async function dispatchSimulationRequest(
     return listResponse(
       data.enrollments
         .filter((row) => row.learner_id === SIMULATION_IDS.learner)
-        .map((row) => {
-          const learningPath = decorate(
-            data,
-            'learning-paths',
-            find(data, 'learning-paths', row.learning_path_id),
-          );
-          return {
-            ...row,
-            progress_percent: summary(data, row.id).progress.percent,
-            learning_path: {
-              id: learningPath.id,
-              name: learningPath.name,
-              description: learningPath.description,
-              image: learningPath.image,
-              duration: learningPath.duration,
-              category_id: learningPath.category_id,
-              category_learning_path: learningPath.category_id
-                ? { id: learningPath.category_id, name: learningPath.category_name }
-                : null,
-              totalModules: training
-                ? number(find(data, 'learning-paths', row.learning_path_id).competencies_count)
-                : objects(learningPath.competencies).length,
-            },
-          };
-        }),
+        .map((row) => ({
+          ...row,
+          progress_percent: summary(data, row.id).progress.percent,
+          learning_path: enrollmentLearningPath(data, row.learning_path_id),
+        })),
       params,
     );
   }
+  match = /^(?:platform\/)?users\/([^/]+)\/enrollments$/.exec(path);
+  if (match && method === 'GET') return traineeEnrollmentsPage(data, match[1], params);
+  match = /^(?:platform\/)?users\/([^/]+)\/purchased-learning-paths$/.exec(path);
+  if (match && method === 'GET') return managerPurchasesPage(data, match[1], params);
   match = /^enrollments\/([^/]+)\/(summary|evaluations)$/.exec(path);
   if (match && method === 'GET') {
     const registration = enrollment(data, match[1]);

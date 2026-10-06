@@ -21,6 +21,8 @@ import type {
   FormationSummaryListResponse,
 } from '@/modules/shared/lib/evaluation-notes';
 import type { TwoFactorSettings } from '@/modules/admin/resources/two-factor/types';
+import type { ClientManagerPurchasesResponse } from '@/shared/types/client-manager-detail.types';
+import type { TraineeEnrollmentsResponse } from '@/shared/types/trainee-detail.types';
 import {
   SIMULATION_IDS as id,
   SIMULATION_IMAGE,
@@ -568,6 +570,57 @@ describe('isolated simulation business API', () => {
     expect((await request<List>(`enrollments/${id.enrollment}/evaluations`)).data[0]).toMatchObject(
       { attempts_used: 1, last_attempt_status: 'completed' },
     );
+  });
+
+  it('sert les inscriptions d’un stagiaire pour le détail admin et portail', async () => {
+    resetSimulationData(Role.SUPER_ADMIN);
+    for (const prefix of ['', 'platform/']) {
+      const page = await request<TraineeEnrollmentsResponse>(
+        `${prefix}users/${id.learner}/enrollments`,
+      );
+      expect(page.meta).toMatchObject({ total: page.data.length, page: 1, per_page: 25 });
+      expect(page.data[0]).toMatchObject({
+        id: id.enrollment,
+        status: 'not_started',
+        progress_percent: 0,
+        expires_at: null,
+        completed_modules: 0,
+        time_spent_seconds: 0,
+        learning_path: { id: id.learningPath },
+      });
+      expect(page.data[0].total_modules).toBeGreaterThan(0);
+    }
+    const empty = await request<TraineeEnrollmentsResponse>(
+      `platform/users/${id.learner}/enrollments?status=completed`,
+    );
+    expect(empty.data).toEqual([]);
+    const missing = `platform/users/${simulationId(9999)}/enrollments`;
+    await expect(request(missing)).rejects.toMatchObject({ status: 404 });
+    await expect(request(`platform/users/${id.manager}/enrollments`)).rejects.toMatchObject({
+      status: 404,
+    });
+  });
+
+  it('sert les formations achetées d’un responsable pour le détail admin et portail', async () => {
+    resetSimulationData(Role.SUPER_ADMIN);
+    for (const prefix of ['', 'platform/']) {
+      const page = await request<ClientManagerPurchasesResponse>(
+        `${prefix}users/${id.manager}/purchased-learning-paths`,
+      );
+      expect(page.meta).toMatchObject({ total: page.data.length, page: 1, per_page: 25 });
+      expect(page.data[0]).toMatchObject({
+        learning_path: { id: id.learningPath },
+        modules_count: expect.any(Number),
+        evaluations_count: expect.any(Number),
+      });
+    }
+    const none = await request<ClientManagerPurchasesResponse>(
+      `platform/users/${id.manager}/purchased-learning-paths?q=introuvable`,
+    );
+    expect(none.data).toEqual([]);
+    await expect(
+      request(`platform/users/${id.learner}/purchased-learning-paths`),
+    ).rejects.toMatchObject({ status: 404 });
   });
 
   it('scores incorrect answers honestly and rejects content outside an enrollment', async () => {

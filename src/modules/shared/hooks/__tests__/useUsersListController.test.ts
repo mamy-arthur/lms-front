@@ -187,3 +187,140 @@ describe('useUsersListController', () => {
     });
   });
 });
+
+describe('useUsersListController — état dans l’URL', () => {
+  const options = { urlPath: '/admin/users', includeTenantFilter: true, includeClientFilter: true };
+
+  beforeEach(() => window.history.replaceState(null, '', '/admin/users'));
+  afterEach(() => window.history.replaceState(null, '', '/'));
+
+  it('restaure recherche, rôles, statut, périmètre, tri et pagination après démontage', () => {
+    const first = renderHook(() => useUsersListController(options));
+    act(() => first.result.current.setDraftSearch('Alice & Bob'));
+    act(() => first.result.current.handleSearch());
+    act(() => {
+      first.result.current.handleRoleToggle('TRAINEE');
+      first.result.current.handleRoleToggle('CLIENT_MANAGER');
+      first.result.current.setDraftStatus('inactive');
+      first.result.current.setDraftTenant('tenant-1');
+      first.result.current.setParams((prev) => ({ ...prev, client_id: 'client-1' }));
+      first.result.current.handleSort('email');
+      first.result.current.handlePageSizeChange(50);
+      first.result.current.handlePageChange(3);
+    });
+    const expected = first.result.current.params;
+    first.unmount();
+
+    const restored = renderHook(() => useUsersListController(options));
+    expect(restored.result.current.params).toEqual(expected);
+    expect(restored.result.current.draftSearch).toBe('Alice & Bob');
+    expect(restored.result.current.selectedRoles).toEqual(['TRAINEE', 'CLIENT_MANAGER']);
+    expect(restored.result.current.draftStatus).toBe('inactive');
+    expect(restored.result.current.draftTenant).toBe('tenant-1');
+    expect(restored.result.current.page).toBe(3);
+    expect(restored.result.current.pageSize).toBe(50);
+    expect(restored.result.current.sort).toEqual({ column: 'email', direction: 'asc' });
+    // Replaying the search debounce after hydration must not reset page 3.
+    act(() => restored.result.current.handleSearch());
+    expect(restored.result.current.page).toBe(3);
+  });
+
+  it('restaure aussi une entrée d’historique sans démonter le contrôleur', () => {
+    const { result } = renderHook(() => useUsersListController(options));
+    act(() => result.current.setDraftSearch('brouillon'));
+    act(() => {
+      window.history.replaceState(null, '', '/admin/users?q=retour&page=4&is_active=false');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    });
+    expect(result.current.draftSearch).toBe('retour');
+    expect(result.current.page).toBe(3);
+    expect(result.current.draftStatus).toBe('inactive');
+  });
+
+  it('n’écrit dans l’URL que les valeurs non par défaut, avec une pagination à base 1', () => {
+    const { result } = renderHook(() => useUsersListController(options));
+    act(() => result.current.handlePageChange(2));
+    expect(window.location.search).toBe('?page=3');
+    expect(result.current.page).toBe(2);
+    act(() => result.current.handlePageSizeChange(50));
+    expect(window.location.search).toBe('?page_size=50');
+    act(() => result.current.handlePageSizeChange(25));
+    expect(window.location.search).toBe('');
+    expect(result.current.pageSize).toBe(25);
+  });
+
+  it('ignore les paramètres invalides plutôt que transmettre des valeurs arbitraires à l’API', () => {
+    window.history.replaceState(
+      null,
+      '',
+      '/admin/users?page=-1&page_size=99999&sort_by=password&sort_dir=bad&is_active=bad&roles=bad,TRAINEE,TRAINEE',
+    );
+    const { result } = renderHook(() => useUsersListController(options));
+    expect(result.current.params).toEqual({
+      sort_by: 'created_at',
+      sort_dir: 'desc',
+      page_size: 25,
+      page: 0,
+      roles: 'TRAINEE',
+    });
+    expect(result.current.page).toBe(0);
+  });
+
+  it('ignore les filtres tenant/client pour un contexte non autorisé ou le portail', () => {
+    window.history.replaceState(null, '', '/users?tenant_id=other&client_id=other&q=Alice');
+    const { result } = renderHook(() => useUsersListController({ urlPath: '/users' }));
+    expect(result.current.params).not.toHaveProperty('tenant_id');
+    expect(result.current.params).not.toHaveProperty('client_id');
+    expect(result.current.draftSearch).toBe('Alice');
+  });
+
+  it('garde les autres paramètres URL et n’ajoute pas d’entrée d’historique', () => {
+    window.history.replaceState(null, '', '/admin/users?source=dashboard');
+    const length = window.history.length;
+    const { result } = renderHook(() => useUsersListController(options));
+    act(() => result.current.handlePageChange(2));
+    expect(new URLSearchParams(window.location.search).get('source')).toBe('dashboard');
+    expect(window.history.length).toBe(length);
+  });
+
+  it('efface plusieurs rôles dans le même événement sans écraser les mises à jour précédentes', () => {
+    window.history.replaceState(null, '', '/admin/users?roles=TRAINEE,EDITOR&page=2');
+    const { result } = renderHook(() => useUsersListController(options));
+    act(() => result.current.selectedRoles.forEach(result.current.handleRoleToggle));
+    expect(result.current.selectedRoles).toEqual([]);
+    expect(result.current.page).toBe(0);
+    expect(new URLSearchParams(window.location.search).has('roles')).toBe(false);
+  });
+
+  it('laisse les autres consommateurs en état local et ne conserve rien entre deux montages', () => {
+    window.history.replaceState(null, '', '/admin/users?q=Alice&page=3');
+    const first = renderHook(() => useUsersListController());
+    expect(first.result.current.draftSearch).toBe('');
+    act(() => first.result.current.handlePageChange(2));
+    first.unmount();
+    const second = renderHook(() => useUsersListController());
+    expect(second.result.current.page).toBe(0);
+    expect(window.location.search).toBe('?q=Alice&page=3');
+  });
+
+  it('laisse Next resynchroniser son routeur au lieu de lui renvoyer son propre état', () => {
+    window.history.replaceState({ __NA: true, userDetailOpenedByList: true }, '', '/admin/users');
+    const replaceState = jest.spyOn(window.history, 'replaceState');
+    const { result } = renderHook(() => useUsersListController(options));
+    act(() => result.current.handlePageChange(2));
+    const [state] = replaceState.mock.calls.at(-1) ?? [];
+    // Next ignore la synchro d’URL si on lui renvoie ses clés internes.
+    expect(state).not.toHaveProperty('__NA');
+    expect(state).toMatchObject({ userDetailOpenedByList: true });
+    replaceState.mockRestore();
+  });
+
+  it('reste actif malgré un slash final dans le chemin courant', () => {
+    window.history.replaceState(null, '', '/admin/users/?page=2');
+    const { result } = renderHook(() => useUsersListController(options));
+    expect(result.current.page).toBe(1);
+    act(() => result.current.handlePageChange(4));
+    expect(result.current.page).toBe(4);
+    expect(new URLSearchParams(window.location.search).get('page')).toBe('5');
+  });
+});
