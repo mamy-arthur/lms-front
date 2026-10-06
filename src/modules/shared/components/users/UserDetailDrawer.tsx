@@ -21,6 +21,8 @@ export interface UserDetailPageProps {
   id: string;
   area: UserDetailArea;
   onEdit: (user: User) => void;
+  /** Deep links cannot know the target role: let the host re-route to the matching drawer. */
+  onRoleMismatch?: (user: User) => void;
 }
 
 export interface UserDetailEditFormProps {
@@ -38,6 +40,7 @@ export interface UserDetailDrawerProps {
   editForm: ComponentType<UserDetailEditFormProps>;
   onClose: () => void;
   onCloseAutoFocus?: (event: Event) => void;
+  onRoleMismatch?: (user: User) => void;
 }
 
 interface Props extends UserDetailDrawerProps {
@@ -60,6 +63,7 @@ function UserDrawers({
   editForm: EditForm,
   onClose,
   onCloseAutoFocus,
+  onRoleMismatch,
   namespace,
   title,
   description,
@@ -112,7 +116,7 @@ function UserDrawers({
             </SheetClose>
           </SheetHeader>
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6">
-            {id && <Page id={id} area={area} onEdit={edit} />}
+            {id && <Page id={id} area={area} onEdit={edit} onRoleMismatch={onRoleMismatch} />}
           </div>
         </SheetContent>
       </Sheet>

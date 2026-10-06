@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react';
 import type { UserDetailKind } from '@/shared/types/user-detail.types';
-import { USERS_LIST_URL_CHANGE } from './useUsersListParams';
+import { isOnPath, USERS_LIST_URL_CHANGE } from './useUsersListParams';
 
 function subscribe(onChange: () => void) {
   window.addEventListener('popstate', onChange);
@@ -17,11 +17,11 @@ const serverSnapshot = () => null;
 
 const OPENED_BY_LIST = 'userDetailOpenedByList';
 // history.back() is asynchronous: ignore further closes until its popstate has fired.
-let backPending = false;
+const BACK_TIMEOUT_MS = 500;
 
 export function useUserDetailDrawer(path: string, kind: UserDetailKind) {
   const getSnapshot = useCallback(() => {
-    if (window.location.pathname !== path) return null;
+    if (!isOnPath(path)) return null;
     const query = new URLSearchParams(window.location.search);
     // A hand-written URL containing both targets must never open two sheets.
     if (kind === 'trainee' && query.get('manager')) return null;
@@ -30,6 +30,7 @@ export function useUserDetailDrawer(path: string, kind: UserDetailKind) {
   const id = useSyncExternalStore(subscribe, getSnapshot, serverSnapshot);
   const lastId = useRef<string | null>(null);
   const opener = useRef<HTMLElement | null>(null);
+  const backPending = useRef(false);
   useEffect(() => {
     if (id) lastId.current = id;
   }, [id]);
@@ -46,12 +47,19 @@ export function useUserDetailDrawer(path: string, kind: UserDetailKind) {
 
   const close = () => {
     const url = new URL(window.location.href);
-    const isOpen = url.searchParams.has('trainee') || url.searchParams.has('manager');
+    // Closing one kind must never dismiss the drawer of the other kind.
+    if (!url.searchParams.has(kind)) return;
     // Pop the entry pushed by open() so "Back" does not land on an identical list entry.
-    if (isOpen && window.history.state?.[OPENED_BY_LIST]) {
-      if (backPending) return;
-      backPending = true;
-      window.addEventListener('popstate', () => (backPending = false), { once: true });
+    if (window.history.state?.[OPENED_BY_LIST]) {
+      if (backPending.current) return;
+      backPending.current = true;
+      const settle = () => {
+        backPending.current = false;
+        window.removeEventListener('popstate', settle);
+      };
+      window.addEventListener('popstate', settle);
+      // A back() that never pops must not lock the drawer closed forever.
+      window.setTimeout(settle, BACK_TIMEOUT_MS);
       window.history.back();
       return;
     }

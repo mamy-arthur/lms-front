@@ -302,4 +302,25 @@ describe('useUsersListController — état dans l’URL', () => {
     expect(second.result.current.page).toBe(0);
     expect(window.location.search).toBe('?q=Alice&page=3');
   });
+
+  it('laisse Next resynchroniser son routeur au lieu de lui renvoyer son propre état', () => {
+    window.history.replaceState({ __NA: true, userDetailOpenedByList: true }, '', '/admin/users');
+    const replaceState = jest.spyOn(window.history, 'replaceState');
+    const { result } = renderHook(() => useUsersListController(options));
+    act(() => result.current.handlePageChange(2));
+    const [state] = replaceState.mock.calls.at(-1) ?? [];
+    // Next ignore la synchro d’URL si on lui renvoie ses clés internes.
+    expect(state).not.toHaveProperty('__NA');
+    expect(state).toMatchObject({ userDetailOpenedByList: true });
+    replaceState.mockRestore();
+  });
+
+  it('reste actif malgré un slash final dans le chemin courant', () => {
+    window.history.replaceState(null, '', '/admin/users/?page=2');
+    const { result } = renderHook(() => useUsersListController(options));
+    expect(result.current.page).toBe(1);
+    act(() => result.current.handlePageChange(4));
+    expect(result.current.page).toBe(4);
+    expect(new URLSearchParams(window.location.search).get('page')).toBe('5');
+  });
 });

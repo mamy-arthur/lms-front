@@ -37,6 +37,23 @@ function subscribe(onChange: () => void) {
 
 const serverSnapshot = () => '';
 
+/** A trailing slash must not disable the URL-backed state. */
+export function isOnPath(path: string) {
+  const trim = (value: string) => value.replace(/\/+$/, '') || '/';
+  return trim(window.location.pathname) === trim(path);
+}
+
+/**
+ * Next only syncs usePathname/useSearchParams when the state it receives carries none of its own
+ * keys; re-sending them would leave the router on a stale URL that it later restores.
+ */
+function customHistoryState() {
+  const state = { ...window.history.state };
+  delete state.__NA;
+  delete state.__PRIVATE_NEXTJS_INTERNALS_TREE;
+  return state;
+}
+
 // The URL exposes a 1-based page; the controller keeps a 0-based index.
 function serialize(
   search: string,
@@ -109,7 +126,7 @@ export function useUsersListParams<TParams>({
   );
 
   const getSnapshot = useCallback(
-    () => (urlPath && window.location.pathname === urlPath ? window.location.search : ''),
+    () => (urlPath && isOnPath(urlPath) ? window.location.search : ''),
     [urlPath],
   );
   const search = useSyncExternalStore(subscribe, getSnapshot, serverSnapshot);
@@ -126,7 +143,7 @@ export function useUsersListParams<TParams>({
         return;
       }
       // A late update after navigating away must not rewrite another page's URL.
-      if (window.location.pathname !== urlPath) return;
+      if (!isOnPath(urlPath)) return;
       // Read the current URL for every update, including consecutive functional updates.
       const currentSearch = getSnapshot();
       const previous = parse(currentSearch);
@@ -134,7 +151,7 @@ export function useUsersListParams<TParams>({
       if (next === previous) return;
       const href = `${urlPath}${serialize(currentSearch, next, defaults)}${window.location.hash}`;
       // Next integrates native History calls without adding a history entry per filter change.
-      window.history.replaceState(window.history.state, '', href);
+      window.history.replaceState(customHistoryState(), '', href);
       window.dispatchEvent(new Event(USERS_LIST_URL_CHANGE));
     },
     [urlPath, getSnapshot, parse, defaults],

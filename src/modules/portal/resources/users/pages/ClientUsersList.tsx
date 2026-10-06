@@ -21,6 +21,7 @@ import { useDeleteClientUser } from '../hooks/useDeleteClientUser';
 import { useDeleteConfirm } from '@/modules/shared/hooks/useDeleteConfirm';
 import { Role } from '@/shared/constants/roles';
 import { ROUTES } from '@/shared/constants/routes';
+import type { User as SharedUser } from '@/shared/types/user.types';
 
 const ROLE_OPTIONS = [
   { value: 'CLIENT_MANAGER', label: 'Responsable' },
@@ -68,6 +69,7 @@ export function ClientUserList() {
 
   const editUser = (user: ClientUser) => {
     traineeDrawer.close();
+    managerDrawer.close();
     handleEdit(user);
   };
 
@@ -75,6 +77,12 @@ export function ClientUserList() {
     if (user.role === Role.TRAINEE) traineeDrawer.open(user.id);
     else if (user.role === Role.CLIENT_MANAGER) managerDrawer.open(user.id);
     else editUser(user);
+  };
+
+  // A deep link cannot know the target role: switch to the drawer that matches the loaded profile.
+  const handleRoleMismatch = (user: SharedUser) => {
+    if (user.role === Role.TRAINEE) traineeDrawer.open(user.id);
+    else if (user.role === Role.CLIENT_MANAGER) managerDrawer.open(user.id);
   };
 
   const { data: queryResult, isLoading } = useClientUsersQuery(params);
@@ -248,6 +256,7 @@ export function ClientUserList() {
         editForm={UserFormDrawer}
         onClose={traineeDrawer.close}
         onCloseAutoFocus={traineeDrawer.restoreFocus}
+        onRoleMismatch={handleRoleMismatch}
       />
 
       <ClientManagerDetailDrawer
@@ -257,6 +266,7 @@ export function ClientUserList() {
         editForm={UserFormDrawer}
         onClose={managerDrawer.close}
         onCloseAutoFocus={managerDrawer.restoreFocus}
+        onRoleMismatch={handleRoleMismatch}
       />
 
       <UserFormDrawer

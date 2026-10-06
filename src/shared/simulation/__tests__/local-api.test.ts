@@ -596,6 +596,9 @@ describe('isolated simulation business API', () => {
     expect(empty.data).toEqual([]);
     const missing = `platform/users/${simulationId(9999)}/enrollments`;
     await expect(request(missing)).rejects.toMatchObject({ status: 404 });
+    await expect(request(`platform/users/${id.manager}/enrollments`)).rejects.toMatchObject({
+      status: 404,
+    });
   });
 
   it('sert les formations achetées d’un responsable pour le détail admin et portail', async () => {

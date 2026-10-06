@@ -1571,6 +1571,8 @@ function traineeEnrollmentsPage(
   params: URLSearchParams,
 ): SimulationResponse {
   const learner = find(data, 'users', userId);
+  if (learner.role !== Role.TRAINEE)
+    fail(404, 'Simulation : stagiaire introuvable.', 'SIMULATION_NOT_FOUND');
   return listResponse(
     data.enrollments
       .filter((row) => row.learner_id === learner.id)

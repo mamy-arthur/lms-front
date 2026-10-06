@@ -2,8 +2,6 @@ import type { ReactElement } from 'react';
 import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { redirect } from 'next/navigation';
-import PortalPage from '@/app/(portal)/users/[id]/page';
 import { normalizeUser, type User } from '@/modules/admin/resources/users/types';
 import { traineeDetailApi } from '@/shared/api/trainee-detail.api';
 import { Role } from '@/shared/constants/roles';
@@ -16,8 +14,6 @@ import type {
 import { TraineeDetailPage } from '../TraineeDetailPage';
 import { TraineeDetailDrawer } from '../TraineeDetailDrawer';
 import { useTraineeDetailDrawer } from '@/modules/shared/hooks/useTraineeDetailDrawer';
-
-jest.mock('next/navigation', () => ({ redirect: jest.fn() }));
 
 jest.mock('@/shared/api/trainee-detail.api', () => ({
   traineeDetailApi: { profile: jest.fn(), enrollments: jest.fn() },
@@ -218,12 +214,6 @@ describe('Chargement direct et navigation', () => {
       expect(api.enrollments).toHaveBeenCalledTimes(1);
     },
   );
-
-  it('redirige le lien profond vers le drawer de la liste, cible encodée', async () => {
-    await PortalPage({ params: Promise.resolve({ id: 'élève/a ?#%' }) });
-    expect(redirect).toHaveBeenCalledWith('/users?trainee=%C3%A9l%C3%A8ve%2Fa%20%3F%23%25');
-    expect(api.profile).not.toHaveBeenCalled();
-  });
 });
 
 describe('Drawer de détail du stagiaire', () => {

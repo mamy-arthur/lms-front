@@ -115,7 +115,7 @@ function ClientManagerPurchases({ id, area }: Pick<UserDetailPageProps, 'id' | '
           </Select>
         </div>
       </div>
-      <div aria-busy={busy} aria-label="Achats du responsable">
+      <div role="region" aria-busy={busy} aria-label="Achats du responsable">
         {busy || query.isPending ? (
           <div className="space-y-3">
             <p role="status" className="text-sm text-muted-foreground">

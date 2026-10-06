@@ -158,7 +158,7 @@ function TraineeEnrollments({ id, area }: Pick<Props, 'id' | 'area'>) {
           </Select>
         </div>
       </div>
-      <div aria-busy={busy} aria-label="Inscriptions du stagiaire">
+      <div role="region" aria-busy={busy} aria-label="Inscriptions du stagiaire">
         {busy || query.isPending ? (
           <div className="space-y-3">
             <p role="status" className="text-sm text-muted-foreground">

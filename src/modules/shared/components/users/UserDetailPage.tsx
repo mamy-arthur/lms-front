@@ -1,6 +1,7 @@
 'use client';
 
 import type { ComponentType, CSSProperties } from 'react';
+import { useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Mail, MapPin, Pencil } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -43,6 +44,7 @@ function DetailContent({
   id,
   area,
   onEdit,
+  onRoleMismatch,
   namespace,
   role,
   labels,
@@ -55,17 +57,21 @@ function DetailContent({
     queryFn: async ({ signal }) => {
       const { data } = await loadProfile(area, id, signal);
       if (!data) throw new Error('Missing profile');
-      // Validate the raw role before normalization can supply a default.
-      if (data.role !== role) throw Object.assign(new Error('Unexpected role'), { status: 404 });
-      return normalizeUser(data);
+      // Keep the raw role: normalization would supply a default and validate an unknown profile.
+      return { user: normalizeUser(data), rawRole: data.role };
     },
     enabled: scope.enabled,
     retry: retryRequest,
     placeholderData: () => undefined,
     refetchOnMount: 'always',
   });
-  const validRole = profile.data?.role === role;
+  const validRole = profile.data?.rawRole === role;
   const notFound = errorStatus(profile.error) === 404 || (profile.isSuccess && !validRole);
+  const handoff = useRef(onRoleMismatch);
+  handoff.current = onRoleMismatch;
+  useEffect(() => {
+    if (profile.isSuccess && !validRole) handoff.current?.(profile.data.user);
+  }, [profile.isSuccess, profile.data, validRole]);
 
   return (
     <div
@@ -106,7 +112,11 @@ function DetailContent({
         </section>
       ) : profile.data && validRole ? (
         <>
-          <UserProfile user={profile.data} onEdit={() => onEdit(profile.data)} labels={labels} />
+          <UserProfile
+            user={profile.data.user}
+            onEdit={() => onEdit(profile.data.user)}
+            labels={labels}
+          />
           <Content id={id} area={area} />
         </>
       ) : null}

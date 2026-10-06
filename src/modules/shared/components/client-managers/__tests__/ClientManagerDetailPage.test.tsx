@@ -113,10 +113,22 @@ function EditForm({ open, user, onClose, onSuccess, onCloseAutoFocus }: UserDeta
   );
 }
 
-function Harness({ area = 'portal' }: { area?: UserDetailArea }) {
+function Harness({
+  area = 'portal',
+  routeByRole = false,
+}: {
+  area?: UserDetailArea;
+  routeByRole?: boolean;
+}) {
   const path = area === 'admin' ? '/admin/users' : '/users';
   const managerDrawer = useUserDetailDrawer(path, 'manager');
   const traineeDrawer = useTraineeDetailDrawer(path);
+  const onRoleMismatch = routeByRole
+    ? (user: User) =>
+        user.role === Role.CLIENT_MANAGER
+          ? managerDrawer.open(user.id)
+          : traineeDrawer.open(user.id)
+    : undefined;
   return (
     <>
       <button data-user-detail-trigger={manager.id} onClick={() => managerDrawer.open(manager.id)}>
@@ -132,6 +144,7 @@ function Harness({ area = 'portal' }: { area?: UserDetailArea }) {
         editForm={EditForm}
         onClose={managerDrawer.close}
         onCloseAutoFocus={managerDrawer.restoreFocus}
+        onRoleMismatch={onRoleMismatch}
       />
       <TraineeDetailDrawer
         key={`trainee:${managerDrawer.id ?? ''}`}
@@ -140,6 +153,7 @@ function Harness({ area = 'portal' }: { area?: UserDetailArea }) {
         editForm={EditForm}
         onClose={traineeDrawer.close}
         onCloseAutoFocus={traineeDrawer.restoreFocus}
+        onRoleMismatch={onRoleMismatch}
       />
     </>
   );
@@ -514,6 +528,26 @@ describe('Drawer, historique et édition exclusive', () => {
     expect(screen.getAllByRole('dialog')).toHaveLength(1);
     navigate('/users');
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
+
+  it('bascule sur le détail responsable quand un lien profond vise le mauvais rôle', async () => {
+    traineeApi.profile.mockResolvedValue({ data: manager });
+    window.history.replaceState(null, '', '/users?trainee=manager-1');
+    mount(<Harness routeByRole />);
+    expect(await screen.findByRole('heading', { name: manager.full_name })).toBeVisible();
+    expect(window.location.search).toBe('?manager=manager-1');
+    expect(
+      screen.queryByRole('heading', { name: 'Stagiaire introuvable' }),
+    ).not.toBeInTheDocument();
+    expect(api.profile).toHaveBeenCalledWith('portal', manager.id, expect.any(AbortSignal));
+  });
+
+  it('garde l’écran introuvable si l’hôte ne sait pas rerouter le rôle', async () => {
+    traineeApi.profile.mockResolvedValue({ data: manager });
+    window.history.replaceState(null, '', '/users?trainee=manager-1');
+    mount(<Harness />);
+    expect(await screen.findByRole('heading', { name: 'Stagiaire introuvable' })).toBeVisible();
+    expect(window.location.search).toBe('?trainee=manager-1');
   });
 });
 

@@ -3,8 +3,6 @@
 import { UserDetailDrawer, type UserDetailDrawerProps } from '../users/UserDetailDrawer';
 import { TraineeDetailPage } from './TraineeDetailPage';
 
-export type { UserDetailEditFormProps as TraineeEditFormProps } from '../users/UserDetailDrawer';
-
 export function TraineeDetailDrawer(props: UserDetailDrawerProps) {
   return (
     <UserDetailDrawer

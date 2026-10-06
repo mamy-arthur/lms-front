@@ -1,5 +1,3 @@
-const PORTAL_USERS = '/users';
-
 export const ROUTES = {
   auth: {
     login: '/login',
@@ -50,9 +48,7 @@ export const ROUTES = {
     formationQuiz: (slug: string) => `/my-learning-paths/${slug}/quiz`,
     profile: '/profile',
     //certificates: "/certificates",
-    users: PORTAL_USERS,
-    // Le détail stagiaire est un drawer au-dessus de la liste, piloté par ce paramètre.
-    traineeDetail: (id: string) => `${PORTAL_USERS}?trainee=${encodeURIComponent(id)}`,
+    users: '/users',
     // modules: "/modules",
     // quizzes: "/quizzes",
     //modules: "/modules",
