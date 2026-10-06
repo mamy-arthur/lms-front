@@ -105,6 +105,9 @@ export function TwoFactorSettingsPage() {
               scope="tenant"
               inheritedValues={globalSettings.data?.data.effective}
               templateMails={templateMails.data?.data ?? []}
+              templatesLoading={templateMails.isLoading}
+              templatesError={templateMails.isError}
+              onRetryTemplates={() => templateMails.refetch()}
               isSaving={updateTenant.isPending}
               onSubmit={(payload) => updateTenant.mutate(payload)}
             />

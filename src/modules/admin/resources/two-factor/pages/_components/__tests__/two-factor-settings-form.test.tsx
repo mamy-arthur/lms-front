@@ -220,6 +220,53 @@ describe('TwoFactorSettingsForm — enregistrement', () => {
 });
 
 describe('TwoFactorSettingsForm — activation', () => {
+  it('distingue l’activation globale par défaut d’une modification personnalisée et de son annulation', async () => {
+    const user = userEvent.setup();
+    render(
+      <TwoFactorSettingsForm
+        settings={INHERITED_SETTINGS}
+        scope="global"
+        isSaving={false}
+        onSubmit={jest.fn()}
+      />,
+    );
+
+    const activation = screen.getByRole('switch', { name: /activer la vérification/i });
+    expect(screen.queryByText('Personnalisé')).not.toBeInTheDocument();
+    expect(screen.queryByText('Hérité')).not.toBeInTheDocument();
+    expect(activation.parentElement).toHaveTextContent('Par défaut');
+
+    await user.click(activation);
+    expect(activation.parentElement).toHaveTextContent('Personnalisé');
+
+    await user.click(activation);
+    expect(activation.parentElement).toHaveTextContent('Par défaut');
+
+    await user.click(activation);
+    await user.click(screen.getByRole('button', { name: /annuler/i }));
+    expect(activation.parentElement).toHaveTextContent('Par défaut');
+  });
+
+  it.each([true, false])(
+    'indique une activation globale %s explicitement personnalisée',
+    (enabled) => {
+      render(
+        <TwoFactorSettingsForm
+          settings={{
+            ...INHERITED_SETTINGS,
+            overrides: { ...INHERITED_SETTINGS.overrides, enabled },
+            effective: { ...EFFECTIVE, enabled },
+          }}
+          scope="global"
+          isSaving={false}
+          onSubmit={jest.fn()}
+        />,
+      );
+
+      expect(screen.getByText('Personnalisé')).toBeInTheDocument();
+    },
+  );
+
   it('avertit quand le 2FA passe de désactivé à activé', async () => {
     const user = userEvent.setup();
     render(

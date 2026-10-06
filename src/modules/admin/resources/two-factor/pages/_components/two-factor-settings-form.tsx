@@ -240,7 +240,15 @@ export function TwoFactorSettingsForm({
             </div>
           )}
           <div className="flex items-center gap-2">
-            <Badge variant="outline">{enabledInherited ? 'Hérité' : 'Personnalisé'}</Badge>
+            <Badge variant="outline">
+              {scope === 'tenant'
+                ? enabledInherited
+                  ? 'Hérité'
+                  : 'Personnalisé'
+                : settings.overrides.enabled === null && enabled === settings.effective.enabled
+                  ? 'Par défaut'
+                  : 'Personnalisé'}
+            </Badge>
             <Switch
               id="two-factor-enabled"
               checked={effectiveEnabled}

@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import type { TwoFactorSettings } from '../../types';
+import type { TenantTemplateMail, TwoFactorSettings } from '../../types';
 import { TwoFactorSettingsPage } from '../TwoFactorSettingsPage';
 
 const GLOBAL_SETTINGS: TwoFactorSettings = {
@@ -32,6 +32,13 @@ const GLOBAL_SETTINGS: TwoFactorSettings = {
 let mockGlobalSettings: TwoFactorSettings | undefined;
 let mockTenantSettings: TwoFactorSettings;
 const mockUpdateTenant = jest.fn();
+const mockRefetchTemplates = jest.fn();
+let mockTemplateMailsQuery: {
+  data?: { data: TenantTemplateMail[] };
+  isLoading: boolean;
+  isError: boolean;
+  refetch: typeof mockRefetchTemplates;
+};
 
 jest.mock('../../hooks/useTwoFactorSettings', () => ({
   useGlobalTwoFactorSettings: () => ({
@@ -39,7 +46,7 @@ jest.mock('../../hooks/useTwoFactorSettings', () => ({
     isLoading: !mockGlobalSettings,
   }),
   useTenantTwoFactorSettings: () => ({ data: { data: mockTenantSettings } }),
-  useTenantTemplateMails: () => ({ data: { data: [] } }),
+  useTenantTemplateMails: () => mockTemplateMailsQuery,
   useUpdateGlobalTwoFactorSettings: () => ({ isPending: false, mutate: jest.fn() }),
   useUpdateTenantTwoFactorSettings: () => ({ isPending: false, mutate: mockUpdateTenant }),
 }));
@@ -56,6 +63,12 @@ async function selectTenant(user: ReturnType<typeof userEvent.setup>) {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockTemplateMailsQuery = {
+    data: { data: [] },
+    isLoading: false,
+    isError: false,
+    refetch: mockRefetchTemplates,
+  };
   mockGlobalSettings = GLOBAL_SETTINGS;
   mockTenantSettings = {
     ...GLOBAL_SETTINGS,
@@ -64,8 +77,8 @@ beforeEach(() => {
   };
 });
 
-describe('TwoFactorSettingsPage activation inheritance', () => {
-  it('allows disabling and re-enabling inheritance without locking the switch', async () => {
+describe('TwoFactorSettingsPage — héritage de l’activation', () => {
+  it('permet de désactiver puis de réactiver l’héritage sans verrouiller l’interrupteur', async () => {
     const user = userEvent.setup();
     render(<TwoFactorSettingsPage />);
     await selectTenant(user);
@@ -91,7 +104,7 @@ describe('TwoFactorSettingsPage activation inheritance', () => {
   });
 
   it.each([true, false])(
-    'restores global activation %s and saves a null override',
+    'rétablit l’activation globale %s et enregistre une surcharge nulle',
     async (enabled) => {
       mockGlobalSettings = {
         ...GLOBAL_SETTINGS,
@@ -121,7 +134,7 @@ describe('TwoFactorSettingsPage activation inheritance', () => {
     },
   );
 
-  it('enables restoring inheritance when global settings finish loading', async () => {
+  it('permet de rétablir l’héritage après le chargement des paramètres globaux', async () => {
     mockGlobalSettings = undefined;
     mockTenantSettings = {
       ...mockTenantSettings,
@@ -142,5 +155,67 @@ describe('TwoFactorSettingsPage activation inheritance', () => {
     await user.click(inheritance);
     expect(inheritance).toBeChecked();
     expect(screen.getByRole('switch', { name: /Activer la v.rification/i })).toBeChecked();
+  });
+});
+
+describe('TwoFactorSettingsPage — modèles d’e-mail', () => {
+  it('désactive le sélecteur pendant le chargement puis permet de choisir un modèle', async () => {
+    mockTemplateMailsQuery = { ...mockTemplateMailsQuery, data: undefined, isLoading: true };
+    const user = userEvent.setup();
+    const { rerender } = render(<TwoFactorSettingsPage />);
+    await selectTenant(user);
+
+    expect(screen.getByText('Chargement des modèles…')).toHaveAttribute('role', 'status');
+    expect(screen.getByRole('combobox', { name: 'Modèle de l’e-mail' })).toBeDisabled();
+    expect(screen.queryByText(/aucun modèle personnalisé disponible/i)).not.toBeInTheDocument();
+
+    mockTemplateMailsQuery = {
+      ...mockTemplateMailsQuery,
+      isLoading: false,
+      data: {
+        data: [
+          {
+            id: 'template-1',
+            name: 'Code de connexion',
+            reference: null,
+            subject: 'Code',
+            status: true,
+          },
+        ],
+      },
+    };
+    rerender(<TwoFactorSettingsPage />);
+
+    expect(screen.queryByText('Chargement des modèles…')).not.toBeInTheDocument();
+    const selector = screen.getByRole('combobox', { name: 'Modèle de l’e-mail' });
+    expect(selector).toBeEnabled();
+    await user.click(selector);
+    await user.click(screen.getByRole('option', { name: 'Code de connexion' }));
+    await user.click(screen.getByRole('button', { name: /enregistrer/i }));
+    expect(mockUpdateTenant).toHaveBeenCalledWith(
+      expect.objectContaining({ template_mail_id: 'template-1' }),
+    );
+  });
+
+  it('affiche l’erreur et relance la requête sans la confondre avec une liste vide', async () => {
+    mockTemplateMailsQuery = { ...mockTemplateMailsQuery, data: undefined, isError: true };
+    const user = userEvent.setup();
+    const { rerender } = render(<TwoFactorSettingsPage />);
+    await selectTenant(user);
+
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Impossible de charger les modèles d’e-mail.',
+    );
+    expect(screen.getByRole('combobox', { name: 'Modèle de l’e-mail' })).toBeDisabled();
+    expect(screen.queryByText(/aucun modèle personnalisé disponible/i)).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Réessayer' }));
+    expect(mockRefetchTemplates).toHaveBeenCalledTimes(1);
+
+    mockTemplateMailsQuery = { ...mockTemplateMailsQuery, data: { data: [] }, isError: false };
+    rerender(<TwoFactorSettingsPage />);
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Modèle de l’e-mail' })).toBeEnabled();
+    expect(screen.getByText(/aucun modèle personnalisé disponible/i)).toBeInTheDocument();
   });
 });
