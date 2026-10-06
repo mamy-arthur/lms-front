@@ -45,7 +45,8 @@ describe('TwoFactorSettingsForm — héritage', () => {
       />,
     );
 
-    expect(screen.getByText(/hérité : 10 minutes/i)).toBeInTheDocument();
+    expect(screen.getByText(/par défaut : 10 minutes/i)).toBeInTheDocument();
+    expect(screen.getByLabelText('Durée de validité')).toHaveValue(10);
     expect(screen.getByLabelText('Durée de validité')).toBeDisabled();
   });
 
@@ -61,11 +62,20 @@ describe('TwoFactorSettingsForm — héritage', () => {
       />,
     );
 
+    await user.click(screen.getByRole('switch', { name: /activer la vérification/i }));
     await user.click(save());
 
     await waitFor(() => expect(onSubmit).toHaveBeenCalled());
     expect(onSubmit).toHaveBeenCalledWith(
-      expect.objectContaining({ ttl_minutes: null, code_length: null }),
+      expect.objectContaining({
+        enabled: true,
+        code_length: null,
+        ttl_minutes: null,
+        resend_cooldown_seconds: null,
+        max_attempts: null,
+        lockout_threshold: null,
+        trusted_device_days: null,
+      }),
     );
   });
 
@@ -137,7 +147,7 @@ describe('TwoFactorSettingsForm — portée', () => {
       />,
     );
 
-    expect(screen.queryByLabelText(/template du mail otp/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: /modèle de l’e-mail/i })).not.toBeInTheDocument();
   });
 
   it('affiche le sélecteur de template au niveau tenant', () => {
@@ -159,7 +169,7 @@ describe('TwoFactorSettingsForm — portée', () => {
       />,
     );
 
-    expect(screen.getByLabelText(/template du mail otp/i)).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: /modèle de l’e-mail/i })).toBeInTheDocument();
   });
 
   it('n’envoie template_mail_id que sur la portée tenant', async () => {
@@ -174,6 +184,7 @@ describe('TwoFactorSettingsForm — portée', () => {
       />,
     );
 
+    await user.click(screen.getByRole('switch', { name: /activer la vérification/i }));
     await user.click(save());
 
     await waitFor(() => expect(onSubmit).toHaveBeenCalled());
@@ -181,7 +192,81 @@ describe('TwoFactorSettingsForm — portée', () => {
   });
 });
 
+describe('TwoFactorSettingsForm — enregistrement', () => {
+  it('ne sauvegarde pas un formulaire sans modification', async () => {
+    const user = userEvent.setup();
+    const onSubmit = jest.fn();
+    render(
+      <TwoFactorSettingsForm
+        settings={INHERITED_SETTINGS}
+        scope="global"
+        isSaving={false}
+        onSubmit={onSubmit}
+      />,
+    );
+
+    expect(save()).toBeDisabled();
+    await user.click(save());
+    expect(onSubmit).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('switch', { name: /activer la vérification/i }));
+    expect(save()).toBeEnabled();
+
+    await user.click(screen.getByRole('button', { name: /annuler/i }));
+    expect(save()).toBeDisabled();
+    expect(screen.getByRole('switch', { name: /activer la vérification/i })).not.toBeChecked();
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+});
+
 describe('TwoFactorSettingsForm — activation', () => {
+  it('distingue l’activation globale par défaut d’une modification personnalisée et de son annulation', async () => {
+    const user = userEvent.setup();
+    render(
+      <TwoFactorSettingsForm
+        settings={INHERITED_SETTINGS}
+        scope="global"
+        isSaving={false}
+        onSubmit={jest.fn()}
+      />,
+    );
+
+    const activation = screen.getByRole('switch', { name: /activer la vérification/i });
+    expect(screen.queryByText('Personnalisé')).not.toBeInTheDocument();
+    expect(screen.queryByText('Hérité')).not.toBeInTheDocument();
+    expect(activation.parentElement).toHaveTextContent('Par défaut');
+
+    await user.click(activation);
+    expect(activation.parentElement).toHaveTextContent('Personnalisé');
+
+    await user.click(activation);
+    expect(activation.parentElement).toHaveTextContent('Par défaut');
+
+    await user.click(activation);
+    await user.click(screen.getByRole('button', { name: /annuler/i }));
+    expect(activation.parentElement).toHaveTextContent('Par défaut');
+  });
+
+  it.each([true, false])(
+    'indique une activation globale %s explicitement personnalisée',
+    (enabled) => {
+      render(
+        <TwoFactorSettingsForm
+          settings={{
+            ...INHERITED_SETTINGS,
+            overrides: { ...INHERITED_SETTINGS.overrides, enabled },
+            effective: { ...EFFECTIVE, enabled },
+          }}
+          scope="global"
+          isSaving={false}
+          onSubmit={jest.fn()}
+        />,
+      );
+
+      expect(screen.getByText('Personnalisé')).toBeInTheDocument();
+    },
+  );
+
   it('avertit quand le 2FA passe de désactivé à activé', async () => {
     const user = userEvent.setup();
     render(

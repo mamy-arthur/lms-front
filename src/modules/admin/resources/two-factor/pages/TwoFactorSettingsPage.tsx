@@ -36,7 +36,7 @@ export function TwoFactorSettingsPage() {
   const tenants = useTenants();
 
   return (
-    <div className="bg-background">
+    <div className="mx-auto w-full max-w-6xl bg-background">
       <header className="mb-8">
         <h1 className="text-2xl font-bold tracking-tight">Vérification en deux étapes</h1>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -45,7 +45,7 @@ export function TwoFactorSettingsPage() {
         </p>
       </header>
 
-      <Tabs defaultValue="global" className="max-w-3xl">
+      <Tabs defaultValue="global" className="w-full min-w-0">
         <TabsList>
           <TabsTrigger value="global">Global</TabsTrigger>
           <TabsTrigger value="tenant">Par tenant</TabsTrigger>
@@ -103,7 +103,11 @@ export function TwoFactorSettingsPage() {
               key={resyncKey(tenantSettings.data.data)}
               settings={tenantSettings.data.data}
               scope="tenant"
+              inheritedValues={globalSettings.data?.data.effective}
               templateMails={templateMails.data?.data ?? []}
+              templatesLoading={templateMails.isLoading}
+              templatesError={templateMails.isError}
+              onRetryTemplates={() => templateMails.refetch()}
               isSaving={updateTenant.isPending}
               onSubmit={(payload) => updateTenant.mutate(payload)}
             />
